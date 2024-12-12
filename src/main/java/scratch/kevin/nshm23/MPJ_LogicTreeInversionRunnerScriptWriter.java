@@ -653,7 +653,7 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 		
 //		dirName += "-proxyGriddedTests";
 		
-		Class<? extends InversionConfigurationFactory> factoryClass = PRVI25_InvConfigFactory.class;
+//		Class<? extends InversionConfigurationFactory> factoryClass = PRVI25_InvConfigFactory.class;
 		
 //		Class<? extends InversionConfigurationFactory> factoryClass = PRVI25_InvConfigFactory.GriddedUseM1Bounds.class;
 //		dirName += "-grid_bounds_m1";
@@ -672,6 +672,9 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 		
 //		Class<? extends InversionConfigurationFactory> factoryClass = PRVI25_InvConfigFactory.GriddedForceSlab2Depths.class;
 //		dirName += "-gridded_use_slab2";
+		
+		Class<? extends InversionConfigurationFactory> factoryClass = PRVI25_InvConfigFactory.NoProxyLengthLimit.class;
+		dirName += "-no_proxy_len_limit";
 		
 		if (!factoryClass.equals(PRVI25_InvConfigFactory.class)) {
 			// try instantiate it to make sure we get any static modifiers that might change branch weights

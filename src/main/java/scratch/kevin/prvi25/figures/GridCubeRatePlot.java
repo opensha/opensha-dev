@@ -339,14 +339,14 @@ public class GridCubeRatePlot {
 		
 		gp.drawGraphPanel(cellRatePlot, false, false, xRange, yRange);
 		
-		PlotUtils.writePlots(outputDir, "nucl_rate_tot", gp, width, false, true, true, false);
+		PlotUtils.writePlots(outputDir, "cube_nucl_rate_tot", gp, width, false, true, true, false);
 		
 		XYZPlotSpec cellRateM7Plot = buildPlot(m7NuclXYZ, cellXRanges, m7CellRates, rateFormat,
 				sectXY, nuclRateCPT, "Gridded M>7 Nucleation Rate", " ");
 		
 		gp.drawGraphPanel(cellRateM7Plot, false, false, xRange, yRange);
 		
-		PlotUtils.writePlots(outputDir, "nucl_rate_m7", gp, width, false, true, true, false);
+		PlotUtils.writePlots(outputDir, "cube_nucl_rate_m7", gp, width, false, true, true, false);
 	}
 	
 	private static void calcXYZValues(EvenlyDiscrXYZ_DataSet xyz, List<List<Integer>> xyzMappedCubes,

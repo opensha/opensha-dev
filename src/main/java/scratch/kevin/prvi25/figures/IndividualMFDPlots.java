@@ -1,24 +1,36 @@
 package scratch.kevin.prvi25.figures;
 
 import java.awt.Color;
+import java.awt.geom.Point2D;
 import java.io.File;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 import org.jfree.data.Range;
 import org.opensha.commons.data.function.DiscretizedFunc;
 import org.opensha.commons.data.function.EvenlyDiscretizedFunc;
 import org.opensha.commons.data.uncertainty.UncertainBoundedIncrMagFreqDist;
+import org.opensha.commons.geo.Region;
 import org.opensha.commons.gui.plot.HeadlessGraphPanel;
 import org.opensha.commons.gui.plot.PlotCurveCharacterstics;
 import org.opensha.commons.gui.plot.PlotLineType;
 import org.opensha.commons.gui.plot.PlotSpec;
 import org.opensha.commons.gui.plot.PlotUtils;
 import org.opensha.sha.earthquake.faultSysSolution.FaultSystemSolution;
+import org.opensha.sha.earthquake.faultSysSolution.modules.BranchRegionalMFDs;
+import org.opensha.sha.earthquake.faultSysSolution.modules.BranchRegionalMFDs.MFDType;
 import org.opensha.sha.earthquake.faultSysSolution.modules.BranchSectNuclMFDs;
+import org.opensha.sha.earthquake.faultSysSolution.modules.RegionsOfInterest;
 import org.opensha.sha.earthquake.faultSysSolution.util.FaultSysTools;
+import org.opensha.sha.earthquake.rupForecastImpl.prvi25.gridded.PRVI25_GridSourceBuilder;
+import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_DeclusteringAlgorithms;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_RegionalSeismicity;
+import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_SeisSmoothingAlgorithms;
+import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_SubductionFaultModels;
+import org.opensha.sha.earthquake.rupForecastImpl.prvi25.util.PRVI25_RegionLoader;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.util.PRVI25_RegionLoader.PRVI25_SeismicityRegions;
 import org.opensha.sha.faultSurface.FaultSection;
 import org.opensha.sha.magdist.IncrementalMagFreqDist;
@@ -28,12 +40,14 @@ import com.google.common.base.Preconditions;
 import com.google.common.primitives.Ints;
 
 import net.mahdilamb.colormap.Colors;
+import scratch.kevin.latex.LaTeXUtils;
+import scratch.kevin.prvi25.SubductionCombinedModelCreator;
 
 public class IndividualMFDPlots {
 
 	public static void main(String[] args) throws IOException {
 		File crustalDir = new File("/home/kevin/OpenSHA/nshm23/batch_inversions/"
-				+ "2024_11_19-prvi25_crustal_branches-dmSample5x");
+				+ "2024_12_05-prvi25_crustal_branches-dmSample5x");
 		FaultSystemSolution crustalSol = FaultSystemSolution.load(new File(crustalDir,
 				"results_PRVI_CRUSTAL_FM_V1p1_branch_averaged_gridded.zip"));
 		
@@ -41,34 +55,180 @@ public class IndividualMFDPlots {
 		
 		File subductionDir = new File("/home/kevin/OpenSHA/nshm23/batch_inversions/"
 				+ "2024_11_19-prvi25_subduction_branches");
-		FaultSystemSolution subductionSol1 = FaultSystemSolution.load(new File(subductionDir,
+		FaultSystemSolution subductionLargeSol = FaultSystemSolution.load(new File(subductionDir,
 				"results_PRVI_SUB_FM_LARGE_branch_averaged_gridded.zip"));
-		FaultSystemSolution subductionSol2 = FaultSystemSolution.load(new File(subductionDir,
+		FaultSystemSolution subductionSmallSol = FaultSystemSolution.load(new File(subductionDir,
 				"results_PRVI_SUB_FM_SMALL_branch_averaged_gridded.zip"));
+		FaultSystemSolution subductionCombined = SubductionCombinedModelCreator.combine(
+				Map.of(PRVI25_SubductionFaultModels.PRVI_SUB_FM_LARGE, subductionLargeSol,
+						PRVI25_SubductionFaultModels.PRVI_SUB_FM_SMALL, subductionSmallSol));
 		
 		File crustalOutputDir = new File("/home/kevin/Documents/papers/2024_PRVI_ERF/prvi25-erf-paper/Figures/crustal_sol");
 		Preconditions.checkState(crustalOutputDir.exists() || crustalOutputDir.mkdir());
 		File subductionOutputDir = new File("/home/kevin/Documents/papers/2024_PRVI_ERF/prvi25-erf-paper/Figures/sub_sol");
 		Preconditions.checkState(subductionOutputDir.exists() || subductionOutputDir.mkdir());
 		
-		UncertainBoundedIncrMagFreqDist[] crustalOnFaultDists = getOnFaultMFDs(crustalSol);
-		IncrementalMagFreqDist crustalMean = CombinedMFDsPlot.calcFaultMFD(null, crustalSol, refMFD);
-		UncertainBoundedIncrMagFreqDist crustalObs = PRVI25_RegionalSeismicity.getBounded(PRVI25_SeismicityRegions.CRUSTAL, refMFD, 8.6);
-		IncrementalMagFreqDist crustalGridded = CombinedMFDsPlot.calcGriddedMFD(
-				PRVI25_SeismicityRegions.CRUSTAL.load(), TectonicRegionType.ACTIVE_SHALLOW, crustalSol, refMFD);
+		FileWriter crustalTexFW = new FileWriter(new File(crustalOutputDir, "crustal_mfds.tex"));
+		FileWriter subductionTexFW = new FileWriter(new File(subductionOutputDir, "subduction_mfds.tex"));
 		
-		plot(crustalOutputDir, "crustal_mfds", new Range(5d, 8.5d), crustalOnFaultDists, crustalMean, null, crustalGridded, crustalObs);
+		Map<PRVI25_SeismicityRegions, Region> subsetRegions = Map.of(
+				PRVI25_SeismicityRegions.CRUSTAL, PRVI25_RegionLoader.loadPRVI_MapExtents());
+		
+		for (PRVI25_SeismicityRegions seisReg : PRVI25_SeismicityRegions.values()) {
+			Region[] regions;
+			if (subsetRegions.containsKey(seisReg))
+				regions = new Region[] {seisReg.load(), subsetRegions.get(seisReg)};
+			else
+				regions = new Region[] {seisReg.load()};
+			
+			for (int r=0; r<regions.length; r++) {
+				Region reg = regions[r];
+				
+				FaultSystemSolution sol;
+				File outputDir;
+				String prefix;
+				TectonicRegionType trt;
+				Range xRange;
+				String texPrefix;
+				FileWriter texFW;
+				if (seisReg == PRVI25_SeismicityRegions.CRUSTAL) {
+					sol = crustalSol;
+					outputDir = crustalOutputDir;
+					prefix = "crustal_mfds";
+					trt = TectonicRegionType.ACTIVE_SHALLOW;
+					xRange = new Range(5d, 8.5);
+					texPrefix = "CrustalMFD";
+					texFW = crustalTexFW;
+				} else if (seisReg == PRVI25_SeismicityRegions.CAR_INTERFACE) {
+					sol = subductionCombined;
+					outputDir = subductionOutputDir;
+					prefix = "subduction_mfds_car_interface";
+					trt = TectonicRegionType.SUBDUCTION_INTERFACE;
+					xRange = new Range(5d, 9.5);
+					texPrefix = "SubCarIntMFD";
+					texFW = subductionTexFW;
+				} else if (seisReg == PRVI25_SeismicityRegions.MUE_INTERFACE) {
+					sol = subductionCombined;
+					outputDir = subductionOutputDir;
+					prefix = "subduction_mfds_mue_interface";
+					trt = TectonicRegionType.SUBDUCTION_INTERFACE;
+					xRange = new Range(5d, 9.5);
+					texPrefix = "SubMueIntMFD";
+					texFW = subductionTexFW;
+				} else if (seisReg == PRVI25_SeismicityRegions.CAR_INTRASLAB) {
+					sol = subductionCombined;
+					outputDir = subductionOutputDir;
+					prefix = "subduction_mfds_car_slab";
+					trt = TectonicRegionType.SUBDUCTION_SLAB;
+					xRange = new Range(5d, 9.5);
+					texPrefix = "SubCarSlabMFD";
+					texFW = subductionTexFW;
+				} else if (seisReg == PRVI25_SeismicityRegions.MUE_INTRASLAB) {
+					sol = subductionCombined;
+					outputDir = subductionOutputDir;
+					prefix = "subduction_mfds_mue_slab";
+					trt = TectonicRegionType.SUBDUCTION_SLAB;
+					xRange = new Range(5d, 9.5);
+					texPrefix = "SubMueSlabMFD";
+					texFW = subductionTexFW;
+				} else {
+					throw new IllegalStateException();
+				}
+				
+				if (r > 0) {
+					texPrefix += "Subset";
+					prefix += "_subset";
+				}
+				
+				UncertainBoundedIncrMagFreqDist[] onFaultDists = null;
+				if (trt == TectonicRegionType.ACTIVE_SHALLOW)
+					onFaultDists = getOnFaultMFDFractiles(sol, r == 0 ? null : reg);
+				else if (trt == TectonicRegionType.SUBDUCTION_INTERFACE)
+					onFaultDists = getRegionalMFDFractiles(sol, MFDType.SUPRA_ONLY, reg, fractiles);
+				IncrementalMagFreqDist onFaultMean = null;
+				if (trt == TectonicRegionType.ACTIVE_SHALLOW)
+					onFaultMean = CombinedMFDsPlot.calcFaultMFD(r == 0 ? null : reg, sol, refMFD);
+				else if (trt == TectonicRegionType.SUBDUCTION_INTERFACE)
+					onFaultMean = CombinedMFDsPlot.calcFaultMFD(reg, sol, refMFD);
+				UncertainBoundedIncrMagFreqDist obs;
+				if (r == 0)
+					obs = PRVI25_RegionalSeismicity.getBounded(seisReg, refMFD, xRange.getUpperBound()+0.1);
+				else
+					obs = PRVI25_RegionalSeismicity.getRemapped(reg, seisReg, PRVI25_DeclusteringAlgorithms.AVERAGE,
+							PRVI25_SeisSmoothingAlgorithms.AVERAGE, refMFD, xRange.getUpperBound()+0.1);
+				IncrementalMagFreqDist gridded;
+				UncertainBoundedIncrMagFreqDist[] griddedDists;
+				if (trt == TectonicRegionType.ACTIVE_SHALLOW || trt == TectonicRegionType.SUBDUCTION_INTERFACE) {
+					gridded = CombinedMFDsPlot.calcGriddedMFD(reg, trt, sol, refMFD);
+					griddedDists = getRegionalMFDFractiles(sol, MFDType.GRID_ONLY, reg, extrema);
+				} else {
+					// regions overlap, need to redo it
+					Preconditions.checkState(r == 0, "Need to do bounds right if we decide to use a slab subset region");
+					gridded = PRVI25_RegionalSeismicity.AVERAGE.build(seisReg, refMFD, PRVI25_GridSourceBuilder.SLAB_MMAX);
+					griddedDists = new UncertainBoundedIncrMagFreqDist[] { PRVI25_RegionalSeismicity.getBounded(seisReg, refMFD, PRVI25_GridSourceBuilder.SLAB_MMAX) };
+				}
+				
+				if (trt != TectonicRegionType.SUBDUCTION_SLAB) {
+					texFW.write(LaTeXUtils.defineValueCommand(texPrefix+"ObsMFiveRate",
+							LaTeXUtils.numberExpFormatSigFigs(obs.getCumRate(obs.getClosestXIndex(5.01)), 3), false)+"\n");
+					texFW.write(LaTeXUtils.defineValueCommand(texPrefix+"SupraRate",
+							LaTeXUtils.numberExpFormatSigFigs(onFaultMean.calcSumOfY_Vals(), 3), false)+"\n");
+					texFW.write(LaTeXUtils.defineValueCommand(texPrefix+"SupraRI",
+							LaTeXUtils.numberExpFormatFixedDecimal(1d/onFaultMean.calcSumOfY_Vals(), 1), false)+"\n");
+					if (trt == TectonicRegionType.ACTIVE_SHALLOW) {
+						texFW.write(LaTeXUtils.defineValueCommand(texPrefix+"MSixFiveRate",
+								LaTeXUtils.numberExpFormatSigFigs(onFaultMean.getCumRate(onFaultMean.getClosestXIndex(6.501)), 3), false)+"\n");
+						texFW.write(LaTeXUtils.defineValueCommand(texPrefix+"MSixFiveRI",
+								LaTeXUtils.numberExpFormatFixedDecimal(1d/onFaultMean.getCumRate(onFaultMean.getClosestXIndex(6.501)), 1), false)+"\n");
+					} else {
+						texFW.write(LaTeXUtils.defineValueCommand(texPrefix+"MEightRate",
+								LaTeXUtils.numberExpFormatSigFigs(onFaultMean.getCumRate(onFaultMean.getClosestXIndex(8.01)), 3), false)+"\n");
+						texFW.write(LaTeXUtils.defineValueCommand(texPrefix+"MEightRI",
+								LaTeXUtils.numberExpFormatFixedDecimal(1d/onFaultMean.getCumRate(onFaultMean.getClosestXIndex(8.01)), 1), false)+"\n");
+					}
+					
+				}
+				
+				IncrementalMagFreqDist total = null;
+				if (trt != TectonicRegionType.SUBDUCTION_SLAB)
+					total = sum(onFaultMean, gridded);
+				if (trt != TectonicRegionType.SUBDUCTION_SLAB)
+					plot(outputDir, prefix, xRange,
+							onFaultDists, onFaultMean, // on fault
+							null, gridded, // gridded
+							null, total, // total
+							obs);
+				plot(outputDir, prefix+"_gridded_dist", xRange,
+						null, onFaultMean, // on fault
+						griddedDists, gridded, // gridded
+						null, total, // total
+						obs);
+				if (trt != TectonicRegionType.SUBDUCTION_SLAB) {
+					UncertainBoundedIncrMagFreqDist[] totalDists = getRegionalMFDFractiles(sol, MFDType.SUM, reg, fractiles);
+					plot(outputDir, prefix+"_total_dist", xRange,
+							null, onFaultMean, // on fault
+							null, gridded, // gridded
+							totalDists, total, // total
+							obs);
+				}
+			}
+		}
+		crustalTexFW.close();
+		subductionTexFW.close();
 	}
 	
 	private static void plot(File outputDir, String prefix, Range xRange,
 			UncertainBoundedIncrMagFreqDist[] onFaultDists, IncrementalMagFreqDist onFaultMean,
 			UncertainBoundedIncrMagFreqDist[] griddedDists, IncrementalMagFreqDist gridded,
+			UncertainBoundedIncrMagFreqDist[] totalDists, IncrementalMagFreqDist total,
 			UncertainBoundedIncrMagFreqDist obs) throws IOException {
 		Color onFaultColor = Colors.tab_red;
 		Color onFaultTransColor = new Color(onFaultColor.getRed(), onFaultColor.getGreen(), onFaultColor.getBlue(), 60);
 		Color obsColor = Colors.tab_green;
 		Color griddedColor = Colors.tab_blue;
 		Color griddedTransColor = new Color(griddedColor.getRed(), griddedColor.getGreen(), griddedColor.getBlue(), 60);
+		Color totalColor = Colors.tab_purple;
+		Color totalTransColor = new Color(totalColor.getRed(), totalColor.getGreen(), totalColor.getBlue(), 60);
 		
 		List<DiscretizedFunc> funcs = new ArrayList<>();
 		List<PlotCurveCharacterstics> chars = new ArrayList<>();
@@ -88,9 +248,28 @@ public class IndividualMFDPlots {
 			chars.add(new PlotCurveCharacterstics(PlotLineType.DOTTED, 2f, obsColor));
 		}
 		
-		onFaultMean.setName("On-Fault");
-		funcs.add(onFaultMean);
-		chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 3f, onFaultColor));
+		if (gridded != null) {
+			gridded.setName("Gridded");
+			funcs.add(gridded);
+			chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 3f, griddedColor));
+		}
+		
+		if (griddedDists != null) {
+			for (int i=0; i<griddedDists.length; i++) {
+				if (i == 0)
+					griddedDists[i].setName(extremaLabel);
+				else
+					griddedDists[i].setName(null);
+				funcs.add(griddedDists[i]);
+				chars.add(new PlotCurveCharacterstics(PlotLineType.SHADED_UNCERTAIN, 1f, griddedTransColor));
+			}
+		}
+		
+		if (onFaultMean != null) {
+			onFaultMean.setName("On-Fault");
+			funcs.add(onFaultMean);
+			chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 3f, onFaultColor));
+		}
 		
 		if (onFaultDists != null) {
 			for (int i=0; i<onFaultDists.length; i++) {
@@ -103,28 +282,30 @@ public class IndividualMFDPlots {
 			}
 		}
 		
-		if (gridded != null) {
-			gridded.setName("Gridded");
-			funcs.add(gridded);
-			chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 3f, griddedColor));
+		if (total != null) {
+			total.setName("Total");
+			funcs.add(total);
+			chars.add(new PlotCurveCharacterstics(PlotLineType.DASHED, 3f, totalColor));
 		}
 		
-		if (griddedDists != null) {
-			for (int i=0; i<griddedDists.length; i++) {
+		if (totalDists != null) {
+			for (int i=0; i<totalDists.length; i++) {
 				if (i == 0)
-					griddedDists[i].setName(fractileLabel);
+					totalDists[i].setName(fractileLabel);
 				else
-					griddedDists[i].setName(null);
-				funcs.add(griddedDists[i]);
-				chars.add(new PlotCurveCharacterstics(PlotLineType.SHADED_UNCERTAIN, 1f, griddedTransColor));
+					totalDists[i].setName(null);
+				funcs.add(totalDists[i]);
+				chars.add(new PlotCurveCharacterstics(PlotLineType.SHADED_UNCERTAIN, 1f, totalTransColor));
 			}
 		}
 		
-		// again on top
-		onFaultMean = onFaultMean.deepClone();
-		onFaultMean.setName(null);
-		funcs.add(onFaultMean);
-		chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 3f, onFaultColor));
+//		// again on top
+//		if (total == null && griddedDists == null && totalDists == null && onFaultMean != null) {
+//			onFaultMean = onFaultMean.deepClone();
+//			onFaultMean.setName(null);
+//			funcs.add(onFaultMean);
+//			chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 3f, onFaultColor));
+//		}
 		
 		PlotSpec plot = new PlotSpec(funcs, chars, " ", "Magnitude", "Incremental Rate (1/yr)");
 		plot.setLegendInset(true);
@@ -137,23 +318,20 @@ public class IndividualMFDPlots {
 		
 		PlotUtils.writePlots(outputDir, prefix, gp, 800, 750, true, true, false);
 	}
-	
+
 	private static double[] fractiles = {0d, 0.025, 0.16, 0.84, 0.975d, 1d};
-	private static String fractileLabel = "Sample p[0,2.5,16,84,97.5,100]";
+	private static String fractileLabel = "p[0,2.5,16,84,97.5,100]";
+	private static double[] extrema = {0d, 1d};
+	private static String extremaLabel = "Extrema";
 	
-	private static UncertainBoundedIncrMagFreqDist[] getOnFaultMFDs(FaultSystemSolution sol, int... parents) {
+	private static UncertainBoundedIncrMagFreqDist[] getOnFaultMFDFractiles(FaultSystemSolution sol, Region reg) {
 		BranchSectNuclMFDs branchSectMFDs = sol.requireModule(BranchSectNuclMFDs.class);
 		
-		List<Integer> sectIDs = new ArrayList<>();
-		if (parents != null && parents.length > 0) {
-			for (FaultSection sect : sol.getRupSet().getFaultSectionDataList())
-				if (Ints.contains(parents, sect.getParentSectionId()))
-					sectIDs.add(sect.getSectionId());
-		} else {
-			for (int i=0; i<sol.getRupSet().getNumSections(); i++)
-				sectIDs.add(i);
-		}
-		IncrementalMagFreqDist[] fractileMFDs = branchSectMFDs.calcIncrementalSectFractiles(sectIDs, fractiles);
+		double[] sectFracts = null;
+		if (reg != null)
+			sectFracts = sol.getRupSet().getFractSectsInsideRegion(reg, false);
+		
+		IncrementalMagFreqDist[] fractileMFDs = branchSectMFDs.calcIncrementalFractiles(sectFracts, fractiles);
 		
 		int numRet = fractiles.length/2;
 		UncertainBoundedIncrMagFreqDist[] ret = new UncertainBoundedIncrMagFreqDist[numRet];
@@ -163,6 +341,53 @@ public class IndividualMFDPlots {
 			ret[i] = new UncertainBoundedIncrMagFreqDist(CombinedMFDsPlot.average(lower, upper), lower, upper, null);
 		}
 		
+		return ret;
+	}
+	
+	private static UncertainBoundedIncrMagFreqDist[] getRegionalMFDFractiles(FaultSystemSolution sol,
+			MFDType type, Region reg, double[] fractiles) throws IOException {
+		BranchRegionalMFDs regMFDs = sol.requireModule(BranchRegionalMFDs.class);
+		
+		IncrementalMagFreqDist[] fractileMFDs;
+		if (reg != null) {
+			RegionsOfInterest roi = sol.getRupSet().requireModule(RegionsOfInterest.class);
+			List<Region> regions = roi.getRegions();
+			Preconditions.checkState(regions.size() == regMFDs.getNumRegions());
+			int regionIndex = -1;
+			for (int i=0; i<regions.size(); i++) {
+				if (regions.get(i).equalsRegion(reg)) {
+					regionIndex = i;
+					break;
+				}
+			}
+			Preconditions.checkState(regionIndex >= 0, "Didn't find region named %s in ROI, have %s regions", reg.getName(), regions.size());
+			fractileMFDs = regMFDs.calcRegionalIncrementalFractiles(type, regionIndex, fractiles);
+		} else {
+			fractileMFDs = regMFDs.calcTotalIncrementalFractiles(type, fractiles);
+		}
+		
+		int numRet = fractiles.length/2;
+		UncertainBoundedIncrMagFreqDist[] ret = new UncertainBoundedIncrMagFreqDist[numRet];
+		for (int i=0; i<numRet; i++) {
+			IncrementalMagFreqDist lower = fractileMFDs[i];
+			IncrementalMagFreqDist upper = fractileMFDs[fractileMFDs.length - (1 + i)];
+			ret[i] = new UncertainBoundedIncrMagFreqDist(CombinedMFDsPlot.average(lower, upper), lower, upper, null);
+		}
+		
+		return ret;
+	}
+	
+	private static IncrementalMagFreqDist sum(IncrementalMagFreqDist mfd1, IncrementalMagFreqDist mfd2) {
+		Preconditions.checkState(mfd1.getDelta() == mfd2.getDelta());
+		double min = Math.min(mfd1.getMinX(), mfd2.getMinX());
+		double max = Math.max(mfd1.getMaxX(), mfd2.getMaxX());
+		int num = (int)((max - min)/mfd1.getDelta() + 1);
+		IncrementalMagFreqDist ret = new IncrementalMagFreqDist(min, max, num);
+		Preconditions.checkState(mfd1.getDelta() == ret.getDelta());
+		for (Point2D pt : mfd1)
+			ret.set(ret.getClosestXIndex(pt.getX()), pt.getY());
+		for (Point2D pt : mfd2)
+			ret.add(ret.getClosestXIndex(pt.getX()), pt.getY());
 		return ret;
 	}
 

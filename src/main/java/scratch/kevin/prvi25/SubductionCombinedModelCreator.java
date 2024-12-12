@@ -13,6 +13,9 @@ import org.opensha.commons.logicTree.LogicTreeLevel;
 import org.opensha.commons.logicTree.LogicTreeNode;
 import org.opensha.sha.earthquake.faultSysSolution.FaultSystemSolution;
 import org.opensha.sha.earthquake.faultSysSolution.hazard.AbstractLogicTreeHazardCombiner;
+import org.opensha.sha.earthquake.faultSysSolution.modules.BranchRegionalMFDs;
+import org.opensha.sha.earthquake.faultSysSolution.modules.BranchSectNuclMFDs;
+import org.opensha.sha.earthquake.faultSysSolution.modules.BranchSectParticMFDs;
 import org.opensha.sha.earthquake.faultSysSolution.modules.FaultGridAssociations;
 import org.opensha.sha.earthquake.faultSysSolution.modules.GridSourceList;
 import org.opensha.sha.earthquake.faultSysSolution.modules.GridSourceProvider;
@@ -56,6 +59,12 @@ public class SubductionCombinedModelCreator {
 		}
 		Preconditions.checkState(!subductionBASols.isEmpty());
 		
+		FaultSystemSolution trueMean = combine(subductionBASols);
+		trueMean.write(outputFile);
+	}
+
+	public static FaultSystemSolution combine(
+			Map<PRVI25_SubductionFaultModels, FaultSystemSolution> subductionBASols) {
 		List<LogicTreeLevel<? extends LogicTreeNode>> levels = new ArrayList<>();
 		List<LogicTreeBranch<LogicTreeNode>> branches = new ArrayList<>();
 		
@@ -68,17 +77,30 @@ public class SubductionCombinedModelCreator {
 		
 		TrueMeanSolutionCreator creator = new TrueMeanSolutionCreator(tree);
 		creator.setDoGridProv(true);
+		List<BranchRegionalMFDs> regionalMFDs = new ArrayList<>();
+		List<Double> weights = new ArrayList<>();
 		for (LogicTreeBranch<?> branch : tree) {
 			FaultSystemSolution subductionSol = subductionBASols.get(branch.requireValue(PRVI25_SubductionFaultModels.class));
+			weights.add(tree.getBranchWeight(branch));
 			
 			creator.addSolution(subductionSol, branch);
+			
+			if (regionalMFDs != null) {
+				BranchRegionalMFDs regMFDs = subductionSol.getModule(BranchRegionalMFDs.class);
+				if (regMFDs == null)
+					regionalMFDs = null;
+				else
+					regionalMFDs.add(regMFDs);
+			}
 		}
 		
 		FaultSystemSolution trueMean = creator.build();
 		RegionsOfInterest roi = subductionBASols.values().iterator().next().getRupSet().getModule(RegionsOfInterest.class);
 		if (roi != null)
 			trueMean.getRupSet().addModule(roi);
-		trueMean.write(outputFile);
+		if (regionalMFDs != null)
+			trueMean.addModule(BranchRegionalMFDs.combine(regionalMFDs, weights));
+		return trueMean;
 	}
 
 }

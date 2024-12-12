@@ -1,19 +1,31 @@
 package scratch.kevin.prvi25.figures;
 
+import java.awt.BasicStroke;
 import java.awt.Color;
+import java.awt.Font;
+import java.awt.geom.Ellipse2D;
 import java.io.File;
+import java.io.FileWriter;
 import java.io.IOException;
+import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+import org.jfree.chart.annotations.XYAnnotation;
+import org.jfree.chart.annotations.XYShapeAnnotation;
+import org.jfree.chart.annotations.XYTextAnnotation;
+import org.jfree.chart.ui.RectangleAnchor;
 import org.jfree.chart.ui.RectangleEdge;
+import org.jfree.chart.ui.TextAnchor;
 import org.jfree.data.Range;
+import org.opensha.commons.data.CSVFile;
 import org.opensha.commons.data.function.DefaultXY_DataSet;
 import org.opensha.commons.data.function.XY_DataSet;
 import org.opensha.commons.geo.Location;
+import org.opensha.commons.geo.LocationList;
 import org.opensha.commons.geo.Region;
 import org.opensha.commons.gui.plot.GeographicMapMaker;
 import org.opensha.commons.gui.plot.HeadlessGraphPanel;
@@ -27,6 +39,7 @@ import org.opensha.commons.logicTree.LogicTreeBranch;
 import org.opensha.commons.logicTree.LogicTreeLevel;
 import org.opensha.commons.logicTree.LogicTreeNode;
 import org.opensha.commons.mapping.gmt.elements.GMT_CPT_Files;
+import org.opensha.commons.util.DataUtils.MinMaxAveTracker;
 import org.opensha.commons.util.cpt.CPT;
 import org.opensha.sha.earthquake.faultSysSolution.FaultSystemRupSet;
 import org.opensha.sha.earthquake.faultSysSolution.FaultSystemSolution;
@@ -39,7 +52,10 @@ import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_Crusta
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_LogicTreeBranch;
 import org.opensha.sha.faultSurface.FaultSection;
 
+import com.google.common.base.Preconditions;
+
 import net.mahdilamb.colormap.Colors;
+import scratch.kevin.latex.LaTeXUtils;
 
 public class SlipRateFigures {
 	
@@ -48,18 +64,21 @@ public class SlipRateFigures {
 	public static void main(String[] args) throws IOException {
 		File invsDir = new File("/data/kevin/nshm23/batch_inversions");
 		File figsDir = new File("/home/kevin/Documents/papers/2024_PRVI_ERF/prvi25-erf-paper/Figures");
-		File crustalOutputDir = new File(figsDir, "crustal_dm");
+		File crustalDMOutputDir = new File(figsDir, "crustal_dm");
+		File crustalSolOutputDir = new File(figsDir, "crustal_sol");
 		
 		File crustalSolDir = new File(invsDir, "2024_12_05-prvi25_crustal_branches-dmSample5x/");
 		FaultSystemSolution crustalSol = FaultSystemSolution.load(
 				new File(crustalSolDir, "results_PRVI_CRUSTAL_FM_V1p1_branch_averaged_gridded.zip"));
 		FaultSystemSolution crustalNoClassicSol = buildNoClassic(new File(crustalSolDir, "node_branch_averaged"));
 		
-		plotCrustal(crustalOutputDir, crustalSol, crustalNoClassicSol);
+		plotCrustal(crustalDMOutputDir, crustalSolOutputDir, crustalSol, crustalNoClassicSol);
 //		plotCrustal(outputDir, null);
 	}
 	
-	private static void plotCrustal(File outputDir, FaultSystemSolution sol, FaultSystemSolution solNoClassic) throws IOException {
+	private static void plotCrustal(File dmOutputDir, File solOutputDir, FaultSystemSolution sol, FaultSystemSolution solNoClassic) throws IOException {
+		Preconditions.checkState(dmOutputDir.exists() || dmOutputDir.mkdir());
+		Preconditions.checkState(solOutputDir.exists() || solOutputDir.mkdir());
 		PRVI25_CrustalFaultModels fm = PRVI25_CrustalFaultModels.PRVI_CRUSTAL_FM_V1p1;
 		
 		int numTotSects = 0;
@@ -89,7 +108,7 @@ public class SlipRateFigures {
 			String label = (target ? "Target " : "")+"Slip Rate (mm/yr)";
 			mapMaker.plotSectScalars(slipRates, slipCPT, label);
 			
-			mapMaker.plot(outputDir, prefix, " ");
+			mapMaker.plot(dmOutputDir, prefix, " ");
 			mapMaker.setCPTLocation(RectangleEdge.TOP);
 			PlotSpec linearPlot = mapMaker.buildPlot(" ");
 			mapMaker.setCPTLocation(RectangleEdge.BOTTOM);
@@ -101,7 +120,7 @@ public class SlipRateFigures {
 			
 			mapMaker.plotSectScalars(logSlipRates, logSlipCPT, "Log10 "+label);
 			
-			mapMaker.plot(outputDir, prefix+"_log", " ");
+			mapMaker.plot(dmOutputDir, prefix+"_log", " ");
 			PlotSpec logPlot = mapMaker.buildPlot(" ");
 			
 			HeadlessGraphPanel gp = PlotUtils.initHeadless();
@@ -109,7 +128,7 @@ public class SlipRateFigures {
 			gp.drawGraphPanel(List.of(linearPlot, logPlot), false, false, List.of(mapMaker.getXRange()),
 					List.of(mapMaker.getYRange(), mapMaker.getYRange()));
 			
-			PlotUtils.writePlots(outputDir, prefix+"_combined", gp, mapMaker.getDefaultPlotWidth(), true, true, true, false);
+			PlotUtils.writePlots(dmOutputDir, prefix+"_combined", gp, mapMaker.getDefaultPlotWidth(), true, true, true, false);
 		}
 
 		FaultSystemRupSet rupSet = sol.getRupSet();
@@ -128,6 +147,22 @@ public class SlipRateFigures {
 				.collect(Collectors.toMap(Map.Entry::getKey,
 						entry -> entry.getValue().stream().mapToDouble(Double::doubleValue).average().orElse(0.0)
 						));
+		List<? extends FaultSection> lowSubSects = PRVI25_CrustalDeformationModels.GEOLOGIC_LOW.build(fm);
+		List<? extends FaultSection> highSubSects = PRVI25_CrustalDeformationModels.GEOLOGIC_HIGH.build(fm);
+		List<Double> binWidths = new ArrayList<>();
+		for (int i=0; i<lowSubSects.size(); i++)
+			binWidths.add(highSubSects.get(i).getOrigAveSlipRate() - lowSubSects.get(i).getOrigAveSlipRate());
+		Map<Integer, List<Double>> binWidthsByParent = new HashMap<>();
+		for (FaultSection sect : rupSet.getFaultSectionDataList()) {
+			int parentID = sect.getParentSectionId();
+			if (!binWidthsByParent.containsKey(parentID))
+				binWidthsByParent.put(parentID, new ArrayList<>());
+			binWidthsByParent.get(parentID).add(binWidths.get(sect.getSectionId()));
+		}
+		Map<Integer, Double> averageBinWidthByParent = binWidthsByParent.entrySet().stream()
+			.collect(Collectors.toMap(Map.Entry::getKey,
+					entry -> entry.getValue().stream().mapToDouble(Double::doubleValue).average().orElse(0.0)
+					));
 		
 		for (boolean includeClassic : new boolean[] {false,true}) {
 			String prefix = "crustal_solution_slip_rates";
@@ -164,19 +199,156 @@ public class SlipRateFigures {
 //			}
 			
 			mapMaker.plotSectScalars(solSlips, slipCPT, solName+" Slip Rates (mm/yr)");
-			mapMaker.plot(outputDir, prefix, " ");
+			mapMaker.plot(solOutputDir, prefix, " ");
 			
 			CPT diffCPT = GMT_CPT_Files.DIVERGING_BAM_UNIFORM.instance().reverse().rescale(-1d, 1d);
 			CPT pDiffCPT = GMT_CPT_Files.DIVERGING_VIK_UNIFORM.instance().rescale(-20d, 20d);
 			
+			List<? extends FaultSection> sects = sol.getRupSet().getFaultSectionDataList();
+			List<XYTextAnnotation> anns = new ArrayList<>();
+			List<LocationList> arrows = new ArrayList<>();
+			Font labelFont = new Font(Font.SANS_SERIF, Font.BOLD, 14);
+			CrustalFaultNamesFigure.buildLabelsAndArrows(sects, "Bouillante Montserrat", false, new Location(16.55, -62.4),
+					labelFont, TextAnchor.CENTER_RIGHT, 0, anns, arrows);
+			CrustalFaultNamesFigure.buildLabelsAndArrows(sects, "Main Ridge 2", false, new Location(19.2, -65.9),
+					labelFont, TextAnchor.TOP_CENTER, 0d, anns, arrows);
+			CrustalFaultNamesFigure.buildLabelsAndArrows(sects, "Main Ridge 1", false, new Location(19.8, -65.1),
+					labelFont, TextAnchor.BOTTOM_LEFT, 0d, anns, arrows);
+			CrustalFaultNamesFigure.buildLabelsAndArrows(sects, "Bunce 6", false, new Location(19.4, -64.6),
+					labelFont, TextAnchor.TOP_CENTER, 0d, anns, arrows);
+			
+			mapMaker.addAnnotations(anns);
+			mapMaker.plotArrows(arrows, 6d, new Color(0, 0, 0, 180), 1f);
+			mapMaker.setFillArrowheads(true);
+			
 			mapMaker.plotSectScalars(difference(targetSlips, solSlips), diffCPT, solName+" - Target Slip Rates (mm/yr)");
-			mapMaker.plot(outputDir, prefix+"_diff", " ");
+			mapMaker.plot(solOutputDir, prefix+"_diff", " ");
 			
 			mapMaker.plotSectScalars(percentDifference(targetSlips, solSlips), pDiffCPT, solName+" vs Target Slip Rates (% Difference)");
-			mapMaker.plot(outputDir, prefix+"_pDiff", " ");
+			mapMaker.plot(solOutputDir, prefix+"_pDiff", " ");
 			
-			plotScatter(outputDir, prefix+"_scatter", targetSlips, solSlips, targetAverageSlipsByParent, solAverageSlipsByParent);
+			List<XYAnnotation> linearAnns = circleFaultAnns(targetSubSects, "Main Ridge", solSlips, targetSlips, TextAnchor.TOP_LEFT);
+			linearAnns.addAll(circleFaultAnns(targetSubSects, "Bouillante Montserrat", solSlips, targetSlips, TextAnchor.BASELINE_RIGHT));
+			
+			plotScatter(solOutputDir, prefix+"_scatter", targetSlips, solSlips,
+					targetAverageSlipsByParent, solAverageSlipsByParent, linearAnns, null);
+			
+			CSVFile<String> slipsCSV = new CSVFile<>(true);
+			
+			slipsCSV.addLine("", "Absolute slip rate misfit (mm/yr)", "Misfit percentage of rate", "Misfit percentage of bound width");
+			DecimalFormat pDF = new DecimalFormat("0.#%");
+			DecimalFormat twoDigits = new DecimalFormat("0.00");
+			
+			FileWriter slipTEX = new FileWriter(new File(solOutputDir, prefix+"_slip_misfits.tex"));
+			for (boolean subsection : new boolean[] {true,false}) {
+				List<Double> absValues = new ArrayList<>();
+				List<Double> scaledToRates = new ArrayList<>();
+				List<Double> scaledToBins = new ArrayList<>();
+				if (subsection) {
+					for (int i=0; i<solSlips.size(); i++) {
+						double solVal = solSlips.get(i);
+						double targetVal = targetSlips.get(i);
+						double binWidth = binWidths.get(i);
+						double absDiff = Math.abs(solVal - targetVal);
+						absValues.add(absDiff);
+						scaledToRates.add(absDiff/targetVal);
+						scaledToBins.add(absDiff/binWidth);
+					}
+				} else {
+					for (int parentID : solAverageSlipsByParent.keySet()) {
+						double solVal = solAverageSlipsByParent.get(parentID);
+						double targetVal = targetAverageSlipsByParent.get(parentID);
+						double binWidth = averageBinWidthByParent.get(parentID);
+						double absDiff = Math.abs(solVal - targetVal);
+						absValues.add(absDiff);
+						scaledToRates.add(absDiff/targetVal);
+						scaledToBins.add(absDiff/binWidth); 
+					}
+				}
+				for (boolean max : new boolean[] {false,true}) {
+					String label = subsection ? "Subsection" : "Fault section aggregated";
+					if (max)
+						label += ", maximum";
+					else
+						label += ", average";
+					List<String> line = new ArrayList<>();
+					line.add(label);
+					double abs, scaledToRate, scaledToBin;
+					String texPrefix = subsection ? "CrustalSubsect" : "CrustalSect";
+					if (!includeClassic)
+						texPrefix += "ExclClassic";
+					if (max) {
+						texPrefix += "Max";
+						abs = absValues.stream().mapToDouble(D->D).max().getAsDouble();
+						scaledToRate = scaledToRates.stream().mapToDouble(D->D).max().getAsDouble();
+						scaledToBin = scaledToBins.stream().mapToDouble(D->D).max().getAsDouble();
+					} else {
+						texPrefix += "Avg";
+						abs = absValues.stream().mapToDouble(D->D).average().getAsDouble();
+						scaledToRate = scaledToRates.stream().mapToDouble(D->D).average().getAsDouble();
+						scaledToBin = scaledToBins.stream().mapToDouble(D->D).average().getAsDouble();
+					}
+					texPrefix += "SlipMsft";
+					slipTEX.write(LaTeXUtils.defineValueCommand(texPrefix, twoDigits.format(abs))+"\n");
+					slipTEX.write(LaTeXUtils.defineValueCommand(texPrefix+"Pct", pDF.format(scaledToRate))+"\n");
+					slipTEX.write(LaTeXUtils.defineValueCommand(texPrefix+"BinPct", pDF.format(scaledToBin))+"\n");
+					line.add(twoDigits.format(abs));
+					line.add(pDF.format(scaledToRate));
+					line.add(pDF.format(scaledToBin));
+					slipsCSV.addLine(line);
+				}
+			}
+			slipTEX.close();
+			slipsCSV.writeToFile(new File(solOutputDir, prefix+"_slip_misfits.csv"));
 		}
+	}
+	
+	private static List<XYAnnotation> circleFaultAnns(List<? extends FaultSection> sects, String name,
+			List<Double> solSlips, List<Double> targetSlips, TextAnchor anchor) {
+		List<XYAnnotation> anns = new ArrayList<>();
+		
+		MinMaxAveTracker solTrack = new MinMaxAveTracker();
+		MinMaxAveTracker targetTrack = new MinMaxAveTracker();
+		for (FaultSection sect : sects) {
+			if (sect.getSectionName().contains(name)) {
+				solTrack.addValue(solSlips.get(sect.getSectionId()));
+				targetTrack.addValue(targetSlips.get(sect.getSectionId()));
+			}
+		}
+		Preconditions.checkState(solTrack.getNum() > 0);
+		double w = 1 + targetTrack.getLength();
+		double h = 1 + solTrack.getLength();
+		double centerX = targetTrack.getCenter();
+		double centerY = solTrack.getCenter();
+		double lowerX = centerX - 0.5*w;
+		double lowerY = centerY - 0.5*h;
+		Color color = Color.DARK_GRAY;
+		XYShapeAnnotation oval = new XYShapeAnnotation(new Ellipse2D.Double(lowerX, lowerY, w, h), new BasicStroke(3f), color);
+		anns.add(oval);
+		
+		Font annFont = new Font(Font.SANS_SERIF, Font.BOLD, 20);
+		double labelX, labelY;
+		if (anchor.isBaseline())
+			// baseline means the anchor is on the bottom which means we're above it
+			labelY = lowerY+h;
+		else if (anchor.isVerticalCenter())
+			labelY = centerY;
+		else
+			labelY = lowerY;
+		if (anchor.isLeft())
+			// anchor is left which means we're on the right
+			labelX = lowerX+w;
+		else if (anchor.isHorizontalCenter())
+			labelX = centerX;
+		else
+			labelX = lowerX;
+		XYTextAnnotation label = new XYTextAnnotation(name, labelX, labelY);
+		label.setFont(annFont);
+//		label.setPaint(color);
+		label.setTextAnchor(anchor);
+		anns.add(label);
+		
+		return anns;
 	}
 	
 	private static FaultSystemSolution buildNoClassic(File nodeSolDir) throws IOException {
@@ -221,9 +393,14 @@ public class SlipRateFigures {
 			ret.add(100d*(solution.get(i) - target.get(i))/target.get(i));
 		return ret;
 	}
-	
 	private static void plotScatter(File outputDir, String prefix, List<Double> targetSlips, List<Double> solSlips,
 			Map<Integer, Double> targetParentSlips, Map<Integer, Double> solParentSlips) throws IOException {
+		plotScatter(outputDir, prefix, targetSlips, solSlips, targetParentSlips, solParentSlips, null, null);
+	}
+	
+	private static void plotScatter(File outputDir, String prefix, List<Double> targetSlips, List<Double> solSlips,
+			Map<Integer, Double> targetParentSlips, Map<Integer, Double> solParentSlips,
+			List<? extends XYAnnotation> linearAnns, List<? extends XYAnnotation> logAnns) throws IOException {
 		List<XY_DataSet> funcs = new ArrayList<>();
 		List<PlotCurveCharacterstics> chars = new ArrayList<>();
 		
@@ -243,6 +420,7 @@ public class SlipRateFigures {
 			DefaultXY_DataSet scatter = new DefaultXY_DataSet();
 			for (int i=0; i<solSlips.size(); i++)
 				scatter.set(targetSlips.get(i), solSlips.get(i));
+			scatter.setName("Subsections");
 			
 			funcs.add(scatter);
 			chars.add(new PlotCurveCharacterstics(PlotSymbol.BOLD_CROSS, 4f, Color.BLACK));
@@ -252,6 +430,7 @@ public class SlipRateFigures {
 			DefaultXY_DataSet scatter = new DefaultXY_DataSet();
 			for (int id : solParentSlips.keySet())
 				scatter.set(targetParentSlips.get(id), solParentSlips.get(id));
+			scatter.setName("Fault Section Averages");
 			
 			funcs.add(scatter);
 			Color color = Colors.tab_blue;
@@ -260,13 +439,17 @@ public class SlipRateFigures {
 		}
 		
 		PlotSpec plot = new PlotSpec(funcs, chars, " ", "Target Slip Rate (mm/yr)", "Solution Slip Rate (mm/yr)");
+		if (solSlips != null && solParentSlips != null)
+			plot.setLegendInset(RectangleAnchor.TOP_LEFT);
 		
 		HeadlessGraphPanel gp = PlotUtils.initHeadless();
 		
+		plot.setPlotAnnotations(linearAnns);
 		gp.drawGraphPanel(plot, false, false, linearRange, linearRange);
 		
 		PlotUtils.writePlots(outputDir, prefix, gp, 800, false, true, true, false);
 		
+		plot.setPlotAnnotations(logAnns);
 		gp.drawGraphPanel(plot, true, true, logRange, logRange);
 		
 		PlotUtils.writePlots(outputDir, prefix+"_log", gp, 800, false, true, true, false);
