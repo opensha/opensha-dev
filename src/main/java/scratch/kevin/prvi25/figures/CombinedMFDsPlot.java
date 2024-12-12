@@ -23,23 +23,22 @@ import org.opensha.sha.magdist.IncrementalMagFreqDist;
 import org.opensha.sha.magdist.SummedMagFreqDist;
 import org.opensha.sha.util.TectonicRegionType;
 
+import com.google.common.base.Preconditions;
+
 import net.mahdilamb.colormap.Colors;
+
+import static scratch.kevin.prvi25.figures.PRVI_Paths.*;
 
 public class CombinedMFDsPlot {
 
 	public static void main(String[] args) throws IOException {
-		File crustalDir = new File("/home/kevin/OpenSHA/nshm23/batch_inversions/"
-				+ "2024_11_19-prvi25_crustal_branches-dmSample5x");
-		FaultSystemSolution crustalSol = FaultSystemSolution.load(new File(crustalDir,
-				"results_PRVI_CRUSTAL_FM_V1p1_branch_averaged_gridded.zip"));
+		FaultSystemSolution crustalSol = FaultSystemSolution.load(CRUSTAL_SOL_GRIDDED);
 		
-		File subductionDir = new File("/home/kevin/OpenSHA/nshm23/batch_inversions/"
-				+ "2024_11_19-prvi25_subduction_branches");
-		FaultSystemSolution subductionSol1 = FaultSystemSolution.load(new File(subductionDir,
-				"results_PRVI_SUB_FM_LARGE_branch_averaged_gridded.zip"));
-		FaultSystemSolution subductionSol2 = FaultSystemSolution.load(new File(subductionDir,
-				"results_PRVI_SUB_FM_SMALL_branch_averaged_gridded.zip"));
+		FaultSystemSolution subductionSol1 = FaultSystemSolution.load(SUBDUCTION_SOL_LARGE);
+		FaultSystemSolution subductionSol2 = FaultSystemSolution.load(SUBDUCTION_SOL_SMALL);
 		
+		File outputDir = new File(FIGURES_DIR, "combined_mfds");
+		Preconditions.checkState(outputDir.exists() || outputDir.mkdir());
 		
 		EvenlyDiscretizedFunc refMFD = FaultSysTools.initEmptyMFD(9.45);
 		
@@ -122,7 +121,6 @@ public class CombinedMFDsPlot {
 		
 		HeadlessGraphPanel gp = PlotUtils.initHeadless();
 
-		File outputDir = new File("/tmp");
 		Range yRange = new Range(1e-6, 1e1);
 		Range xRange = new Range(5d, 9.5d);
 

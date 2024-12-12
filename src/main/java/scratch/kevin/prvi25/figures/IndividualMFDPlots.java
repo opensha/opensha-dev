@@ -43,29 +43,24 @@ import net.mahdilamb.colormap.Colors;
 import scratch.kevin.latex.LaTeXUtils;
 import scratch.kevin.prvi25.SubductionCombinedModelCreator;
 
+import static scratch.kevin.prvi25.figures.PRVI_Paths.*;
+
 public class IndividualMFDPlots {
 
 	public static void main(String[] args) throws IOException {
-		File crustalDir = new File("/home/kevin/OpenSHA/nshm23/batch_inversions/"
-				+ "2024_12_05-prvi25_crustal_branches-dmSample5x");
-		FaultSystemSolution crustalSol = FaultSystemSolution.load(new File(crustalDir,
-				"results_PRVI_CRUSTAL_FM_V1p1_branch_averaged_gridded.zip"));
+		FaultSystemSolution crustalSol = FaultSystemSolution.load(CRUSTAL_SOL_GRIDDED);
 		
 		EvenlyDiscretizedFunc refMFD = FaultSysTools.initEmptyMFD(4.05, 9.55);
 		
-		File subductionDir = new File("/home/kevin/OpenSHA/nshm23/batch_inversions/"
-				+ "2024_11_19-prvi25_subduction_branches");
-		FaultSystemSolution subductionLargeSol = FaultSystemSolution.load(new File(subductionDir,
-				"results_PRVI_SUB_FM_LARGE_branch_averaged_gridded.zip"));
-		FaultSystemSolution subductionSmallSol = FaultSystemSolution.load(new File(subductionDir,
-				"results_PRVI_SUB_FM_SMALL_branch_averaged_gridded.zip"));
+		FaultSystemSolution subductionLargeSol = FaultSystemSolution.load(SUBDUCTION_SOL_LARGE);
+		FaultSystemSolution subductionSmallSol = FaultSystemSolution.load(SUBDUCTION_SOL_SMALL);
 		FaultSystemSolution subductionCombined = SubductionCombinedModelCreator.combine(
 				Map.of(PRVI25_SubductionFaultModels.PRVI_SUB_FM_LARGE, subductionLargeSol,
 						PRVI25_SubductionFaultModels.PRVI_SUB_FM_SMALL, subductionSmallSol));
 		
-		File crustalOutputDir = new File("/home/kevin/Documents/papers/2024_PRVI_ERF/prvi25-erf-paper/Figures/crustal_sol");
+		File crustalOutputDir = new File(FIGURES_DIR, "crustal_sol");
 		Preconditions.checkState(crustalOutputDir.exists() || crustalOutputDir.mkdir());
-		File subductionOutputDir = new File("/home/kevin/Documents/papers/2024_PRVI_ERF/prvi25-erf-paper/Figures/sub_sol");
+		File subductionOutputDir = new File(FIGURES_DIR, "sub_sol");
 		Preconditions.checkState(subductionOutputDir.exists() || subductionOutputDir.mkdir());
 		
 		FileWriter crustalTexFW = new FileWriter(new File(crustalOutputDir, "crustal_mfds.tex"));

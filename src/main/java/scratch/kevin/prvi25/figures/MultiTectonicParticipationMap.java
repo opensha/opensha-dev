@@ -48,27 +48,18 @@ import com.google.common.collect.Table;
 import com.google.common.collect.Table.Cell;
 import com.google.common.primitives.Doubles;
 
+import static scratch.kevin.prvi25.figures.PRVI_Paths.*;
+
 public class MultiTectonicParticipationMap {
 
 	public static void main(String[] args) throws IOException {
-		File invsDir = new File("/home/kevin/OpenSHA/nshm23/batch_inversions");
-		
-		File crustalDir = new File(invsDir, "2024_11_19-prvi25_crustal_branches-dmSample5x");
-		File subductionDir = new File(invsDir, "2024_11_19-prvi25_subduction_branches");
-		File combDir = new File(invsDir, "2024_11_19-prvi25_crustal_subduction_combined_branches");
-		
-//		File outputDir = new File(combDir, "misc_plots/combined_participation");
-		File outputDir = new File("/home/kevin/Documents/papers/2024_PRVI_ERF/prvi25-erf-paper/Figures/combined_partic_rate_maps");
+		File outputDir = new File(FIGURES_DIR, "combined_partic_rate_maps");
 		Preconditions.checkState(outputDir.exists() || outputDir.mkdirs());
 		
-		FaultSystemSolution crustalSol = FaultSystemSolution.load(new File(crustalDir,
-				"results_PRVI_CRUSTAL_FM_V1p1_branch_averaged_gridded.zip"));
-		FaultSystemSolution subSmallSol = FaultSystemSolution.load(new File(subductionDir,
-				"results_PRVI_SUB_FM_SMALL_branch_averaged_gridded.zip"));
-		FaultSystemSolution subLargeSol = FaultSystemSolution.load(new File(subductionDir,
-				"results_PRVI_SUB_FM_LARGE_branch_averaged_gridded.zip"));
-		FaultSystemSolution combSol = FaultSystemSolution.load(new File(combDir,
-				"combined_branch_averaged_solution.zip"));
+		FaultSystemSolution crustalSol = FaultSystemSolution.load(CRUSTAL_SOL_GRIDDED);
+		FaultSystemSolution subSmallSol = FaultSystemSolution.load(SUBDUCTION_SOL_SMALL);
+		FaultSystemSolution subLargeSol = FaultSystemSolution.load(SUBDUCTION_SOL_LARGE);
+		FaultSystemSolution combSol = FaultSystemSolution.load(COMBINED_SOL);
 		
 		boolean includeInterfaceGridded = false;
 		

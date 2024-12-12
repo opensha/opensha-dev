@@ -14,13 +14,12 @@ import org.opensha.sha.earthquake.rupForecastImpl.prvi25.util.PRVI25_RegionLoade
 
 import com.google.common.base.Preconditions;
 
+import static scratch.kevin.prvi25.figures.PRVI_Paths.*;
+
 public class FaultParticipationPlots {
 	
 	public static void main(String[] args) throws IOException {
-		File solFile = new File("/data/kevin/nshm23/batch_inversions/"
-				+ "2024_11_19-prvi25_crustal_branches-dmSample5x/results_PRVI_CRUSTAL_FM_V1p1_branch_averaged_gridded.zip");
-		
-		FaultSystemSolution sol = FaultSystemSolution.load(solFile);
+		FaultSystemSolution sol = FaultSystemSolution.load(CRUSTAL_SOL_SUPRA_ONLY);
 		
 		CPT cpt = GMT_CPT_Files.RAINBOW_UNIFORM.instance().rescale(-5, -1);
 		cpt.setBelowMinColor(cpt.getMinColor());
@@ -28,8 +27,8 @@ public class FaultParticipationPlots {
 		
 		double[] minMags = { 0, 6, 6.7, 7, 7.5, 7.8 };
 		
-//		File outputDir = new File("/home/kevin/Documents/papers/2023_NSHM23_Inversion/figures/partic_plot");
-		File outputDir = new File("/tmp");
+		File outputDir = new File(FIGURES_DIR, "partic_plot");
+//		File outputDir = new File("/tmp");
 		Preconditions.checkState(outputDir.exists() || outputDir.mkdir());
 		
 		GeographicMapMaker mapMaker = new RupSetMapMaker(sol.getRupSet(), PRVI25_RegionLoader.loadPRVI_ModelBroad());

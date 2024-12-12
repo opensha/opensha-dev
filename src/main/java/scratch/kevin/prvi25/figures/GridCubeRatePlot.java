@@ -52,6 +52,8 @@ import com.google.common.primitives.Doubles;
 
 import scratch.UCERF3.erf.ETAS.SeisDepthDistribution;
 
+import static scratch.kevin.prvi25.figures.PRVI_Paths.*;
+
 public class GridCubeRatePlot {
 
 	public static void main(String[] args) throws IOException {
@@ -92,7 +94,7 @@ public class GridCubeRatePlot {
 			rake = 0d;
 		}
 		
-		File outputDir = new File("/home/kevin/Documents/papers/2024_PRVI_ERF/prvi25-erf-paper/Figures/crustal_grid");
+		File outputDir = new File(FIGURES_DIR, "crustal_grid");
 		
 		Region sectReg = new Region(new Location(traceStart.lat, traceStart.lon-1d), new Location(traceEnd.lat, traceEnd.lon+1d));
 		GriddedRegion gridReg = new GriddedRegion(sectReg, gridSpacing, GriddedRegion.ANCHOR_0_0);

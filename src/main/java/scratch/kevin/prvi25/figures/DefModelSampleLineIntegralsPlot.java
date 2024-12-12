@@ -40,15 +40,17 @@ import scratch.kevin.prvi25.FaultSystemLineIntegralCalculator;
 import scratch.kevin.prvi25.FaultSystemLineIntegralCalculator.LineIntegralResult;
 import scratch.kevin.prvi25.FaultSystemLineIntegralCalculator.VectorComponent;
 
+import static scratch.kevin.prvi25.figures.PRVI_Paths.*;
+
 public class DefModelSampleLineIntegralsPlot {
 
 	public static void main(String[] args) throws IOException {
 //		File outputDir = new File("/tmp");
-		File outputDir = new File("/home/kevin/Documents/papers/2024_PRVI_ERF/prvi25-erf-paper/Figures/crustal_dm");
+		File outputDir = new File(FIGURES_DIR, "crustal_dm");
+		Preconditions.checkState(outputDir.exists() || outputDir.mkdir());
 		String prefix = "prvi_dm_sample_line_integrals";
 		
-		LogicTree<?> randTree = LogicTree.read(new File(
-				"/home/kevin/OpenSHA/nshm23/batch_inversions/2024_10_24-prvi25_crustal_branches-dmSample5x/logic_tree.json"));
+		LogicTree<?> randTree = LogicTree.read(new File(CRUSTAL_DIR, "logic_tree.json"));
 		
 		PRVI25_CrustalFaultModels fm = PRVI25_CrustalFaultModels.PRVI_CRUSTAL_FM_V1p1;
 //		VectorComponent[] components = VectorComponent.values();

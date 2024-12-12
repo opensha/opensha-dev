@@ -46,6 +46,8 @@ import com.google.common.collect.Table;
 
 import net.mahdilamb.colormap.Colors;
 
+import static scratch.kevin.prvi25.figures.PRVI_Paths.*;
+
 public class MapSourceTypeDisagg {
 	
 	enum MapType {
@@ -71,22 +73,16 @@ public class MapSourceTypeDisagg {
 	}
 
 	public static void main(String[] args) throws IOException {
-		File baseDir = new File("/home/kevin/OpenSHA/nshm23/batch_inversions/");
-		
 		EnumMap<MapType, File> dirs = new EnumMap<>(MapType.class);
 		
 		double[] periods = {0d, 1d, 5d};
 		ReturnPeriods[] rps = SolHazardMapCalc.MAP_RPS;
 		
-		String crustalDate = "2024_11_19";
-		String subductionDate = crustalDate;
-		String combinedDate = crustalDate;
-		
-		dirs.put(MapType.COMBINED, new File(baseDir, combinedDate+"-prvi25_crustal_subduction_combined_branches-ba_only"));
-		dirs.put(MapType.CRUSTAL, new File(baseDir, crustalDate+"-prvi25_crustal_branches-dmSample5x-ba_only"));
-		dirs.put(MapType.SUBDUCTION, new File(baseDir, subductionDate+"-prvi25_subduction_branches-ba_only-both_fms"));
-		dirs.put(MapType.SUBDUCTION_INTERFACE, new File(baseDir, subductionDate+"-prvi25_subduction_branches-ba_only-INTERFACE_only"));
-		dirs.put(MapType.SUBDUCTION_SLAB, new File(baseDir, subductionDate+"-prvi25_subduction_branches-ba_only-SLAB_only"));
+		dirs.put(MapType.COMBINED, new File(INV_DIR, COMBINED_DIR.getName()+"-ba_only"));
+		dirs.put(MapType.CRUSTAL, new File(INV_DIR, CRUSTAL_DIR.getName()+"-ba_only"));
+		dirs.put(MapType.SUBDUCTION, new File(INV_DIR, SUBDUCTION_DIR.getName()+"-ba_only-both_fms"));
+		dirs.put(MapType.SUBDUCTION_INTERFACE, new File(INV_DIR, SUBDUCTION_DIR.getName()+"-ba_only-INTERFACE_only"));
+		dirs.put(MapType.SUBDUCTION_SLAB, new File(INV_DIR, SUBDUCTION_DIR.getName()+"-ba_only-SLAB_only"));
 		
 		double debugPeriod = 5d;
 		ReturnPeriods debugRP = ReturnPeriods.TWO_IN_50;

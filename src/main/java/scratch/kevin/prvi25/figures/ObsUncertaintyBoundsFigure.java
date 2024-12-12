@@ -32,10 +32,12 @@ import com.google.common.base.Preconditions;
 
 import net.mahdilamb.colormap.Colors;
 
+import static scratch.kevin.prvi25.figures.PRVI_Paths.*;
+
 public class ObsUncertaintyBoundsFigure {
 
 	public static void main(String[] args) throws IOException {
-		File outputDir = new File("/home/kevin/Documents/papers/2024_PRVI_ERF/prvi25-erf-paper/Figures");
+		File outputDir = FIGURES_DIR;
 		String prefix = "obs_mfd_bounds";
 		
 		boolean incremental = false;

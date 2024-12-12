@@ -44,6 +44,8 @@ import com.itextpdf.text.pdf.PdfContentByte;
 import com.itextpdf.text.pdf.PdfTemplate;
 import com.itextpdf.text.pdf.PdfWriter;
 
+import static scratch.kevin.prvi25.figures.PRVI_Paths.*;
+
 public class LogicTreeFigureWriter extends JPanel {
 
 	public static void main(String[] args) throws IOException {
@@ -53,7 +55,8 @@ public class LogicTreeFigureWriter extends JPanel {
 		nameRemappings.put(NSHM23_ScalingRelationships.LOGA_C4p2_SQRT_LEN.getShortName(), "Sqrt-Len");
 		nameRemappings.put(PRVI25_CrustalRandomlySampledDeformationModelLevel.NAME, "Geologic Deformation Model Sample");
 		
-		File outputDir = new File("/home/kevin/Documents/papers/2024_PRVI_ERF/prvi25-erf-paper/Figures/logic_trees");
+		File outputDir = new File(FIGURES_DIR, "logic_trees");
+		Preconditions.checkState(outputDir.exists() || outputDir.mkdir());
 		
 		List<LogicTree<?>> trees = new ArrayList<>();
 		List<String> prefixes = new ArrayList<>();

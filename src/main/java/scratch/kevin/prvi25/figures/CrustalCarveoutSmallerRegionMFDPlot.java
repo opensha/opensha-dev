@@ -32,6 +32,8 @@ import org.opensha.sha.magdist.IncrementalMagFreqDist;
 
 import net.mahdilamb.colormap.Colors;
 
+import static scratch.kevin.prvi25.figures.PRVI_Paths.*;
+
 public class CrustalCarveoutSmallerRegionMFDPlot {
 
 	public static void main(String[] args) throws IOException {
@@ -47,8 +49,7 @@ public class CrustalCarveoutSmallerRegionMFDPlot {
 		names.add("Smaller Map Region");
 		prefixes.add("smaller_map_region");
 		
-		FaultSystemSolution sol = FaultSystemSolution.load(new File("/home/kevin/OpenSHA/nshm23/batch_inversions/"
-				+ "2024_10_24-prvi25_crustal_branches-dmSample5x/results_PRVI_CRUSTAL_FM_V1p1_branch_averaged_gridded.zip"));
+		FaultSystemSolution sol = FaultSystemSolution.load(CRUSTAL_SOL_SUPRA_ONLY);
 		
 		EvenlyDiscretizedFunc refMFD = FaultSysTools.initEmptyMFD(2.55, sol.getRupSet().getMaxMag());
 		

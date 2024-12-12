@@ -39,6 +39,8 @@ import org.opensha.sha.faultSurface.RuptureSurface;
 
 import com.google.common.base.Preconditions;
 
+import static scratch.kevin.prvi25.figures.PRVI_Paths.*;
+
 public class ProxyFaultRepresentationFigures {
 	
 	private enum RupType {
@@ -60,7 +62,8 @@ public class ProxyFaultRepresentationFigures {
 		ProxyFaultSectionInstances proxyModule = ProxyFaultSectionInstances.build(rupSet, 5, 5d);
 		rupSet.addModule(proxyModule);
 		
-		File outputDir = new File("/home/kevin/Documents/papers/2024_PRVI_ERF/prvi25-erf-paper/Figures/proxy_faults");
+		File outputDir = new File(FIGURES_DIR, "proxy_faults");
+		Preconditions.checkState(outputDir.exists() || outputDir.mkdir());
 		
 		boolean titles = false;
 		

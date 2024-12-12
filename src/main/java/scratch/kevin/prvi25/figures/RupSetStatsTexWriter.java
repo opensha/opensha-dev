@@ -28,14 +28,15 @@ import com.google.common.base.Preconditions;
 
 import scratch.kevin.latex.LaTeXUtils;
 
+import static scratch.kevin.prvi25.figures.PRVI_Paths.*;
+
 public class RupSetStatsTexWriter {
 
 	public static void main(String[] args) throws IOException {
-		// TODO Auto-generated method stub
 		PRVI25_InvConfigFactory factory = new PRVI25_InvConfigFactory();
 		factory.setCacheDir(new File("/home/kevin/OpenSHA/nshm23/rup_sets/cache"));
 		
-		File outputDir = new File("/home/kevin/Documents/papers/2024_PRVI_ERF/prvi25-erf-paper/Figures");
+		File outputDir = FIGURES_DIR;
 		
 		FileWriter fw = new FileWriter(new File(outputDir, "rup_set_stats.tex"));
 		

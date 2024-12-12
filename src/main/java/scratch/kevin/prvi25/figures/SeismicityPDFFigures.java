@@ -18,6 +18,8 @@ import org.opensha.commons.gui.plot.PlotCurveCharacterstics;
 import org.opensha.commons.gui.plot.PlotLineType;
 import org.opensha.commons.mapping.gmt.elements.GMT_CPT_Files;
 import org.opensha.commons.util.cpt.CPT;
+import org.opensha.sha.earthquake.faultSysSolution.FaultSystemSolution;
+import org.opensha.sha.earthquake.faultSysSolution.modules.GridSourceList;
 import org.opensha.sha.earthquake.faultSysSolution.util.FaultSysTools;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.gridded.PRVI25_GridSourceBuilder;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_DeclusteringAlgorithms;
@@ -25,26 +27,32 @@ import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_Region
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_SeisSmoothingAlgorithms;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.util.PRVI25_RegionLoader;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.util.PRVI25_RegionLoader.PRVI25_SeismicityRegions;
+import org.opensha.sha.util.TectonicRegionType;
 
 import com.google.common.base.Preconditions;
+
+import static scratch.kevin.prvi25.figures.PRVI_Paths.*;
 
 class SeismicityPDFFigures {
 
 	public static void main(String[] args) throws IOException {
-		File figsDir = new File("/home/kevin/Documents/papers/2024_PRVI_ERF/prvi25-erf-paper/Figures");
-		File crustalOutputDir = new File(figsDir, "crustal_grid");
+		File crustalOutputDir = new File(FIGURES_DIR, "crustal_grid");
 		Preconditions.checkState(crustalOutputDir.exists() || crustalOutputDir.mkdir());
-		File subOutputDir = new File(figsDir, "sub_grid");
+		File subOutputDir = new File(FIGURES_DIR, "sub_grid");
 		Preconditions.checkState(subOutputDir.exists() || subOutputDir.mkdir());
 		
 		PRVI25_DeclusteringAlgorithms avgDecluster = PRVI25_DeclusteringAlgorithms.AVERAGE;
 		PRVI25_SeisSmoothingAlgorithms avgSmooth = PRVI25_SeisSmoothingAlgorithms.AVERAGE;
 		GriddedRegion fullGrid = new GriddedRegion(PRVI25_SeismicityRegions.CRUSTAL.load(), 0.1, GriddedRegion.ANCHOR_0_0);
 		
+		GridSourceList crustalGridProv = FaultSystemSolution.load(CRUSTAL_SOL_GRIDDED).requireModule(GridSourceList.class);
+		
 		plotPDFs(crustalOutputDir, "crustal_pdf", 0, avgDecluster, avgSmooth, fullGrid,
 				"Crustal", PRVI25_SeismicityRegions.CRUSTAL);
-		plotPDFs(crustalOutputDir, "crustal_m5", 5d, avgDecluster, avgSmooth, fullGrid,
-				"Crustal", PRVI25_SeismicityRegions.CRUSTAL);
+//		plotPDFs(crustalOutputDir, "crustal_m5", 5d, avgDecluster, avgSmooth, fullGrid,
+//				"Crustal", PRVI25_SeismicityRegions.CRUSTAL);
+		plotNucleationRates(crustalOutputDir, "crustal_m5", crustalGridProv, 5d, TectonicRegionType.ACTIVE_SHALLOW, fullGrid, "Crustal", null);
+		plotNucleationRates(crustalOutputDir, "crustal_m7", crustalGridProv, 7d, TectonicRegionType.ACTIVE_SHALLOW, fullGrid, "Crustal", null);
 		
 		plotPDFs(subOutputDir, "sub_interface_pdf", 0, avgDecluster, avgSmooth, fullGrid,
 				"Interface", PRVI25_SeismicityRegions.CAR_INTERFACE, PRVI25_SeismicityRegions.MUE_INTERFACE);
@@ -110,6 +118,38 @@ class SeismicityPDFFigures {
 		mapMaker.setWriteGeoJSON(false);
 		
 		if (!plotRegions.isEmpty())
+			mapMaker.plotInsetRegions(plotRegions, new PlotCurveCharacterstics(PlotLineType.SOLID, 2f, Color.DARK_GRAY), null, 1);
+		mapMaker.plotXYZData(xyz, cpt, label);
+		
+		mapMaker.plot(outputDir, prefix, " ");
+	}
+	
+	private static void plotNucleationRates(File outputDir, String prefix, GridSourceList gridSources,
+			double minMag, TectonicRegionType trt, GriddedRegion gridReg, String name,
+			List<Region> plotRegions) throws IOException {
+		GriddedGeoDataSet xyz = new GriddedGeoDataSet(gridReg, false);
+		BitSet everSets = new BitSet(xyz.size());
+		boolean remap = gridSources.getGriddedRegion() == null || !gridReg.equalsRegion(gridSources.getGriddedRegion());
+		
+		for (int l=0; l<gridSources.getNumLocations(); l++) {
+			int index = remap ? gridReg.indexForLocation(gridSources.getLocation(l)) : l;
+			if (index < 0)
+				continue;
+			everSets.set(index);
+			xyz.set(index, gridSources.getCumulativeNucleationRate(trt, l, minMag));
+		}
+		for (int i=0; i<xyz.size(); i++)
+			if (!everSets.get(i))
+				xyz.set(i, Double.NaN);
+		xyz.log10();
+		CPT cpt = GMT_CPT_Files.SEQUENTIAL_BATLOW_UNIFORM.instance().rescale(-7, -2);
+		String label = "Log10 "+name+" M>"+oDF.format(minMag)+" Nucleation Rate";
+		cpt.setNanColor(new Color(255, 255, 255));
+		
+		GeographicMapMaker mapMaker = new GeographicMapMaker(gridReg);
+		mapMaker.setWriteGeoJSON(false);
+		
+		if (plotRegions != null && !plotRegions.isEmpty())
 			mapMaker.plotInsetRegions(plotRegions, new PlotCurveCharacterstics(PlotLineType.SOLID, 2f, Color.DARK_GRAY), null, 1);
 		mapMaker.plotXYZData(xyz, cpt, label);
 		

@@ -23,12 +23,17 @@ import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_Crusta
 import org.opensha.sha.faultSurface.FaultSection;
 import org.opensha.sha.faultSurface.FaultTrace;
 
+import com.google.common.base.Preconditions;
+
 import net.mahdilamb.colormap.Colors;
+
+import static scratch.kevin.prvi25.figures.PRVI_Paths.*;
 
 class CrustalFaultNamesFigure {
 
 	public static void main(String[] args) throws IOException {
-		File ouutputDir = new File("/home/kevin/Documents/papers/2024_PRVI_ERF/prvi25-erf-paper/Figures/crustal_fm");
+		File outputDir = new File(FIGURES_DIR, "crustal_fm");
+		Preconditions.checkState(outputDir.exists() || outputDir.mkdir());
 		
 		PRVI25_CrustalFaultModels fm = PRVI25_CrustalFaultModels.PRVI_CRUSTAL_FM_V1p1;
 		
@@ -42,7 +47,7 @@ class CrustalFaultNamesFigure {
 		
 		mapMaker.setSectTraceChar(new PlotCurveCharacterstics(PlotLineType.SOLID, 3f, Colors.tab_blue));
 		
-		mapMaker.plot(ouutputDir, "crustal_sect_names", " ");
+		mapMaker.plot(outputDir, "crustal_sect_names", " ");
 	}
 	
 	static void addStandardFaultLabels(GeographicMapMaker mapMaker, List<? extends FaultSection> sects) {

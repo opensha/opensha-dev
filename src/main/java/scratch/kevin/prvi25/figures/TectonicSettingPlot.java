@@ -37,10 +37,12 @@ import com.google.common.base.Preconditions;
 import net.mahdilamb.colormap.Colors;
 import scratch.kevin.prvi25.FaultSystemLineIntegralCalculator;
 
+import static scratch.kevin.prvi25.figures.PRVI_Paths.*;
+
 public class TectonicSettingPlot {
 
 	public static void main(String[] args) throws IOException {
-		File outputDir = new File("/home/kevin/Documents/papers/2024_PRVI_ERF/prvi25-erf-paper/Figures/");
+		File outputDir = FIGURES_DIR;
 		Preconditions.checkState(outputDir.exists() || outputDir.mkdirs());
 		
 		Region modelReg = PRVI25_RegionLoader.loadPRVI_ModelBroad();

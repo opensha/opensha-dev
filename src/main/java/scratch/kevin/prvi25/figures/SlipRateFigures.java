@@ -57,20 +57,18 @@ import com.google.common.base.Preconditions;
 import net.mahdilamb.colormap.Colors;
 import scratch.kevin.latex.LaTeXUtils;
 
+import static scratch.kevin.prvi25.figures.PRVI_Paths.*;
+
 public class SlipRateFigures {
 	
 	static Region CRUSTAL_FAULT_MAP_REG = new Region(new Location(16.4, -70.2), new Location(20.2, -61.7));;
 
 	public static void main(String[] args) throws IOException {
-		File invsDir = new File("/data/kevin/nshm23/batch_inversions");
-		File figsDir = new File("/home/kevin/Documents/papers/2024_PRVI_ERF/prvi25-erf-paper/Figures");
-		File crustalDMOutputDir = new File(figsDir, "crustal_dm");
-		File crustalSolOutputDir = new File(figsDir, "crustal_sol");
+		File crustalDMOutputDir = new File(FIGURES_DIR, "crustal_dm");
+		File crustalSolOutputDir = new File(FIGURES_DIR, "crustal_sol");
 		
-		File crustalSolDir = new File(invsDir, "2024_12_05-prvi25_crustal_branches-dmSample5x/");
-		FaultSystemSolution crustalSol = FaultSystemSolution.load(
-				new File(crustalSolDir, "results_PRVI_CRUSTAL_FM_V1p1_branch_averaged_gridded.zip"));
-		FaultSystemSolution crustalNoClassicSol = buildNoClassic(new File(crustalSolDir, "node_branch_averaged"));
+		FaultSystemSolution crustalSol = FaultSystemSolution.load(CRUSTAL_SOL_SUPRA_ONLY);
+		FaultSystemSolution crustalNoClassicSol = buildNoClassic(new File(CRUSTAL_DIR, "node_branch_averaged"));
 		
 		plotCrustal(crustalDMOutputDir, crustalSolOutputDir, crustalSol, crustalNoClassicSol);
 //		plotCrustal(outputDir, null);

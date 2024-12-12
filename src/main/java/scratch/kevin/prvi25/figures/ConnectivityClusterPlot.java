@@ -7,8 +7,6 @@ import java.util.List;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
-import org.opensha.commons.geo.Location;
-import org.opensha.commons.geo.Region;
 import org.opensha.commons.gui.plot.GeographicMapMaker;
 import org.opensha.sha.earthquake.faultSysSolution.FaultSystemRupSet;
 import org.opensha.sha.earthquake.faultSysSolution.FaultSystemSolution;
@@ -17,15 +15,18 @@ import org.opensha.sha.earthquake.faultSysSolution.reports.plots.FaultSectionCon
 import org.opensha.sha.earthquake.faultSysSolution.ruptures.util.ConnectivityCluster;
 import org.opensha.sha.faultSurface.FaultSection;
 
+import com.google.common.base.Preconditions;
 import com.google.common.base.Stopwatch;
+
+import static scratch.kevin.prvi25.figures.PRVI_Paths.*;
 
 class ConnectivityClusterPlot {
 	
 	public static void main(String[] args) throws IOException {
-		FaultSystemSolution sol = FaultSystemSolution.load(new File("/data/kevin/nshm23/batch_inversions/"
-				+ "2024_11_19-prvi25_crustal_branches-dmSample5x/results_PRVI_CRUSTAL_FM_V1p1_branch_averaged.zip"));
+		FaultSystemSolution sol = FaultSystemSolution.load(CRUSTAL_SOL_SUPRA_ONLY);
 		
-		File outputDir = new File("/home/kevin/Documents/papers/2024_PRVI_ERF/prvi25-erf-paper/Figures/crustal_fm");
+		File outputDir = new File(FIGURES_DIR, "crustal_fm");
+		Preconditions.checkState(outputDir.exists() || outputDir.mkdir());
 		
 		FaultSystemRupSet rupSet = sol.getRupSet();
 		if (!rupSet.hasModule(ConnectivityClusters.class)) {

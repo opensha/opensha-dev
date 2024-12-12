@@ -36,6 +36,8 @@ import com.google.common.base.Preconditions;
 
 import scratch.kevin.prvi25.FaultSystemLineIntegralCalculator;
 
+import static scratch.kevin.prvi25.figures.PRVI_Paths.*;
+
 public class PRVI_SubductionSubSectPlots {
 	
 	public static Region plotReg = new Region(new Location(16.5, -71.5), new Location(21, -60));
@@ -50,7 +52,7 @@ public class PRVI_SubductionSubSectPlots {
 		PRVI25_InvConfigFactory factory = new PRVI25_InvConfigFactory();
 		
 //		File outputDir = new File("/home/kevin/Documents/papers/2024_PRVI_Subduction/figures/fault_model");
-		File outputDir = new File("/home/kevin/Documents/papers/2024_PRVI_ERF/prvi25-erf-paper/Figures/sub_fm");
+		File outputDir = new File(FIGURES_DIR, "sub_fm");
 		Preconditions.checkState(outputDir.exists() || outputDir.mkdir());
 		
 		Font font = new Font(Font.SANS_SERIF, Font.BOLD, 24);

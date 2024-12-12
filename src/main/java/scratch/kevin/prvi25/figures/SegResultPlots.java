@@ -21,15 +21,15 @@ import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_Segmen
 
 import com.google.common.base.Preconditions;
 
+import static scratch.kevin.prvi25.figures.PRVI_Paths.*;
+
 class SegResultPlots {
 	
 	public static void main(String[] args) throws IOException {
-		File outputDir = new File("/home/kevin/Documents/papers/2024_PRVI_ERF/prvi25-erf-paper/Figures/crustal_sol");
+		File outputDir = new File(FIGURES_DIR, "crustal_sol");
 		Preconditions.checkState(outputDir.exists() || outputDir.mkdir());
 		
-		FaultSystemSolution sol = FaultSystemSolution.load(
-				new File("/data/kevin/nshm23/batch_inversions/2024_12_05-prvi25_crustal_branches-dmSample5x/"
-						+ "results_PRVI_CRUSTAL_FM_V1p1_branch_averaged.zip"));
+		FaultSystemSolution sol = FaultSystemSolution.load(CRUSTAL_SOL_SUPRA_ONLY);
 		
 		ClusterRuptures cRups = sol.getRupSet().requireModule(ClusterRuptures.class);
 		PlausibilityConfiguration config = sol.getRupSet().requireModule(PlausibilityConfiguration.class);
