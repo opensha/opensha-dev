@@ -158,7 +158,7 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 		int samplingBranchCountMultiplier = 1;
 
 		String dirName = new SimpleDateFormat("yyyy_MM_dd").format(new Date());
-//		String dirName = "2024_11_19";
+//		String dirName = "2024_12_12";
 		String dirSuffix = null;
 		
 		/*
@@ -653,7 +653,7 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 		
 //		dirName += "-proxyGriddedTests";
 		
-//		Class<? extends InversionConfigurationFactory> factoryClass = PRVI25_InvConfigFactory.class;
+		Class<? extends InversionConfigurationFactory> factoryClass = PRVI25_InvConfigFactory.class;
 		
 //		Class<? extends InversionConfigurationFactory> factoryClass = PRVI25_InvConfigFactory.GriddedUseM1Bounds.class;
 //		dirName += "-grid_bounds_m1";
@@ -673,8 +673,8 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 //		Class<? extends InversionConfigurationFactory> factoryClass = PRVI25_InvConfigFactory.GriddedForceSlab2Depths.class;
 //		dirName += "-gridded_use_slab2";
 		
-		Class<? extends InversionConfigurationFactory> factoryClass = PRVI25_InvConfigFactory.NoProxyLengthLimit.class;
-		dirName += "-no_proxy_len_limit";
+//		Class<? extends InversionConfigurationFactory> factoryClass = PRVI25_InvConfigFactory.NoProxyLengthLimit.class;
+//		dirName += "-no_proxy_len_limit";
 		
 		if (!factoryClass.equals(PRVI25_InvConfigFactory.class)) {
 			// try instantiate it to make sure we get any static modifiers that might change branch weights

@@ -100,7 +100,7 @@ public class CrustalSubductionTrueMeanCreator {
 				subductionBASols.put(fm, sol);
 			}
 		}
-		Preconditions.checkState(!subductionBASols.isEmpty());
+		Preconditions.checkState(subductionBASols.size() == 2);
 		
 		List<LogicTreeLevel<? extends LogicTreeNode>> levels = new ArrayList<>();
 		List<LogicTreeBranch<LogicTreeNode>> branches = new ArrayList<>();
