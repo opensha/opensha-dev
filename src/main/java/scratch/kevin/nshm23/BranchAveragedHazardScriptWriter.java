@@ -230,8 +230,7 @@ public class BranchAveragedHazardScriptWriter {
 			argz += " --region "+regPath;
 			if (noMFDs)
 				argz += " --no-mfds";
-			if (vs30 != null)
-				argz += " --vs30 "+vs30.floatValue();
+			
 			argz += " --gridded-seis "+bgOp.name();
 			if (gmms != null)
 				for (AttenRelRef gmm : gmms)
@@ -244,6 +243,8 @@ public class BranchAveragedHazardScriptWriter {
 					argz += (float)periods[p];
 				}
 			}
+			if (vs30 != null)
+				argz += " --vs30 "+vs30.floatValue();
 			if (supersample)
 				argz += " --supersample";
 			if (sigmaTrunc != null)

@@ -19,9 +19,13 @@ import org.opensha.commons.hpc.pbs.USC_CARC_ScriptWriter;
 import org.opensha.commons.logicTree.LogicTree;
 import org.opensha.commons.logicTree.LogicTreeBranch;
 import org.opensha.commons.logicTree.LogicTreeLevel;
+import org.opensha.commons.logicTree.LogicTreeLevel.FileBackedLevel;
 import org.opensha.commons.logicTree.LogicTreeNode;
+import org.opensha.commons.logicTree.LogicTreeNode.FileBackedNode;
+import org.opensha.sha.earthquake.faultSysSolution.FaultSystemSolution;
 import org.opensha.sha.earthquake.faultSysSolution.hazard.mpj.MPJ_LogicTreeHazardCalc;
 import org.opensha.sha.earthquake.faultSysSolution.hazard.mpj.MPJ_SiteLogicTreeHazardCurveCalc;
+import org.opensha.sha.earthquake.faultSysSolution.modules.SolutionLogicTree;
 import org.opensha.sha.earthquake.param.IncludeBackgroundOption;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_CrustalFaultModels;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_LogicTreeBranch;
@@ -31,47 +35,60 @@ import com.google.common.base.Preconditions;
 
 import edu.usc.kmilner.mpj.taskDispatch.MPJTaskCalculator;
 
+import static scratch.kevin.prvi25.figures.PRVI_Paths.*;
+
 public class GMMLogicTreeWriter {
 
 	public static void main(String[] args) throws IOException {
-		File baseDir = new File("/home/kevin/OpenSHA/nshm23/batch_inversions");
-		
 		String jobSuffix = "";
 		String outputSuffix = "";
+		String dirSuffix = "";
 		String forceInputFileName = null;
 		String logicTreeOutputName = null;
 		boolean combineOnly = false;
 		
 //		GriddedRegion gridReg = new GriddedRegion(PRVI25_RegionLoader.loadPRVI_ModelBroad(), 0.1, GriddedRegion.ANCHOR_0_0);
-		GriddedRegion gridReg = new GriddedRegion(PRVI25_RegionLoader.loadPRVI_MapExtents(), 0.025, GriddedRegion.ANCHOR_0_0);
+//		GriddedRegion gridReg = new GriddedRegion(PRVI25_RegionLoader.loadPRVI_MapExtents(), 0.025, GriddedRegion.ANCHOR_0_0);
+		GriddedRegion gridReg = new GriddedRegion(PRVI25_RegionLoader.loadPRVI_Tight(), 0.025, GriddedRegion.ANCHOR_0_0);
 		System.out.println("Region has "+gridReg.getNodeCount()+" nodes");
+		
+		Double vs30 = null;
+		
+		vs30 = 760d; dirSuffix = "-vs760";
+		Double sigmaTrunc = 3d;
+		boolean supersample = true;
+		double[] periods = { 0d, 0.2d, 1d, 5d };
 		
 		/*
 		 * Active crustal
+		 *
+		 * do supra-seis and then include
 		 */
-		List<LogicTreeLevel<? extends LogicTreeNode>> gmmLevels = PRVI25_LogicTreeBranch.levelsCrustalGMM;
-		File sourceDir = new File(baseDir, "2024_08_16-prvi25_crustal_branches-dmSample5x");
-		File outputDir = new File(baseDir, sourceDir.getName()+"-gmTreeCalcs");
-		// supra-seis only
-//		File sourceTreeFile = new File(sourceDir, "logic_tree.json");
-//		int mins = 1440;
-//		IncludeBackgroundOption bgOp = IncludeBackgroundOption.EXCLUDE;
-		// including gridded
-		int mins = 1440*5;
-		File sourceTreeFile = new File(sourceDir, "logic_tree_full_gridded.json");
-//		File sourceTreeFile = new File(sourceDir, "logic_tree_full_gridded_sampled.json"); jobSuffix = "_sampled";
-		IncludeBackgroundOption bgOp = IncludeBackgroundOption.INCLUDE;
+//		List<LogicTreeLevel<? extends LogicTreeNode>> gmmLevels = PRVI25_LogicTreeBranch.levelsCrustalGMM;
+//		File sourceDir = CRUSTAL_DIR;
+//		File outputDir = new File(sourceDir.getParentFile(), sourceDir.getName()+"-gmTreeCalcs"+dirSuffix);
+//		// supra-seis only
+////		File sourceTreeFile = new File(sourceDir, "logic_tree.json");
+////		int mins = 1440;
+////		IncludeBackgroundOption bgOp = IncludeBackgroundOption.EXCLUDE;
+//		// including gridded
+//		int mins = 1440*5;
+//		File sourceTreeFile = new File(sourceDir, "logic_tree_full_gridded.json");
+////		File sourceTreeFile = new File(sourceDir, "logic_tree_full_gridded_sampled.json"); jobSuffix = "_sampled";
+//		IncludeBackgroundOption bgOp = IncludeBackgroundOption.INCLUDE;
 		
 		/*
 		 * Interface
+		 * 
+		 * do supra-seis, then gridded-only, then combine
 		 */
 //		List<LogicTreeLevel<? extends LogicTreeNode>> gmmLevels = PRVI25_LogicTreeBranch.levelsInterfaceGMM;
-//		File sourceDir = new File(baseDir, "2024_08_16-prvi25_subduction_branches");
-//		File outputDir = new File(baseDir, sourceDir.getName()+"-gmTreeCalcs");
+//		File sourceDir = SUBDUCTION_DIR;
+//		File outputDir = new File(sourceDir.getParentFile(), sourceDir.getName()+"-gmTreeCalcs"+dirSuffix);
 //		// supra-seis only
-//		File sourceTreeFile = new File(sourceDir, "logic_tree.json");
-//		int mins = 1440;
-//		IncludeBackgroundOption bgOp = IncludeBackgroundOption.EXCLUDE;
+////		File sourceTreeFile = new File(sourceDir, "logic_tree.json");
+////		int mins = 1440;
+////		IncludeBackgroundOption bgOp = IncludeBackgroundOption.EXCLUDE;
 //		// interface gridded only
 ////		int mins = 1440;
 ////		File sourceTreeFile = new File(sourceDir, "logic_tree_gridded_only.json");
@@ -81,21 +98,21 @@ public class GMMLogicTreeWriter {
 ////		jobSuffix = "_interface";
 ////		outputSuffix = jobSuffix;
 //		// interface both (combine only)
-////		combineOnly = true;
-////		int mins = 1440;
-////		forceInputFileName = "results_full_gridded_interface_only.zip";
-////		File sourceTreeFile = new File(sourceDir, "logic_tree_full_gridded.json");
-////		logicTreeOutputName = "logic_tree_full_gridded_interface_only.json";
-////		IncludeBackgroundOption bgOp = IncludeBackgroundOption.INCLUDE;
-////		jobSuffix = "_interface";
-////		outputSuffix = jobSuffix;
+//		combineOnly = true;
+//		int mins = 1440;
+//		forceInputFileName = "results_full_gridded_interface_only.zip";
+//		File sourceTreeFile = new File(sourceDir, "logic_tree_full_gridded.json");
+//		logicTreeOutputName = "logic_tree_full_gridded_interface_only.json";
+//		IncludeBackgroundOption bgOp = IncludeBackgroundOption.INCLUDE;
+//		jobSuffix = "_interface";
+//		outputSuffix = jobSuffix;
 		
 		/*
 		 * Slab
 		 */
 //		List<LogicTreeLevel<? extends LogicTreeNode>> gmmLevels = PRVI25_LogicTreeBranch.levelsSlabGMM;
-//		File sourceDir = new File(baseDir, "2024_08_16-prvi25_subduction_branches");
-//		File outputDir = new File(baseDir, sourceDir.getName()+"-gmTreeCalcs");
+//		File sourceDir = SUBDUCTION_DIR;
+//		File outputDir = new File(sourceDir.getParentFile(), sourceDir.getName()+"-gmTreeCalcs"+dirSuffix);
 //		// always slab gridded only
 //		int mins = 1440;
 //		File sourceTreeFile = new File(sourceDir, "logic_tree_gridded_only.json");
@@ -105,6 +122,32 @@ public class GMMLogicTreeWriter {
 //		jobSuffix = "_slab";
 //		outputSuffix = jobSuffix;
 		
+		/*
+		 * Branch averaged (GMM-only)
+		 */
+		List<LogicTreeLevel<? extends LogicTreeNode>> gmmLevels = PRVI25_LogicTreeBranch.levelsCombinedGMM;
+		File sourceDir = COMBINED_DIR;
+		File outputDir = new File(sourceDir.getParentFile(), sourceDir.getName()+"-ba_only-gmTreeCalcs"+dirSuffix);
+		// write out a SLT that only contains that node
+		File sourceTreeFile = new File(outputDir, "fake_erf_logic_tree.json");
+		FileBackedLevel fakeLevel = new FileBackedLevel("ERF Model", "ERF",
+				List.of(new FileBackedNode("Branch Averaged ERF", "BranchAveragedERF", 1d, "BA_ERF")));
+		LogicTree<?> tempTree = LogicTree.buildExhaustive(List.of(fakeLevel), true);
+		Preconditions.checkState(tempTree.size() == 1);
+		File sourceFile = new File(outputDir, "fake_erf_slt.zip");
+		SolutionLogicTree.FileBuilder builder = new SolutionLogicTree.FileBuilder(sourceFile);
+		builder.setSerializeGridded(true);
+		builder.solution(FaultSystemSolution.load(COMBINED_SOL), tempTree.getBranch(0));
+		builder.close();
+		forceInputFileName = sourceFile.getName();
+		tempTree.write(sourceTreeFile);
+		logicTreeOutputName = "logic_tree.json";
+		sourceDir = outputDir;
+		int mins = 1440;
+		IncludeBackgroundOption bgOp = IncludeBackgroundOption.INCLUDE;
+		
+		
+		// FOR ALL
 		LogicTree<?> erfTree = LogicTree.read(sourceTreeFile);
 		System.out.println("Read "+erfTree.size()+" ERF branches");
 		
@@ -208,6 +251,20 @@ public class GMMLogicTreeWriter {
 		if (combineOnly)
 			argz += " --combine-only";
 		argz += " --region "+dirPath+"/"+gridRegFile.getName();
+		if (vs30 != null)
+			argz += " --vs30 "+vs30.floatValue();
+		if (supersample)
+			argz += " --supersample";
+		if (sigmaTrunc != null)
+			argz += " --gmm-sigma-trunc-one-sided "+sigmaTrunc.floatValue();
+		if (periods != null) {
+			argz += " --periods ";
+			for (int p=0; p<periods.length; p++) {
+				if (p > 0)
+					argz += ",";
+				argz += (float)periods[p];
+			}
+		}
 		argz += " "+MPJTaskCalculator.argumentBuilder().maxDispatch(100).threads(remoteTotalThreads).build();
 		List<String> script = mpjWrite.buildScript(MPJ_LogicTreeHazardCalc.class.getName(), argz);
 		pbsWrite.writeScript(new File(localDir, mapScriptName), script, mins, nodes, remoteTotalThreads, queue);
@@ -232,6 +289,20 @@ public class GMMLogicTreeWriter {
 		argz += " --output-dir "+dirPath+"/"+outputFilePrefix+"_sites"+outputSuffix;
 		argz += " --sites-file "+dirPath+"/"+localSitesFile.getName();
 		argz += " --gridded-seis "+bgOp.name();
+		if (vs30 != null)
+			argz += " --vs30 "+vs30.floatValue();
+		if (supersample)
+			argz += " --supersample";
+		if (sigmaTrunc != null)
+			argz += " --gmm-sigma-trunc-one-sided "+sigmaTrunc.floatValue();
+		if (periods != null) {
+			argz += " --periods ";
+			for (int p=0; p<periods.length; p++) {
+				if (p > 0)
+					argz += ",";
+				argz += (float)periods[p];
+			}
+		}
 		argz += " "+MPJTaskCalculator.argumentBuilder().minDispatch(1).maxDispatch(10).threads(remoteTotalThreads).build();
 		script = mpjWrite.buildScript(MPJ_SiteLogicTreeHazardCurveCalc.class.getName(), argz);
 		pbsWrite.writeScript(new File(localDir, siteScriptName), script, mins, nodes, remoteTotalThreads, queue);

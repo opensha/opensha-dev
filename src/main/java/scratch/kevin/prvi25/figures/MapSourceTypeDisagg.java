@@ -75,14 +75,17 @@ public class MapSourceTypeDisagg {
 	public static void main(String[] args) throws IOException {
 		EnumMap<MapType, File> dirs = new EnumMap<>(MapType.class);
 		
-		double[] periods = {0d, 1d, 5d};
+		double[] periods = {0d, 0.2d, 1d, 5d};
 		ReturnPeriods[] rps = SolHazardMapCalc.MAP_RPS;
 		
-		dirs.put(MapType.COMBINED, new File(INV_DIR, COMBINED_DIR.getName()+"-ba_only"));
-		dirs.put(MapType.CRUSTAL, new File(INV_DIR, CRUSTAL_DIR.getName()+"-ba_only"));
-		dirs.put(MapType.SUBDUCTION, new File(INV_DIR, SUBDUCTION_DIR.getName()+"-ba_only-both_fms"));
-		dirs.put(MapType.SUBDUCTION_INTERFACE, new File(INV_DIR, SUBDUCTION_DIR.getName()+"-ba_only-INTERFACE_only"));
-		dirs.put(MapType.SUBDUCTION_SLAB, new File(INV_DIR, SUBDUCTION_DIR.getName()+"-ba_only-SLAB_only"));
+//		String suffix = "-vs760";
+		String suffix = "-vs260";
+		
+		dirs.put(MapType.COMBINED, new File(INV_DIR, COMBINED_DIR.getName()+"-ba_only"+suffix));
+		dirs.put(MapType.CRUSTAL, new File(INV_DIR, CRUSTAL_DIR.getName()+"-ba_only"+suffix));
+		dirs.put(MapType.SUBDUCTION, new File(INV_DIR, SUBDUCTION_DIR.getName()+"-ba_only-both_fms"+suffix));
+		dirs.put(MapType.SUBDUCTION_INTERFACE, new File(INV_DIR, SUBDUCTION_DIR.getName()+"-ba_only-INTERFACE_only"+suffix));
+		dirs.put(MapType.SUBDUCTION_SLAB, new File(INV_DIR, SUBDUCTION_DIR.getName()+"-ba_only-SLAB_only"+suffix));
 		
 		double debugPeriod = 5d;
 		ReturnPeriods debugRP = ReturnPeriods.TWO_IN_50;

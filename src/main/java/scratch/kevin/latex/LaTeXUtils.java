@@ -98,8 +98,8 @@ public class LaTeXUtils {
 		return numberExpFormat(numberToString(DataUtils.roundSigFigs(number.doubleValue(), sigFigs)));
 	}
 	
-	public static String numberExpFormatFixedDecimal(Number number, int scale) {
-		return numberExpFormat(numberToString(DataUtils.roundFixed(number.doubleValue(), scale)));
+	public static String numberExpFormatFixedDecimal(Number number, int decimalPlaces) {
+		return numberExpFormat(numberToString(DataUtils.roundFixed(number.doubleValue(), decimalPlaces)));
 	}
 	
 	private static synchronized String numberToString(Number number) {
@@ -108,7 +108,7 @@ public class LaTeXUtils {
 			str = nonExpOptionalDF.format(number);
 		return str;
 	}
-	
+
 	private static final DecimalFormat nonExpOptionalDF = new DecimalFormat("0.###########");
 	
 	public static String numberExpFormat(String number) {
@@ -130,12 +130,30 @@ public class LaTeXUtils {
 		// Return the formatted LaTeX string
 		return String.format("$%s \\times 10^{%s}$", base, exponent);
 	}
+	
+	private static final DecimalFormat groupedIntDF = new DecimalFormat("0");
+	static {
+		groupedIntDF.setGroupingUsed(true);
+		groupedIntDF.setGroupingSize(3);
+	}
+	
+	public static String groupedIntNumber(Number number) {
+		return groupedIntDF.format(number);
+	}
+	
+	private static final DecimalFormat percentDF = new DecimalFormat("0.##########%");
+	
+	public static String numberAsPercent(Number number, int decimalPlaces) {
+		return numberExpFormatFixedDecimal(number, decimalPlaces)+LATEX_ESCAPE_MAP.get('%');
+	}
 
 	public static void main(String[] args) {
 		String raw = "Special characters: & % $ # _ { } ~ ^ \\ and \\& already escaped.";
 		String escaped = escapeLaTeX(raw);
 		System.out.println("Original: " + raw);
 		System.out.println("Escaped: " + escaped);
+		
+		System.out.println(numberAsPercent(100d*0.505/1.3, 0));
 		
 		System.out.println(defineValueCommand("SlipRateExample", "33%"));
 		System.out.println(defineValueCommand("SlipRateExample", "\\expnum("+numberExpFormat(3.14)+")", false));

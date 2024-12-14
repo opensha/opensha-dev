@@ -87,8 +87,8 @@ public class RupSetStatsTexWriter {
 		return branch;
 	}
 	
-	private static final DecimalFormat magDF = new DecimalFormat("0.0");
-	private static final DecimalFormat groupedIntDF = new DecimalFormat("0");
+	static final DecimalFormat magDF = new DecimalFormat("0.0");
+	static final DecimalFormat groupedIntDF = new DecimalFormat("0");
 	static {
 		groupedIntDF.setGroupingUsed(true);
 		groupedIntDF.setGroupingSize(3);

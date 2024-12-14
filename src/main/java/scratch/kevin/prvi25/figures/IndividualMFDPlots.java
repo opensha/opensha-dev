@@ -164,24 +164,128 @@ public class IndividualMFDPlots {
 				}
 				
 				if (trt != TectonicRegionType.SUBDUCTION_SLAB) {
+					if (r > 0)
+						texFW.write("% "+seisReg.name()+"subset "+r+"\n");
+					else
+						texFW.write("% "+seisReg.name()+"\n");
+					double obsM5 = obs.getCumRate(obs.getClosestXIndex(5.01));
 					texFW.write(LaTeXUtils.defineValueCommand(texPrefix+"ObsMFiveRate",
-							LaTeXUtils.numberExpFormatSigFigs(obs.getCumRate(obs.getClosestXIndex(5.01)), 3), false)+"\n");
+							LaTeXUtils.numberExpFormatSigFigs(obsM5, 3), false)+"\n");
+					if (r > 0) {
+						UncertainBoundedIncrMagFreqDist origObs = PRVI25_RegionalSeismicity.getBounded(seisReg, refMFD, xRange.getUpperBound()+0.1);
+						double origM5 = origObs.getCumRate(origObs.getClosestXIndex(5.01));
+						texFW.write(LaTeXUtils.defineValueCommand(texPrefix+"ObsMFivePercent",
+								LaTeXUtils.numberAsPercent(100d*obsM5/origM5, 0), false)+"\n");
+					}
 					texFW.write(LaTeXUtils.defineValueCommand(texPrefix+"SupraRate",
 							LaTeXUtils.numberExpFormatSigFigs(onFaultMean.calcSumOfY_Vals(), 3), false)+"\n");
-					texFW.write(LaTeXUtils.defineValueCommand(texPrefix+"SupraRI",
-							LaTeXUtils.numberExpFormatFixedDecimal(1d/onFaultMean.calcSumOfY_Vals(), 1), false)+"\n");
-					if (trt == TectonicRegionType.ACTIVE_SHALLOW) {
-						texFW.write(LaTeXUtils.defineValueCommand(texPrefix+"MSixFiveRate",
-								LaTeXUtils.numberExpFormatSigFigs(onFaultMean.getCumRate(onFaultMean.getClosestXIndex(6.501)), 3), false)+"\n");
-						texFW.write(LaTeXUtils.defineValueCommand(texPrefix+"MSixFiveRI",
-								LaTeXUtils.numberExpFormatFixedDecimal(1d/onFaultMean.getCumRate(onFaultMean.getClosestXIndex(6.501)), 1), false)+"\n");
-					} else {
-						texFW.write(LaTeXUtils.defineValueCommand(texPrefix+"MEightRate",
-								LaTeXUtils.numberExpFormatSigFigs(onFaultMean.getCumRate(onFaultMean.getClosestXIndex(8.01)), 3), false)+"\n");
-						texFW.write(LaTeXUtils.defineValueCommand(texPrefix+"MEightRI",
-								LaTeXUtils.numberExpFormatFixedDecimal(1d/onFaultMean.getCumRate(onFaultMean.getClosestXIndex(8.01)), 1), false)+"\n");
+					double onFaultRI = 1d/onFaultMean.calcSumOfY_Vals();
+					if (onFaultRI > 5d)
+						texFW.write(LaTeXUtils.defineValueCommand(texPrefix+"SupraRI",
+								LaTeXUtils.groupedIntNumber(onFaultRI), false)+"\n");
+					else
+						texFW.write(LaTeXUtils.defineValueCommand(texPrefix+"SupraRI",
+								LaTeXUtils.numberExpFormatFixedDecimal(onFaultRI, 1), false)+"\n");
+					if (obs != null) {
+						System.out.println("Looking for "+seisReg+" observed MFD exceedances (r="+r+")");
+						for (boolean cml : new boolean[] {false,true}) {
+							// find the first and last magnitude where the on-fault rate exceeds the observed rate
+							EvenlyDiscretizedFunc onFunc = cml ? onFaultMean.getCumRateDistWithOffset() : onFaultMean;
+							for (boolean upper : new boolean[] {false,true}) {
+								EvenlyDiscretizedFunc obsFunc;
+								if (upper) {
+									if (cml) {
+										System.out.println("Cumulative, Upper");
+										obsFunc = obs.getUpper().getCumRateDistWithOffset();
+									} else {
+										System.out.println("Incremental, Upper");
+										obsFunc = obs.getUpper();
+									}
+								} else {
+									if (cml) {
+										System.out.println("Cumulative, Preferred");
+										obsFunc = obs.getCumRateDistWithOffset();
+									} else {
+										System.out.println("Incremental, Preferred");
+										obsFunc = obs;
+									}
+								}
+								int firstExceedanceIndex = -1;
+								int lastExceedanceIndex = -1;
+								for (int i=0; i<onFunc.size(); i++) {
+									double mag = onFunc.getX(i);
+									int obsX = obsFunc.getClosestXIndex(mag);
+									if ((float)mag == (float)obsFunc.getX(obsX)) {
+										double onFaultRate = onFunc.getY(i);
+										double obsRate = obsFunc.getY(i);
+										if (onFaultRate > obsRate) {
+											if (!cml || onFaultMean.getY(i) > 0)
+												System.out.println("M"+(float)mag+"\tfault="+(float)onFaultRate
+														+"\texceeds\tobs="+(float)obsRate
+														+"\tdiff="+(float)(onFaultRate-obsRate)
+														+"\tpDiff="+(float)(100d*(onFaultRate-obsRate)/obsRate));
+											if (firstExceedanceIndex < 0)
+												firstExceedanceIndex = i;
+											lastExceedanceIndex = i;
+										}
+									} else {
+										System.out.println("Mag not matched: "+(float)mag+"\tclosest="+(float)obsFunc.getX(obsX));
+									}
+								}
+								if (firstExceedanceIndex >= 0) {
+									// we have an exceedance
+									double firstMag = onFunc.getX(firstExceedanceIndex);
+									if (!cml)
+										// move to the start of the bin
+										firstMag -= 0.5*onFunc.getDelta();
+									String texMagPrefix = texPrefix;
+									if (cml)
+										texMagPrefix += "Cml";
+									else
+										texMagPrefix += "Incr";
+									texMagPrefix += "ObsExceed";
+									if (upper)
+										texMagPrefix += "Upper";
+									texFW.write(LaTeXUtils.defineValueCommand(texMagPrefix+"FirstMag",
+											RupSetStatsTexWriter.magDF.format(firstMag), false)+"\n");
+									if (!cml && lastExceedanceIndex > firstExceedanceIndex
+											// make sure we went below, didn't just run out of ruptures
+											&& onFaultMean.getCumRate(lastExceedanceIndex) > 0) {
+										// it exceeded for multiple magnitudes
+										double lastMag = onFunc.getX(lastExceedanceIndex);
+										if (!cml)
+											// move to the end of the bin
+											lastMag += 0.5*onFunc.getDelta();
+										texFW.write(LaTeXUtils.defineValueCommand(texMagPrefix+"LastMag",
+												RupSetStatsTexWriter.magDF.format(lastMag), false)+"\n");
+									}
+								}
+							}
+						}
 					}
+					List<Double> mags;
+					List<String> magNames;
 					
+					if (trt == TectonicRegionType.ACTIVE_SHALLOW) {
+						mags = List.of(6.5, 7d, 7.5);
+						magNames = List.of("SixFive", "Seven", "SevenFive");
+					} else {
+						mags = List.of(8d, 8.5, 9d);
+						magNames = List.of("Eight", "EightFive", "Nine");
+					}
+					for (int m=0; m<mags.size(); m++) {
+						double mag = mags.get(m);
+						String magName = magNames.get(m);
+						// round up as they're incremental and we want to make sure it maps to the bin that lies above
+						double cmlRate = onFaultMean.getCumRate(onFaultMean.getClosestXIndex(mag+0.01));
+						texFW.write(LaTeXUtils.defineValueCommand(texPrefix+"M"+magName+"Rate",
+								LaTeXUtils.numberExpFormatSigFigs(cmlRate, 3), false)+"\n");
+						double cmlRI = 1d/cmlRate;
+						texFW.write(LaTeXUtils.defineValueCommand(texPrefix+"M"+magName+"RI",
+//								LaTeXUtils.numberExpFormatFixedDecimal(cmlRI, 0), false)+"\n");
+								LaTeXUtils.groupedIntNumber(cmlRI), false)+"\n");
+					}
+					texFW.write("\n");
 				}
 				
 				IncrementalMagFreqDist total = null;

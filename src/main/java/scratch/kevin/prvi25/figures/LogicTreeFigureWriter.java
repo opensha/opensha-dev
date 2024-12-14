@@ -33,6 +33,7 @@ import org.opensha.commons.util.ExceptionUtils;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_ScalingRelationships;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.PRVI25_InvConfigFactory;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_CrustalRandomlySampledDeformationModelLevel;
+import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_LogicTreeBranch;
 
 import com.google.common.base.Preconditions;
 import com.itextpdf.awt.FontMapper;
@@ -73,6 +74,10 @@ public class LogicTreeFigureWriter extends JPanel {
 		prefixes.add("subduction_inversion");
 		trees.add(new PRVI25_InvConfigFactory().getGridSourceTree(trees.get(trees.size()-1)));
 		prefixes.add("subduction_gridded");
+		
+		List<LogicTreeLevel<? extends LogicTreeNode>> gmmLevels = PRVI25_LogicTreeBranch.levelsCrustalGMM;
+		trees.add(LogicTree.buildExhaustive(gmmLevels, true));
+		prefixes.add("gmm");
 		
 		for (int i=0; i<trees.size(); i++) {
 			LogicTree<?> tree = trees.get(i);

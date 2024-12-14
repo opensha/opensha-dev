@@ -2,6 +2,7 @@ package scratch.kevin.prvi25.figures;
 
 import java.awt.Color;
 import java.io.File;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
@@ -49,8 +50,6 @@ class SeismicityPDFFigures {
 		
 		plotPDFs(crustalOutputDir, "crustal_pdf", 0, avgDecluster, avgSmooth, fullGrid,
 				"Crustal", PRVI25_SeismicityRegions.CRUSTAL);
-//		plotPDFs(crustalOutputDir, "crustal_m5", 5d, avgDecluster, avgSmooth, fullGrid,
-//				"Crustal", PRVI25_SeismicityRegions.CRUSTAL);
 		plotNucleationRates(crustalOutputDir, "crustal_m5", crustalGridProv, 5d, TectonicRegionType.ACTIVE_SHALLOW, fullGrid, "Crustal Gridded", null);
 		plotNucleationRates(crustalOutputDir, "crustal_m7", crustalGridProv, 7d, TectonicRegionType.ACTIVE_SHALLOW, fullGrid, "Crustal Gridded", null);
 		

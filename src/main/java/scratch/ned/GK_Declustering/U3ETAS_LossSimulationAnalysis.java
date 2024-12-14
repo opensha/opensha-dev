@@ -2042,7 +2042,6 @@ public class U3ETAS_LossSimulationAnalysis {
 		double minLn = -meanLn*3;
 		double deltaLn = 2*maxLn/numPoints;
 		
-		org.opensha.commons.calc.GaussianDistCalc gaussDistCalc = new org.opensha.commons.calc.GaussianDistCalc();
 		HistogramFunction normEvenPDF = new HistogramFunction(minLn,numPoints,deltaLn);
 		for(int i=1;i<normEvenPDF.size();i++) {
 			double normVal = (normEvenPDF.getX(i)-meanLn)/stdDevLn;
