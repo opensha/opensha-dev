@@ -34,6 +34,7 @@ import org.opensha.sha.faultSurface.RuptureSurface;
 
 import com.google.common.base.Preconditions;
 
+import net.mahdilamb.colormap.Colors;
 import scratch.kevin.prvi25.FaultSystemLineIntegralCalculator;
 
 import static scratch.kevin.prvi25.figures.PRVI_Paths.*;
@@ -46,7 +47,8 @@ public class PRVI_SubductionSubSectPlots {
 
 	public static void main(String[] args) throws IOException {
 		LogicTreeBranch<LogicTreeNode> branch = PRVI25_LogicTreeBranch.DEFAULT_SUBDUCTION_INTERFACE;
-		PRVI25_SubductionScalingRelationships scale = PRVI25_SubductionScalingRelationships.LOGA_C4p0;
+		PRVI25_SubductionScalingRelationships scale = PRVI25_SubductionScalingRelationships.AVERAGE;
+		String scaleLabel = "average scaling";
 		branch = branch.copy();
 		branch.setValue(scale);
 		PRVI25_InvConfigFactory factory = new PRVI25_InvConfigFactory();
@@ -56,10 +58,10 @@ public class PRVI_SubductionSubSectPlots {
 		Preconditions.checkState(outputDir.exists() || outputDir.mkdir());
 		
 		Font font = new Font(Font.SANS_SERIF, Font.BOLD, 24);
-		DecimalFormat magDF = new DecimalFormat("0.00");
+		DecimalFormat magDF = new DecimalFormat("0.0");
 		
 		CPT magCPT = GMT_CPT_Files.SEQUENTIAL_BATLOW_UNIFORM.instance().rescale(7.5d, 9d);
-		CPT slipCPT = GMT_CPT_Files.SEQUENTIAL_BATLOW_UNIFORM.instance().rescale(0d, 5d);
+		CPT slipCPT = GMT_CPT_Files.SEQUENTIAL_BATLOW_UNIFORM.instance().rescale(0d, 4d);
 		CPT slipUncertCPT = GMT_CPT_Files.SEQUENTIAL_BATLOW_UNIFORM.instance().rescale(0d, 2d);
 		CPT rakeCPT = GMT_CPT_Files.SEQUENTIAL_NAVIA_UNIFORM.instance().rescale(0d, 90d);
 		
@@ -101,20 +103,53 @@ public class PRVI_SubductionSubSectPlots {
 			double annX = xRange.getLowerBound() + 0.97*xRange.getLength();
 			double annY = yRange.getLowerBound() + 0.95*yRange.getLength();
 
-			mapMaker.plotSectScalars(minMags, magCPT, "Minimum Magnitude ("+scale.getShortName()+")");
+			mapMaker.plotSectScalars(minMags, magCPT, "Minimum Magnitude ("+scaleLabel+")");
 			XYTextAnnotation rangeAnn = new XYTextAnnotation("["+magDF.format(minMin)+", "+magDF.format(maxMin)+"]", annX, annY);
 			rangeAnn.setTextAnchor(TextAnchor.TOP_RIGHT);
 			rangeAnn.setFont(font);
 			mapMaker.addAnnotation(rangeAnn);
 			mapMaker.plot(outputDir, "subduction_min_mag_"+fm.getFilePrefix(), fmName);
 			
-			mapMaker.plotSectScalars(maxMags, magCPT, "Maximum Magnitude ("+scale.getShortName()+")");
+			Font subInterfaceFont = new Font(Font.SANS_SERIF, Font.BOLD, 18);
+			XYTextAnnotation hspAnn = new XYTextAnnotation("Northern Hispaniola", -69.8, 20.05);
+			hspAnn.setRotationAngle(mapMaker.getRotationAngleCorrectedForAspectRatio(Math.toRadians(18)));
+			hspAnn.setTextAnchor(TextAnchor.BASELINE_CENTER);
+			hspAnn.setFont(subInterfaceFont);
+			mapMaker.addAnnotation(hspAnn);
+			
+			XYTextAnnotation prviAnn = new XYTextAnnotation("Puerto Rico-Virgin Islands", -65.5, 20.05);
+//			prviAnn.setRotationAngle(mapMaker.getRotationAngleCorrectedForAspectRatio(Math.toRadians(20)));
+			prviAnn.setTextAnchor(TextAnchor.BASELINE_CENTER);
+			prviAnn.setFont(subInterfaceFont);
+			mapMaker.addAnnotation(prviAnn);
+			
+			XYTextAnnotation laAnn = new XYTextAnnotation("Lesser Antilles", -62, 19.55);
+			laAnn.setRotationAngle(mapMaker.getRotationAngleCorrectedForAspectRatio(Math.toRadians(23)));
+			laAnn.setTextAnchor(TextAnchor.BASELINE_CENTER);
+			laAnn.setFont(subInterfaceFont);
+			mapMaker.addAnnotation(laAnn);
+
+			mapMaker.plot(outputDir, "subduction_min_mag_"+fm.getFilePrefix()+"_names", fmName);
+			
+			mapMaker.plotSectScalars(maxMags, magCPT, "Maximum Magnitude ("+scaleLabel+")");
 			mapMaker.clearAnnotations();
 			rangeAnn = new XYTextAnnotation("["+magDF.format(minMax)+", "+magDF.format(maxMax)+"]", annX, annY);
 			rangeAnn.setTextAnchor(TextAnchor.TOP_RIGHT);
 			rangeAnn.setFont(font);
 			mapMaker.addAnnotation(rangeAnn);
 			mapMaker.plot(outputDir, "subduction_max_mag_"+fm.getFilePrefix(), fmName);
+			
+			Font interfaceFont = new Font(Font.SANS_SERIF, Font.BOLD, 26);
+			XYTextAnnotation carAnn = new XYTextAnnotation("Caribbean Trench", -65.5, 20.05);
+			carAnn.setTextAnchor(TextAnchor.BASELINE_CENTER);
+			carAnn.setFont(interfaceFont);
+			mapMaker.addAnnotation(carAnn);
+			XYTextAnnotation mueAnn = new XYTextAnnotation("Muertos Trough", -68, 17.2);
+			mueAnn.setTextAnchor(TextAnchor.TOP_CENTER);
+			mueAnn.setFont(interfaceFont);
+			mapMaker.addAnnotation(mueAnn);
+			
+			mapMaker.plot(outputDir, "subduction_max_mag_"+fm.getFilePrefix()+"_names", fmName);
 			
 			mapMaker.clearAnnotations();
 			
@@ -142,10 +177,10 @@ public class PRVI_SubductionSubSectPlots {
 				List<LocationList> rakeArrows = new ArrayList<>();
 				for (FaultSection sect : sects)
 					if (sect.getSectionId() % rakeMod == 0)
-						rakeArrows.addAll(buildRakeArrows(sect, slipCPT.getMaxValue()));
-				mapMaker.plotArrows(rakeArrows, 20d, Color.BLACK, 2f);
+						rakeArrows.addAll(buildRakeArrows(sect, 5d));
+				mapMaker.plotArrows(rakeArrows, 20d, Colors.tab_red.darker(), 2f);
 				mapMaker.setFillArrowheads(true);
-				mapMaker.plotLines(rakeArrows, Color.BLACK, 2f);
+//				mapMaker.plotLines(rakeArrows, Color.BLACK, 2f);
 				
 				mapMaker.plotSectScalars(slips, slipCPT, dm.getShortName()+" Slip Rate (mm/yr)");
 				mapMaker.plot(outputDir, "subduction_slip_"+fm.getFilePrefix()+"_"+dm.getFilePrefix(), fmName+", "+dmName);

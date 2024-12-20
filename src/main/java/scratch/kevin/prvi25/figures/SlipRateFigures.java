@@ -46,13 +46,17 @@ import org.opensha.sha.earthquake.faultSysSolution.FaultSystemSolution;
 import org.opensha.sha.earthquake.faultSysSolution.modules.SectSlipRates;
 import org.opensha.sha.earthquake.faultSysSolution.modules.SolutionSlipRates;
 import org.opensha.sha.earthquake.faultSysSolution.util.BranchAverageSolutionCreator;
+import org.opensha.sha.earthquake.faultSysSolution.util.FaultSectionUtils;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_SegmentationModels;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_CrustalDeformationModels;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_CrustalFaultModels;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_LogicTreeBranch;
+import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_SubductionDeformationModels;
+import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_SubductionFaultModels;
 import org.opensha.sha.faultSurface.FaultSection;
 
 import com.google.common.base.Preconditions;
+import com.google.common.primitives.Ints;
 
 import net.mahdilamb.colormap.Colors;
 import scratch.kevin.latex.LaTeXUtils;
@@ -61,7 +65,7 @@ import static scratch.kevin.prvi25.figures.PRVI_Paths.*;
 
 public class SlipRateFigures {
 	
-	static Region CRUSTAL_FAULT_MAP_REG = new Region(new Location(16.4, -70.2), new Location(20.2, -61.7));;
+	static Region CRUSTAL_FAULT_MAP_REG = new Region(new Location(16.4, -70.2), new Location(20.2, -61.7));
 
 	public static void main(String[] args) throws IOException {
 		File crustalDMOutputDir = new File(FIGURES_DIR, "crustal_dm");
@@ -72,6 +76,11 @@ public class SlipRateFigures {
 		
 		plotCrustal(crustalDMOutputDir, crustalSolOutputDir, crustalSol, crustalNoClassicSol);
 //		plotCrustal(outputDir, null);
+
+		File subSolOutputDir = new File(FIGURES_DIR, "sub_sol");
+		FaultSystemSolution subLargeSol = FaultSystemSolution.load(SUBDUCTION_SOL_LARGE);
+		FaultSystemSolution subSmallSol = FaultSystemSolution.load(SUBDUCTION_SOL_SMALL);
+		plotSubduction(subSolOutputDir, subSmallSol, subLargeSol);
 	}
 	
 	private static void plotCrustal(File dmOutputDir, File solOutputDir, FaultSystemSolution sol, FaultSystemSolution solNoClassic) throws IOException {
@@ -228,8 +237,12 @@ public class SlipRateFigures {
 			List<XYAnnotation> linearAnns = circleFaultAnns(targetSubSects, "Main Ridge", solSlips, targetSlips, TextAnchor.TOP_LEFT);
 			linearAnns.addAll(circleFaultAnns(targetSubSects, "Bouillante Montserrat", solSlips, targetSlips, TextAnchor.BASELINE_RIGHT));
 			
+			Range linearRange = new Range(0d, 13d);
+			Range logRange = new Range(1e-1, 2e1);
+			
 			plotScatter(solOutputDir, prefix+"_scatter", targetSlips, solSlips,
-					targetAverageSlipsByParent, solAverageSlipsByParent, linearAnns, null);
+					targetAverageSlipsByParent, solAverageSlipsByParent,
+					linearRange, logRange, linearAnns, null);
 			
 			CSVFile<String> slipsCSV = new CSVFile<>(true);
 			
@@ -299,6 +312,184 @@ public class SlipRateFigures {
 			slipTEX.close();
 			slipsCSV.writeToFile(new File(solOutputDir, prefix+"_slip_misfits.csv"));
 		}
+	}
+	
+	private static void plotSubduction(File outputDir, FaultSystemSolution smallSol, FaultSystemSolution largeSol) throws IOException {
+		double weightLarge = PRVI25_SubductionFaultModels.PRVI_SUB_FM_LARGE.getNodeWeight(null);
+		double weightSmall = PRVI25_SubductionFaultModels.PRVI_SUB_FM_SMALL.getNodeWeight(null);
+		
+		Preconditions.checkState(smallSol.getRupSet().getNumSections() == largeSol.getRupSet().getNumSections());
+		
+		int[] commonParents = {
+				FaultSectionUtils.findParentSectionID(smallSol.getRupSet().getFaultSectionDataList(), "Hispaniola"),
+				FaultSectionUtils.findParentSectionID(smallSol.getRupSet().getFaultSectionDataList(), "Muertos")
+		};
+		
+		List<FaultSection> combSects = new ArrayList<>();
+		List<Double> combSectSolSlipRates = new ArrayList<>();
+		List<Double> combSectTargetSlipRates = new ArrayList<>();
+		Map<Integer, Double> combAverageSlipsByParent = new HashMap<>();
+		Map<Integer, Double> combAverageTargetByParent = new HashMap<>();
+		Map<Integer, Integer> idToCombMap = new HashMap<>();
+		
+		List<Double> absValues = new ArrayList<>();
+		List<Double> scaledToRates = new ArrayList<>();
+		
+		for (boolean small : new boolean[] {false,true}) {
+			List<? extends FaultSection> sects;
+			SolutionSlipRates solSlipsModule;
+			SectSlipRates targets;
+			double weight;
+			if (small) {
+				targets = smallSol.getRupSet().getSectSlipRates();
+				sects = smallSol.getRupSet().getFaultSectionDataList();
+				solSlipsModule = smallSol.requireModule(SolutionSlipRates.class);
+				weight = weightSmall/(weightSmall+weightLarge);
+			} else {
+				targets = largeSol.getRupSet().getSectSlipRates();
+				sects = largeSol.getRupSet().getFaultSectionDataList();
+				solSlipsModule = largeSol.requireModule(SolutionSlipRates.class);
+				weight = weightLarge/(weightSmall+weightLarge);
+			}
+			
+			List<Double> solSlips = new ArrayList<>();
+			for (int i=0; i<sects.size(); i++)
+				solSlips.add(solSlipsModule.get(i)*1e3);
+			Map<Integer, List<Double>> solSlipsByParent = new HashMap<>();
+			for (FaultSection sect : sects) {
+				int parentID = sect.getParentSectionId();
+				if (!solSlipsByParent.containsKey(parentID))
+					solSlipsByParent.put(parentID, new ArrayList<>());
+				solSlipsByParent.get(parentID).add(solSlipsModule.get(sect.getSectionId())*1e3);
+			}
+			Map<Integer, List<Double>> targetSlipsByParent = new HashMap<>();
+			for (int i=0; i<sects.size(); i++) {
+				double slip = targets.getSlipRate(i)*1e3;
+				int parentID = sects.get(i).getParentSectionId();
+				if (!targetSlipsByParent.containsKey(parentID))
+					targetSlipsByParent.put(parentID, new ArrayList<>());
+				targetSlipsByParent.get(parentID).add(slip);
+			}
+			for (int s=0; s<sects.size(); s++) {
+				FaultSection sect = sects.get(s);
+				int origID = sect.getSectionId();
+				double solSlip = solSlipsModule.get(s)*1e3;
+				double targetSlip = targets.getSlipRate(s)*1e3;
+				if (Ints.contains(commonParents, sect.getParentSectionId())) {
+					Integer index = idToCombMap.get(origID);
+					if (index == null) {
+						// first time
+						sect = sect.clone();
+						index = combSects.size();
+						sect.setSectionId(index);
+						combSects.add(sect);
+						combSectSolSlipRates.add(0d);
+						combSectTargetSlipRates.add(0d);
+						idToCombMap.put(origID, index);
+					}
+					combSectSolSlipRates.set(index, combSectSolSlipRates.get(index) + weight*solSlip);
+					combSectTargetSlipRates.set(index, combSectTargetSlipRates.get(index) + weight*targetSlip);
+				} else {
+					sect = sect.clone();
+					int index = combSects.size();
+					idToCombMap.put(sect.getSectionId(), index);
+					sect.setSectionId(index);
+					combSects.add(sect);
+					combSectSolSlipRates.add(solSlip);
+					combSectTargetSlipRates.add(targetSlip);
+				}
+				double absDiff = Math.abs(solSlip - targetSlip);
+				absValues.add(absDiff);
+				scaledToRates.add(absDiff/targetSlip);
+			}
+			Map<Integer, Double> solAverageSlipsByParent = solSlipsByParent.entrySet().stream()
+					.collect(Collectors.toMap(Map.Entry::getKey,
+							entry -> entry.getValue().stream().mapToDouble(Double::doubleValue).average().orElse(0.0)
+							));
+			Map<Integer, Double> targetAverageSlipsByParent = targetSlipsByParent.entrySet().stream()
+					.collect(Collectors.toMap(Map.Entry::getKey,
+							entry -> entry.getValue().stream().mapToDouble(Double::doubleValue).average().orElse(0.0)
+							));
+			for (int parent : solAverageSlipsByParent.keySet()) {
+				double parentSolSlip = solAverageSlipsByParent.get(parent);
+				double parentTargetSlip = targetAverageSlipsByParent.get(parent);
+				if (Ints.contains(commonParents, parent)) {
+					double prev = combAverageSlipsByParent.containsKey(parent) ? combAverageSlipsByParent.get(parent) : 0d;
+					combAverageSlipsByParent.put(parent, prev + weight*parentSolSlip);
+					combAverageTargetByParent.put(parent, prev + weight*parentTargetSlip);
+				} else {
+					// unique fake parent ID
+					int fakeParent = -solAverageSlipsByParent.size();
+					combAverageSlipsByParent.put(fakeParent, parentSolSlip);
+					combAverageTargetByParent.put(fakeParent, parentTargetSlip);
+				}
+			}
+		}
+		
+		GeographicMapMaker mapMaker = new GeographicMapMaker(PRVI_SubductionSubSectPlots.plotReg, combSects);
+		mapMaker.setWriteGeoJSON(false);
+		mapMaker.setFillSurfaces(true);
+		mapMaker.setSectTraceChar(new PlotCurveCharacterstics(PlotLineType.SOLID, 2f, Color.DARK_GRAY));
+		mapMaker.setSectOutlineChar(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, Color.GRAY));
+		
+		CPT diffCPT = GMT_CPT_Files.DIVERGING_BAM_UNIFORM.instance().reverse().rescale(-1d, 1d);
+		CPT pDiffCPT = GMT_CPT_Files.DIVERGING_VIK_UNIFORM.instance().rescale(-20d, 20d);
+		
+		List<Double> sortables = new ArrayList<>(combSectSolSlipRates.size());
+		for (int i=0; i<combSectSolSlipRates.size(); i++)
+			sortables.add((double)i);
+		
+		mapMaker.plotSectScalars(difference(combSectTargetSlipRates, combSectSolSlipRates),
+				sortables, diffCPT, "Solution - Target Slip Rates (mm/yr)");
+		mapMaker.plot(outputDir, "sub_slip_diff", " ");
+		
+		mapMaker.plotSectScalars(percentDifference(combSectTargetSlipRates, combSectSolSlipRates),
+				sortables, pDiffCPT, "Solution vs Target Slip Rates (% Difference)");
+		mapMaker.plot(outputDir, "sub_slip_pDiff", " ");
+		
+		Range linearRange = new Range(0d, 4d);
+		Range logRange = new Range(1e-1, 1e1);
+		
+		plotScatter(outputDir, "sub_slip_scatter", combSectTargetSlipRates, combSectSolSlipRates,
+				combAverageTargetByParent, combAverageSlipsByParent, linearRange, logRange);
+		
+		CSVFile<String> slipsCSV = new CSVFile<>(true);
+		
+		slipsCSV.addLine("", "Absolute slip rate misfit (mm/yr)", "Misfit percentage of rate");
+		DecimalFormat pDF = new DecimalFormat("0.#%");
+		DecimalFormat twoDigits = new DecimalFormat("0.00");
+		
+		FileWriter slipTEX = new FileWriter(new File(outputDir, "sub_slip_misfits.tex"));
+		
+		for (boolean max : new boolean[] {false,true}) {
+			String label = "Subsection";
+			if (max)
+				label += ", maximum";
+			else
+				label += ", average";
+			List<String> line = new ArrayList<>();
+			line.add(label);
+			double abs, scaledToRate;
+			String texPrefix = "SubductionSubsect";
+			if (max) {
+				texPrefix += "Max";
+				abs = absValues.stream().mapToDouble(D->D).max().getAsDouble();
+				scaledToRate = scaledToRates.stream().mapToDouble(D->D).max().getAsDouble();
+			} else {
+				texPrefix += "Avg";
+				abs = absValues.stream().mapToDouble(D->D).average().getAsDouble();
+				scaledToRate = scaledToRates.stream().mapToDouble(D->D).average().getAsDouble();
+			}
+			texPrefix += "SlipMsft";
+			slipTEX.write(LaTeXUtils.defineValueCommand(texPrefix, twoDigits.format(abs))+"\n");
+			slipTEX.write(LaTeXUtils.defineValueCommand(texPrefix+"Pct", pDF.format(scaledToRate))+"\n");
+			line.add(twoDigits.format(abs));
+			line.add(pDF.format(scaledToRate));
+			slipsCSV.addLine(line);
+		}
+		
+		slipTEX.close();
+		slipsCSV.writeToFile(new File(outputDir, "sub_slip_misfits.csv"));
 	}
 	
 	private static List<XYAnnotation> circleFaultAnns(List<? extends FaultSection> sects, String name,
@@ -392,18 +583,17 @@ public class SlipRateFigures {
 		return ret;
 	}
 	private static void plotScatter(File outputDir, String prefix, List<Double> targetSlips, List<Double> solSlips,
-			Map<Integer, Double> targetParentSlips, Map<Integer, Double> solParentSlips) throws IOException {
-		plotScatter(outputDir, prefix, targetSlips, solSlips, targetParentSlips, solParentSlips, null, null);
+			Map<Integer, Double> targetParentSlips, Map<Integer, Double> solParentSlips,
+			Range linearRange, Range logRange) throws IOException {
+		plotScatter(outputDir, prefix, targetSlips, solSlips, targetParentSlips, solParentSlips, linearRange, logRange, null, null);
 	}
 	
 	private static void plotScatter(File outputDir, String prefix, List<Double> targetSlips, List<Double> solSlips,
 			Map<Integer, Double> targetParentSlips, Map<Integer, Double> solParentSlips,
+			Range linearRange, Range logRange,
 			List<? extends XYAnnotation> linearAnns, List<? extends XYAnnotation> logAnns) throws IOException {
 		List<XY_DataSet> funcs = new ArrayList<>();
 		List<PlotCurveCharacterstics> chars = new ArrayList<>();
-		
-		Range linearRange = new Range(0d, 13d);
-		Range logRange = new Range(1e-1, 2e1);
 		
 		DefaultXY_DataSet oneToOne = new DefaultXY_DataSet();
 		oneToOne.set(linearRange.getLowerBound(), linearRange.getLowerBound());

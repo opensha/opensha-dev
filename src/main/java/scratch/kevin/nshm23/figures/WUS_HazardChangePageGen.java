@@ -1562,13 +1562,13 @@ public class WUS_HazardChangePageGen {
 	private static final DecimalFormat twoDigits = new DecimalFormat("0.00");
 	private static final DecimalFormat pDF = new DecimalFormat("0.00%");
 	
-	static GriddedGeoDataSet asLog10(GriddedGeoDataSet xyz) {
+	public static GriddedGeoDataSet asLog10(GriddedGeoDataSet xyz) {
 		xyz = xyz.copy();
 		xyz.log10();
 		return xyz;
 	}
 	
-	static GriddedGeoDataSet sumMap(GriddedGeoDataSet map1, GriddedGeoDataSet map2) {
+	public static GriddedGeoDataSet sumMap(GriddedGeoDataSet map1, GriddedGeoDataSet map2) {
 		Preconditions.checkState(map1.size() == map2.size());
 		GriddedGeoDataSet ret = new GriddedGeoDataSet(map1.getRegion());
 		for (int i=0; i<ret.size(); i++)
@@ -1576,7 +1576,7 @@ public class WUS_HazardChangePageGen {
 		return ret;
 	}
 	
-	static GriddedGeoDataSet mapPDiff(GriddedGeoDataSet map1, GriddedGeoDataSet map2) {
+	public static GriddedGeoDataSet mapPDiff(GriddedGeoDataSet map1, GriddedGeoDataSet map2) {
 		Preconditions.checkState(map1.size() == map2.size());
 		GriddedGeoDataSet ret = new GriddedGeoDataSet(map1.getRegion());
 		for (int i=0; i<ret.size(); i++)
@@ -1584,7 +1584,7 @@ public class WUS_HazardChangePageGen {
 		return ret;
 	}
 	
-	static GriddedGeoDataSet mapDiff(GriddedGeoDataSet map1, GriddedGeoDataSet map2) {
+	public static GriddedGeoDataSet mapDiff(GriddedGeoDataSet map1, GriddedGeoDataSet map2) {
 		Preconditions.checkState(map1.size() == map2.size());
 		GriddedGeoDataSet ret = new GriddedGeoDataSet(map1.getRegion());
 		for (int i=0; i<ret.size(); i++)

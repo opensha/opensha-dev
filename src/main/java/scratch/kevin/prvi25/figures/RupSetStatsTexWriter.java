@@ -117,6 +117,8 @@ public class RupSetStatsTexWriter {
 			ClusterRuptures cRups = avgRupSet.requireModule(ClusterRuptures.class);
 			BinaryRuptureProbabilityCalc exclusion = PRVI25_InvConfigFactory.getExclusionModel(
 					avgRupSet, avgBranch, cRups);
+			double myMaxMin = 0d;
+			double myMinMin = Double.POSITIVE_INFINITY;
 			for (int s=0; s<avgRupSet.getNumSections(); s++) {
 				double mMin, mMax;
 				if (exclusion == null) {
@@ -139,10 +141,18 @@ public class RupSetStatsTexWriter {
 				momentSum += moment;
 				momentWeightedSectMmin += moment*mMin;
 				momentWeightedSectMmax += moment*mMax;
+				myMaxMin = Math.max(myMaxMin, mMin);
+				myMinMin = Math.min(myMinMin, mMin);
 			}
 			if (avgScaleBranches.size() == 1) {
 				fw.write(LaTeXUtils.defineValueCommand(texPrefix+"NumRups", groupedIntDF.format(avgRupSet.getNumRuptures()))+"\n");
 				fw.write(LaTeXUtils.defineValueCommand(texPrefix+"NumSubsects", groupedIntDF.format(avgRupSet.getNumSections()))+"\n");
+				fw.write(LaTeXUtils.defineValueCommand(texPrefix+"AvgSectMinMmin", magDF.format(myMinMin))+"\n");
+				fw.write(LaTeXUtils.defineValueCommand(texPrefix+"AvgSectMaxMmin", magDF.format(myMaxMin))+"\n");
+				if (avgBranch.hasValue(PRVI25_SubductionFaultModels.class)) {
+					fw.write(LaTeXUtils.defineValueCommand(texPrefix+"AvgGridMinMmax", magDF.format(myMinMin-0.1))+"\n");
+					fw.write(LaTeXUtils.defineValueCommand(texPrefix+"AvgGridMaxMmax", magDF.format(myMaxMin-0.1))+"\n");
+				}
 			}
 		}
 		momentWeightedSectMmin /= momentSum;

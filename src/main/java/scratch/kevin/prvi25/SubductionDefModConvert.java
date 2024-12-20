@@ -69,6 +69,7 @@ import com.google.common.primitives.Ints;
 import com.google.gson.Gson;
 
 import net.mahdilamb.colormap.Colors;
+import scratch.kevin.prvi25.figures.PRVI_Paths;
 import scratch.kevin.prvi25.figures.PRVI_SubductionSubSectPlots;
 
 public class SubductionDefModConvert {
@@ -96,7 +97,7 @@ public class SubductionDefModConvert {
 		boolean interpSymmetry = true;
 		
 //		File plotOutputDir = new File("/home/kevin/Documents/papers/2024_PRVI_Subduction/figures/def_model");
-		File plotOutputDir = new File("/home/kevin/Documents/papers/2024_PRVI_ERF/prvi25-erf-paper/Figures/sub_dm");
+		File plotOutputDir = new File(PRVI_Paths.FIGURES_DIR, "sub_dm");
 		Preconditions.checkState(plotOutputDir.exists() || plotOutputDir.mkdir());
 		
 		Table<Boolean, Boolean, String> debugPrefixes = HashBasedTable.create();

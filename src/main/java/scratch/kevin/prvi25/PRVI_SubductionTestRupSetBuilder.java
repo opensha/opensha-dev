@@ -24,6 +24,7 @@ import org.opensha.sha.faultSurface.FaultTrace;
 
 import com.google.common.base.Preconditions;
 
+import scratch.kevin.prvi25.figures.PRVI_Paths;
 import scratch.kevin.prvi25.figures.PRVI_SubductionSubSectPlots;
 
 public class PRVI_SubductionTestRupSetBuilder {
@@ -34,7 +35,7 @@ public class PRVI_SubductionTestRupSetBuilder {
 		PRVI25_SubductionDeformationModels dm = PRVI25_SubductionDeformationModels.FULL;
 		
 //		File outputDir = new File("/home/kevin/Documents/papers/2024_PRVI_Subduction/figures/fault_model");
-		File outputDir = new File("/home/kevin/Documents/papers/2024_PRVI_ERF/prvi25-erf-paper/Figures/sub_fm");
+		File outputDir = new File(PRVI_Paths.FIGURES_DIR, "sub_fm");
 		Preconditions.checkState(outputDir.exists() || outputDir.mkdir());
 		
 		// first just write out the fault model

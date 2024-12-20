@@ -115,10 +115,10 @@ public class GridCubeRatePlot {
 		props.set(GeoJSONFaultSection.LOW_DEPTH, lowDepth);
 		props.set(GeoJSONFaultSection.UPPER_DEPTH, upDepth);
 		props.set(GeoJSONFaultSection.SLIP_RATE, 10d);
-		LineString geom = new LineString(traceStart, traceEnd);
+		Geometry geom = new LineString(traceStart, traceEnd);
 //		props.set(GeoJSONFaultSection.PROXY, true);
-//		Geometry geom = new LineString(traceStart, traceEnd);
-//		Polygon proxyZone = new Polygon(new Region(traceStart, new Location(traceEnd.lat, traceEnd.lon+gridSpacing)));
+//		Polygon proxyZone = new Polygon(new Region(new Location(traceStart.lat, -0.5*gridSpacing),
+//				new Location(traceEnd.lat, 0.5*gridSpacing)));
 //		geom = new GeometryCollection(geom, proxyZone);
 		Feature sectFeature = new Feature(geom, props);
 		GeoJSONFaultSection sect = GeoJSONFaultSection.fromFeature(sectFeature);
@@ -256,6 +256,21 @@ public class GridCubeRatePlot {
 		sectXY.set(sectTopLoc.lon*lonSpacingKM, sectTopLoc.depth);
 		sectXY.set(sectBotLoc.lon*lonSpacingKM, sectBotLoc.depth);
 		
+		XY_DataSet polyXY = null;
+		if (sect.isProxyFault() && sect.getZonePolygon() != null) {
+			Region proxyReg = sect.getZonePolygon();
+			double left = proxyReg.getMinLon()*lonSpacingKM;
+			double right = proxyReg.getMaxLon()*lonSpacingKM;
+			polyXY = new DefaultXY_DataSet();
+			polyXY.set(left, sectTopLoc.depth);
+			polyXY.set(right, sectTopLoc.depth);
+			polyXY.set(right, sectBotLoc.depth);
+			polyXY.set(left, sectBotLoc.depth);
+			polyXY.set(polyXY.get(0));
+			
+			sectXY = null;
+		}
+		
 		CPT assocCPT = GMT_CPT_Files.SEQUENTIAL_LAJOLLA_UNIFORM.instance().rescale(0d, 1d);
 		assocCPT.setPreferredTickInterval(0.1);
 		calcXYZValues(assocXYZ, xyzMappedCubes, new Function<Integer, Double>() {
@@ -277,7 +292,7 @@ public class GridCubeRatePlot {
 		DecimalFormat fractDF = new DecimalFormat("0.00");
 		
 		XYZPlotSpec assocPlot = buildPlot(assocXYZ, cellXRanges, cellAssocs, new FormatFunc(fractDF),
-				sectXY, assocCPT, "Fractional Association", " ");
+				sectXY, polyXY, assocCPT, "Fractional Association", " ");
 		
 		HeadlessGraphPanel gp = PlotUtils.initHeadless();
 		
@@ -337,14 +352,14 @@ public class GridCubeRatePlot {
 		};
 		
 		XYZPlotSpec cellRatePlot = buildPlot(totalNuclXYZ, cellXRanges, totCellRates, rateFormat,
-				sectXY, nuclRateCPT, "Gridded M>5 Nucleation Rate", " ");
+				sectXY, polyXY, nuclRateCPT, "Log10 Gridded M>5 Nucleation Rate", " ");
 		
 		gp.drawGraphPanel(cellRatePlot, false, false, xRange, yRange);
 		
 		PlotUtils.writePlots(outputDir, "cube_nucl_rate_tot", gp, width, false, true, true, false);
 		
 		XYZPlotSpec cellRateM7Plot = buildPlot(m7NuclXYZ, cellXRanges, m7CellRates, rateFormat,
-				sectXY, nuclRateCPT, "Gridded M>7 Nucleation Rate", " ");
+				sectXY, polyXY, nuclRateCPT, "Log10 Gridded M>7 Nucleation Rate", " ");
 		
 		gp.drawGraphPanel(cellRateM7Plot, false, false, xRange, yRange);
 		
@@ -417,7 +432,7 @@ public class GridCubeRatePlot {
 	}
 	
 	private static XYZPlotSpec buildPlot(EvenlyDiscrXYZ_DataSet xyz, List<Range> cellXRanges, List<Double> cellValues,
-			Function<Double, String> cellDF, XY_DataSet sectXY, CPT cpt, String zLabel, String title) {
+			Function<Double, String> cellDF, XY_DataSet sectXY, XY_DataSet polyXY, CPT cpt, String zLabel, String title) {
 		List<XY_DataSet> funcs = new ArrayList<>();
 		List<PlotCurveCharacterstics> chars = new ArrayList<>();
 		
@@ -456,11 +471,18 @@ public class GridCubeRatePlot {
 			}
 		}
 		
-		funcs.add(sectXY);
-		chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 7f, Color.WHITE));
+		if (sectXY != null) {
+			funcs.add(sectXY);
+			chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 7f, Color.WHITE));
+			
+			funcs.add(sectXY);
+			chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 4f, Color.BLACK));
+		}
 		
-		funcs.add(sectXY);
-		chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 4f, Color.BLACK));
+		if (polyXY != null) {
+			funcs.add(polyXY);
+			chars.add(new PlotCurveCharacterstics(PlotLineType.DASHED, 4f, new Color(0, 0, 0, 160)));
+		}
 		
 		XYZPlotSpec plot = new XYZPlotSpec(xyz, funcs, chars, cpt, title, "X (km)", "Depth (km)", zLabel);
 		plot.setYAxisInverted(true);

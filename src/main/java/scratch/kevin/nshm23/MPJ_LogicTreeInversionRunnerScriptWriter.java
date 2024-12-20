@@ -118,6 +118,7 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 		boolean hazardGridded = false;
 		boolean forceRequiredNonzeroWeight = false;
 		Double forceHazardGridSpacing = null;
+		long randSeed = 12345678l;
 		
 		File remoteMainDir = new File("/project/scec_608/kmilner/nshm23/batch_inversions");
 		int remoteTotalThreads = 20;
@@ -638,7 +639,11 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 				levels.remove(i);
 		Preconditions.checkState(levels.size() == origNumLevels -1);
 		individualRandomLevels.add(new PRVI25_CrustalRandomlySampledDeformationModelLevel());
-		samplingBranchCountMultiplier = 5; // 5 for each branch
+//		samplingBranchCountMultiplier = 5; // 5 for each branch
+//		samplingBranchCountMultiplier = 10; // 10 for each branch
+//		samplingBranchCountMultiplier = 20; // 20 for each branch
+		samplingBranchCountMultiplier = 50; // 50 for each branch
+		randSeed *= samplingBranchCountMultiplier;
 		dirName += "-dmSample";
 		if (samplingBranchCountMultiplier > 1)
 			dirName += samplingBranchCountMultiplier+"x";
@@ -756,7 +761,6 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 //		int numSamples = nodes*5;
 //		int numSamples = nodes*4;
 //		long randSeed = System.currentTimeMillis();
-		long randSeed = 12345678l;
 		int numSamples = 0;
 //		int numSamples = 450;
 //		int numSamples = 36*10;

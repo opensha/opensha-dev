@@ -163,7 +163,14 @@ public class IndividualMFDPlots {
 					griddedDists = new UncertainBoundedIncrMagFreqDist[] { PRVI25_RegionalSeismicity.getBounded(seisReg, refMFD, PRVI25_GridSourceBuilder.SLAB_MMAX) };
 				}
 				
-				if (trt != TectonicRegionType.SUBDUCTION_SLAB) {
+				if (trt == TectonicRegionType.SUBDUCTION_SLAB) {
+					if (seisReg == PRVI25_SeismicityRegions.CAR_INTRASLAB) {
+						// combined slab plot
+						plotMultiSlab(subductionOutputDir, "subduction_mfds_slab_combined", new Range(5d, 8d),
+								PRVI25_RegionalSeismicity.getBounded(PRVI25_SeismicityRegions.CAR_INTRASLAB, refMFD, PRVI25_GridSourceBuilder.SLAB_MMAX),
+								PRVI25_RegionalSeismicity.getBounded(PRVI25_SeismicityRegions.MUE_INTRASLAB, refMFD, PRVI25_GridSourceBuilder.SLAB_MMAX));
+					}
+				} else {
 					if (r > 0)
 						texFW.write("% "+seisReg.name()+"subset "+r+"\n");
 					else
@@ -177,15 +184,34 @@ public class IndividualMFDPlots {
 						texFW.write(LaTeXUtils.defineValueCommand(texPrefix+"ObsMFivePercent",
 								LaTeXUtils.numberAsPercent(100d*obsM5/origM5, 0), false)+"\n");
 					}
+					double onFaultTotalRate = onFaultMean.calcSumOfY_Vals();
 					texFW.write(LaTeXUtils.defineValueCommand(texPrefix+"SupraRate",
-							LaTeXUtils.numberExpFormatSigFigs(onFaultMean.calcSumOfY_Vals(), 3), false)+"\n");
-					double onFaultRI = 1d/onFaultMean.calcSumOfY_Vals();
+							LaTeXUtils.numberExpFormatSigFigs(onFaultTotalRate, 3), false)+"\n");
+					double onFaultRI = 1d/onFaultTotalRate;
 					if (onFaultRI > 5d)
 						texFW.write(LaTeXUtils.defineValueCommand(texPrefix+"SupraRI",
 								LaTeXUtils.groupedIntNumber(onFaultRI), false)+"\n");
 					else
 						texFW.write(LaTeXUtils.defineValueCommand(texPrefix+"SupraRI",
 								LaTeXUtils.numberExpFormatFixedDecimal(onFaultRI, 1), false)+"\n");
+					if (seisReg == PRVI25_SeismicityRegions.CRUSTAL && r == 0) {
+						double multiFaultRate = 0d;
+						for (int rupIndex=0; rupIndex<sol.getRupSet().getNumRuptures(); rupIndex++) {
+							boolean multiFault = false;
+							List<FaultSection> rupSects = sol.getRupSet().getFaultSectionDataForRupture(rupIndex);
+							for (int i=1; !multiFault&&i<rupSects.size(); i++)
+								multiFault = rupSects.get(i-1).getParentSectionId() != rupSects.get(i).getParentSectionId();
+							if (multiFault)
+								multiFaultRate += sol.getRateForRup(rupIndex);
+						}
+						texFW.write(LaTeXUtils.defineValueCommand(texPrefix+"SupraMultiFaultRate",
+								LaTeXUtils.numberExpFormatSigFigs(multiFaultRate, 3), false)+"\n");
+						double multiFaultRI = 1d/multiFaultRate;
+						texFW.write(LaTeXUtils.defineValueCommand(texPrefix+"SupraMultiFaultRI",
+								LaTeXUtils.groupedIntNumber(multiFaultRI), false)+"\n");
+						texFW.write(LaTeXUtils.defineValueCommand(texPrefix+"SupraMultiFaultPercent",
+								LaTeXUtils.numberAsPercent(100d*multiFaultRate/onFaultTotalRate, 1), false)+"\n");
+					}
 					if (obs != null) {
 						System.out.println("Looking for "+seisReg+" observed MFD exceedances (r="+r+")");
 						for (boolean cml : new boolean[] {false,true}) {
@@ -405,6 +431,51 @@ public class IndividualMFDPlots {
 //			funcs.add(onFaultMean);
 //			chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 3f, onFaultColor));
 //		}
+		
+		PlotSpec plot = new PlotSpec(funcs, chars, " ", "Magnitude", "Incremental Rate (1/yr)");
+		plot.setLegendInset(true);
+		
+		Range yRange = new Range(1e-6, 1e1);
+		
+		HeadlessGraphPanel gp = PlotUtils.initHeadless();
+		
+		gp.drawGraphPanel(plot, false, true, xRange, yRange);
+		
+		PlotUtils.writePlots(outputDir, prefix, gp, 800, 750, true, true, false);
+	}
+	
+	private static void plotMultiSlab(File outputDir, String prefix, Range xRange,
+			UncertainBoundedIncrMagFreqDist carDist,
+			UncertainBoundedIncrMagFreqDist mueDist) throws IOException {
+		Color carColor = Colors.tab_orange;
+		Color mueColor = Colors.tab_green;
+		
+		List<DiscretizedFunc> funcs = new ArrayList<>();
+		List<PlotCurveCharacterstics> chars = new ArrayList<>();
+		
+		mueDist.setName("Muertos Preferred");
+		funcs.add(mueDist);
+		chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 3f, mueColor));
+		
+		mueDist.getUpper().setName("Muertos High & Low");
+		funcs.add(mueDist.getUpper());
+		chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, mueColor));
+		
+		mueDist.getLower().setName(null);
+		funcs.add(mueDist.getLower());
+		chars.add(chars.get(chars.size()-1));
+		
+		carDist.setName("Caribbean Preferred");
+		funcs.add(carDist);
+		chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 3f, carColor));
+		
+		carDist.getUpper().setName("Caribbean High & Low");
+		funcs.add(carDist.getUpper());
+		chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, carColor));
+		
+		carDist.getLower().setName(null);
+		funcs.add(carDist.getLower());
+		chars.add(chars.get(chars.size()-1));
 		
 		PlotSpec plot = new PlotSpec(funcs, chars, " ", "Magnitude", "Incremental Rate (1/yr)");
 		plot.setLegendInset(true);

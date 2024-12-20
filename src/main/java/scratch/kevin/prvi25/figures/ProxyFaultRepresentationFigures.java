@@ -136,7 +136,7 @@ public class ProxyFaultRepresentationFigures {
 			int rupID = -1;
 			double maxRupMag = 0d;
 			List<Integer> allRups = new ArrayList<>(rupSet.getRupturesForParentSection(parentID));
-//			Collections.reverse(allRups); // this makes it the left side of Anegada zones
+			Collections.reverse(allRups); // this makes it the left side of Anegada zones
 			for (int rupIndex : allRups) {
 				double mag = rupSet.getMagForRup(rupIndex);
 				if ((float)mag < (float)maxRupMag)

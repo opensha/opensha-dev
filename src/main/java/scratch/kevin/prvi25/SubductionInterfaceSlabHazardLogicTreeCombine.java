@@ -137,9 +137,10 @@ public class SubductionInterfaceSlabHazardLogicTreeCombine extends AbstractLogic
 	private static void remapTree(LogicTree<?> tree, Map<LogicTreeLevel<?>, LogicTreeLevel<?>> levelRemaps,
 			Map<LogicTreeNode, LogicTreeNode> nodeRemaps, String nameAdd, String shortNameAdd) {
 		for (LogicTreeLevel<?> level : tree.getLevels()) {
-			if (ScalarIMR_ParamsLogicTreeNode.class.isAssignableFrom(level.getType())) {
+			String name = level.getName();
+			if (ScalarIMR_ParamsLogicTreeNode.class.isAssignableFrom(level.getType())
+					&& !name.toLowerCase().contains("interface") && !name.toLowerCase().contains("slab")) {
 				// need to remap
-				String name = level.getName();
 				List<FileBackedNode> modNodes = new ArrayList<>();
 				for (LogicTreeNode node : level.getNodes()) {
 					FileBackedNode modNode = new FileBackedNode(nameAdd+" "+node.getName(), node.getShortName(),
@@ -168,7 +169,7 @@ public class SubductionInterfaceSlabHazardLogicTreeCombine extends AbstractLogic
 	@Override
 	protected void remapInnerTree(LogicTree<?> tree, Map<LogicTreeLevel<?>, LogicTreeLevel<?>> levelRemaps,
 			Map<LogicTreeNode, LogicTreeNode> nodeRemaps) {
-		remapTree(tree, levelRemaps, nodeRemaps, "Slab", "");
+		remapTree(tree, levelRemaps, nodeRemaps, "Intraslab", "");
 	}
 
 	@Override

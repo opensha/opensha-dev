@@ -15,6 +15,7 @@ import org.opensha.commons.geo.Location;
 import org.opensha.commons.geo.json.Feature;
 import org.opensha.sha.earthquake.faultSysSolution.util.SolHazardMapCalc.ReturnPeriods;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.util.NSHM23_RegionLoader;
+import org.opensha.sha.earthquake.rupForecastImpl.prvi25.util.PRVI25_RegionLoader;
 
 import com.google.common.base.Preconditions;
 
@@ -26,8 +27,18 @@ public class RewriteExternalHazard {
 		File invsDir = new File("/data/kevin/nshm23/batch_inversions");
 		
 		File extCalcDir = new File("/home/kevin/OpenSHA/nshm23/nshmp-haz-models/ext_hazard_calcs/"
-				+ "conus-6b4-nshmp-haz-lib1415-grid_smooth_OFF-0p1-vs760-20240307-087a4937807eb5/vs30-760");
-		File outputDir = new File(invsDir, "2024_03_08-nshmp-haz-external-conus-6b4-ask2014-vs760-grid_smooth_OFF");
+				+ "prvi-t2-2003-ERF-2025-vB1-GMMs-2025conf-0p01-vs760-20241213-49f58ecb02d600/vs30-760");
+		File outputDir = new File(invsDir, "2024_12_13-nshmp-haz-external-prvi-2b1-prvi25gmms-vs760");
+		
+		GriddedRegion gridReg = new GriddedRegion(
+				PRVI25_RegionLoader.loadPRVI_MapExtents(),
+				0.01, GriddedRegion.ANCHOR_0_0);
+
+		double[] periods = {0d, 0.2, 1d, 5d};
+		
+//		File extCalcDir = new File("/home/kevin/OpenSHA/nshm23/nshmp-haz-models/ext_hazard_calcs/"
+//				+ "conus-6b4-nshmp-haz-lib1415-grid_smooth_OFF-0p1-vs760-20240307-087a4937807eb5/vs30-760");
+//		File outputDir = new File(invsDir, "2024_03_08-nshmp-haz-external-conus-6b4-ask2014-vs760-grid_smooth_OFF");
 //				+ "conus-6b4-nshmp-haz-grid_smooth_optimize_OFF-0p1-vs760-20240213-195bddb0d73730/vs30-760");
 //		File outputDir = new File(invsDir, "2024_02_15-nshmp-haz-external-conus-6b4-ask2014-vs760-grid_smooth_optimize_OFF");
 //				+ "conus-6b4-nshmp-haz-0p1-vs760-20240208-afaff93cd918f5/vs30-760");
@@ -35,11 +46,11 @@ public class RewriteExternalHazard {
 //				+ "conus-6b4-nshmp-haz-0p1-vs760-20240228-ef0f647c24c8d1/vs30-760");
 //		File outputDir = new File(invsDir, "2024_02_28-nshmp-haz-external-conus-6b4-ask2014-vs760");
 		
-		GriddedRegion gridReg = new GriddedRegion(
-				NSHM23_RegionLoader.loadFullConterminousUS(),
-				0.1, GriddedRegion.ANCHOR_0_0);
+//		GriddedRegion gridReg = new GriddedRegion(
+//				NSHM23_RegionLoader.loadFullConterminousUS(),
+//				0.1, GriddedRegion.ANCHOR_0_0);
 		
-		double[] periods = {0d, 1d};
+//		double[] periods = {0d, 1d};
 		ReturnPeriods[] rps = {ReturnPeriods.TWO_IN_50, ReturnPeriods.TEN_IN_50};
 		
 		Preconditions.checkState(outputDir.exists() || outputDir.mkdir());

@@ -3073,13 +3073,48 @@ public class PureScratch {
 		System.out.println("Slip: "+(float)slip+" -> "+(float)projected);
 	}
 	
+	private static void test337() throws IOException {
+		int num = 100000000;
+		int numVals = 1000;
+		double[] randBases = new double[numVals];
+		double[] randExponents = new double[numVals];
+		for (int i=0; i<numVals; i++) {
+			randBases[i] = Math.random()*1e-8;
+			randExponents[i] = Math.random();
+		}
+		
+		Stopwatch powWatch = Stopwatch.createStarted();
+		for (int i=0; i<num; i++) {
+			int idx = i % numVals;
+			Math.pow(randBases[idx], randExponents[idx]);
+		}
+		powWatch.stop();
+		double powSecs = powWatch.elapsed(TimeUnit.MILLISECONDS)/1000d;
+		System.out.println("Math.pow took "+(float)powSecs);
+		
+		Stopwatch expWatch = Stopwatch.createStarted();
+		for (int i=0; i<num; i++) {
+			int idx = i % numVals;
+			Math.exp(randBases[idx]*randExponents[idx]);
+		}
+		expWatch.stop();
+		double expSecs = expWatch.elapsed(TimeUnit.MILLISECONDS)/1000d;
+		System.out.println("Math.exp took "+(float)expSecs);
+		
+		for (int i=0; i<numVals; i++) {
+			double pow = Math.pow(randBases[i], randExponents[i]);
+			double fromExp = Math.exp(Math.log(randBases[i])*randExponents[i]);
+			System.out.println(pow+"\t"+fromExp+"\tdiff="+(fromExp-pow));
+		}
+	}
+	
 	/**
 	 * @param args
 	 * @throws Exception 
 	 */
 	public static void main(String[] args) throws Exception {
 		try {
-			test336();
+			test337();
 		} catch (Throwable t) {
 			t.printStackTrace();
 			System.exit(1);
