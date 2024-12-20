@@ -10,6 +10,7 @@ import java.util.List;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
+import org.opensha.commons.util.io.archive.ArchiveOutput;
 import org.opensha.sha.simulators.RSQSimEvent;
 import org.opensha.sha.simulators.srf.RSQSimEventSlipTimeFunc;
 import org.opensha.sha.simulators.srf.RSQSimSRFGenerator;
@@ -26,19 +27,27 @@ import scratch.kevin.simulators.RSQSimCatalog.Loader;
 public class CatalogSRF_Writer {
 
 	public static void main(String[] args) throws IOException {
-		File baseDir = new File("/data/kevin/simulators/catalogs");
-		RSQSimCatalog catalog = Catalogs.BRUCE_4983_STITCHED.instance(baseDir);
+		RSQSimCatalog catalog;
+		double minMag = 6.5;
+		double skipYears = 5000;
+		if (args.length > 0) {
+			catalog = Catalogs.valueOf(args[0]).instance();
+			if (args.length > 1)
+				minMag = Double.parseDouble(args[1]);
+			if (args.length > 2)
+				skipYears = Double.parseDouble(args[2]);
+		} else {
+			catalog = Catalogs.BRUCE_5566.instance();
+		}
 		
 		File outputFile = new File(catalog.getCatalogDir(), "srfs.zip");
 //		File outputDir = new File(catalog.getCatalogDir(), "srfs");
 //		Preconditions.checkState(outputDir.exists() || outputDir.mkdir());
 		
-		double minMag = 6.5;
-		double skipYears = 65000;
 		double maxDuration = 0;
 		
-//		double dt = RSQSimBBP_Config.SRF_DT;
-		double dt = 0.1;
+		double dt = RSQSimBBP_Config.SRF_DT;
+//		double dt = 0.1;
 		SRFInterpolationMode interp = RSQSimBBP_Config.SRF_INTERP_MODE;
 		double srfVersion = RSQSimBBP_Config.SRF_VERSION;
 		
@@ -48,9 +57,7 @@ public class CatalogSRF_Writer {
 		List<RSQSimEvent> events = loader.load();
 		System.out.println("Loaded "+events.size()+" events in "+SimulatorUtils.getSimulationDurationYears(events)+" yrs");
 		
-		ZipOutputStream zout = new ZipOutputStream(new FileOutputStream(outputFile));
-		
-		BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(zout));
+		ArchiveOutput output = new ArchiveOutput.AsynchronousZipFileOutput(outputFile);
 		
 		int cnt = 0;
 		DecimalFormat pDF = new DecimalFormat("0.0%");
@@ -60,15 +67,15 @@ public class CatalogSRF_Writer {
 			cnt++;
 			RSQSimEventSlipTimeFunc slipTimeFunc = catalog.getSlipTimeFunc(e);
 //			File srfFile = new File(outputDir, "event_"+e.getID()+".srf");
-			zout.putNextEntry(new ZipEntry("event_"+e.getID()+".srf"));
+			output.putNextEntry("event_"+e.getID()+".srf");;
 			List<SRF_PointData> srfPoints = RSQSimSRFGenerator.buildSRF(slipTimeFunc, e.getAllElements(), dt, interp);
+			BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(output.getOutputStream()));
 			SRF_PointData.writeSRF(writer, srfPoints, srfVersion);
 			writer.flush();
-			zout.flush();
-			zout.closeEntry();
+			output.closeEntry();
 		}
 		
-		zout.close();
+		output.close();
 	}
 
 }
