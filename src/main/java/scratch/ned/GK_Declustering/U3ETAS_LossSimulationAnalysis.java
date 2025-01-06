@@ -2,49 +2,81 @@ package scratch.ned.GK_Declustering;
 
 import java.awt.Color;
 import java.io.File;
+import java.io.FileReader;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.GregorianCalendar;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Random;
 
 import org.apache.commons.math3.distribution.LogNormalDistribution;
 import org.apache.commons.math3.distribution.PoissonDistribution;
 import org.apache.commons.math3.random.JDKRandomGenerator;
+import org.apache.commons.math3.stat.descriptive.DescriptiveStatistics;
 import org.dom4j.DocumentException;
 import org.jfree.data.Range;
 import org.opensha.commons.data.CSVFile;
+import org.opensha.commons.data.Site;
 import org.opensha.commons.data.TimeSpan;
+import org.opensha.commons.data.function.AbstractDiscretizedFunc;
 import org.opensha.commons.data.function.ArbDiscrEmpiricalDistFunc;
 import org.opensha.commons.data.function.ArbDiscrEmpiricalDistFunc_3D;
 import org.opensha.commons.data.function.ArbitrarilyDiscretizedFunc;
+import org.opensha.commons.data.function.DefaultXY_DataSet;
 import org.opensha.commons.data.function.DiscretizedFunc;
 import org.opensha.commons.data.function.EvenlyDiscretizedFunc;
 import org.opensha.commons.data.function.HistogramFunction;
 import org.opensha.commons.data.function.XY_DataSet;
+import org.opensha.commons.data.region.CaliforniaRegions;
 import org.opensha.commons.data.uncertainty.UncertainArbDiscFunc;
+import org.opensha.commons.geo.GriddedRegion;
+import org.opensha.commons.geo.Location;
 import org.opensha.commons.geo.LocationUtils;
+import org.opensha.commons.geo.Region;
+import org.opensha.commons.gui.plot.GeographicMapMaker;
 import org.opensha.commons.gui.plot.PlotCurveCharacterstics;
 import org.opensha.commons.gui.plot.PlotLineType;
+import org.opensha.commons.gui.plot.PlotSymbol;
+import org.opensha.commons.mapping.gmt.elements.GMT_CPT_Files;
+import org.opensha.commons.param.Parameter;
+import org.opensha.commons.param.ParameterList;
 import org.opensha.commons.util.ExceptionUtils;
+import org.opensha.commons.util.cpt.CPT;
+import org.opensha.commons.util.cpt.CPTVal;
+import org.opensha.sha.calc.HazardCurveCalculator;
+import org.opensha.sha.earthquake.ERF;
 import org.opensha.sha.earthquake.EqkRupture;
 import org.opensha.sha.earthquake.ProbEqkRupture;
+import org.opensha.sha.earthquake.ProbEqkSource;
+import org.opensha.sha.earthquake.calc.ERF_Calculator;
 import org.opensha.sha.earthquake.calc.recurInterval.LognormalDistCalc;
 import org.opensha.sha.earthquake.faultSysSolution.FaultSystemSolution;
+import org.opensha.sha.earthquake.faultSysSolution.modules.RupMFDsModule;
 import org.opensha.sha.earthquake.observedEarthquake.ObsEqkRupList;
 import org.opensha.sha.earthquake.observedEarthquake.ObsEqkRupture;
 import org.opensha.sha.earthquake.observedEarthquake.Declustering.GardnerKnopoffDeclustering;
+import org.opensha.sha.earthquake.param.MagDependentAperiodicityParam;
 import org.opensha.sha.earthquake.param.ProbabilityModelOptions;
 import org.opensha.sha.earthquake.param.ProbabilityModelParam;
+import org.opensha.sha.faultSurface.FaultSection;
 import org.opensha.sha.magdist.IncrementalMagFreqDist;
 import org.opensha.sha.magdist.SummedMagFreqDist;
 
+import com.google.common.base.Preconditions;
+import com.google.common.collect.HashBasedTable;
 import com.google.common.math.Quantiles;
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 
+import scratch.UCERF3.erf.ETAS.ETAS_Utils;
 import scratch.UCERF3.erf.FaultSystemSolutionERF;
 import scratch.UCERF3.erf.ETAS.ETAS_CatalogIO;
 import scratch.UCERF3.erf.ETAS.ETAS_CatalogIO.ETAS_Catalog;
 import scratch.UCERF3.erf.ETAS.ETAS_EqkRupture;
-import scratch.UCERF3.erf.ETAS.ETAS_Utils;
+import scratch.UCERF3.erf.ETAS.ETAS_SimAnalysisTools;
+import scratch.UCERF3.erf.ETAS.ETAS_Simulator;
 import scratch.UCERF3.erf.ETAS.FaultSystemSolutionERF_ETAS;
 import scratch.UCERF3.erf.ETAS.launcher.ETAS_Launcher;
 import scratch.UCERF3.griddedSeismicity.AbstractGridSourceProvider;
@@ -65,7 +97,8 @@ public class U3ETAS_LossSimulationAnalysis {
 
 	//	static String catalogsFileName = "/Users/field/Field_Other/CEA_WGCEP/UCERF3/DeclusteringAnalysis/Data/U3ETAS_SimulationData/results_m5_preserve_chain_FullTD_totRateScaleFactor1pt14.bin"; 
 	//  static String catalogsFileName = "/Users/field/Library/CloudStorage/OneDrive-DOI/Field_Other/CEA_WGCEP/UCERF3/DeclusteringOnHazardAnalysisPaper/OtherStuff/Data/U3ETAS_SimulationData/results_m5_preserve_chain_FullTD_totRateScaleFactor1pt14.bin";
-	static String catalogsFileName = "/Users/field/Library/CloudStorage/OneDrive-DOI/Field_Other/CEA_WGCEP/UCERF3/DeclusteringOnLossAnalysisPaper2024/Data/2024_06_06-Start2012_500yr_kCOV1p5_Spontaneous_HistCatalog/results_m5_preserve_chain 1.bin";
+	static String catalogsFileName = "/Users/field/Library/CloudStorage/OneDrive-DOI/Field_Other/CEA_WGCEP/UCERF3/DeclusteringOnLossAnalysisPaper2024/Data/2024_06_06-Start2012_500yr_kCOV1p5_Spontaneous_HistCatalog/results_m5_preserve_chain.bin";
+	static String catalogsFileName2 = "/Users/field/Library/CloudStorage/OneDrive-DOI/Field_Other/CEA_WGCEP/UCERF3/DeclusteringOnLossAnalysisPaper2024/Data/2024_08_23-Start2012_500yr_kCOV1p5_Spontaneous_HistCatalog/results_m5_preserve_chain.bin";
 	
 	// mean loss data file
 	static String lossDataCSV_Filename = "/Users/field/Library/CloudStorage/OneDrive-DOI/Field_Other/CEA_WGCEP/UCERF3/DeclusteringOnLossAnalysisPaper2024/Data/average_nth_rup_losses_remapped_m2p5.csv";
@@ -93,13 +126,15 @@ public class U3ETAS_LossSimulationAnalysis {
 	static int numMag = 40;
 	
 	// following are units of 1000 dollars
-	static double lossCurveLogMin = 0; // 1,000
-	static double lossCurveLogMax = 9;  // 1 trillion
+//	static double lossCurveLogMin = 0; // 1,000
+//	static double lossCurveLogMax = 9;  // 1 trillion
+	static double lossCurveLogMin = 3; // 1,000
+	static double lossCurveLogMax = 12;  // 1 trillion
 	static int lossCurveNum = 91; //40;
 	static double lossCurveDelta = (lossCurveLogMax-lossCurveLogMin)/(double)(lossCurveNum-1);
-	ArbitrarilyDiscretizedFunc curveXvals = getBlankLossCurve(0d);
+	ArbitrarilyDiscretizedFunc curveXvals = getBlankLossExceedCurve(0d);
 	
-	LossCOV_Model covModel = LossCOV_Model.PORTER_POWER_LAW_2020_09_01_fixed;
+	LossCOV_Model covModel = LossCOV_Model.PORTER_POWER_LAW_2020_09_01_DOLLARS;
 	double[] randomLossForEventID;
 	int totalNumEvents;
 	
@@ -125,8 +160,10 @@ public class U3ETAS_LossSimulationAnalysis {
 		
 		// Load catalogs & loss data
 		CSVFile<String> lossDataCSV_File=null;
+		File[] catFileArray = {new File(catalogsFileName),new File(catalogsFileName2)};
+//		File[] catFileArray = {new File(catalogsFileName)};
 		try {
-			catalogList = loadCatalogs(new File(catalogsFileName), 5.0, false);
+			catalogList = loadCatalogs(catFileArray, 5.0, false);
 			lossDataCSV_File = CSVFile.readFile(new File(lossDataCSV_Filename), true);
 		} catch (IOException | DocumentException e) {
 			throw ExceptionUtils.asRuntimeException(e);
@@ -150,7 +187,7 @@ public class U3ETAS_LossSimulationAnalysis {
 				fssIndexForNthRup.put(nthIndex, lossDataCSV_File.getInt(r, 1));
 				gridCellIndexForNthRup.put(nthIndex, lossDataCSV_File.getInt(r, 2));
 				magForNthRup.put(nthIndex, lossDataCSV_File.getDouble(r, 3));
-				meanLossForNthRup.put(nthIndex, lossDataCSV_File.getDouble(r, 4));
+				meanLossForNthRup.put(nthIndex, lossDataCSV_File.getDouble(r, 4)*1000d);
 				lossCOVForNthRup.put(nthIndex, lossDataCSV_File.getDouble(r, 5));
 		}
 		
@@ -177,7 +214,7 @@ public class U3ETAS_LossSimulationAnalysis {
 			for (ObsEqkRupture obsRup : catalog) {
 				ETAS_EqkRupture rup = (ETAS_EqkRupture)obsRup;
 				int nth = rup.getNthERF_Index();
-				double magDiff = Math.abs(rup.getMag()/magForNthRup.get(nth) - 1.0);
+				double magDiff=Math.abs(rup.getMag()/magForNthRup.get(nth) - 1.0);
 				if(magDiff > 1e-4)
 					throw new RuntimeException("ERROR: mags differ for nth rup: "+nth+"; cat mag = "+rup.getMag()+"; loss-file mag = "+ magForNthRup.get(nth));		
 				if(rup.getFSSIndex() != fssIndexForNthRup.get(nth))
@@ -229,29 +266,36 @@ public class U3ETAS_LossSimulationAnalysis {
 		mfdList.add(catalogGKdeclMFD);
 		mfdList.add(catalogGKfiltMFD);
 		mfdList.add(catalogSpontaneustMFD);
-		mfdList.add(erfMFD_TD);
-		mfdList.add(erfMFD_TimeInd);
+//		mfdList.add(erfMFD_TD);
+//		mfdList.add(erfMFD_TimeInd);
 
 		ArrayList<PlotCurveCharacterstics> plotChars = new ArrayList<PlotCurveCharacterstics>();	
-		plotChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 2f, Color.BLUE));
-		plotChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 2f, Color.RED));
-		plotChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 2f, Color.BLACK));
-		plotChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 2f, Color.GREEN));
-		plotChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 2f, Color.ORANGE));
-		plotChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 2f, Color.GRAY));
-		PlottingUtils.writeAndOrPlotFuncs(mfdList, plotChars, "MFDs", "Mag", "Rate (/yr)", 
-				new Range(5,8.5), new Range(1e-5,2), false, true, null, true);
+		plotChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, Color.RED));
+		plotChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, Color.BLUE));
+		plotChars.add(new PlotCurveCharacterstics(PlotLineType.DOTTED, 1f, Color.BLUE));
+		plotChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, Color.GRAY));
+		plotChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, Color.GREEN));
+		plotChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, Color.ORANGE));
+		File outputDir = new File(dirName+ "/MFD_Figs");
+		if(!outputDir.exists()) outputDir.mkdir();
+		String fileNamePrefix = dirName+"/MFD_Figs/incrMFD";
+		PlottingUtils.writeAndOrPlotFuncs(mfdList, plotChars, "", "Magnitude", "Incremental Rate (per year)", 
+				new Range(5,8.5), new Range(1e-5,2), false, true, fileNamePrefix, true);
 
 		ArrayList<XY_DataSet> mfdCumList = new ArrayList<XY_DataSet>();
 		mfdCumList.add(catalogMFD.getCumRateDistWithOffset());
 		mfdCumList.add(catalogGKdeclMFD.getCumRateDistWithOffset());
 		mfdCumList.add(catalogGKfiltMFD.getCumRateDistWithOffset());
 		mfdCumList.add(catalogSpontaneustMFD.getCumRateDistWithOffset());
-		mfdCumList.add(erfMFD_TD.getCumRateDistWithOffset());
-		mfdCumList.add(erfMFD_TimeInd.getCumRateDistWithOffset());
-		PlottingUtils.writeAndOrPlotFuncs(mfdCumList, plotChars, "Cumunlative MFDs", "Mag", "Cumulative Rate (/yr)", 
-				new Range(5,8.5), new Range(1e-5,10), false, true, null, true);
+//		mfdCumList.add(erfMFD_TD.getCumRateDistWithOffset());
+//		mfdCumList.add(erfMFD_TimeInd.getCumRateDistWithOffset());
 		
+		fileNamePrefix = dirName+"/MFD_Figs/cumMFD";
+		PlottingUtils.writeAndOrPlotFuncs(mfdCumList, plotChars, "", "Magnitude", "Cumulative Rate (per year)", 
+				new Range(5,8.5), new Range(1e-5,10), false, true, fileNamePrefix, true);
+		
+		IncrementalMagFreqDist catalogMFD_Ratio = makeMFD();
+		catalogMFD_Ratio.setName("catalogMFD_Ratio");
 		IncrementalMagFreqDist mfdGKdeclMFD_Ratio = makeMFD();
 		mfdGKdeclMFD_Ratio.setName("mfdGKdeclMFD_Ratio");
 		IncrementalMagFreqDist mfdGKfiltMFD_Ratio = makeMFD();
@@ -259,16 +303,19 @@ public class U3ETAS_LossSimulationAnalysis {
 		IncrementalMagFreqDist mfdSpontaneousMFD_Ratio = makeMFD();
 		mfdSpontaneousMFD_Ratio.setName("mfdSpontaneousMFD_Ratio");
 		for(int i=0;i<catalogMFD.size();i++) {
+			catalogMFD_Ratio.set(i,catalogMFD.getY(i)/catalogMFD.getY(i));
 			mfdGKdeclMFD_Ratio.set(i,catalogGKdeclMFD.getY(i)/catalogMFD.getY(i));
 			mfdGKfiltMFD_Ratio.set(i,catalogGKfiltMFD.getY(i)/catalogMFD.getY(i));
 			mfdSpontaneousMFD_Ratio.set(i,catalogSpontaneustMFD.getY(i)/catalogMFD.getY(i));
 		}
 		ArrayList<XY_DataSet> ratioList = new ArrayList<XY_DataSet>();
+		ratioList.add(catalogMFD_Ratio);
 		ratioList.add(mfdGKdeclMFD_Ratio);
 		ratioList.add(mfdGKfiltMFD_Ratio);
 		ratioList.add(mfdSpontaneousMFD_Ratio);
-		PlottingUtils.writeAndOrPlotFuncs(ratioList, plotChars, "Incr MFD Ratios", "Mag", "Ratio", 
-				new Range(5,8.5), new Range(0,1), false, false, null, true);
+		fileNamePrefix = dirName+"/MFD_Figs/mfdRatios";
+		PlottingUtils.writeAndOrPlotFuncs(ratioList, plotChars, "", "Magnitude", "Incremental Ratio", 
+				new Range(5,8.5), new Range(0,1), false, false, fileNamePrefix, true);
 	}
 	
 	/**
@@ -277,30 +324,46 @@ public class U3ETAS_LossSimulationAnalysis {
 	public void writeAAL_ValuesBillions() {
 		System.out.println("\nAverage Annual losses (AAL; billion $):");
 		
-//		double aal_Catalog = getAveAnnaulLossFromCatalogList(catalogList)/1e6d;
-//		System.out.println("\tAAL from catalogs: "+(float)aal_Catalog);
-		double[] stats = getLossStatsFromCatalogList(catalogList, true);
-		System.out.println("\tAAL from catalogs: "+(float)(stats[0]/1e6d)+"\t(AAL=EventRate*MeanLoss)");
+		double aal_Catalog = getAveAnnaulLossFromCatalogList(catalogList)/1e9d;
+		System.out.println("\nCatalog Stats (based on mean loss per rupture):");
+		double[] stats = getLossStatsFromCatalogList(catalogList, false, true);
+		System.out.println("\tAAL from catalogs: "+(float)(stats[0]/1e9d)+"\t(AAL=EventRate*MeanLoss)");
 		System.out.println("\t\tEventRate = : "+(float)(stats[1]));
-		System.out.println("\t\tMeanLoss = : "+(float)(stats[2]/1e6d));
-		System.out.println("\t\tMedianLoss = : "+(float)(stats[3]/1e6d));
+		System.out.println("\t\tMeanLoss = : "+(float)(stats[2]/1e9d));
+		System.out.println("\t\tMedianLoss = : "+(float)(stats[3]/1e9d));
 		System.out.println("\t\tLossCOV = : "+(float)(stats[4]));
-		System.out.println("\t\tMinNonZeroLoss = : "+(float)(stats[5]/1e6d));
-		System.out.println("\t\tMaxLoss = : "+(float)(stats[6]/1e6d));
+		System.out.println("\t\tMinNonZeroLoss = : "+(float)(stats[5]/1e9d));
+		System.out.println("\t\tMaxLoss = : "+(float)(stats[6]/1e9d));
 		System.out.println("\t\tfractZeroLossRups = : "+(float)(stats[7]));
+		System.out.println("\t\tAAL from faults = : "+(float)(stats[8]/1e9d));
+		System.out.println("\t\tAAL from gridded seismicity = : "+(float)(stats[9]/1e9d));
+		System.out.println("\t\tAAL for spontaneous seismicity = : "+(float)(stats[10]/1e9d));
+
+		// NOT sure why this is so painfully slow; main results are equivalent to above
+//		System.out.println("\nCatalog Stats (based on random loss from COV):");
+//		stats = getLossStatsFromCatalogList(catalogList, true, true);
+//		System.out.println("\tAAL from catalogs: "+(float)(stats[0]/1e9d)+"\t(AAL=EventRate*MeanLoss)");
+//		System.out.println("\t\tEventRate = : "+(float)(stats[1]));
+//		System.out.println("\t\tMeanLoss = : "+(float)(stats[2]/1e9d));
+//		System.out.println("\t\tMedianLoss = : "+(float)(stats[3]/1e9d));
+//		System.out.println("\t\tLossCOV = : "+(float)(stats[4]));
+//		System.out.println("\t\tMinNonZeroLoss = : "+(float)(stats[5]/1e9d));
+//		System.out.println("\t\tMaxLoss = : "+(float)(stats[6]/1e9d));
+//		System.out.println("\t\tfractZeroLossRups = : "+(float)(stats[7]));
+//		System.out.println("\t\tAAL from faults = : "+(float)(stats[8]/1e9d));
+//		System.out.println("\t\tAAL from gridded seismicity = : "+(float)(stats[9]/1e9d));
 
 
-
-		double aal_TD = getAveAnnualLossFromERF(true)/1e6d;  // Time Dependent
+		double aal_TD = getAveAnnualLossFromERF(true)/1e9d;  // Time Dependent
 		if(D) System.out.println("\tAAL from ERF-TD = "+(float)aal_TD); 
 		
-		double aal_TimeInd = getAveAnnualLossFromERF(false)/1e6d;  // Time Independent
+		double aal_TimeInd = getAveAnnualLossFromERF(false)/1e9d;  // Time Independent
 		if(D) System.out.println("\tAAL from ERF-TimeInd = "+(float)aal_TimeInd); 
 		
-		double aal_GKdeclCatalog = getAveAnnaulLossFromCatalogList(catalogDeclusteredList)/1e6d;
+		double aal_GKdeclCatalog = getAveAnnaulLossFromCatalogList(catalogDeclusteredList)/1e9d;
 		System.out.println("\tAAL from GK declustered catalogs: "+(float)aal_GKdeclCatalog+"\n");
 		
-		double aal_GKfilteredCatalog = getAveAnnaulLossFromCatalogList(getU3_GK_FilteredCatalog(catalogList))/1e6d;
+		double aal_GKfilteredCatalog = getAveAnnaulLossFromCatalogList(getU3_GK_FilteredCatalog(catalogList))/1e9d;
 		System.out.println("\tAAL from GK U3 filtered catalogs: "+(float)aal_GKfilteredCatalog+"\n");
 
 
@@ -355,15 +418,17 @@ public class U3ETAS_LossSimulationAnalysis {
 		funcList.get(4).setName("16% fractile");
 		funcList.get(5).setName("84% fractile");
 		ArrayList<PlotCurveCharacterstics> plotChars = new ArrayList<PlotCurveCharacterstics>();	
-		plotChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 2f, Color.BLUE));
-		plotChars.add(new PlotCurveCharacterstics(PlotLineType.DOTTED_AND_DASHED, 2f, Color.BLUE));
-		plotChars.add(new PlotCurveCharacterstics(PlotLineType.DOTTED, 2f, Color.BLUE));
-		plotChars.add(new PlotCurveCharacterstics(PlotLineType.DOTTED, 2f, Color.BLUE));
-		plotChars.add(new PlotCurveCharacterstics(PlotLineType.DASHED, 2f, Color.BLUE));
-		plotChars.add(new PlotCurveCharacterstics(PlotLineType.DASHED, 2f, Color.BLUE));
-
-		PlottingUtils.writeAndOrPlotFuncs(funcList, plotChars, "", "Magnitude", "Mean Loss ($1000)",
-				new Range(5d,8.5), new Range(1e-2,1e8), false, true, 6d, 5d, null, true);
+		plotChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, Color.BLUE));
+		plotChars.add(new PlotCurveCharacterstics(PlotLineType.DOTTED_AND_DASHED, 1f, Color.BLUE));
+		plotChars.add(new PlotCurveCharacterstics(PlotLineType.DOTTED, 1f, Color.BLUE));
+		plotChars.add(new PlotCurveCharacterstics(PlotLineType.DOTTED, 1f, Color.BLUE));
+		plotChars.add(new PlotCurveCharacterstics(PlotLineType.DASHED, 1f, Color.BLUE));
+		plotChars.add(new PlotCurveCharacterstics(PlotLineType.DASHED, 1f, Color.BLUE));
+		String fileNamePrefix = dirName+"/LossForAllRupStats";
+		if(randomFromCOV)
+			fileNamePrefix += "RandCOV";
+		PlottingUtils.writeAndOrPlotFuncs(funcList, plotChars, "", "Magnitude", "Loss ($)",
+				new Range(5d,8.5), new Range(1e1,1e11), false, true, 6d, 5d, fileNamePrefix, true);
 	}
 	
 	/**
@@ -377,37 +442,54 @@ public class U3ETAS_LossSimulationAnalysis {
 	 * stats[5] = minLoss; // minimum non-zero loss
 	 * stats[6] = maxLoss;
 	 * stats[7] = fractZeroLosses; // fraction of ruptures that are zero-loss 
+	 * stats[8] = AAL from faults 
+	 * stats[9] = AAL from gridded seismicity 
 	 * @param catList
 	 * @return stats
 	 */
-	public double[] getLossStatsFromCatalogList(ArrayList<ObsEqkRupList> catList, boolean mkPlot) {
-		HistogramFunction hist = getBlankLossCurveLogX();
-		double[] stats = new double[8];
+	public double[] getLossStatsFromCatalogList(ArrayList<ObsEqkRupList> catList, boolean randFromCOV, boolean mkPlot) {
+		HistogramFunction hist = getBlankLossExceedCurveLogX();
+		double[] stats = new double[11];
 		ArbDiscrEmpiricalDistFunc distFunc = new ArbDiscrEmpiricalDistFunc();
-		double aal =0;
+		double aal=0,aal_faults=0,aal_gridded=0, aal_spontaneous=0;
 		int n=0;
+int cat =0;
 		int numZeroLosses = 0;
 		double minLoss = Double.MAX_VALUE, maxLoss=0;
 		for (ObsEqkRupList catalog : catList) {
+//cat +=1;
+//if(randFromCOV) System.out.println("cat "+cat);
 			for (ObsEqkRupture obsRup : catalog) {
 				n+=1;
 				ETAS_EqkRupture rup = (ETAS_EqkRupture)obsRup;
-				double rupLoss = meanLossForNthRup.get(rup.getNthERF_Index());
+				double rupLoss;
+				if(randFromCOV)
+					rupLoss = randomLossForEventID[rup.getID()];
+				else
+					rupLoss = meanLossForNthRup.get(rup.getNthERF_Index());
 				
 				if(rupLoss==0.0)
 					numZeroLosses+=1;			
 				else
 					if(minLoss>rupLoss) minLoss=rupLoss;
 				
-				if(maxLoss<rupLoss) maxLoss=rupLoss;
+				if(maxLoss<rupLoss) 
+					maxLoss=rupLoss;
 				aal += rupLoss;
+				if(rup.getFSSIndex()>0)
+					aal_faults +=rupLoss;
+				else
+					aal_gridded +=rupLoss;
+				
+				if(rup.getGeneration()==0)
+					aal_spontaneous+=rupLoss;
+
 				distFunc.set(rupLoss, 1.0);
 				
 				if(mkPlot) {
 					double log10Loss = Math.log10(rupLoss);
 					if(log10Loss<lossCurveLogMin)
 						hist.add(0,1.0); // put in first bin
-//						continue;
 					else
 						hist.add(log10Loss, 1.0);
 				}
@@ -421,6 +503,9 @@ public class U3ETAS_LossSimulationAnalysis {
 		stats[5] = minLoss;
 		stats[6] = maxLoss;
 		stats[7] = numZeroLosses/(double)n;
+		stats[8] = aal_faults/((double)catList.size()*catalogDuration);
+		stats[9] = aal_gridded/((double)catList.size()*catalogDuration);
+		stats[10] = aal_spontaneous/((double)catList.size()*catalogDuration);
 		
 		if(Math.abs(stats[1]*stats[2]/stats[0] - 1.0) > 1e-6)
 			throw new RuntimeException("AAL != EventRate*MeanLoss");
@@ -431,17 +516,102 @@ public class U3ETAS_LossSimulationAnalysis {
 //			double aalTest =0;
 //			for(int i=1;i<hist.size();i++)
 //				aalTest += Math.pow(10, hist.getX(i))*hist.getY(i);
-//			System.out.println("aalTest="+aalTest/1e6); // convert to billions
+//			System.out.println("aalTest="+aalTest/1e9); // convert to billions
 			
 			ArrayList<XY_DataSet> funcList = new ArrayList<XY_DataSet>();
 			funcList.add(hist);
 			ArrayList<PlotCurveCharacterstics> plotChars = new ArrayList<PlotCurveCharacterstics>();	
 			plotChars.add(new PlotCurveCharacterstics(PlotLineType.HISTOGRAM, 2f, Color.BLUE));
-			PlottingUtils.writeAndOrPlotFuncs(funcList, plotChars, "Catalog Loss Rate Dist; Zero COV", 
+			if(randFromCOV)
+				PlottingUtils.writeAndOrPlotFuncs(funcList, plotChars, "Catalog Loss Rate Dist; Random From COV", 
 					"Log10(Loss;thousand $)", "Bin Rate (per year)", null, null, false, false, null, true);
+			else
+				PlottingUtils.writeAndOrPlotFuncs(funcList, plotChars, "Catalog Loss Rate Dist; Mean Loss", 
+						"Log10(Loss;thousand $)", "Bin Rate (per year)", null, null, false, false, null, true);
 
 		}
 		return stats;
+	}
+
+	
+	/**
+	 * This plots all points on the distribution (using ArbDiscrEmpiricalDistFunc)
+	 * @param randFromCOV
+	 * @param mkPlot
+	 */
+	public void plotCumAggrYearlyLossDistributions(boolean randFromCOV, boolean mkPlot) {
+		ArrayList<ObsEqkRupList> subCatList = getSubcatalogList(getCatalogs(), 1.0);
+		ArbDiscrEmpiricalDistFunc distFuncTD = new ArbDiscrEmpiricalDistFunc();
+		int counter = -1;
+		double writeAt = 0.1;
+		for (ObsEqkRupList catalog : subCatList) {
+			counter+=1;
+			double percDone = (double)counter/(double)subCatList.size();
+			if(percDone > writeAt) {
+				System.out.println("percDone: "+(float)percDone);
+				writeAt+=0.1;
+			}
+			double totLoss=0;
+			for (ObsEqkRupture obsRup : catalog) {
+				ETAS_EqkRupture rup = (ETAS_EqkRupture)obsRup;
+				if(randFromCOV)
+					totLoss += randomLossForEventID[rup.getID()];
+				else
+					totLoss += meanLossForNthRup.get(rup.getNthERF_Index());
+			}
+			distFuncTD.set(totLoss, 1.0);	
+		}			
+		DiscretizedFunc cumDistFuncTD = distFuncTD.getCumDist();
+		cumDistFuncTD.scale(1.0/distFuncTD.calcSumOfY_Vals());
+		cumDistFuncTD.setName("cumDistFuncTD");
+//		for(int i=0;i<cumDistFuncTD.size();i++)
+//			cumDistFuncTD.set(cumDistFuncTD.getX(i), 1.0-cumDistFuncTD.getY(i));
+		
+		subCatList = getSubcatalogList(getRandomizedCatalogs(), 1.0);
+		ArbDiscrEmpiricalDistFunc distFuncTI = new ArbDiscrEmpiricalDistFunc();
+		counter = -1;
+		writeAt = 0.1;
+		for (ObsEqkRupList catalog : subCatList) {
+			counter+=1;
+			double percDone = (double)counter/(double)subCatList.size();
+			if(percDone > writeAt) {
+				System.out.println("percDone: "+(float)percDone);
+				writeAt+=0.1;
+			}
+			double totLoss=0;
+			for (ObsEqkRupture obsRup : catalog) {
+				ETAS_EqkRupture rup = (ETAS_EqkRupture)obsRup;
+				if(randFromCOV)
+					totLoss += randomLossForEventID[rup.getID()];
+				else
+					totLoss += meanLossForNthRup.get(rup.getNthERF_Index());
+			}
+			distFuncTI.set(totLoss, 1.0);	
+		}			
+		DiscretizedFunc cumDistFuncTI = distFuncTI.getCumDist();
+		cumDistFuncTI.scale(1.0/distFuncTI.calcSumOfY_Vals());
+		cumDistFuncTI.setName("cumDistFuncTI");
+//		for(int i=0;i<cumDistFuncTI.size();i++)
+//			cumDistFuncTI.set(cumDistFuncTI.getX(i), 1.0-cumDistFuncTI.getY(i));
+
+		double[] vals = {10e6,5e9};
+		System.out.print("X\tY_TD\tY_TI");
+		for(double val:vals)
+			System.out.println(val+"\t"+cumDistFuncTD.getInterpolatedY_inLogXLogYDomain(val)+"\t"+cumDistFuncTI.getInterpolatedY_inLogXLogYDomain(val));
+
+		
+		ArrayList<XY_DataSet> funcList = new ArrayList<XY_DataSet>();
+		funcList.add(cumDistFuncTD);
+		funcList.add(cumDistFuncTI);
+		ArrayList<PlotCurveCharacterstics> plotChars = new ArrayList<PlotCurveCharacterstics>();	
+		plotChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, Color.BLUE));
+		plotChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, Color.RED));
+		if(randFromCOV)
+			PlottingUtils.writeAndOrPlotFuncs(funcList, plotChars, "Cumulative Loss Dist; Random From COV", 
+					"Loss($)", "Cumulative Dist", null, null, false, false, null, true);
+			else
+				PlottingUtils.writeAndOrPlotFuncs(funcList, plotChars, "Cumulative Loss Dist; Mean Loss", 
+						"Loss ($)", "Cumulative Dist", null, null, true, false, null, true);
 	}
 
 	
@@ -524,7 +694,7 @@ public class U3ETAS_LossSimulationAnalysis {
 	}
 	
 	public ArbitrarilyDiscretizedFunc getLossExceedProbCurveFromERF() {
-		ArbitrarilyDiscretizedFunc lossExceedProbCurve = getBlankLossCurve(1d);
+		ArbitrarilyDiscretizedFunc lossExceedProbCurve = getBlankLossExceedCurve(1d);
 		if(erf==null)
 			erf = getERF();
 		erf.getTimeSpan().setDuration(1d);
@@ -560,10 +730,10 @@ public class U3ETAS_LossSimulationAnalysis {
 	 */
 	public ArrayList<XY_DataSet> testCOV_ModelChangesInAug2024() {
 		LossCOV_Model covModel1 = LossCOV_Model.PORTER_POWER_LAW_2020_09_01_fixed;
-		ArbitrarilyDiscretizedFunc lossExceedProbCurve = getBlankLossCurve(1d);  // 
+		ArbitrarilyDiscretizedFunc lossExceedProbCurve = getBlankLossExceedCurve(1d);  // 
 		LossCOV_Model covModel2 = LossCOV_Model.PORTER_POWER_LAW_2020_09_01;
-		ArbitrarilyDiscretizedFunc lossExceedProbCurve2 = getBlankLossCurve(1d); // previous
-		ArbitrarilyDiscretizedFunc lossExceedProbCurve3 = getBlankLossCurve(1d); // old/wrong distribution
+		ArbitrarilyDiscretizedFunc lossExceedProbCurve2 = getBlankLossExceedCurve(1d); // previous
+		ArbitrarilyDiscretizedFunc lossExceedProbCurve3 = getBlankLossExceedCurve(1d); // old/wrong distribution
 		
 //		double l = 1e7;
 //		System.out.println("HERE1: "+covModel1.getCOV(l));
@@ -628,7 +798,7 @@ public class U3ETAS_LossSimulationAnalysis {
 	
 	
 	public ArbitrarilyDiscretizedFunc getLossRateCurveFromERF() {
-		ArbitrarilyDiscretizedFunc lossRateCurve = getBlankLossCurve(0d);
+		ArbitrarilyDiscretizedFunc lossRateCurve = getBlankLossExceedCurve(0d);
 		if(erf==null)
 			erf = getERF();
 		erf.getParameter(ProbabilityModelParam.NAME).setValue(ProbabilityModelOptions.POISSON);
@@ -654,7 +824,7 @@ public class U3ETAS_LossSimulationAnalysis {
 	
 	
 	public ArbitrarilyDiscretizedFunc getLossRateCurveFromERF_zeroCOV() {
-		ArbitrarilyDiscretizedFunc lossRateCurve = getBlankLossCurve(0d);
+		ArbitrarilyDiscretizedFunc lossRateCurve = getBlankLossExceedCurve(0d);
 		if(erf==null)
 			erf = getERF();
 		erf.getParameter(ProbabilityModelParam.NAME).setValue(ProbabilityModelOptions.POISSON);
@@ -680,7 +850,7 @@ public class U3ETAS_LossSimulationAnalysis {
 	
 	public ArbitrarilyDiscretizedFunc getLossRateCurveFromCatalogs(ArrayList<ObsEqkRupList> catList) {
 		if(D) System.out.println("Working on getLossRateCurveFromCatalogs(); num catalogs = "+catList.size());
-		ArbitrarilyDiscretizedFunc lossRateCurve = getBlankLossCurve(0d);
+		ArbitrarilyDiscretizedFunc lossRateCurve = getBlankLossExceedCurve(0d);
 		for (ObsEqkRupList catalog : catList) {
 			for (ObsEqkRupture obsRup : catalog) {
 				ETAS_EqkRupture rup = (ETAS_EqkRupture)obsRup;
@@ -699,7 +869,7 @@ public class U3ETAS_LossSimulationAnalysis {
 	
 	
 	public ArbitrarilyDiscretizedFunc getLossRateCurveFromCatalogsZeroCOV(ArrayList<ObsEqkRupList> catList) {
-		ArbitrarilyDiscretizedFunc lossRateCurve = getBlankLossCurve(0d);
+		ArbitrarilyDiscretizedFunc lossRateCurve = getBlankLossExceedCurve(0d);
 		for (ObsEqkRupList catalog : catList) {
 			for (ObsEqkRupture obsRup : catalog) {
 				ETAS_EqkRupture rup = (ETAS_EqkRupture)obsRup;
@@ -717,6 +887,28 @@ public class U3ETAS_LossSimulationAnalysis {
 		lossRateCurve.scale(1.0/((double)catList.size()*catalogDuration));
 		return lossRateCurve;
 	}
+	
+	
+	public ArbitrarilyDiscretizedFunc getLossRateCurveFromCatalogsRandomFromCOV(ArrayList<ObsEqkRupList> catList) {
+		ArbitrarilyDiscretizedFunc lossRateCurve = getBlankLossExceedCurve(0d);
+		for (ObsEqkRupList catalog : catList) {
+			for (ObsEqkRupture obsRup : catalog) {
+				ETAS_EqkRupture rup = (ETAS_EqkRupture)obsRup;
+				double loss = randomLossForEventID[rup.getID()];
+				if(loss == 0.0)
+					continue;
+				for(int i=0;i<lossRateCurve.size();i++) {
+					if(lossRateCurve.getX(i)<loss)
+						lossRateCurve.set(i,lossRateCurve.getY(i)+1d);
+					else
+						break;
+				}
+			}
+		}		
+		lossRateCurve.scale(1.0/((double)catList.size()*catalogDuration));
+		return lossRateCurve;
+	}
+
 
 
 	
@@ -724,11 +916,11 @@ public class U3ETAS_LossSimulationAnalysis {
 		
 		if(D) System.out.println("Working on getLossExceedProbCurveFromCatalogs(); num catalogs = "+catList.size());
 
-		ArbitrarilyDiscretizedFunc lossProbCurve = getBlankLossCurve(0d);
+		ArbitrarilyDiscretizedFunc lossProbCurve = getBlankLossExceedCurve(0d);
 		ArrayList<ObsEqkRupList> subCatList = getSubcatalogList(catList, duration);
 		
 		for (ObsEqkRupList catalog : subCatList) {
-			ArbitrarilyDiscretizedFunc lossProbCurveForSubCat = getBlankLossCurve(1d);
+			ArbitrarilyDiscretizedFunc lossProbCurveForSubCat = getBlankLossExceedCurve(1d);
 			for (ObsEqkRupture obsRup : catalog) {
 				ETAS_EqkRupture rup = (ETAS_EqkRupture)obsRup;
 				double aveLoss = meanLossForNthRup.get(rup.getNthERF_Index());
@@ -750,8 +942,8 @@ public class U3ETAS_LossSimulationAnalysis {
 		}		
 		lossProbCurve.scale(1.0/((double)subCatList.size()));
 		
-		ArbitrarilyDiscretizedFunc low95confCurve = getBlankLossCurve(0d);
-		ArbitrarilyDiscretizedFunc high95confCurve = getBlankLossCurve(0d);
+		ArbitrarilyDiscretizedFunc low95confCurve = getBlankLossExceedCurve(0d);
+		ArbitrarilyDiscretizedFunc high95confCurve = getBlankLossExceedCurve(0d);
 		for(int i=0;i<lossProbCurve.size();i++) {
 			double xVal = lossProbCurve.getX(i);
 			double[] confArray = ETAS_Utils.getBinomialProportion95confidenceInterval(lossProbCurve.getY(i), subCatList.size());
@@ -774,11 +966,11 @@ public class U3ETAS_LossSimulationAnalysis {
 	
 	public ArbitrarilyDiscretizedFunc getLossExceedProbCurveFromCatalogsZeroCOV(ArrayList<ObsEqkRupList> catList, double duration) {
 
-		ArbitrarilyDiscretizedFunc lossProbCurve = getBlankLossCurve(0d);
+		ArbitrarilyDiscretizedFunc lossProbCurve = getBlankLossExceedCurve(0d);
 		ArrayList<ObsEqkRupList> subCatList = getSubcatalogList(catList, duration);
 		
 		for (ObsEqkRupList catalog : subCatList) {
-			ArbitrarilyDiscretizedFunc lossProbCurveForSubCat = getBlankLossCurve(0d);
+			ArbitrarilyDiscretizedFunc lossProbCurveForSubCat = getBlankLossExceedCurve(0d);
 			double maxLoss = 0;
 			for (ObsEqkRupture obsRup : catalog) {
 				ETAS_EqkRupture rup = (ETAS_EqkRupture)obsRup;
@@ -802,19 +994,19 @@ public class U3ETAS_LossSimulationAnalysis {
 	
 	public UncertainArbDiscFunc getLossExceedProbCurveFromCatalogsRandomFromCOV(ArrayList<ObsEqkRupList> catList, double duration) {
 
-		ArbitrarilyDiscretizedFunc lossProbCurve = getBlankLossCurve(0d);
+		ArbitrarilyDiscretizedFunc lossProbCurve = getBlankLossExceedCurve(0d);
 		ArrayList<ObsEqkRupList> subCatList = getSubcatalogList(catList, duration);
 		
-		// TEMP
-		double lossExceedThresh = 4.0e4;
-		int[] numExceedForCatArray = new int[subCatList.size()];
+//		// TEMP
+//		double lossExceedThresh = 4.0e4;
+//		int[] numExceedForCatArray = new int[subCatList.size()];
 
 		// TEMP
 		int c=-1;
 		for (ObsEqkRupList catalog : subCatList) {
 			c+=1;
 
-			ArbitrarilyDiscretizedFunc lossProbCurveForSubCat = getBlankLossCurve(0d);
+			ArbitrarilyDiscretizedFunc lossProbCurveForSubCat = getBlankLossExceedCurve(0d);
 			double maxLoss = 0;
 			for (ObsEqkRupture obsRup : catalog) {
 				ETAS_EqkRupture rup = (ETAS_EqkRupture)obsRup;
@@ -825,9 +1017,7 @@ public class U3ETAS_LossSimulationAnalysis {
 				if(maxLoss<randLoss) maxLoss=randLoss;
 
 				// TEMP
-				if(randLoss>=lossExceedThresh)
-					numExceedForCatArray[c] += 1;
-//				if(randLoss>=Math.pow(10, 0.95) && randLoss<Math.pow(10, 1.05))
+//				if(randLoss>=lossExceedThresh)
 //					numExceedForCatArray[c] += 1;
 				
 			}
@@ -863,8 +1053,8 @@ public class U3ETAS_LossSimulationAnalysis {
 			
 		}		
 		lossProbCurve.scale(1.0/((double)subCatList.size()));
-		ArbitrarilyDiscretizedFunc low95confCurve = getBlankLossCurve(0d);
-		ArbitrarilyDiscretizedFunc high95confCurve = getBlankLossCurve(0d);
+		ArbitrarilyDiscretizedFunc low95confCurve = getBlankLossExceedCurve(0d);
+		ArbitrarilyDiscretizedFunc high95confCurve = getBlankLossExceedCurve(0d);
 		for(int i=0;i<lossProbCurve.size();i++) {
 			double xVal = lossProbCurve.getX(i);
 			double[] confArray = ETAS_Utils.getBinomialProportion95confidenceInterval(lossProbCurve.getY(i), subCatList.size());
@@ -879,9 +1069,75 @@ public class U3ETAS_LossSimulationAnalysis {
 		UncertainArbDiscFunc uncertFunc = new UncertainArbDiscFunc(lossProbCurve,low95confCurve,high95confCurve);
 		
 		// TEMP
-		int maxNum = 0;
-		for(int num:numExceedForCatArray)
-			if(num>maxNum) maxNum=num;
+//		int maxNum = 0;
+//		for(int num:numExceedForCatArray)
+//			if(num>maxNum) maxNum=num;
+////		System.out.println("maxNum: "+maxNum);
+//		HistogramFunction hist = new HistogramFunction(0d,(double)maxNum,maxNum+1);
+//		for(int num:numExceedForCatArray)
+//			hist.add(num, 1d);
+//	//	System.out.println("\nhist.calcSumOfY_Vals():\n"+hist.calcSumOfY_Vals());
+//
+//		hist.normalizeBySumOfY_Vals();
+//		System.out.println("\nnumExceedPDF:\n"+hist);
+		
+		return uncertFunc;
+	}
+	
+	
+	/**
+	 * This returns a histogram representing the fraction of catalogs that had 0, 1, 2, 3... exceedances of the given
+	 * threshold loss value.
+	 * @param catList
+	 * @param duration
+	 * @param lossExceedThresh
+	 * @return
+	 */
+	public HistogramFunction getNumLossExceedDistFromCatalogsRandomFromCOV(ArrayList<ObsEqkRupList> catList, double duration, double lossExceedThresh) {
+
+		ArrayList<ObsEqkRupList> subCatList = getSubcatalogList(catList, duration);
+		
+		int[] numExceedForCatArray = new int[subCatList.size()];
+		int c=-1;
+		for (ObsEqkRupList catalog : subCatList) {
+			c+=1;
+			for (ObsEqkRupture obsRup : catalog) {
+				ETAS_EqkRupture rup = (ETAS_EqkRupture)obsRup;
+				double randLoss = randomLossForEventID[rup.getID()]; // covModel.getDistribution(aveLoss).sample(); // get randome sample
+				if(randLoss>=lossExceedThresh)
+					numExceedForCatArray[c] += 1;
+			}
+			
+//			// TEMP
+//			if(numExceedForCatArray[c]>250) {
+//				for (ObsEqkRupture obsRup : subCatList.get(c-1)) { // previous catalog
+//					ETAS_EqkRupture rup = (ETAS_EqkRupture)obsRup;
+//					double aveLoss = meanLossForNthRup.get(rup.getNthERF_Index());
+//					if(aveLoss==0)
+//						continue;
+//					System.out.println(rup.getMag()+"\t"+rup.getGeneration()+"\tPrevious catalog"); //  +"\t"+rup.getOriginTimeCal());
+//				}
+//				for (ObsEqkRupture obsRup : catalog) { // this catalog
+//					ETAS_EqkRupture rup = (ETAS_EqkRupture)obsRup;
+//					double aveLoss = meanLossForNthRup.get(rup.getNthERF_Index());
+//					if(aveLoss==0)
+//						continue;
+//					System.out.println(rup.getMag()+"\t"+rup.getGeneration()); //  +"\t"+rup.getOriginTimeCal());
+//				}
+//				System.exit(0);
+//			}
+
+			
+		}		
+		
+		int maxNum = 0, catForMaxNum=-1;
+		for(c=0;c<numExceedForCatArray.length;c++ ) {
+			int num = numExceedForCatArray[c];
+			if(num>maxNum) {
+				maxNum=num;
+				catForMaxNum=c;
+			}
+		}
 //		System.out.println("maxNum: "+maxNum);
 		HistogramFunction hist = new HistogramFunction(0d,(double)maxNum,maxNum+1);
 		for(int num:numExceedForCatArray)
@@ -889,22 +1145,22 @@ public class U3ETAS_LossSimulationAnalysis {
 	//	System.out.println("\nhist.calcSumOfY_Vals():\n"+hist.calcSumOfY_Vals());
 
 		hist.normalizeBySumOfY_Vals();
-		System.out.println("\nnumExceedPDF:\n"+hist);
-		
-		return uncertFunc;
+		hist.setInfo("maxNum="+maxNum+", which occurred in subCat="+catForMaxNum);
+//		System.out.println("\nnumExceedPDF: for loss="+lossExceedThresh+"\n"+hist);
+
+		return hist;
 	}
 
 	
 	
-	public UncertainArbDiscFunc getLossIncrProbDistFromCatalogsRandomFromCOV(ArrayList<ObsEqkRupList> catList, double duration) {
+	public UncertainArbDiscFunc testGetLossExceedProbCurveFromCatalogsRandomFromCOV(ArrayList<ObsEqkRupList> catList, double duration) {
 
-		ArbitrarilyDiscretizedFunc lossProbCurve = getBlankLossCurve(0d);
-		HistogramFunction lossHistLogX = getBlankLossCurveLogX();
+		ArbitrarilyDiscretizedFunc lossProbCurve = getBlankLossExceedCurve(0d);
 		ArrayList<ObsEqkRupList> subCatList = getSubcatalogList(catList, duration);
 		
 		for (ObsEqkRupList catalog : subCatList) {
 
-			ArbitrarilyDiscretizedFunc lossProbCurveForSubCat = getBlankLossCurve(0d);
+			ArbitrarilyDiscretizedFunc lossProbCurveForSubCat = getBlankLossExceedCurve(1d);
 			double maxLoss = 0;
 			for (ObsEqkRupture obsRup : catalog) {
 				ETAS_EqkRupture rup = (ETAS_EqkRupture)obsRup;
@@ -912,13 +1168,15 @@ public class U3ETAS_LossSimulationAnalysis {
 				if(aveLoss==0)
 					continue;
 				double randLoss = randomLossForEventID[rup.getID()]; // covModel.getDistribution(aveLoss).sample(); // get randome sample
-//				if(maxLoss<randLoss) maxLoss=randLoss;
-				double log10_Loss = Math.log10(randLoss);
-				if(log10_Loss<=lossCurveLogMin-lossCurveDelta/2.0)
-					continue;
-				int index = lossHistLogX.getClosestXIndex(log10_Loss);
-				lossProbCurveForSubCat.set(index, 1);
+				if(maxLoss<randLoss) maxLoss=randLoss;
 
+				
+			}
+			for(int i=0;i<lossProbCurveForSubCat.size();i++) {
+				if(lossProbCurveForSubCat.getX(i) < maxLoss)
+					lossProbCurveForSubCat.set(i,0.0); // prob of not exceeding
+				else
+					break;
 			}
 			for(int i=0;i<lossProbCurve.size();i++) {
 				lossProbCurve.set(i,lossProbCurve.getY(i)+lossProbCurveForSubCat.getY(i));
@@ -928,8 +1186,119 @@ public class U3ETAS_LossSimulationAnalysis {
 			
 		}		
 		lossProbCurve.scale(1.0/((double)subCatList.size()));
-		ArbitrarilyDiscretizedFunc low95confCurve = getBlankLossCurve(0d);
-		ArbitrarilyDiscretizedFunc high95confCurve = getBlankLossCurve(0d);
+		// convert from non-exceet to exceed prob
+		for(int i=0;i<lossProbCurve.size();i++) {
+			lossProbCurve.set(i,1-lossProbCurve.getY(i));
+		}
+
+		
+		ArbitrarilyDiscretizedFunc low95confCurve = getBlankLossExceedCurve(0d);
+		ArbitrarilyDiscretizedFunc high95confCurve = getBlankLossExceedCurve(0d);
+		for(int i=0;i<lossProbCurve.size();i++) {
+			double xVal = lossProbCurve.getX(i);
+			double[] confArray = ETAS_Utils.getBinomialProportion95confidenceInterval(lossProbCurve.getY(i), subCatList.size());
+			if(confArray[0]>lossProbCurve.getY(i)) {  // numerical problem
+				if(D) System.out.println("ISSUE: Low bound above mean:\nmean="+lossProbCurve.getY(i)+"\nlowBound="+confArray[0]+"\nN="+subCatList.size());
+				confArray[0] = 0;
+			}
+			low95confCurve.set(xVal,confArray[0]);
+			high95confCurve.set(xVal,confArray[1]);
+		}
+
+		UncertainArbDiscFunc uncertFunc = new UncertainArbDiscFunc(lossProbCurve,low95confCurve,high95confCurve);
+		
+		return uncertFunc;
+	}
+
+
+	
+	
+	public UncertainArbDiscFunc getLossIncrProbDistFromCatalogsRandomFromCOV(ArrayList<ObsEqkRupList> catList, double duration) {
+
+		// this has offset bin x values by half delta
+		HistogramFunction lossHistLogX = getBlankIncrLossCurveLogX();
+		ArbitrarilyDiscretizedFunc lossProbCurve = getBlankIncrLossCurve(0);
+		double fracZeroLossSubCats = 0;
+		ArrayList<ObsEqkRupList> subCatList = getSubcatalogList(catList, duration);
+		for (ObsEqkRupList catalog : subCatList) {
+			ArbitrarilyDiscretizedFunc lossProbCurveForSubCat = getBlankIncrLossCurve(0);
+			double totLoss = 0;
+			for (ObsEqkRupture obsRup : catalog) {
+				ETAS_EqkRupture rup = (ETAS_EqkRupture)obsRup;
+				double aveLoss = meanLossForNthRup.get(rup.getNthERF_Index());
+				if(aveLoss==0)
+					continue;
+				double randLoss = randomLossForEventID[rup.getID()]; // covModel.getDistribution(aveLoss).sample(); // get randome sample
+				totLoss+=randLoss;
+				double log10_Loss = Math.log10(randLoss);
+				if(log10_Loss<=lossCurveLogMin) // this is the edge of the first bin
+					continue;
+//if(randLoss>6.3095734E10)
+//	System.out.println("LOSS: "+randLoss);
+				int index = lossHistLogX.getClosestXIndex(log10_Loss);
+				lossProbCurveForSubCat.set(index, 1); // this ends up 1.0 if one or more occurrences
+
+			}
+			if(totLoss==0.0) // this should be good enough to avoid numerical problems
+				fracZeroLossSubCats+=1;
+			for(int i=0;i<lossProbCurve.size();i++) {
+				lossProbCurve.set(i,lossProbCurve.getY(i)+lossProbCurveForSubCat.getY(i));
+			}
+		}		
+		fracZeroLossSubCats /= (double)subCatList.size();
+		lossProbCurve.setInfo("fracZeroLossSubCats="+fracZeroLossSubCats);
+		lossProbCurve.scale(1.0/((double)subCatList.size()));
+		ArbitrarilyDiscretizedFunc low95confCurve = getBlankIncrLossCurve(0);
+		ArbitrarilyDiscretizedFunc high95confCurve = getBlankIncrLossCurve(0);
+		for(int i=0;i<lossProbCurve.size();i++) {
+			double xVal = lossProbCurve.getX(i);
+			double[] confArray = ETAS_Utils.getBinomialProportion95confidenceInterval(lossProbCurve.getY(i), subCatList.size());
+			if(confArray[0]>lossProbCurve.getY(i)) {  // numerical problem
+				if(D) System.out.println("ISSUE: Low bound above mean:\nmean="+lossProbCurve.getY(i)+"\nlowBound="+confArray[0]+"\nN="+subCatList.size());
+				confArray[0] = 0;
+			}
+			low95confCurve.set(xVal,confArray[0]);
+			high95confCurve.set(xVal,confArray[1]);
+		}
+
+		UncertainArbDiscFunc uncertFunc = new UncertainArbDiscFunc(lossProbCurve,low95confCurve,high95confCurve);
+		
+		return uncertFunc;
+	}
+	
+	
+	
+	public UncertainArbDiscFunc getAggrLossIncrProbDistFromCatalogsRandomFromCOV(ArrayList<ObsEqkRupList> catList, double duration) {
+
+		// this has offset bin x values by half delta
+		HistogramFunction lossHistLogX = getBlankIncrLossCurveLogX();
+		ArbitrarilyDiscretizedFunc lossProbCurve = getBlankIncrLossCurve(0);
+		double fracZeroLossSubCats = 0;
+		ArrayList<ObsEqkRupList> subCatList = getSubcatalogList(catList, duration);
+		for (ObsEqkRupList catalog : subCatList) {
+			ArbitrarilyDiscretizedFunc lossProbCurveForSubCat = getBlankIncrLossCurve(0);
+			double totLoss = 0;
+			for (ObsEqkRupture obsRup : catalog) {
+				ETAS_EqkRupture rup = (ETAS_EqkRupture)obsRup;
+				double aveLoss = meanLossForNthRup.get(rup.getNthERF_Index());
+				if(aveLoss==0)
+					continue;
+				double randLoss = randomLossForEventID[rup.getID()]; // covModel.getDistribution(aveLoss).sample(); // get randome sample
+				totLoss+=randLoss;
+			}
+			double log10_Loss = Math.log10(totLoss);
+			if(log10_Loss<=lossCurveLogMin) // this is the edge of the first bin
+				continue;
+			int index = lossHistLogX.getClosestXIndex(log10_Loss);
+			lossProbCurve.set(index,lossProbCurve.getY(index)+1); // this ends up 1.0 if one or more occurrences
+			if(totLoss==0.0) // this should be good enough to avoid numerical problems
+				fracZeroLossSubCats+=1;
+		}		
+		fracZeroLossSubCats /= (double)subCatList.size();
+		lossProbCurve.setInfo("fracZeroLossSubCats="+fracZeroLossSubCats);
+		lossProbCurve.scale(1.0/((double)subCatList.size()));
+		ArbitrarilyDiscretizedFunc low95confCurve = getBlankIncrLossCurve(0);
+		ArbitrarilyDiscretizedFunc high95confCurve = getBlankIncrLossCurve(0);
 		for(int i=0;i<lossProbCurve.size();i++) {
 			double xVal = lossProbCurve.getX(i);
 			double[] confArray = ETAS_Utils.getBinomialProportion95confidenceInterval(lossProbCurve.getY(i), subCatList.size());
@@ -948,16 +1317,58 @@ public class U3ETAS_LossSimulationAnalysis {
 
 	
 	
+	/**
+	 * Make the curve assuming Poisson; this gives the same as above with a randomized catalog
+	 * @param catList
+	 * @param duration
+	 * @return
+	 */
+	public ArbitrarilyDiscretizedFunc testLossIncrProbDistFromCatalogsRandomFromCOV(ArrayList<ObsEqkRupList> catList, double duration) {
+
+		ArbitrarilyDiscretizedFunc lossProbCurve = getBlankIncrLossCurve(0d);
+		HistogramFunction lossHistLogX = getBlankIncrLossCurveLogX();
+		ArrayList<ObsEqkRupList> subCatList = getSubcatalogList(catList, duration);
+		
+		for (ObsEqkRupList catalog : subCatList) {
+			for (ObsEqkRupture obsRup : catalog) {
+				ETAS_EqkRupture rup = (ETAS_EqkRupture)obsRup;
+				double aveLoss = meanLossForNthRup.get(rup.getNthERF_Index());
+				if(aveLoss==0)
+					continue;
+				double randLoss = randomLossForEventID[rup.getID()]; // covModel.getDistribution(aveLoss).sample(); // get randome sample
+				double log10_Loss = Math.log10(randLoss);
+				if(log10_Loss<=lossCurveLogMin)
+					continue;
+				lossHistLogX.add(log10_Loss, 1.0);
+			}
+		}		
+		lossHistLogX.scale(1.0/((double)subCatList.size()*duration));
+		
+		for(int i=0;i<lossHistLogX.size();i++)
+			lossProbCurve.set(i,1-Math.exp(-lossHistLogX.getY(i)));
+		
+		return lossProbCurve;
+	}
+
+
+	
+	
 	
 
 	public UncertainArbDiscFunc getAggrLossExceedProbCurveFromCatalogsRandomFromCOV(ArrayList<ObsEqkRupList> catList, double duration) {
 		
-		ArbitrarilyDiscretizedFunc lossProbCurve = getBlankLossCurve(0d);
+		ArbitrarilyDiscretizedFunc lossProbCurve = getBlankLossExceedCurve(0d);
 		ArrayList<ObsEqkRupList> subCatList = getSubcatalogList(catList, duration);
 		
+		int subCatIndexForMaxLoss = -1;
+		int subCatIndexForMaxAggLoss = -1;
+		int subCatIndex = -1;
+		double maxLoss =  -1;
+		double maxAggLoss =  -1;
 		double aveAggrLoss = 0;
 		for (ObsEqkRupList catalog : subCatList) {
-			ArbitrarilyDiscretizedFunc lossProbCurveForSubCat = getBlankLossCurve(0d);
+			subCatIndex += 1;
+			ArbitrarilyDiscretizedFunc lossProbCurveForSubCat = getBlankLossExceedCurve(0d);
 			double totLoss = 0;
 			for (ObsEqkRupture obsRup : catalog) {
 				ETAS_EqkRupture rup = (ETAS_EqkRupture)obsRup;
@@ -966,8 +1377,17 @@ public class U3ETAS_LossSimulationAnalysis {
 					continue;
 				double randLoss = randomLossForEventID[rup.getID()]; // covModel.getDistribution(aveLoss).sample(); // get random sample
 				totLoss+=randLoss;
+				if(randLoss>maxLoss) {
+					maxLoss = randLoss;
+					subCatIndexForMaxLoss = subCatIndex;
+				}
 //				totLoss+=aveLoss;
 			}
+			if(totLoss>maxAggLoss) {
+				maxAggLoss = totLoss;
+				subCatIndexForMaxAggLoss = subCatIndex;
+			}			
+			
 			aveAggrLoss+=totLoss;
 			for(int i=0;i<lossProbCurveForSubCat.size();i++) {
 				if(lossProbCurveForSubCat.getX(i) < totLoss)
@@ -981,10 +1401,12 @@ public class U3ETAS_LossSimulationAnalysis {
 		}	
 		aveAggrLoss /= (double)subCatList.size();
 		lossProbCurve.scale(1.0/((double)subCatList.size()));
-		lossProbCurve.setInfo("aveAggrLoss = "+aveAggrLoss);
-		if(D) System.out.println("aveAggrLoss = "+aveAggrLoss);
-		ArbitrarilyDiscretizedFunc low95confCurve = getBlankLossCurve(0d);
-		ArbitrarilyDiscretizedFunc high95confCurve = getBlankLossCurve(0d);
+		String info = "aveAggrLoss = "+aveAggrLoss+"\nmaxLoss, subCatIndexForMaxAggLoss: "+maxLoss+", "+subCatIndexForMaxLoss+
+				"\nmaxAggLoss, subCatIndexForMaxAggLoss: "+maxAggLoss+", "+subCatIndexForMaxAggLoss;
+		lossProbCurve.setInfo(info);
+		if(D) System.out.println(info);
+		ArbitrarilyDiscretizedFunc low95confCurve = getBlankLossExceedCurve(0d);
+		ArbitrarilyDiscretizedFunc high95confCurve = getBlankLossExceedCurve(0d);
 		for(int i=0;i<lossProbCurve.size();i++) {
 			double xVal = lossProbCurve.getX(i);
 			double[] confArray = ETAS_Utils.getBinomialProportion95confidenceInterval(lossProbCurve.getY(i), subCatList.size());
@@ -999,6 +1421,48 @@ public class U3ETAS_LossSimulationAnalysis {
 		UncertainArbDiscFunc uncertFunc = new UncertainArbDiscFunc(lossProbCurve,low95confCurve,high95confCurve);
 		return uncertFunc;
 	}
+	
+	
+	public UncertainArbDiscFunc getMagExceedProbCurveFromCatalogs(ArrayList<ObsEqkRupList> catList, double duration) {
+		
+		IncrementalMagFreqDist magExceedProbCurve = makeMFD();
+		ArrayList<ObsEqkRupList> subCatList = getSubcatalogList(catList, duration);
+		
+		for (ObsEqkRupList catalog : subCatList) {
+			IncrementalMagFreqDist magExceedProbCurveForSubCat = makeMFD();
+			double maxMag = 0;
+			for (ObsEqkRupture obsRup : catalog) {
+				if(obsRup.getMag()>maxMag)
+					maxMag = obsRup.getMag();
+			}
+			for(int i=0;i<magExceedProbCurveForSubCat.size();i++) {
+				if(magExceedProbCurveForSubCat.getX(i) < maxMag)
+					magExceedProbCurveForSubCat.set(i,1.0);
+				else
+					break;
+			}
+			for(int i=0;i<magExceedProbCurve.size();i++) {
+				magExceedProbCurve.set(i,magExceedProbCurve.getY(i)+magExceedProbCurveForSubCat.getY(i));
+			}
+		}	
+		magExceedProbCurve.scale(1.0/((double)subCatList.size()));
+		IncrementalMagFreqDist low95confCurve = makeMFD();
+		IncrementalMagFreqDist high95confCurve = makeMFD();
+		for(int i=0;i<magExceedProbCurve.size();i++) {
+			double xVal = magExceedProbCurve.getX(i);
+			double[] confArray = ETAS_Utils.getBinomialProportion95confidenceInterval(magExceedProbCurve.getY(i), subCatList.size());
+			if(confArray[0]>magExceedProbCurve.getY(i)) {  // numerical problem
+				if(D) System.out.println("ISSUE: Low bound above mean:\nmean="+magExceedProbCurve.getY(i)+"\nlowBound="+confArray[0]+"\nN="+subCatList.size());
+				confArray[0] = 0;
+			}
+			low95confCurve.set(xVal,confArray[0]);
+			high95confCurve.set(xVal,confArray[1]);
+		}
+
+		UncertainArbDiscFunc uncertFunc = new UncertainArbDiscFunc(magExceedProbCurve,low95confCurve,high95confCurve);
+		return uncertFunc;
+	}
+
 
 
 	
@@ -1102,6 +1566,25 @@ public class U3ETAS_LossSimulationAnalysis {
 		}
 		return catalogRandomizedList;
 	}
+	
+	
+	/**
+	 * This randomizes a single catalog in case you want it to have the exact same set of events
+	 * @param catalog
+	 * @return
+	 */
+	public ObsEqkRupList randomizeCatalog(ObsEqkRupList catalog) {
+		ObsEqkRupList randCat =new ObsEqkRupList();
+		for(ObsEqkRupture rup:catalog) {
+			long randTimeMillis = startTimeMillis + (long)(randomGen.nextDouble()*fullDurationMillis);
+			ObsEqkRupture newRup = (ObsEqkRupture) rup.clone();
+			newRup.setOriginTime(randTimeMillis);
+			randCat.add(newRup);
+		}
+		randCat.sortByOriginTime();
+		return randCat;
+	}
+
 
 	
 
@@ -1234,6 +1717,37 @@ public class U3ETAS_LossSimulationAnalysis {
 		return erf;
 	}
 	
+	public ArrayList<ObsEqkRupList> load1yrConditionalCatalogs() throws IOException, DocumentException {
+		File[] catalogsFileArray = {new File("/Users/field/Library/CloudStorage/OneDrive-DOI/Field_Other/CEA_WGCEP/UCERF3/DeclusteringOnLossAnalysisPaper2024/Data/2024_10_18_1yrConditionalComCatdata_kCOV1p5_MaxPtSrcM/results_m5_preserve_chain.bin")};
+		double minMag=5;
+		boolean checkAgainstERF =true;
+		ArrayList<ObsEqkRupList> oneYrCats = loadCatalogs(catalogsFileArray, minMag, checkAgainstERF);
+		
+		// check mags & indices against catalogs
+		double maxCatLengthYears=0;
+		for (ObsEqkRupList catalog : oneYrCats) {
+			if(catalog.size()>1) {
+				double catLength = ((double)(catalog.get(catalog.size()-1).getOriginTime()-catalog.get(0).getOriginTime()))/(double)millisPerYr;
+				if(maxCatLengthYears<catLength)
+					maxCatLengthYears=catLength;
+			}
+			for (ObsEqkRupture obsRup : catalog) {
+				ETAS_EqkRupture rup = (ETAS_EqkRupture)obsRup;
+				int nth = rup.getNthERF_Index();
+				double magDiff=Math.abs(rup.getMag()/magForNthRup.get(nth) - 1.0);
+				if(magDiff > 1e-4)
+					throw new RuntimeException("ERROR: mags differ for nth rup: "+nth+"; cat mag = "+rup.getMag()+"; loss-file mag = "+ magForNthRup.get(nth));		
+				if(rup.getFSSIndex() != fssIndexForNthRup.get(nth))
+					throw new RuntimeException("ERROR: fss indices differ for nth rup: "+nth+"; cat fssID = "+rup.getFSSIndex()+"; loss-file fssID = "+ fssIndexForNthRup.get(nth));		
+				if(rup.getGridNodeIndex() != gridCellIndexForNthRup.get(nth))
+					throw new RuntimeException("ERROR: grid cell indices differ for nth rup: "+nth+"; cat cellID = "+rup.getGridNodeIndex()+"; loss-file cellID = "+gridCellIndexForNthRup.get(nth));
+			}
+		}	
+		if(D) System.out.println("maxCatLengthYears="+(float)maxCatLengthYears);
+
+		return oneYrCats;
+	}
+	
 	
 	/**
 	 * The check against the ERF does not work because indexing between ERF and catalogs somehow got screwed up,
@@ -1247,10 +1761,11 @@ public class U3ETAS_LossSimulationAnalysis {
 	 * @throws IOException
 	 * @throws DocumentException
 	 */
-	public ArrayList<ObsEqkRupList> loadCatalogs(File catalogsFile, double minMag, boolean checkAgainstERF) throws IOException, DocumentException {
+	public ArrayList<ObsEqkRupList> loadCatalogs(File[] catalogsFileArray, double minMag, boolean checkAgainstERF) throws IOException, DocumentException {
 		
-
-		List<ETAS_Catalog> catalogs = ETAS_CatalogIO.loadCatalogsBinary(catalogsFile, minMag); 
+		ArrayList<ETAS_Catalog> catalogs = new ArrayList<ETAS_Catalog>();
+		for(File catFile:catalogsFileArray)
+			catalogs.addAll(ETAS_CatalogIO.loadCatalogsBinary(catFile, minMag)); 
 		
 		System.out.println("catalogs.size()="+catalogs.size());
 		
@@ -1396,7 +1911,14 @@ public class U3ETAS_LossSimulationAnalysis {
 		for (ETAS_Catalog catalog : catalogs) {
 			ObsEqkRupList obsEqkRupList = new ObsEqkRupList();
 			for (ETAS_EqkRupture rup : catalog) {
+//if(id<200 && id>100)
+//	System.out.println(rup.getEventId()+"\t"+rup.getID()+"\t"+rup.getGeneration()+"\t"+rup.getParentID());
+//if(id==199)
+//	System.exit(id);
+				
 				if(rup.getMag()>=minMag) {
+					// put id in EventID (string) so save the info (this field is presently null)
+					rup.setEventId(Integer.toString(rup.getID()));
 					id+=1;
 					rup.setID(id);
 					obsEqkRupList.add(rup);
@@ -1410,22 +1932,38 @@ public class U3ETAS_LossSimulationAnalysis {
 	}
 	
 	
-	private static HistogramFunction getBlankLossCurveLogX() {
+	private static HistogramFunction getBlankLossExceedCurveLogX() {
 		return new HistogramFunction(lossCurveLogMin, lossCurveLogMax, lossCurveNum);
 	}
 	
-	private static ArbitrarilyDiscretizedFunc getBlankLossCurve(double initYvalues) {
+	private static ArbitrarilyDiscretizedFunc getBlankLossExceedCurve(double initYvalues) {
 		ArbitrarilyDiscretizedFunc func = new ArbitrarilyDiscretizedFunc();
-		HistogramFunction histFunc = getBlankLossCurveLogX();
+		HistogramFunction histFunc = getBlankLossExceedCurveLogX();
 		for (int i=0; i<histFunc.size(); i++)
 			func.set(Math.pow(10d,histFunc.getX(i)), initYvalues);
 		return func;
 	}
 	
+	/**
+	 * This as the x-axis bin center offset by half bin width
+	 * @return
+	 */
+	private static HistogramFunction getBlankIncrLossCurveLogX() {
+		return new HistogramFunction(lossCurveLogMin+lossCurveDelta/2.0, lossCurveLogMax+lossCurveDelta/2.0, lossCurveNum);
+	}
+
+	private static ArbitrarilyDiscretizedFunc getBlankIncrLossCurve(double initYvalues) {
+		ArbitrarilyDiscretizedFunc func = new ArbitrarilyDiscretizedFunc();
+		HistogramFunction histFunc = getBlankIncrLossCurveLogX();
+		for (int i=0; i<histFunc.size(); i++)
+			func.set(Math.pow(10d,histFunc.getX(i)), initYvalues);
+		return func;
+	}
+
 	
 	
 	private static ArbitrarilyDiscretizedFunc junk_convertExceedCurveToPDF(UncertainArbDiscFunc curve) {
-		HistogramFunction linearXCurve = getBlankLossCurveLogX(); // for x-axis values
+		HistogramFunction linearXCurve = getBlankLossExceedCurveLogX(); // for x-axis values
 		ArbitrarilyDiscretizedFunc resultCurve = new ArbitrarilyDiscretizedFunc();
 		for(int i=0;i<curve.size();i++) {
 			if(i==0) {
@@ -1443,14 +1981,81 @@ public class U3ETAS_LossSimulationAnalysis {
 		return resultCurve;
 	}
 	
+	
 	/**
+	 * This assumes the given distribution has half x-bin offset relative to what is
+	 * returned by getBlankLossCurve()
+	 * @return
+	 */
+	private static ArbitrarilyDiscretizedFunc convertIncrToExceedProbDist(UncertainArbDiscFunc incrDist) {
+		ArbitrarilyDiscretizedFunc exceedFunc = getBlankLossExceedCurve(0d);
+		for(int i=0;i<incrDist.size();i++) {
+			double nonExceed=1;
+			for(int j=i; j<incrDist.size();j++) {
+				nonExceed *= (1.0-incrDist.getY(j));
+			}
+			exceedFunc.set(i,1.0-nonExceed);
+		}
+		return exceedFunc;
+	}
+	
+	/**
+	 * This assumes the given distribution has half x-bin offset relative to what is
+	 * returned by getBlankLossCurve()
+	 * @return
+	 */
+	private static ArbitrarilyDiscretizedFunc convertAggIncrToExceedProbDist(UncertainArbDiscFunc incrDist) {
+		ArbitrarilyDiscretizedFunc exceedFunc = getBlankLossExceedCurve(0d);
+		for(int i=0;i<incrDist.size();i++) {
+			double sum=0;
+			for(int j=i; j<incrDist.size();j++) {
+				sum += incrDist.getY(j);
+			}
+			exceedFunc.set(i,sum);
+		}
+		return exceedFunc;
+	}
+
+
+	
+	
+	/**
+	 * This assumes the given distribution has half x-bin offset relative to what is
+	 * returned by getBlankLossCurve()
+	 * @return
+	 */
+	private static ArbitrarilyDiscretizedFunc convertExceedToIncrProbDist(UncertainArbDiscFunc exceedDist) {
+		ArbitrarilyDiscretizedFunc incrFunc = getBlankIncrLossCurve(0d);
+		for(int i=0;i<exceedDist.size()-1;i++) {
+			double incrProb = 1.0 - (1.0-exceedDist.getY(i))/(1.0-exceedDist.getY(i+1));
+			incrFunc.set(i,incrProb);
+		}
+		return incrFunc;
+	}
+
+	
+	private static ArbitrarilyDiscretizedFunc convertAggrExceedToIncrProbDist(UncertainArbDiscFunc exceedDist) {
+		ArbitrarilyDiscretizedFunc incrFunc = getBlankIncrLossCurve(0d);
+		for(int i=0;i<exceedDist.size()-1;i++) {
+			double incrProb = exceedDist.getY(i)-exceedDist.getY(i+1);
+			incrFunc.set(i,incrProb);
+		}
+		return incrFunc;
+	}
+
+	
+	
+	/**
+	 * 	THIS IS WRONG - CAN'T DIFF THE EXCEED PROB AT BIN EDGES; MUST DISAGG NON-EXCEED PROBS
+
+	 * 
 	 * First and last bins contain all the probability below and above those x-axis values, respectively.
 	 * 
 	 * Not sure the best way to scale the y-axis given varying x-axis bin width.
 	 * @param curve
 	 * @return
 	 */
-	private static HistogramFunction convertExceedCurveToLog10_PDF_Hist(XY_DataSet curve) {
+	private static HistogramFunction convertExceedCurveToLog10_PDF_Hist_WRONG(XY_DataSet curve) {
 		HistogramFunction hist = new HistogramFunction(lossCurveLogMin-lossCurveDelta/2d, lossCurveLogMax+lossCurveDelta/2d, lossCurveNum+1);
 
 		// set first value
@@ -1502,9 +2107,14 @@ public class U3ETAS_LossSimulationAnalysis {
 		
 		return hist;
 	}
+	
+	
+	
 
 
 	/**
+	 * 	THIS IS WRONG - CAN'T DIFF THE EXCEED PROB AT BIN EDGES; MUST DISAGG NON-EXCEED PROBS
+	 * 
 	 * First and last bins contain all the probability below and above those x-axis values, respectively
 	 * 
 	 * Not sure the best way to scale the y-axis given varying x-axis bin width.
@@ -1512,7 +2122,7 @@ public class U3ETAS_LossSimulationAnalysis {
 	 * @param curve
 	 * @return
 	 */
-	private static HistogramFunction convertExceedCurveToHist(UncertainArbDiscFunc curve, int numXaxisBins) {
+	private static HistogramFunction convertExceedCurveToHist_WRONG(UncertainArbDiscFunc curve, int numXaxisBins) {
 		
 		
 		// find the index of the last no-zero Y value (this will remove a ton of zeros)
@@ -1629,18 +2239,30 @@ public class U3ETAS_LossSimulationAnalysis {
 //						meanLossForNthRup.get(nth)*erf.getNthRupture(nth).getMeanAnnualRate(duration));
 //		}
 		
+		// Scale by delta so y values so the AAL
+		lossRate_cat.scale(lossRate_cat.getDelta());
+//		lossRate_erf.scale(lossRate_erf.getDelta());
+		lossRate_catDecl.scale(lossRate_catDecl.getDelta());
+		lossRate_spontaneous.scale(lossRate_spontaneous.getDelta());
+		
+		
 		ArrayList<XY_DataSet> mfdList = new ArrayList<XY_DataSet>();
 		mfdList.add(lossRate_cat);
 //		mfdList.add(lossRate_erf);
 		mfdList.add(lossRate_catDecl);
 		mfdList.add(lossRate_spontaneous);
 		ArrayList<PlotCurveCharacterstics> plotChars = new ArrayList<PlotCurveCharacterstics>();	
-		plotChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 2f, Color.BLUE));
-		plotChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 2f, Color.BLACK));
-		plotChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 2f, Color.GREEN));
+//		plotChars.add(new PlotCurveCharacterstics(PlotLineType.HISTOGRAM, 1f, Color.RED));
+//		plotChars.add(new PlotCurveCharacterstics(PlotLineType.HISTOGRAM, 1f, Color.BLUE));
+//		plotChars.add(new PlotCurveCharacterstics(PlotLineType.HISTOGRAM, 1f, Color.GRAY));
+		plotChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, Color.RED));
+		plotChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, Color.BLUE));
+		plotChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, Color.GRAY));
 		// new Range(1e3,2e4)
-		PlottingUtils.writeAndOrPlotFuncs(mfdList, plotChars, "Loss Rate vs Mag", "Mag", "Loss Rate (/yr)", 
-				null, new Range(1e3,2e4), false, true, null, true);
+		String fileNamePrefix = dirName+"/LossRateVsMag";
+
+		PlottingUtils.writeAndOrPlotFuncs(mfdList, plotChars, "", "Magnitude", "Loss Rate ($ per year)", 
+				new Range(5.0,8.5), new Range(1e5,2e6), false, true, fileNamePrefix, true);
 		return mfdList;
 	}
 
@@ -1766,13 +2388,13 @@ public class U3ETAS_LossSimulationAnalysis {
 	public ArrayList<ObsEqkRupList> getSubcatalogList(ArrayList<ObsEqkRupList> catalogList, double subDurationYrs) {
 		
 		long runtime = System.currentTimeMillis();
-		long subDurationMillis = millisPerYr*(long)subDurationYrs;
+		long subDurationMillis = (long)(millisPerYr*subDurationYrs);
 		
 		int numSubCatPerCat = (int)(fullDurationMillis/subDurationMillis); // this should truncate
 		if(D) System.out.println("numSubCatPerCat="+numSubCatPerCat);
 		long remainderMillis = fullDurationMillis - numSubCatPerCat*subDurationMillis;
-		double remainderYears = (double)remainderMillis/(double)subDurationMillis;
-		if(D) System.out.println("remainderYears="+remainderYears);
+		double remainderFraction = (double)remainderMillis/(double)subDurationMillis;
+		if(D) System.out.println("remainderFraction="+remainderFraction);
 
 //		numSubCatPerCat = (int)((endTimeMillis-1000-startTimeMillis)/durationMillis);
 //		System.out.println("numSubCatPerCat="+numSubCatPerCat);
@@ -1790,9 +2412,9 @@ public class U3ETAS_LossSimulationAnalysis {
 					subCatList.get(catIndex).add(rup);
 				else {
 					numRupsNotUsed+=1;
-					if(rup.getOriginTime()<endTimeMillis) {
-						throw new RuntimeException("Something wrong in getSubcatalogList()");
-					}
+//					if(rup.getOriginTime()<endTimeMillis) {
+//						throw new RuntimeException("Something wrong in getSubcatalogList()");
+//					}
 				}
 			}
 			eqkRupListList.addAll(subCatList);
@@ -2042,6 +2664,7 @@ public class U3ETAS_LossSimulationAnalysis {
 		double minLn = -meanLn*3;
 		double deltaLn = 2*maxLn/numPoints;
 		
+//		org.opensha.commons.calc.GaussianDistCalc gaussDistCalc = new org.opensha.commons.calc.GaussianDistCalc();
 		HistogramFunction normEvenPDF = new HistogramFunction(minLn,numPoints,deltaLn);
 		for(int i=1;i<normEvenPDF.size();i++) {
 			double normVal = (normEvenPDF.getX(i)-meanLn)/stdDevLn;
@@ -2171,66 +2794,102 @@ public class U3ETAS_LossSimulationAnalysis {
 		}
 		return tableString;
 	}
-
 	
-	
-	public void makeFigAndTableSetA_1yr_Exceedances(boolean randCOV) {
+	public void make1yrConditionalLossExceedComparisonFig() {
 		
 		ArrayList<UncertainArbDiscFunc> funcList = new ArrayList<UncertainArbDiscFunc>(); 
 		
-		String randCOVincluded = "";
-		if(randCOV)
-			randCOVincluded = " (cond loss PDF for each rup randomly sampled)";
+		UncertainArbDiscFunc lossExceedProbFromTD_CatalogsRandFromCOV = getLossExceedProbCurveFromCatalogsRandomFromCOV(getCatalogs(), 1d);
+		lossExceedProbFromTD_CatalogsRandFromCOV.setName("lossExceedProbFromTD_CatalogsRandFromCOV");
+		
+		
+		System.out.println("DOING ONE YEAR CATS");
+		ArrayList<ObsEqkRupList> oneYrCondCats=null;
+		try {
+			oneYrCondCats = load1yrConditionalCatalogs();
+		} catch (IOException e) {
+			e.printStackTrace();
+		} catch (DocumentException e) {
+			e.printStackTrace();
+		}
+		
+		// Need to make exceedance curve by hand because method above subdivides catalogs and not sure it will work
+		double aveYearlyLoss=0;
+		ArbitrarilyDiscretizedFunc lossProbCurve = getBlankLossExceedCurve(0d);
+		for (ObsEqkRupList catalog : oneYrCondCats) {
+			double lossSum=0;
+			ArbitrarilyDiscretizedFunc lossProbCurveForSubCat = getBlankLossExceedCurve(0d);
+			double maxLoss = 0;
+			for (ObsEqkRupture obsRup : catalog) {
+				ETAS_EqkRupture rup = (ETAS_EqkRupture)obsRup;
+				double aveLoss = meanLossForNthRup.get(rup.getNthERF_Index());
+				if(aveLoss==0)
+					continue;
+				double randLoss = randomLossForEventID[rup.getID()]; // covModel.getDistribution(aveLoss).sample(); // get randome sample
+				if(maxLoss<randLoss) maxLoss=randLoss;
+				lossSum+=randLoss;
+			}
+			aveYearlyLoss+=lossSum;
+			for(int i=0;i<lossProbCurveForSubCat.size();i++) {
+				if(lossProbCurveForSubCat.getX(i) < maxLoss)
+					lossProbCurveForSubCat.set(i,1.0);
+				else
+					break;
+			}
+			for(int i=0;i<lossProbCurve.size();i++) {
+				lossProbCurve.set(i,lossProbCurve.getY(i)+lossProbCurveForSubCat.getY(i));
+			}
+		}		
+		aveYearlyLoss /= (double)oneYrCondCats.size();
+		lossProbCurve.scale(1.0/((double)oneYrCondCats.size()));
+		ArbitrarilyDiscretizedFunc low95confCurve = getBlankLossExceedCurve(0d);
+		ArbitrarilyDiscretizedFunc high95confCurve = getBlankLossExceedCurve(0d);
+		for(int i=0;i<lossProbCurve.size();i++) {
+			double xVal = lossProbCurve.getX(i);
+			double[] confArray = ETAS_Utils.getBinomialProportion95confidenceInterval(lossProbCurve.getY(i), oneYrCondCats.size());
+			if(confArray[0]>lossProbCurve.getY(i)) {  // numerical problem
+				if(D) System.out.println("ISSUE: Low bound above mean:\nmean="+lossProbCurve.getY(i)+"\nlowBound="+confArray[0]+"\nN="+oneYrCondCats.size());
+				confArray[0] = 0;
+			}
+			low95confCurve.set(xVal,confArray[0]);
+			high95confCurve.set(xVal,confArray[1]);
+		}
+		UncertainArbDiscFunc oneYrCondExceedUncertFunc = new UncertainArbDiscFunc(lossProbCurve,low95confCurve,high95confCurve);
+		oneYrCondExceedUncertFunc.setName("oneYrCondExceedUncertFunc");
+		
+		funcList.add(lossExceedProbFromTD_CatalogsRandFromCOV);
+		funcList.add(oneYrCondExceedUncertFunc);
+		
+		// Write tables
+		String tableString = "";
+		tableString += "\n1yr Loss for CEA probability levels (cond loss PDF for each rup randomly sampled):\n"+"\n";
+		tableString += "Probability\tTD_loss\tTD_uncert\tCond2024_loss\tCond2024_uncert"+"\n";
+		tableString += getTableStringOfCEA_Values(funcList,true)+"\n";
+		tableString += "\n1yr Loss ratios, relative to TD, for CEA probability levels (cond loss PDF for each rup randomly sampled):\n"+"\n";
+		tableString += "Probability\tCond2024_loss\tCond2024_uncert"+"\n";
+		tableString += getTableStringOfCEA_Ratios(funcList, true)+"\n";
+		System.out.println(tableString);
+		oneYrCondExceedUncertFunc.setInfo("2024 Expected Loss = "+aveYearlyLoss+"\n\n"+tableString);
 
-		if(randCOV) {
-			UncertainArbDiscFunc lossExceedProbFromTD_CatalogsRandFromCOV = getLossExceedProbCurveFromCatalogsRandomFromCOV(getCatalogs(), 1d);
-			lossExceedProbFromTD_CatalogsRandFromCOV.setName("lossExceedProbFromTD_CatalogsRandFromCOV");
-			UncertainArbDiscFunc lossExceedProbFromPoisCatalogsRandFromCOV = getLossExceedProbCurveFromCatalogsRandomFromCOV(getRandomizedCatalogs(), 1d);
-			lossExceedProbFromPoisCatalogsRandFromCOV.setName("lossExceedProbFromPoisCatalogsRandFromCOV");
-			UncertainArbDiscFunc lossExceedProbFromDeclusteredCatalogsRandFromCOV = getLossExceedProbCurveFromCatalogsRandomFromCOV(getCatalogsDeclustered(), 1d);
-			lossExceedProbFromDeclusteredCatalogsRandFromCOV.setName("lossExceedProbFromDeclusteredCatalogsRandFromCOV");
-			UncertainArbDiscFunc lossExceedProbFromSpontaneousCatalogsRandFromCOV = getLossExceedProbCurveFromCatalogsRandomFromCOV(getSpontaneousEventsCatalog(getCatalogs()), 1d);
-			lossExceedProbFromSpontaneousCatalogsRandFromCOV.setName("lossExceedProbFromSpontaneousCatalogsRandFromCOV");
-			funcList.add(lossExceedProbFromTD_CatalogsRandFromCOV);
-			funcList.add(lossExceedProbFromPoisCatalogsRandFromCOV);
-			funcList.add(lossExceedProbFromDeclusteredCatalogsRandFromCOV);
-			funcList.add(lossExceedProbFromSpontaneousCatalogsRandFromCOV);			
-		}
-		else {
-			UncertainArbDiscFunc lossExceedProbFromTD_Catalogs = getLossExceedProbCurveFromCatalogs(getCatalogs(), 1d);
-			lossExceedProbFromTD_Catalogs.setName("lossExceedProbFromTD_Catalogs");
-			UncertainArbDiscFunc lossExceedProbFromPoisCatalogs = getLossExceedProbCurveFromCatalogs(getRandomizedCatalogs(), 1d);
-			lossExceedProbFromPoisCatalogs.setName("lossExceedProbFromPoisCatalogs");
-			UncertainArbDiscFunc lossExceedProbFromDeclusteredCatalogs = getLossExceedProbCurveFromCatalogs(getCatalogsDeclustered(), 1d);
-			lossExceedProbFromDeclusteredCatalogs.setName("lossExceedProbFromDeclusteredCatalogs");
-			UncertainArbDiscFunc lossExceedProbFromSpontaneousCatalogs = getLossExceedProbCurveFromCatalogs(getSpontaneousEventsCatalog(getCatalogs()), 1d);
-			lossExceedProbFromSpontaneousCatalogs.setName("lossExceedProbFromSpontaneousCatalogs");
-			funcList.add(lossExceedProbFromTD_Catalogs);
-			funcList.add(lossExceedProbFromPoisCatalogs);
-			funcList.add(lossExceedProbFromDeclusteredCatalogs);
-			funcList.add(lossExceedProbFromSpontaneousCatalogs);
-		}
-		System.out.println("\n1yr Loss for CEA probability levels"+randCOVincluded+":\n");
-		System.out.println("Probability\tTD_loss\tTD_uncert\tTI_loss\tTI_uncert\tGK_loss\tGK_uncert\tSP_loss\tSP_uncert");
-		System.out.println(getTableStringOfCEA_Values(funcList,true));
-		System.out.println("\n1yr Loss ratios, relative to TD, for CEA probability levels"+randCOVincluded+":\n");
-		System.out.println("Probability\tTIvsTD_loss\tTIvsTD_uncert\tGKvsTD_loss\tGKvsTD_uncert\tSPvsTD_loss\tSPvsTD_uncert");
-		System.out.println(getTableStringOfCEA_Ratios(funcList, true));
-		System.out.println("TI = Time Dependent\nTI = Time Independent (Poisson)\nGK = Gardner Knopoff declustered\nSP = Spontaneous ETAS events\nuncert = 1-sigma uncertainty normalized by the mean\n");
 		ArrayList<PlotCurveCharacterstics> plotChars2 = new ArrayList<PlotCurveCharacterstics>();	
-		plotChars2.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 2f, Color.BLUE));
-		plotChars2.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 2f, Color.RED));
-		plotChars2.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 2f, Color.BLACK));
-		plotChars2.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 2f, Color.GREEN));
-		String fileNamePrefix = dirName+"/FigureA_Losses";
-		if(randCOV) fileNamePrefix += "_randCOV";
-		PlottingUtils.writeAndOrPlotUncertFuncs(funcList, plotChars2, "", "Loss ($1000)", "Probability", new Range(1e3,1e9), new Range(1e-6,1.0), true, true, fileNamePrefix, true);
+		plotChars2.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, Color.RED));
+		plotChars2.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, new Color(0, 180, 0)));
+		plotChars2.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, Color.BLUE));
+		plotChars2.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, Color.GRAY));
+
+		File outputDir = new File(dirName+ "/OneYrCondLossComFigure");
+		if(!outputDir.exists()) outputDir.mkdir();
+		String fileNamePrefix = dirName+"/OneYrCondLossComFigure/"+"OneYrCondLossComFigure";
+		fileNamePrefix += "_randCOV";
+		PlottingUtils.writeAndOrPlotUncertFuncs(funcList, plotChars2, "", "Loss ($)", "Exceedance Probability", new Range(1e4,1e11), new Range(1e-5,1.0), true, true, fileNamePrefix, true);
+		fileNamePrefix += "_zoomed";
+		PlottingUtils.writeAndOrPlotUncertFuncs(funcList, plotChars2, "", "Loss ($)", "Exceedance Probability", new Range(1e6,1e11), new Range(1e-4,1.0), true, true, fileNamePrefix, true);
 
 		// Make ratio plots
 		UncertainArbDiscFunc denomCurve = funcList.get(0);
 		ArrayList<XY_DataSet> funcListRatios = new ArrayList<XY_DataSet>(); 
 
-		double xThresh = denomCurve.getClosestXtoY(1e-3);
+		double xThresh = denomCurve.getClosestXtoY(1e-4);
 		for(int i=0;i<funcList.size();i++) {
 			ArbitrarilyDiscretizedFunc ratioCurve = new ArbitrarilyDiscretizedFunc();
 			ratioCurve.setName("Ratio for "+funcList.get(i).getName());
@@ -2243,21 +2902,262 @@ public class U3ETAS_LossSimulationAnalysis {
 			}
 			funcListRatios.add(ratioCurve);
 		}
-		fileNamePrefix = dirName+"/FigureA_LossRatios";
-		if(randCOV) fileNamePrefix += "_randCOV";
-		PlottingUtils.writeAndOrPlotFuncs(funcListRatios, plotChars2, "test", "Loss ($1000)", "Loss Ratio", new Range(1e3,xThresh), new Range(0.0,2.0), true, false, fileNamePrefix, true);
+		fileNamePrefix += "_Ratio";
+		PlottingUtils.writeAndOrPlotFuncs(funcListRatios, plotChars2, "", "Loss ($)", "Exceedance Ratio", new Range(1e4,1e11), new Range(0.0,2.0), true, false, fileNamePrefix, true);
 
-		ArrayList<XY_DataSet> pdfList = new ArrayList<XY_DataSet>(); 
-		for(int i=0;i<2;i++) {
-			pdfList.add(convertExceedCurveToLog10_PDF_Hist(funcList.get(i)));
+//		// plot incremental distributions
+//		ArrayList<XY_DataSet> pdfList = new ArrayList<XY_DataSet>(); 
+//		for(int i=0;i<2;i++) { // Only the first two funcs
+//			pdfList.add(convertExceedToIncrProbDist(funcList.get(i)));
+//		}
+//		if(randCOV) {
+//			UncertainArbDiscFunc lossIncreProbDistFromTD_CatalogsRandFromCOV = getLossIncrProbDistFromCatalogsRandomFromCOV(getCatalogs(), 1d);
+//			lossIncreProbDistFromTD_CatalogsRandFromCOV.setName("lossIncreProbDistFromTD_CatalogsRandFromCOV");
+//			UncertainArbDiscFunc lossIcreProbDistFromPoisCatalogsRandFromCOV = getLossIncrProbDistFromCatalogsRandomFromCOV(getRandomizedCatalogs(), 1d);
+//			lossIcreProbDistFromPoisCatalogsRandFromCOV.setName("lossIcreProbDistFromPoisCatalogsRandFromCOV");
+//			pdfList.add(lossIncreProbDistFromTD_CatalogsRandFromCOV);
+//			pdfList.add(lossIcreProbDistFromPoisCatalogsRandFromCOV);
+//		}
+//		ArrayList<PlotCurveCharacterstics> plotChars3 = new ArrayList<PlotCurveCharacterstics>();	
+//		plotChars3.add(new PlotCurveCharacterstics(PlotLineType.DOTTED, 1f, Color.RED));
+//		plotChars3.add(new PlotCurveCharacterstics(PlotLineType.DOTTED, 1f, Color.BLACK));
+//		plotChars3.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, Color.RED));
+//		plotChars3.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, Color.BLACK));
+//		fileNamePrefix = dirName+"/FigureA/"+durationsYrs+"yr_IncrLoss";
+//		if(randCOV) fileNamePrefix += "_randCOV";
+//		PlottingUtils.writeAndOrPlotFuncs(pdfList, plotChars3, "", "Loss ($1)", "Incremental Probability", new Range(1e4,1e11), new Range(1e-5,1.0), true, true, fileNamePrefix, true);
+	}
+
+	public void make1yrConditionalAggrLossExceedComparisonFig() {
+		
+		ArrayList<UncertainArbDiscFunc> funcList = new ArrayList<UncertainArbDiscFunc>(); 
+		
+		UncertainArbDiscFunc lossExceedProbFromTD_CatalogsRandFromCOV = getAggrLossExceedProbCurveFromCatalogsRandomFromCOV(getCatalogs(), 1d);
+		lossExceedProbFromTD_CatalogsRandFromCOV.setName("aggrLossExceedProbFromTD_CatalogsRandFromCOV");
+		
+		
+		System.out.println("DOING ONE YEAR CATS");
+		ArrayList<ObsEqkRupList> oneYrCondCats=null;
+		try {
+			oneYrCondCats = load1yrConditionalCatalogs();
+		} catch (IOException e) {
+			e.printStackTrace();
+		} catch (DocumentException e) {
+			e.printStackTrace();
 		}
-		PlottingUtils.writeAndOrPlotFuncs(pdfList, plotChars2, "", "Loss ($1000)", "Probability", null, null, false, false, null, true);
+		
+		// Need to make exceedance curve by hand because method above subdivides catalogs and not sure it will work
+		double aveYearlyLoss=0;
+		ArbitrarilyDiscretizedFunc lossProbCurve = getBlankLossExceedCurve(0d);
+		for (ObsEqkRupList catalog : oneYrCondCats) {
+			double lossSum=0;
+			ArbitrarilyDiscretizedFunc lossProbCurveForSubCat = getBlankLossExceedCurve(0d);
+//			double maxLoss = 0;
+			for (ObsEqkRupture obsRup : catalog) {
+				ETAS_EqkRupture rup = (ETAS_EqkRupture)obsRup;
+				double aveLoss = meanLossForNthRup.get(rup.getNthERF_Index());
+				if(aveLoss==0)
+					continue;
+				double randLoss = randomLossForEventID[rup.getID()]; // covModel.getDistribution(aveLoss).sample(); // get randome sample
+//				if(maxLoss<randLoss) maxLoss=randLoss;
+				lossSum+=randLoss;
+			}
+			aveYearlyLoss+=lossSum;
+			for(int i=0;i<lossProbCurveForSubCat.size();i++) {
+				if(lossProbCurveForSubCat.getX(i) < lossSum)
+					lossProbCurveForSubCat.set(i,1.0);
+				else
+					break;
+			}
+			for(int i=0;i<lossProbCurve.size();i++) {
+				lossProbCurve.set(i,lossProbCurve.getY(i)+lossProbCurveForSubCat.getY(i));
+			}
+		}		
+		aveYearlyLoss /= (double)oneYrCondCats.size();
+		lossProbCurve.scale(1.0/((double)oneYrCondCats.size()));
+		ArbitrarilyDiscretizedFunc low95confCurve = getBlankLossExceedCurve(0d);
+		ArbitrarilyDiscretizedFunc high95confCurve = getBlankLossExceedCurve(0d);
+		for(int i=0;i<lossProbCurve.size();i++) {
+			double xVal = lossProbCurve.getX(i);
+			double[] confArray = ETAS_Utils.getBinomialProportion95confidenceInterval(lossProbCurve.getY(i), oneYrCondCats.size());
+			if(confArray[0]>lossProbCurve.getY(i)) {  // numerical problem
+				if(D) System.out.println("ISSUE: Low bound above mean:\nmean="+lossProbCurve.getY(i)+"\nlowBound="+confArray[0]+"\nN="+oneYrCondCats.size());
+				confArray[0] = 0;
+			}
+			low95confCurve.set(xVal,confArray[0]);
+			high95confCurve.set(xVal,confArray[1]);
+		}
+		UncertainArbDiscFunc oneYrCondExceedUncertFunc = new UncertainArbDiscFunc(lossProbCurve,low95confCurve,high95confCurve);
+		oneYrCondExceedUncertFunc.setName("oneYrCondAggrExceedUncertFunc");
+		
+		funcList.add(lossExceedProbFromTD_CatalogsRandFromCOV);
+		funcList.add(oneYrCondExceedUncertFunc);
+		
+		// Write tables
+		String tableString = "";
+		tableString += "\n1yr Aggregate Loss for CEA probability levels (cond loss PDF for each rup randomly sampled):\n"+"\n";
+		tableString += "Probability\tTD_loss\tTD_uncert\tCond2024_loss\tCond2024_uncert"+"\n";
+		tableString += getTableStringOfCEA_Values(funcList,true)+"\n";
+		tableString += "\n1yr Aggregate Loss ratios, relative to TD, for CEA probability levels (cond loss PDF for each rup randomly sampled):\n"+"\n";
+		tableString += "Probability\tCond2024_loss\tCond2024_uncert"+"\n";
+		tableString += getTableStringOfCEA_Ratios(funcList, true)+"\n";
+		System.out.println(tableString);
+		oneYrCondExceedUncertFunc.setInfo("2024 Expected Loss = "+aveYearlyLoss+"\n\n"+tableString);
 
+		ArrayList<PlotCurveCharacterstics> plotChars2 = new ArrayList<PlotCurveCharacterstics>();	
+		plotChars2.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, Color.RED));
+		plotChars2.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, new Color(0, 180, 0)));
+		plotChars2.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, Color.BLUE));
+		plotChars2.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, Color.GRAY));
+
+		File outputDir = new File(dirName+ "/OneYrCondAggrLossComFigure");
+		if(!outputDir.exists()) outputDir.mkdir();
+		String fileNamePrefix = dirName+"/OneYrCondAggrLossComFigure/"+"OneYrCondAggrLossComFigure";
+		fileNamePrefix += "_randCOV";
+		PlottingUtils.writeAndOrPlotUncertFuncs(funcList, plotChars2, "", "Aggregate Loss ($)", "Exceedance Probability", new Range(1e4,1e11), new Range(1e-5,1.0), true, true, fileNamePrefix, true);
+		fileNamePrefix += "_zoomed";
+		PlottingUtils.writeAndOrPlotUncertFuncs(funcList, plotChars2, "", "Aggregate Loss ($)", "Exceedance Probability", new Range(1e6,1e11), new Range(1e-4,1.0), true, true, fileNamePrefix, true);
+
+		// Make ratio plots
+		UncertainArbDiscFunc denomCurve = funcList.get(0);
+		ArrayList<XY_DataSet> funcListRatios = new ArrayList<XY_DataSet>(); 
+
+		double xThresh = denomCurve.getClosestXtoY(1e-4);
+		for(int i=0;i<funcList.size();i++) {
+			ArbitrarilyDiscretizedFunc ratioCurve = new ArbitrarilyDiscretizedFunc();
+			ratioCurve.setName("Ratio for "+funcList.get(i).getName());
+			for(int j=0;j<denomCurve.size();j++) {
+				if(denomCurve.getX(j)>xThresh)
+					break;
+				double ratio = funcList.get(i).getY(j)/denomCurve.getY(j);
+				if(ratio<1e-9 || ratio>1e9) ratio = 1e-9;
+				ratioCurve.set(denomCurve.getX(j), ratio);
+			}
+			funcListRatios.add(ratioCurve);
+		}
+		fileNamePrefix += "_Ratio";
+		PlottingUtils.writeAndOrPlotFuncs(funcListRatios, plotChars2, "", "Aggregate Loss ($)", "Exceedance Ratio", new Range(1e4,1e11), new Range(0.0,2.0), true, false, fileNamePrefix, true);
+
+	}
+
+	
+	/**
+	 * This is for one or more exceedances
+	 * @param randCOV
+	 */
+	public void makeFigAndTableSetA_Exceedances(double durationsYrs, boolean randCOV) {
+				
+		ArrayList<UncertainArbDiscFunc> funcList = new ArrayList<UncertainArbDiscFunc>(); 
+		
+		String randCOVincluded = "";
+		if(randCOV)
+			randCOVincluded = " (cond loss PDF for each rup randomly sampled)";
+
+		if(randCOV) {
+			UncertainArbDiscFunc lossExceedProbFromTD_CatalogsRandFromCOV = getLossExceedProbCurveFromCatalogsRandomFromCOV(getCatalogs(), durationsYrs);
+			lossExceedProbFromTD_CatalogsRandFromCOV.setName("lossExceedProbFromTD_CatalogsRandFromCOV");
+			UncertainArbDiscFunc lossExceedProbFromPoisCatalogsRandFromCOV = getLossExceedProbCurveFromCatalogsRandomFromCOV(getRandomizedCatalogs(), durationsYrs);
+			lossExceedProbFromPoisCatalogsRandFromCOV.setName("lossExceedProbFromPoisCatalogsRandFromCOV");
+			UncertainArbDiscFunc lossExceedProbFromDeclusteredCatalogsRandFromCOV = getLossExceedProbCurveFromCatalogsRandomFromCOV(getCatalogsDeclustered(), durationsYrs);
+			lossExceedProbFromDeclusteredCatalogsRandFromCOV.setName("lossExceedProbFromDeclusteredCatalogsRandFromCOV");
+			UncertainArbDiscFunc lossExceedProbFromSpontaneousCatalogsRandFromCOV = getLossExceedProbCurveFromCatalogsRandomFromCOV(getSpontaneousEventsCatalog(getCatalogs()), durationsYrs);
+			lossExceedProbFromSpontaneousCatalogsRandFromCOV.setName("lossExceedProbFromSpontaneousCatalogsRandFromCOV");
+			funcList.add(lossExceedProbFromTD_CatalogsRandFromCOV);
+			funcList.add(lossExceedProbFromPoisCatalogsRandFromCOV);
+			funcList.add(lossExceedProbFromDeclusteredCatalogsRandFromCOV);
+			funcList.add(lossExceedProbFromSpontaneousCatalogsRandFromCOV);			
+		}
+		else {
+			UncertainArbDiscFunc lossExceedProbFromTD_Catalogs = getLossExceedProbCurveFromCatalogs(getCatalogs(), durationsYrs);
+			lossExceedProbFromTD_Catalogs.setName("lossExceedProbFromTD_Catalogs");
+			UncertainArbDiscFunc lossExceedProbFromPoisCatalogs = getLossExceedProbCurveFromCatalogs(getRandomizedCatalogs(), durationsYrs);
+			lossExceedProbFromPoisCatalogs.setName("lossExceedProbFromPoisCatalogs");
+			UncertainArbDiscFunc lossExceedProbFromDeclusteredCatalogs = getLossExceedProbCurveFromCatalogs(getCatalogsDeclustered(), durationsYrs);
+			lossExceedProbFromDeclusteredCatalogs.setName("lossExceedProbFromDeclusteredCatalogs");
+			UncertainArbDiscFunc lossExceedProbFromSpontaneousCatalogs = getLossExceedProbCurveFromCatalogs(getSpontaneousEventsCatalog(getCatalogs()), durationsYrs);
+			lossExceedProbFromSpontaneousCatalogs.setName("lossExceedProbFromSpontaneousCatalogs");
+			funcList.add(lossExceedProbFromTD_Catalogs);
+			funcList.add(lossExceedProbFromPoisCatalogs);
+			funcList.add(lossExceedProbFromDeclusteredCatalogs);
+			funcList.add(lossExceedProbFromSpontaneousCatalogs);
+		}
+		
+		// Write tables
+		if(durationsYrs==1.0) { // only for 1-year forecast durations
+			System.out.println("\n"+durationsYrs+"yr Loss for CEA probability levels"+randCOVincluded+":\n");
+			System.out.println("Probability\tTD_loss\tTD_uncert\tTI_loss\tTI_uncert\tGK_loss\tGK_uncert\tSP_loss\tSP_uncert");
+			System.out.println(getTableStringOfCEA_Values(funcList,true));
+			System.out.println("\n"+durationsYrs+"yr Loss ratios, relative to TD, for CEA probability levels"+randCOVincluded+":\n");
+			System.out.println("Probability\tTIvsTD_loss\tTIvsTD_uncert\tGKvsTD_loss\tGKvsTD_uncert\tSPvsTD_loss\tSPvsTD_uncert");
+			System.out.println(getTableStringOfCEA_Ratios(funcList, true));
+			System.out.println("TI = Time Dependent\nTI = Time Independent (Poisson)\nGK = Gardner Knopoff declustered\nSP = Spontaneous ETAS events\nuncert = 1-sigma uncertainty normalized by the mean\n");	
+		}
+		
+		ArrayList<PlotCurveCharacterstics> plotChars2 = new ArrayList<PlotCurveCharacterstics>();	
+		plotChars2.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, Color.RED));
+		plotChars2.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, Color.BLACK));
+		plotChars2.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, Color.BLUE));
+		plotChars2.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, Color.GRAY));
+
+		File outputDir = new File(dirName+ "/FigureA");
+		if(!outputDir.exists()) outputDir.mkdir();
+		String fileNamePrefix = dirName+"/FigureA/"+durationsYrs+"yr_LossExceed";
+		if(randCOV) fileNamePrefix += "_randCOV";
+		PlottingUtils.writeAndOrPlotUncertFuncs(funcList, plotChars2, "", "Loss ($)", "Exceedance Probability", new Range(1e4,1e11), new Range(1e-5,1.0), true, true, fileNamePrefix, true);
+		fileNamePrefix += "_zoomed";
+		PlottingUtils.writeAndOrPlotUncertFuncs(funcList, plotChars2, "", "Loss ($)", "Exceedance Probability", new Range(1e6,1e10), new Range(1e-2,1.0), true, true, fileNamePrefix, true);
+
+		// Make ratio plots
+		UncertainArbDiscFunc denomCurve = funcList.get(0);
+		ArrayList<XY_DataSet> funcListRatios = new ArrayList<XY_DataSet>(); 
+
+		double xThresh = denomCurve.getClosestXtoY(1e-4);
+		for(int i=0;i<funcList.size();i++) {
+			ArbitrarilyDiscretizedFunc ratioCurve = new ArbitrarilyDiscretizedFunc();
+			ratioCurve.setName("Ratio for "+funcList.get(i).getName());
+			for(int j=0;j<denomCurve.size();j++) {
+				if(denomCurve.getX(j)>xThresh)
+					break;
+				double ratio = funcList.get(i).getY(j)/denomCurve.getY(j);
+				if(ratio<1e-9 || ratio>1e9) ratio = 1e-9;
+				ratioCurve.set(denomCurve.getX(j), ratio);
+			}
+			funcListRatios.add(ratioCurve);
+		}
+		fileNamePrefix = dirName+"/FigureA/"+durationsYrs+"yr_LossExceedRatio";
+		if(randCOV) fileNamePrefix += "_randCOV";
+		PlottingUtils.writeAndOrPlotFuncs(funcListRatios, plotChars2, "", "Loss ($)", "Exceedance Ratio", new Range(1e4,1e11), new Range(0.0,2.0), true, false, fileNamePrefix, true);
+
+		// plot incremental distributions
+		ArrayList<XY_DataSet> pdfList = new ArrayList<XY_DataSet>(); 
+		for(int i=0;i<2;i++) { // Only the first two funcs
+			pdfList.add(convertExceedToIncrProbDist(funcList.get(i)));
+		}
+		if(randCOV) {
+			UncertainArbDiscFunc lossIncreProbDistFromTD_CatalogsRandFromCOV = getLossIncrProbDistFromCatalogsRandomFromCOV(getCatalogs(), 1d);
+			lossIncreProbDistFromTD_CatalogsRandFromCOV.setName("lossIncreProbDistFromTD_CatalogsRandFromCOV");
+			UncertainArbDiscFunc lossIcreProbDistFromPoisCatalogsRandFromCOV = getLossIncrProbDistFromCatalogsRandomFromCOV(getRandomizedCatalogs(), 1d);
+			lossIcreProbDistFromPoisCatalogsRandFromCOV.setName("lossIcreProbDistFromPoisCatalogsRandFromCOV");
+			pdfList.add(lossIncreProbDistFromTD_CatalogsRandFromCOV);
+			pdfList.add(lossIcreProbDistFromPoisCatalogsRandFromCOV);
+		}
+		ArrayList<PlotCurveCharacterstics> plotChars3 = new ArrayList<PlotCurveCharacterstics>();	
+		plotChars3.add(new PlotCurveCharacterstics(PlotLineType.DOTTED, 1f, Color.RED));
+		plotChars3.add(new PlotCurveCharacterstics(PlotLineType.DOTTED, 1f, Color.BLACK));
+		plotChars3.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, Color.RED));
+		plotChars3.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, Color.BLACK));
+		fileNamePrefix = dirName+"/FigureA/"+durationsYrs+"yr_IncrLoss";
+		if(randCOV) fileNamePrefix += "_randCOV";
+		PlottingUtils.writeAndOrPlotFuncs(pdfList, plotChars3, "", "Loss ($1)", "Incremental Probability", new Range(1e4,1e11), new Range(1e-5,1.0), true, true, fileNamePrefix, true);
 	}
 	
 	
 	
-	
+	/**
+	 * This is for aggregate loss exceedances (only random COV sample supported)
+	 * @param randCOV
+	 */
+
 	public void makeFigAndTableSetB_1yr_Exceedances() {
 		
 		ArrayList<UncertainArbDiscFunc> funcList = new ArrayList<UncertainArbDiscFunc>(); 
@@ -2288,19 +3188,21 @@ public class U3ETAS_LossSimulationAnalysis {
 		System.out.println(getTableStringOfCEA_Ratios(funcList, true));
 		System.out.println("TI = Time Dependent\nTI = Time Independent (Poisson)\nGK = Gardner Knopoff declustered\nSP = Spontaneous ETAS events\nuncert = 1-sigma uncertainty normalized by the mean\n");
 		ArrayList<PlotCurveCharacterstics> plotChars2 = new ArrayList<PlotCurveCharacterstics>();	
-		plotChars2.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 2f, Color.BLUE));
-		plotChars2.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 2f, Color.RED));
-		plotChars2.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 2f, Color.BLACK));
-		plotChars2.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 2f, Color.GREEN));
-		String fileNamePrefix = dirName+"/FigureB_AggrLosses";
+		plotChars2.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, Color.RED));
+		plotChars2.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, Color.BLACK));
+		plotChars2.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, Color.BLUE));
+		plotChars2.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, Color.GRAY));
+		File outputDir = new File(dirName+ "/FigureB");
+		if(!outputDir.exists()) outputDir.mkdir();
+		String fileNamePrefix = dirName+"/FigureB/1.0yr_AggrLossExceed";
 		if(randCOV) fileNamePrefix += "_randCOV";
-		PlottingUtils.writeAndOrPlotUncertFuncs(funcList, plotChars2, "", "Aggregate Loss ($1000)", "Probability", new Range(1e3,1e9), new Range(1e-6,1.0), true, true, fileNamePrefix, true);
+		PlottingUtils.writeAndOrPlotUncertFuncs(funcList, plotChars2, "", "Aggregate Loss ($)", "Exceedance Probability", new Range(1e4,1e11), new Range(1e-5,1.0), true, true, fileNamePrefix, true);
 
 		// Make ratio plots
 		UncertainArbDiscFunc denomCurve = funcList.get(0);
 		ArrayList<XY_DataSet> funcListRatios = new ArrayList<XY_DataSet>(); 
 
-		double xThresh = denomCurve.getClosestXtoY(1e-3);
+		double xThresh = denomCurve.getClosestXtoY(1e-4);
 		for(int i=0;i<funcList.size();i++) {
 			ArbitrarilyDiscretizedFunc ratioCurve = new ArbitrarilyDiscretizedFunc();
 			ratioCurve.setName("Ratio for "+funcList.get(i).getName());
@@ -2313,16 +3215,846 @@ public class U3ETAS_LossSimulationAnalysis {
 			}
 			funcListRatios.add(ratioCurve);
 		}
-		fileNamePrefix = dirName+"/FigureB_AggrLossRatios";
+		fileNamePrefix = dirName+"/FigureB/1.0yr_AggrLossExceedRatio";
 		if(randCOV) fileNamePrefix += "_randCOV";
-		PlottingUtils.writeAndOrPlotFuncs(funcListRatios, plotChars2, "", "AggregateLoss ($1000)", "Loss Ratio", new Range(1e3,xThresh), new Range(0.0,2.0), true, false, fileNamePrefix, true);
+		PlottingUtils.writeAndOrPlotFuncs(funcListRatios, plotChars2, "", "Aggregate Loss ($)", "Exceedance Ratio", new Range(1e4,1e11), new Range(0.0,2.0), true, false, fileNamePrefix, true);
 
+		// plot incremental distributions
 		ArrayList<XY_DataSet> pdfList = new ArrayList<XY_DataSet>(); 
 		for(int i=0;i<2;i++) {
-			pdfList.add(convertExceedCurveToLog10_PDF_Hist(funcList.get(i)));
+			pdfList.add(convertExceedToIncrProbDist(funcList.get(i)));
 		}
-		PlottingUtils.writeAndOrPlotFuncs(pdfList, plotChars2, "", "Aggregate Loss ($1000)", "Probability", null, null, false, false, null, true);
+		if(randCOV) {
+			UncertainArbDiscFunc lossAggrIncreProbDistFromTD_CatalogsRandFromCOV = getAggrLossIncrProbDistFromCatalogsRandomFromCOV(getCatalogs(), 1d);
+			lossAggrIncreProbDistFromTD_CatalogsRandFromCOV.setName("lossAggrIncreProbDistFromTD_CatalogsRandFromCOV");
+			UncertainArbDiscFunc lossAggrIcreProbDistFromPoisCatalogsRandFromCOV = getAggrLossIncrProbDistFromCatalogsRandomFromCOV(getRandomizedCatalogs(), 1d);
+			lossAggrIcreProbDistFromPoisCatalogsRandFromCOV.setName("lossAggrIcreProbDistFromPoisCatalogsRandFromCOV");
+			pdfList.add(lossAggrIncreProbDistFromTD_CatalogsRandFromCOV);
+			pdfList.add(lossAggrIcreProbDistFromPoisCatalogsRandFromCOV);
+		}
+		ArrayList<PlotCurveCharacterstics> plotChars3 = new ArrayList<PlotCurveCharacterstics>();	
+		plotChars3.add(new PlotCurveCharacterstics(PlotLineType.DOTTED, 1f, Color.RED));
+		plotChars3.add(new PlotCurveCharacterstics(PlotLineType.DOTTED, 1f, Color.BLACK));
+		plotChars3.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, Color.RED));
+		plotChars3.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, Color.BLACK));
+		fileNamePrefix = dirName+"/FigureB/1.0yr_AggrIncrLoss";
+		if(randCOV) fileNamePrefix += "_randCOV";
+		PlottingUtils.writeAndOrPlotFuncs(pdfList, plotChars3, "", "Aggregate Loss ($)", "Incremental Probability", new Range(1e4,1e11), new Range(1e-5,1.0), true, true, fileNamePrefix, true);
 	}
+	
+	
+	public void make1yr_StatsCSV_File() {
+//		maxLoss, subCatIndexForMaxAggLoss: 8.253113091481961E10, 244544
+//		maxAggLoss, subCatIndexForMaxAggLoss: 1.153828487953038E11, 210663
+		ArrayList<ObsEqkRupList> subCatList = getSubcatalogList(getCatalogs(), 1d);
+//		ObsEqkRupList catalog = subCatList.get(244544);
+//		MakeFigures.plotEventRateMapForCatalog(catalog, 2.5, "FigRightHere092624", 1d);
+		
+		CSVFile<String> csv = new CSVFile<>(true);
+		csv.addLine("catindex", "numEvents", "numGT_6pt5", "maxRandLoss", "aggrRandLoss", "maxMag", "origCatIndex", "maxMeanLoss", "aggrMeanLoss");
+		int catIndex = -1;
+		for (ObsEqkRupList catalog:subCatList) {
+			catIndex+=1;
+			int origCatIndex = (int)((double)catIndex/500d);
+			double maxRandLoss=0, aggrRandLoss=0, maxMeanLoss=0, aggrMeanLoss=0, nGT6pt5=0, maxMag=0;;
+			for (ObsEqkRupture obsRup : catalog) {
+				ETAS_EqkRupture rup = (ETAS_EqkRupture)obsRup;
+				if(rup.getMag()>=6.5)
+					nGT6pt5+=1;
+				if(rup.getMag()>=maxMag)
+					maxMag=rup.getMag();
+				double meanLoss = meanLossForNthRup.get(rup.getNthERF_Index());
+				if(maxMeanLoss<meanLoss) maxMeanLoss=meanLoss;
+				aggrMeanLoss+=meanLoss;
+
+				double randLoss = randomLossForEventID[rup.getID()]; // covModel.getDistribution(aveLoss).sample(); // get randome sample
+				if(maxRandLoss<randLoss) maxRandLoss=randLoss;
+				aggrRandLoss+=randLoss;
+			}
+			csv.addLine(catIndex+"", catalog.size()+"", nGT6pt5+"", maxRandLoss+"", aggrRandLoss+"",maxMag+"",origCatIndex+"", maxMeanLoss+"", aggrMeanLoss+"");
+		}
+		File file = new File(dirName+"/oneYearStats.csv");
+		try {
+			csv.writeToFile(file);
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+	}
+	
+	public void plotMaxAndAggrLossesPerYearInCatalog(int catalogIndex) {
+		
+		HistogramFunction ratioHistTD = getBlankIncrLossCurveLogX();
+		HistogramFunction numHistTD = getBlankIncrLossCurveLogX();
+		HistogramFunction ratioHistPoiss = getBlankIncrLossCurveLogX();
+		HistogramFunction numHistPoiss = getBlankIncrLossCurveLogX();
+		
+		ArrayList<ObsEqkRupList> tempCatList = new ArrayList<ObsEqkRupList>();
+		tempCatList.add(getCatalogs().get(catalogIndex));
+		
+		File outputDir = new File(dirName+ "/MaxAndAggLossVsTime");
+		if(!outputDir.exists()) outputDir.mkdir();
+
+		
+		double aveAggrOverMax_TD=0;
+		double aveAggrOverMax_Pois=0;
+		double aveAggrOverMax_TD_gt1Billion=0;
+		double aveAggrOverMax_Pois_gt1Billion=0;
+		double aveAggrOverMax_TD_gt1Billion_num=0;
+		double aveAggrOverMax_Pois_gt1Billion_num=0;
+		
+		ArrayList<ObsEqkRupList> subCatList = getSubcatalogList(tempCatList, 1d);
+		HistogramFunction histTD_MaxLoss = new HistogramFunction(0.05,500,1.0);
+		HistogramFunction histTD_AggrLoss = new HistogramFunction(0.05,500,1.0);
+		int subCatIndex=-1;
+		for (ObsEqkRupList catalog:subCatList) {
+			subCatIndex+=1;
+			double maxLoss=0, aggrLoss=0;
+			for (ObsEqkRupture obsRup : catalog) {
+				ETAS_EqkRupture rup = (ETAS_EqkRupture)obsRup;
+				double randLoss = randomLossForEventID[rup.getID()]; // covModel.getDistribution(aveLoss).sample(); // get randome sample
+				if(maxLoss<randLoss) maxLoss=randLoss;
+				aggrLoss+=randLoss;
+			}
+			if(maxLoss != 0.0) {
+				aveAggrOverMax_TD += aggrLoss/maxLoss;
+				if(maxLoss>1e9) {
+					aveAggrOverMax_TD_gt1Billion+=aggrLoss/maxLoss;
+					aveAggrOverMax_TD_gt1Billion_num+=1;
+				}
+			}
+			else {
+				aveAggrOverMax_TD += 1.0;
+			}
+			histTD_MaxLoss.set(subCatIndex,Math.log10(maxLoss));
+			histTD_AggrLoss.set(subCatIndex,Math.log10(aggrLoss));
+			if(Math.log10(maxLoss)>ratioHistTD.getMinX()-ratioHistTD.getDelta()/2) {
+				ratioHistTD.add(Math.log10(maxLoss), aggrLoss/maxLoss);
+				numHistTD.add(Math.log10(maxLoss), 1.0);
+			}
+		}
+		aveAggrOverMax_TD_gt1Billion /= aveAggrOverMax_TD_gt1Billion_num;
+		aveAggrOverMax_TD /= subCatList.size();
+		histTD_AggrLoss.setInfo("aveAggrOverMax_TD="+aveAggrOverMax_TD+"\naveAggrOverMax_TD_gt1Billion="+aveAggrOverMax_TD_gt1Billion);
+		ArrayList<XY_DataSet> funcList = new ArrayList<XY_DataSet>(); 
+		funcList.add(histTD_AggrLoss);
+		funcList.add(histTD_MaxLoss);
+		ArrayList<PlotCurveCharacterstics> plotChars = new ArrayList<PlotCurveCharacterstics>();	
+		plotChars.add(new PlotCurveCharacterstics(PlotLineType.HISTOGRAM, 2f, Color.RED));
+		plotChars.add(new PlotCurveCharacterstics(PlotLineType.HISTOGRAM, 2f, Color.BLUE));
+		String fileNamePrefix = dirName+"/MaxAndAggLossVsTime/maxAndAggLossPerYearForTD_Cat_"+catalogIndex;
+		Range xRange = new Range(0,500);
+//		Range xRange = new Range(163-50,163+50);
+		Range yRange = new Range(4,11.3);
+		PlottingUtils.writeAndOrPlotFuncs(funcList, plotChars, "Full TD", "Year", "Log10(Loss, $)", xRange, yRange, false, false, 6.5, 2.0, fileNamePrefix, true);
+		
+		// Now do poisson result
+		tempCatList = new ArrayList<ObsEqkRupList>();
+		tempCatList.add(getRandomizedCatalogs().get(catalogIndex));
+		subCatList = getSubcatalogList(tempCatList, 1d);
+		HistogramFunction histPois_MaxLoss = new HistogramFunction(0.05,500,1.0);
+		HistogramFunction histPois_AggrLoss = new HistogramFunction(0.05,500,1.0);
+		subCatIndex=-1;
+		for (ObsEqkRupList catalog:subCatList) {
+			subCatIndex+=1;
+			double maxLoss=0, aggrLoss=0;
+			for (ObsEqkRupture obsRup : catalog) {
+				ETAS_EqkRupture rup = (ETAS_EqkRupture)obsRup;
+				double randLoss = randomLossForEventID[rup.getID()]; // covModel.getDistribution(aveLoss).sample(); // get randome sample
+				if(maxLoss<randLoss) maxLoss=randLoss;
+				aggrLoss+=randLoss;
+			}
+			if(maxLoss != 0.0) {
+				aveAggrOverMax_Pois += aggrLoss/maxLoss;
+				if(maxLoss>1e9) {
+					aveAggrOverMax_Pois_gt1Billion+=aggrLoss/maxLoss;
+					aveAggrOverMax_Pois_gt1Billion_num+=1;
+				}
+
+			}
+			else {
+				aveAggrOverMax_Pois += 1.0;
+			}
+
+			histPois_MaxLoss.set(subCatIndex,Math.log10(maxLoss));
+			histPois_AggrLoss.set(subCatIndex,Math.log10(aggrLoss));
+			if(Math.log10(maxLoss)>ratioHistPoiss.getMinX()-ratioHistPoiss.getDelta()/2) {
+				ratioHistPoiss.add(Math.log10(maxLoss), aggrLoss/maxLoss);
+				numHistPoiss.add(Math.log10(maxLoss), 1.0);
+			}
+
+		}
+		aveAggrOverMax_Pois_gt1Billion /= aveAggrOverMax_Pois_gt1Billion_num;
+
+		aveAggrOverMax_Pois /= subCatList.size();
+		histPois_AggrLoss.setInfo("aveAggrOverMax_Pois="+aveAggrOverMax_Pois+"\naveAggrOverMax_Pois_gt1Billion="+aveAggrOverMax_Pois_gt1Billion);
+		ArrayList<XY_DataSet> funcListPoiss = new ArrayList<XY_DataSet>(); 
+		funcListPoiss.add(histPois_AggrLoss);
+		funcListPoiss.add(histPois_MaxLoss);
+		fileNamePrefix = dirName+"/MaxAndAggLossVsTime/maxAndAggLossPerYearForTI_Cat_"+catalogIndex;
+		PlottingUtils.writeAndOrPlotFuncs(funcListPoiss, plotChars, "Full Randomized (Poisson)", "Year", "Log10(Loss, $)", xRange, yRange, false, false, 6.5, 2.0, fileNamePrefix, true);
+
+		// plot aggr/max loss histrograms as func of log10(maxLoss):
+		for(int i=0;i<ratioHistPoiss.size(); i++) {
+			double newVal = ratioHistTD.getY(i)/numHistTD.getY(i);
+			ratioHistTD.set(i,newVal);
+			newVal = ratioHistPoiss.getY(i)/numHistPoiss.getY(i);
+			ratioHistPoiss.set(i,newVal);
+		}
+		ratioHistTD.setName("ratioHistTD");
+		ratioHistPoiss.setName("ratioHistPoiss");
+		ArrayList<XY_DataSet> funcList2 = new ArrayList<XY_DataSet>(); 
+		funcList2.add(ratioHistTD);
+		funcList2.add(ratioHistPoiss);
+		ArrayList<PlotCurveCharacterstics> plotChars2 = new ArrayList<PlotCurveCharacterstics>();	
+		plotChars2.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, Color.RED));
+		plotChars2.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, Color.BLACK));
+		fileNamePrefix = dirName+"/MaxAndAggLossVsTime/aveRatioVsMaxLoss"+catalogIndex;
+		PlottingUtils.writeAndOrPlotFuncs(funcList2, plotChars2, "", "Log10(MaxLoss ($))", "Ratio", null, null, false, false, fileNamePrefix, true);
+
+
+			
+	}
+	
+	
+	public void plotAccumulatedLossVsTimeForCatalog(int catalogIndex) {
+		
+		ArbitrarilyDiscretizedFunc accumLossFunc_TD = new ArbitrarilyDiscretizedFunc();
+		accumLossFunc_TD.setName("accumLossFunc_TD");
+		double accumLoss_TD=0;
+		accumLossFunc_TD.set(0.0,0.0);
+		long lastMillis = 0;
+		for (ObsEqkRupture obsRup : catalogList.get(catalogIndex)) {
+				ETAS_EqkRupture rup = (ETAS_EqkRupture)obsRup;
+				long timeMillis = rup.getOriginTime()-startTimeMillis;
+				if(timeMillis<lastMillis)
+					throw new RuntimeException("rupture order proplem");
+				lastMillis = timeMillis;
+				double timeYears = (double)timeMillis/(double)millisPerYr;
+				double randLoss = randomLossForEventID[rup.getID()]; // covModel.getDistribution(aveLoss).sample(); // get randome sample
+				if(randLoss == 0.0)
+					continue;
+				accumLoss_TD += randLoss;
+				accumLossFunc_TD.set(timeYears,accumLoss_TD);
+		}
+		
+		
+		ArbitrarilyDiscretizedFunc accumLossFunc_Pois = new ArbitrarilyDiscretizedFunc();
+		accumLossFunc_Pois.setName("accumLossFunc_Pois");
+		double accumLoss_Pois=0;
+		accumLossFunc_Pois.set(0.0,0.0);
+		lastMillis = 0;
+		for (ObsEqkRupture obsRup : randomizeCatalog(catalogList.get(catalogIndex))) { // use special method so catalog has exact same events
+				ETAS_EqkRupture rup = (ETAS_EqkRupture)obsRup;
+				long timeMillis = rup.getOriginTime()-startTimeMillis;
+				if(timeMillis<lastMillis)
+					throw new RuntimeException("rupture order proplem");
+				lastMillis = timeMillis;
+				double timeYears = (double)timeMillis/(double)millisPerYr;
+				double randLoss = randomLossForEventID[rup.getID()]; // covModel.getDistribution(aveLoss).sample(); // get randome sample
+				if(randLoss == 0.0)
+					continue;
+				accumLoss_Pois += randLoss;
+				accumLossFunc_Pois.set(timeYears,accumLoss_Pois);
+		}
+		
+		ArrayList<XY_DataSet> funcList = new ArrayList<XY_DataSet>(); 
+		funcList.add(accumLossFunc_TD);
+		funcList.add(accumLossFunc_Pois);
+		ArrayList<PlotCurveCharacterstics> plotChars = new ArrayList<PlotCurveCharacterstics>();	
+		plotChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 2f, Color.BLUE));
+		plotChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 2f, Color.RED));
+		String fileNamePrefix = dirName+"/JUNK";
+		PlottingUtils.writeAndOrPlotFuncs(funcList, plotChars, "", "Year", "Loss", new Range(0,500), null, false, false, null, true);
+		
+	}
+
+
+	
+	public void makeFigSetC_500yrRates(int catIndex) {
+		double startTimeYears = 0; // this is the time within the catalog to start, will need to set lower than this as our simulations are 500 years long
+		double durationYears = 500;
+		int plotWidthPixels = 2000;
+		double binWidthDays = 365.25;
+		String prefix = null;
+		double annotateMinMag = 6;
+		double annotateBinWidth = 0.5;
+		// use this because it has <≥2.5 events
+//		String fullCatFileName = "/Users/field/Field_Other/CEA_WGCEP/UCERF3/DeclusteringAnalysis/testDebugRun/2020_12_03-Start2012_500yr_kCOV1p5_ScaleFactor1p4_Spontaneous_HistoricalCatalog/results_complete.bin"; 
+//		ObsEqkRupList rupList=null;
+//		try {
+//			rupList = U3ETAS_SimulationAnalysis.loadCatalogs(new File(U3ETAS_SimulationAnalysis.fssFileName), new File(fullCatFileName), 2.5).get(0);
+//		} catch (Exception e) {
+//			e.printStackTrace();
+//		}
+		ArrayList<ETAS_EqkRupture> catalog = new ArrayList<ETAS_EqkRupture>();
+		for(ObsEqkRupture rup:this.getCatalogs().get(catIndex))
+			catalog.add((ETAS_EqkRupture)rup);
+//		String dirName = "/Users/field/Field_Other/CEA_WGCEP/UCERF3/DeclusteringAnalysis/FiguresFromEclipse/Figure1";
+		File outputDir = new File(dirName+ "/FigureC");
+		if(!outputDir.exists()) outputDir.mkdir();
+		try {
+			ETAS_SimAnalysisTools.plotRateOverTime(catalog, startTimeYears, durationYears, binWidthDays, outputDir, prefix, plotWidthPixels,
+					annotateMinMag, annotateBinWidth);
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+
+	}
+	
+	
+	public void makeFig1_100yrRates(int catIndex, double startTimeYears) {
+		if(catIndex>999)
+			throw new RuntimeException("Only the first set of catalogs is supported");
+//		double startTimeYears = 163-50; // time within the catalog to start, this time is 50 yrs before the largest aggregate loss
+		double durationYears = 100;
+		int plotWidthPixels = 2000;
+		double binWidthDays = 30;
+		String prefix = null;
+		double annotateMinMag = 6;
+		double annotateBinWidth = 0.5;
+		// use this because it has <≥2.5 events
+		String fullCatFileName = "/Users/field/Library/CloudStorage/OneDrive-DOI/Field_Other/CEA_WGCEP/UCERF3/DeclusteringOnLossAnalysisPaper2024/Data/results_complete.bin";
+//		ObsEqkRupList rupList=null;
+		ETAS_Catalog rupList=null;
+		try {
+			rupList = ETAS_CatalogIO.loadIndividualCatalogBinary(new File(fullCatFileName), catIndex, true);
+//			rupList = U3ETAS_SimulationAnalysis.loadCatalogs(new File(U3ETAS_SimulationAnalysis.fssFileName), new File(fullCatFileName), 2.5).get(0);
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		ArrayList<ETAS_EqkRupture> catalog = new ArrayList<ETAS_EqkRupture>();
+		for(ObsEqkRupture rup:rupList)
+			catalog.add((ETAS_EqkRupture)rup);
+		File outputDir = new File(dirName+ "/Figure1_cat"+catIndex);
+		if(!outputDir.exists()) outputDir.mkdir();
+		try {
+			ETAS_SimAnalysisTools.plotRateOverTime(catalog, startTimeYears, durationYears, binWidthDays, outputDir, prefix, plotWidthPixels,
+					annotateMinMag, annotateBinWidth);
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+	}
+
+	
+	/**
+	 * This is for one or more exceedances, randCOV, and for multiple return forecast durations
+	 * @param randCOV
+	 */
+	public void makeFigSetD_Exceedances() throws IOException {
+				
+		ArrayList<UncertainArbDiscFunc> funcList = new ArrayList<UncertainArbDiscFunc>(); 
+		ArrayList<XY_DataSet> funcListRatios = new ArrayList<XY_DataSet>(); 
+
+		float[] durationsYrsArray = {1f/365.25f, 7f/365.25f, 1f/12, 1f, 5f, 50f}; // day, week, month, yr, 5yr, 50yr
+//		float[] durationsYrsArray = {1f}; // day, week, month, yr, 5yr, 50yr
+		
+		File outputDir = new File(dirName+ "/FigureD");
+		if(!outputDir.exists()) outputDir.mkdir();
+		String dataDirName = dirName+ "/FigureD/data";
+		File dataDir = new File(dataDirName);
+		if(!dataDir.exists()) dataDir.mkdir();
+		Gson gson = new GsonBuilder().setPrettyPrinting().create();
+
+		for(float durationsYrs:durationsYrsArray) {
+			System.out.println("working on duration (yrs) = "+durationsYrs);
+			
+			UncertainArbDiscFunc lossExceedProbFromTD_CatalogsRandFromCOV;
+			UncertainArbDiscFunc lossExceedProbFromPoisCatalogsRandFromCOV;
+			
+			String fileName = "TD_Func_"+Float.toString(durationsYrs)+".json";
+			File outFile = new File(dataDirName+"/"+fileName);
+			String fileName2 = "TI_Func_"+Float.toString(durationsYrs)+".json";
+			File outFile2 = new File(dataDirName+"/"+fileName2);
+			if(outFile.exists()) {
+				FileReader fr = new FileReader(outFile);
+				FileReader fr2 = new FileReader(outFile2);
+				lossExceedProbFromTD_CatalogsRandFromCOV = gson.fromJson(fr, UncertainArbDiscFunc.class);
+				lossExceedProbFromPoisCatalogsRandFromCOV = gson.fromJson(fr2, UncertainArbDiscFunc.class);
+			}
+			else {
+				lossExceedProbFromTD_CatalogsRandFromCOV = getLossExceedProbCurveFromCatalogsRandomFromCOV(getCatalogs(), durationsYrs);
+				lossExceedProbFromTD_CatalogsRandFromCOV.setName("lossExceedProbFromTD_CatalogsRandFromCOV; duration = "+durationsYrs);
+				lossExceedProbFromPoisCatalogsRandFromCOV = getLossExceedProbCurveFromCatalogsRandomFromCOV(getRandomizedCatalogs(), durationsYrs);
+				lossExceedProbFromPoisCatalogsRandFromCOV.setName("lossExceedProbFromPoisCatalogsRandFromCOV; duration = "+durationsYrs);				
+
+				FileWriter fw = new FileWriter(outFile);
+				gson.toJson(lossExceedProbFromTD_CatalogsRandFromCOV, fw);
+				FileWriter fw2 = new FileWriter(outFile2);
+				gson.toJson(lossExceedProbFromPoisCatalogsRandFromCOV, fw2);
+				fw.close();
+				fw2.close();
+			}
+			
+			funcList.add(lossExceedProbFromTD_CatalogsRandFromCOV);
+			funcList.add(lossExceedProbFromPoisCatalogsRandFromCOV);
+			
+			ArbitrarilyDiscretizedFunc ratioCurve = new ArbitrarilyDiscretizedFunc();
+			double xThresh = lossExceedProbFromTD_CatalogsRandFromCOV.getClosestXtoY(1e-4);
+
+			ratioCurve.setName("Ratio for "+lossExceedProbFromPoisCatalogsRandFromCOV.getName());
+			for(int j=0;j<lossExceedProbFromTD_CatalogsRandFromCOV.size();j++) {
+				if(lossExceedProbFromTD_CatalogsRandFromCOV.getX(j)>xThresh)
+					break;
+				double ratio = lossExceedProbFromPoisCatalogsRandFromCOV.getY(j)/lossExceedProbFromTD_CatalogsRandFromCOV.getY(j);
+				if(ratio<1e-9 || ratio>1e9) ratio = 1e-9;
+				ratioCurve.set(lossExceedProbFromTD_CatalogsRandFromCOV.getX(j), ratio);
+			}
+			funcListRatios.add(ratioCurve);
+						
+		}
+		
+		
+		
+//		// Write tables
+//		if(durationsYrs==1.0) { // only for 1-year forecast durations
+//			System.out.println("\n"+durationsYrs+"yr Loss for CEA probability levels"+randCOVincluded+":\n");
+//			System.out.println("Probability\tTD_loss\tTD_uncert\tTI_loss\tTI_uncert\tGK_loss\tGK_uncert\tSP_loss\tSP_uncert");
+//			System.out.println(getTableStringOfCEA_Values(funcList,true));
+//			System.out.println("\n"+durationsYrs+"yr Loss ratios, relative to TD, for CEA probability levels"+randCOVincluded+":\n");
+//			System.out.println("Probability\tTIvsTD_loss\tTIvsTD_uncert\tGKvsTD_loss\tGKvsTD_uncert\tSPvsTD_loss\tSPvsTD_uncert");
+//			System.out.println(getTableStringOfCEA_Ratios(funcList, true));
+//			System.out.println("TI = Time Dependent\nTI = Time Independent (Poisson)\nGK = Gardner Knopoff declustered\nSP = Spontaneous ETAS events\nuncert = 1-sigma uncertainty normalized by the mean\n");	
+//		}
+		
+		ArrayList<PlotCurveCharacterstics> plotChars1 = new ArrayList<PlotCurveCharacterstics>();	
+		plotChars1.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, Color.RED));
+		plotChars1.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, Color.BLACK));
+		plotChars1.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, Color.RED));
+		plotChars1.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, Color.BLACK));
+		plotChars1.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, Color.RED));
+		plotChars1.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, Color.BLACK));
+		plotChars1.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, Color.RED));
+		plotChars1.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, Color.BLACK));
+		plotChars1.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, Color.RED));
+		plotChars1.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, Color.BLACK));
+		plotChars1.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, Color.RED));
+		plotChars1.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, Color.BLACK));
+
+		String fileNamePrefix = dirName+"/FigureD/LossExceed_randCOV";
+		PlottingUtils.writeAndOrPlotUncertFuncs(funcList, plotChars1, "", "Loss ($)", "Exceedance Probability", new Range(1e4,1e11), new Range(1e-5,1.0), true, true, fileNamePrefix, true);
+
+		// Make ratio plots
+		ArrayList<PlotCurveCharacterstics> plotChars2 = new ArrayList<PlotCurveCharacterstics>();	
+		plotChars2.add(new PlotCurveCharacterstics(PlotLineType.DOTTED, 1f, Color.BLACK));
+		plotChars2.add(new PlotCurveCharacterstics(PlotLineType.DASHED, 1f, Color.BLACK));
+		plotChars2.add(new PlotCurveCharacterstics(PlotLineType.DOTTED_AND_DASHED, 1f, Color.BLACK));
+		plotChars2.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, Color.BLACK));
+		plotChars2.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, Color.MAGENTA));
+		plotChars2.add(new PlotCurveCharacterstics(PlotLineType.DOTTED_AND_DASHED, 1f, Color.MAGENTA));
+		fileNamePrefix = dirName+"/FigureD/LossExceedRatio_randCOV";
+		PlottingUtils.writeAndOrPlotFuncs(funcListRatios, plotChars2, "", "Loss ($)", "Exceedance Ratio", new Range(1e4,1e11), new Range(0.5,1.5), true, false, fileNamePrefix, true);
+
+	}
+	
+	
+	/**
+	 * This is for aggregate exceedances, randCOV, and for multiple return forecast durations
+	 * @param randCOV
+	 */
+	public void makeFigSetE_Exceedances() throws IOException {
+				
+		ArrayList<UncertainArbDiscFunc> funcList = new ArrayList<UncertainArbDiscFunc>(); 
+		ArrayList<XY_DataSet> funcListRatios = new ArrayList<XY_DataSet>(); 
+
+		float[] durationsYrsArray = {1f/365.25f, 7f/365.25f, 1f/12, 1f, 5f, 50f}; // day, week, month, yr, 5yr, 50yr
+//		float[] durationsYrsArray = {1f}; // day, week, month, yr, 5yr, 50yr
+		
+		File outputDir = new File(dirName+ "/FigureE");
+		if(!outputDir.exists()) outputDir.mkdir();
+		String dataDirName = dirName+ "/FigureE/data";
+		File dataDir = new File(dataDirName);
+		if(!dataDir.exists()) dataDir.mkdir();
+		Gson gson = new GsonBuilder().setPrettyPrinting().create();
+
+		for(float durationsYrs:durationsYrsArray) {
+			System.out.println("working on duration (yrs) = "+durationsYrs);
+			
+			UncertainArbDiscFunc lossExceedProbFromTD_CatalogsRandFromCOV;
+			UncertainArbDiscFunc lossExceedProbFromPoisCatalogsRandFromCOV;
+			
+			String fileName = "TD_AggrFunc_"+Float.toString(durationsYrs)+".json";
+			File outFile = new File(dataDirName+"/"+fileName);
+			String fileName2 = "TI_AggrFunc_"+Float.toString(durationsYrs)+".json";
+			File outFile2 = new File(dataDirName+"/"+fileName2);
+			if(outFile.exists()) {
+				FileReader fr = new FileReader(outFile);
+				FileReader fr2 = new FileReader(outFile2);
+				lossExceedProbFromTD_CatalogsRandFromCOV = gson.fromJson(fr, UncertainArbDiscFunc.class);
+				lossExceedProbFromPoisCatalogsRandFromCOV = gson.fromJson(fr2, UncertainArbDiscFunc.class);
+			}
+			else {
+				lossExceedProbFromTD_CatalogsRandFromCOV = getAggrLossExceedProbCurveFromCatalogsRandomFromCOV(getCatalogs(), durationsYrs);
+				lossExceedProbFromTD_CatalogsRandFromCOV.setName("aggrLossExceedProbFromTD_CatalogsRandFromCOV; duration = "+durationsYrs);
+				lossExceedProbFromPoisCatalogsRandFromCOV = getAggrLossExceedProbCurveFromCatalogsRandomFromCOV(getRandomizedCatalogs(), durationsYrs);
+				lossExceedProbFromPoisCatalogsRandFromCOV.setName("aggrLossExceedProbFromPoisCatalogsRandFromCOV; duration = "+durationsYrs);				
+
+				FileWriter fw = new FileWriter(outFile);
+				gson.toJson(lossExceedProbFromTD_CatalogsRandFromCOV, fw);
+				FileWriter fw2 = new FileWriter(outFile2);
+				gson.toJson(lossExceedProbFromPoisCatalogsRandFromCOV, fw2);
+				fw.close();
+				fw2.close();
+			}
+			
+			funcList.add(lossExceedProbFromTD_CatalogsRandFromCOV);
+			funcList.add(lossExceedProbFromPoisCatalogsRandFromCOV);
+
+			
+			ArbitrarilyDiscretizedFunc ratioCurve = new ArbitrarilyDiscretizedFunc();
+			double xThresh = lossExceedProbFromTD_CatalogsRandFromCOV.getClosestXtoY(1e-4);
+
+			ratioCurve.setName("Ratio for "+lossExceedProbFromPoisCatalogsRandFromCOV.getName());
+			for(int j=0;j<lossExceedProbFromTD_CatalogsRandFromCOV.size();j++) {
+				if(lossExceedProbFromTD_CatalogsRandFromCOV.getX(j)>xThresh)
+					break;
+				double ratio = lossExceedProbFromPoisCatalogsRandFromCOV.getY(j)/lossExceedProbFromTD_CatalogsRandFromCOV.getY(j);
+				if(ratio<1e-9 || ratio>1e9) ratio = 1e-9;
+				ratioCurve.set(lossExceedProbFromTD_CatalogsRandFromCOV.getX(j), ratio);
+			}
+			funcListRatios.add(ratioCurve);
+						
+		}
+		
+		ArrayList<PlotCurveCharacterstics> plotChars1 = new ArrayList<PlotCurveCharacterstics>();	
+		plotChars1.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, Color.RED));
+		plotChars1.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, Color.BLACK));
+		plotChars1.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, Color.RED));
+		plotChars1.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, Color.BLACK));
+		plotChars1.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, Color.RED));
+		plotChars1.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, Color.BLACK));
+		plotChars1.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, Color.RED));
+		plotChars1.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, Color.BLACK));
+		plotChars1.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, Color.RED));
+		plotChars1.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, Color.BLACK));
+		plotChars1.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, Color.RED));
+		plotChars1.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, Color.BLACK));
+		String fileNamePrefix = dirName+"/FigureE/AggrLossExceed_randCOV";
+		PlottingUtils.writeAndOrPlotUncertFuncs(funcList, plotChars1, "", "Loss ($)", "Aggregate Exceedance Probability", new Range(1e4,1e11), new Range(1e-5,1.0), true, true, fileNamePrefix, true);
+
+		// Make ratio plots
+		ArrayList<PlotCurveCharacterstics> plotChars2 = new ArrayList<PlotCurveCharacterstics>();	
+		plotChars2.add(new PlotCurveCharacterstics(PlotLineType.DOTTED, 1f, Color.BLACK));
+		plotChars2.add(new PlotCurveCharacterstics(PlotLineType.DASHED, 1f, Color.BLACK));
+		plotChars2.add(new PlotCurveCharacterstics(PlotLineType.DOTTED_AND_DASHED, 1f, Color.BLACK));
+		plotChars2.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, Color.BLACK));
+		plotChars2.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, Color.MAGENTA));
+		plotChars2.add(new PlotCurveCharacterstics(PlotLineType.DOTTED_AND_DASHED, 1f, Color.MAGENTA));
+		fileNamePrefix = dirName+"/FigureE/AggrLossExceedRatio_randCOV";
+		PlottingUtils.writeAndOrPlotFuncs(funcListRatios, plotChars2, "", "Loss ($)", "Aggregate Exceedance Ratio", new Range(1e4,1e11), new Range(0.5,1.5), true, false, fileNamePrefix, true);
+
+	}
+	
+	
+	
+	
+	/**
+	 * This is for aggregate exceedances, randCOV, and for multiple return forecast durations
+	 * @param randCOV
+	 */
+	public void makeFigSetG_MagExceedances() throws IOException {
+				
+		ArrayList<UncertainArbDiscFunc> funcList = new ArrayList<UncertainArbDiscFunc>(); 
+		ArrayList<XY_DataSet> funcListRatios = new ArrayList<XY_DataSet>(); 
+
+		float[] durationsYrsArray = {1f/365.25f, 7f/365.25f, 1f/12, 1f, 5f, 50f}; // day, week, month, yr, 5yr, 50yr
+//		float[] durationsYrsArray = {1f}; // day, week, month, yr, 5yr, 50yr
+		
+		File outputDir = new File(dirName+ "/FigureG");
+		if(!outputDir.exists()) outputDir.mkdir();
+		String dataDirName = dirName+ "/FigureG/data";
+		File dataDir = new File(dataDirName);
+		if(!dataDir.exists()) dataDir.mkdir();
+		Gson gson = new GsonBuilder().setPrettyPrinting().create();
+
+		for(float durationsYrs:durationsYrsArray) {
+			System.out.println("working on duration (yrs) = "+durationsYrs);
+			
+			UncertainArbDiscFunc magExceedProbFromTD_Catalogs;
+			UncertainArbDiscFunc magExceedProbFromPoisCatalogs;
+			
+			String fileName = "TD_MagExceedFunc_"+Float.toString(durationsYrs)+".json";
+			File outFile = new File(dataDirName+"/"+fileName);
+			String fileName2 = "TI_MagExceedFunc_"+Float.toString(durationsYrs)+".json";
+			File outFile2 = new File(dataDirName+"/"+fileName2);
+			if(outFile.exists()) {
+				FileReader fr = new FileReader(outFile);
+				FileReader fr2 = new FileReader(outFile2);
+				magExceedProbFromTD_Catalogs = gson.fromJson(fr, UncertainArbDiscFunc.class);
+				magExceedProbFromPoisCatalogs = gson.fromJson(fr2, UncertainArbDiscFunc.class);
+			}
+			else {
+				magExceedProbFromTD_Catalogs = getMagExceedProbCurveFromCatalogs(getCatalogs(), durationsYrs);
+				magExceedProbFromTD_Catalogs.setName("magExceedProbFromTD_Catalogs; duration = "+durationsYrs);
+				magExceedProbFromPoisCatalogs = getMagExceedProbCurveFromCatalogs(getRandomizedCatalogs(), durationsYrs);
+				magExceedProbFromPoisCatalogs.setName("magExceedProbFromPoisCatalogs; duration = "+durationsYrs);				
+
+				FileWriter fw = new FileWriter(outFile);
+				gson.toJson(magExceedProbFromTD_Catalogs, fw);
+				FileWriter fw2 = new FileWriter(outFile2);
+				gson.toJson(magExceedProbFromPoisCatalogs, fw2);
+				fw.close();
+				fw2.close();
+			}
+			
+			funcList.add(magExceedProbFromTD_Catalogs);
+			funcList.add(magExceedProbFromPoisCatalogs);
+
+			
+			ArbitrarilyDiscretizedFunc ratioCurve = new ArbitrarilyDiscretizedFunc();
+			double xThresh = magExceedProbFromTD_Catalogs.getClosestXtoY(1e-4);
+
+			ratioCurve.setName("Ratio for "+magExceedProbFromPoisCatalogs.getName());
+			for(int j=0;j<magExceedProbFromTD_Catalogs.size();j++) {
+				if(magExceedProbFromTD_Catalogs.getX(j)>xThresh)
+					break;
+				double ratio = magExceedProbFromPoisCatalogs.getY(j)/magExceedProbFromTD_Catalogs.getY(j);
+				if(ratio<1e-9 || ratio>1e9) ratio = 1e-9;
+				ratioCurve.set(magExceedProbFromTD_Catalogs.getX(j), ratio);
+			}
+			funcListRatios.add(ratioCurve);
+						
+		}
+		
+		ArrayList<PlotCurveCharacterstics> plotChars1 = new ArrayList<PlotCurveCharacterstics>();	
+		plotChars1.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, Color.RED));
+		plotChars1.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, Color.BLACK));
+		plotChars1.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, Color.RED));
+		plotChars1.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, Color.BLACK));
+		plotChars1.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, Color.RED));
+		plotChars1.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, Color.BLACK));
+		plotChars1.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, Color.RED));
+		plotChars1.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, Color.BLACK));
+		plotChars1.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, Color.RED));
+		plotChars1.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, Color.BLACK));
+		plotChars1.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, Color.RED));
+		plotChars1.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, Color.BLACK));
+		String fileNamePrefix = dirName+"/FigureG/MagExceed";
+		PlottingUtils.writeAndOrPlotUncertFuncs(funcList, plotChars1, "", "Magnitude", "Exceedance Probability", new Range(5.0,8.5), new Range(1e-7,1), false, true, fileNamePrefix, true);
+
+		// Make ratio plots
+		ArrayList<PlotCurveCharacterstics> plotChars2 = new ArrayList<PlotCurveCharacterstics>();	
+		plotChars2.add(new PlotCurveCharacterstics(PlotLineType.DOTTED, 1f, Color.BLACK));
+		plotChars2.add(new PlotCurveCharacterstics(PlotLineType.DASHED, 1f, Color.BLACK));
+		plotChars2.add(new PlotCurveCharacterstics(PlotLineType.DOTTED_AND_DASHED, 1f, Color.BLACK));
+		plotChars2.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, Color.BLACK));
+		plotChars2.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, Color.MAGENTA));
+		plotChars2.add(new PlotCurveCharacterstics(PlotLineType.DOTTED_AND_DASHED, 1f, Color.MAGENTA));
+		fileNamePrefix = dirName+"/FigureG/MagExceedRatio";
+		PlottingUtils.writeAndOrPlotFuncs(funcListRatios, plotChars2, "", "Magnitude", "Exceedance Ratio", new Range(5.0,8.5), new Range(0.5,1.5), false, false, fileNamePrefix, true);
+
+	}
+
+
+
+	public void makeFigSetF_N_ExceedHists() {
+		// For N event histograms:
+		File outputDir = new File(dirName+ "/FigureF");
+		if(!outputDir.exists()) outputDir.mkdir();
+		double[] lossExceedArray = {1e04, 4e7, 1.23e10};
+		for(double loss:lossExceedArray) {
+			HistogramFunction histN_Dist_TD = getNumLossExceedDistFromCatalogsRandomFromCOV(getCatalogs(), 1.0, loss);
+			histN_Dist_TD.setName("TD N exceed dist for loss = "+loss);
+			HistogramFunction histN_Dist_TI = getNumLossExceedDistFromCatalogsRandomFromCOV(getRandomizedCatalogs(), 1.0, loss);
+			histN_Dist_TI.setName("TI N exceed dist for loss = "+loss);
+			
+//			// I need a getRateExceedLoss(loss) method
+//			PoissonDistribution poisDist = new PoissonDistribution(expNum);
+//			for(int i=0;i<poissDist.size();i++) {
+//				poissDist.set(i,poisDist.probability(i));
+//			}
+
+			ArrayList<XY_DataSet> funcList = new ArrayList<XY_DataSet>(); 
+			funcList.add(MakeFigures.getStairStepFunction(histN_Dist_TD));
+			funcList.add(MakeFigures.getStairStepFunction(histN_Dist_TI));
+			ArrayList<PlotCurveCharacterstics> plotChars = new ArrayList<PlotCurveCharacterstics>();	
+			plotChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, Color.RED));
+			plotChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, Color.BLACK));
+			String fileNamePrefix = dirName+"/FigureF/N_ExceedForLossDist_"+loss;
+			PlottingUtils.writeAndOrPlotFuncs(funcList, plotChars, "", "N Exceedances for loss≥"+loss, "Fraction", null, null, false, true, fileNamePrefix, true);		
+			fileNamePrefix = dirName+"/FigureF/N_ExceedForLossDist_"+loss+"_zoomed";
+			PlottingUtils.writeAndOrPlotFuncs(funcList, plotChars, "", "N Exceedances for loss≥"+loss, "Fraction", new Range(-0.5,40), new Range(3e-6,1), false, true, fileNamePrefix, true);		
+		}
+
+	}
+
+	
+	public void write1yrLargeEvents(int subCatalogIndex) {
+//		try {
+//			catalogList = loadCatalogs(new File(catalogsFileName), 2.5, false); // this catalog does not have anything below M 5
+//		} catch (IOException e) {
+//			e.printStackTrace();
+//		} catch (DocumentException e) {
+//			e.printStackTrace();
+//		}
+//		MakeFigures.plotEventRateMapForCatalog(catalogList.get(421), 2.5, "testMapRightHere", 500);
+
+		
+		ArrayList<ObsEqkRupList> subCatList = getSubcatalogList(catalogList, 1d);
+//		MakeFigures.plotEventRateMapForCatalog(subCatList.get(210663), 2.5, "testMapRightHere", 1d);
+		for(ObsEqkRupture rup : subCatList.get(subCatalogIndex)) {
+			int fssIndex = ((ETAS_EqkRupture)rup).getFSSIndex();
+			int gen = ((ETAS_EqkRupture)rup).getGeneration();
+			int parID = ((ETAS_EqkRupture)rup).getParentID();
+			int rupID = Integer.parseInt(rup.getEventId()); // orig ID here because in ID replaced in this analysis
+// the following event is not found so it's probably M≤5 (filtered out)
+if(subCatalogIndex==210663 && rupID == 77552) { // this is the parent of the first M≥6 LA area event in subCatalogIndex=210663 (it started everything)
+	GregorianCalendar cal = rup.getOriginTimeCal();
+	String calString = "ORIGIN TIME: Yr="+cal.get(cal.YEAR)+", DayOfYr="+cal.get(cal.DAY_OF_YEAR)+", Hr="+cal.get(cal.HOUR_OF_DAY)+", Min="+cal.get(cal.MINUTE)+", Sec="+cal.get(cal.SECOND);
+	System.out.println("HERE "+rupID+"\t"+gen+"\t"+parID+"\t"+(float)rup.getMag()+"\t"+calString+"\t"+fssIndex);
+}
+			if(fssIndex>=0) {
+				int srcIndex = erf.getSrcIndexForFltSysRup(fssIndex);
+				ProbEqkSource fssSrc = erf.getSource(srcIndex);
+				GregorianCalendar cal = rup.getOriginTimeCal();
+				String calString = "ORIGIN TIME: Yr="+cal.get(cal.YEAR)+", DayOfYr="+cal.get(cal.DAY_OF_YEAR)+", Hr="+cal.get(cal.HOUR_OF_DAY)+", Min="+cal.get(cal.MINUTE)+", Sec="+cal.get(cal.SECOND);
+				System.out.println(rupID+"\t"+gen+"\t"+parID+"\t"+(float)rup.getMag()+"\t"+calString+"\t"+fssSrc.getName());
+			}
+			else if(rup.getMag()>=6.0) {
+				GregorianCalendar cal = rup.getOriginTimeCal();
+				String calString = "ORIGIN TIME: Yr="+cal.get(cal.YEAR)+", DayOfYr="+cal.get(cal.DAY_OF_YEAR)+", Hr="+cal.get(cal.HOUR_OF_DAY)+", Min="+cal.get(cal.MINUTE)+", Sec="+cal.get(cal.SECOND);
+				System.out.println(rupID+"\t"+gen+"\t"+parID+"\t"+(float)rup.getMag()+"\t"+calString+"\tHypocenter: "+rup.getHypocenterLocation());
+			}
+		}
+	}
+
+	
+	
+	public void plotCatalogMap(int subCatalogIndex, Region region, boolean includeGriddedSeis) {
+		
+		File outputDir = new File(dirName+ "/CatalogMaps");
+		if(!outputDir.exists()) outputDir.mkdir();
+
+		List<? extends FaultSection> sectionList = erf.getSolution().getRupSet().getFaultSectionDataList();
+		
+		ArrayList<Double> magForSectionList = new ArrayList<Double>();
+		ArrayList<Double> genForSectionList = new ArrayList<Double>();
+		for(int s=0;s<sectionList.size();s++) {
+			magForSectionList.add(Double.NaN);
+			genForSectionList.add(Double.NaN);
+		}
+		
+		CPT cptGen = new CPT();
+		cptGen.setBelowMinColor(Color.WHITE);
+		cptGen.setNanColor(Color.WHITE);
+		cptGen.add(new CPTVal(0f, Color.BLACK, 1f, Color.BLUE));
+		cptGen.add(new CPTVal(1f, Color.BLUE, 2f, Color.GREEN));
+		cptGen.add(new CPTVal(2f, Color.GREEN, 3f, Color.ORANGE));
+		cptGen.add(new CPTVal(3f, Color.ORANGE, 4f, Color.RED));
+		cptGen.add(new CPTVal(4f, Color.RED, 5f, Color.MAGENTA));
+		cptGen.setAboveMaxColor(Color.MAGENTA);
+		System.out.println("cpt.getMaxValue()="+cptGen.getMaxValue());
+		System.out.println("cpt.getMinValue()="+cptGen.getMinValue());
+		
+		CPT cptOrig=null;
+		try {
+			cptOrig = GMT_CPT_Files.RAINBOW_UNIFORM.instance(); //   RAINBOW_UNIFORM  SEQUENTIAL_BATLOW_UNIFORM
+		} catch (IOException e1) {
+			e1.printStackTrace();
+		}
+		CPT cptMag = cptOrig.rescale(5d, 8.5d);
+		cptMag.setBelowMinColor(Color.WHITE);
+		cptMag.setNanColor(Color.WHITE);
+
+		
+		List<Location> hypoList = new ArrayList<Location>();
+		List<PlotCurveCharacterstics> charsMag = new  ArrayList<PlotCurveCharacterstics>();
+		List<PlotCurveCharacterstics> charsGen = new  ArrayList<PlotCurveCharacterstics>();
+		PlotSymbol outlineSymbol = PlotSymbol.CIRCLE;
+		String labelMag = "Magnitude";
+		String labelGen = "Generation";
+
+		double mMax=0;
+		double mMax_gridded=0;
+		ArrayList<ObsEqkRupList> subCatList = getSubcatalogList(catalogList, 1d);
+		for(ObsEqkRupture rup : subCatList.get(subCatalogIndex)) {
+			if(rup.getMag()>mMax) 
+				mMax = rup.getMag();
+			int fssIndex = ((ETAS_EqkRupture)rup).getFSSIndex();
+			if(fssIndex>=0) {
+//				if(rup.getMag()>7d) continue;
+				int gen = ((ETAS_EqkRupture)rup).getGeneration();
+				for(int s:erf.getSolution().getRupSet().getSectionsIndicesForRup(fssIndex)) {
+					if(!Double.isNaN(magForSectionList.get(s))) {
+						System.out.println("WARNING: Subsection # "+s+" ruptured more than once; previous mag="+magForSectionList.get(s));
+						// continue; // this keeps the original
+					}
+					magForSectionList.set(s, rup.getMag());
+					genForSectionList.set(s, (double)gen);
+				}				
+				int srcIndex = erf.getSrcIndexForFltSysRup(fssIndex);
+				ProbEqkSource fssSrc = erf.getSource(srcIndex);
+				GregorianCalendar cal = rup.getOriginTimeCal();
+				String calString = "ORIGIN TIME: Yr="+cal.get(cal.YEAR)+", DayOfYr="+cal.get(cal.DAY_OF_YEAR)+", Hr="+cal.get(cal.HOUR_OF_DAY)+", Min="+cal.get(cal.MINUTE)+", Sec="+cal.get(cal.SECOND);
+				System.out.println(rup.getMag()+"\t"+gen+"\t"+calString+"\t"+fssSrc.getName());
+
+			}
+			else { 
+				hypoList.add(rup.getHypocenterLocation());  // everything less that 0.5f is the same size (0.7 is larger)
+				float size = 0.5f+10f*((float)rup.getMag()-5.0f);
+				charsMag.add(new PlotCurveCharacterstics(PlotSymbol.CIRCLE, size, cptMag.getColor((float)rup.getMag())));  //  (float)rup.getMag()-5f
+				int gen = ((ETAS_EqkRupture)rup).getGeneration();
+				charsGen.add(new PlotCurveCharacterstics(PlotSymbol.CIRCLE, size, cptGen.getColor((float)gen)));  //  (float)rup.getMag()-5f
+				if(rup.getMag()>mMax_gridded) 
+					mMax_gridded = rup.getMag();
+
+			}
+		}
+		
+		System.out.println("mMax="+mMax+"\nmMax_gridded="+mMax_gridded); // 7.76
+		
+		// make map with color based on mag
+		GeographicMapMaker mapMaker = new GeographicMapMaker(sectionList);
+		if(region != null)
+			mapMaker.setRegion(region);
+		mapMaker.setSkipNaNs(true);
+		mapMaker.setScalarThickness(8f);
+		if(includeGriddedSeis)
+			mapMaker.plotScatters(hypoList, charsMag, outlineSymbol, cptMag, labelMag);
+		mapMaker.plotSectScalars(magForSectionList, cptMag, null);
+		// write mag for each section
+		for(int s=0;s<sectionList.size();s++) {
+			if(!Double.isNaN(magForSectionList.get(s)))
+				System.out.println("here "+s+"\t"+magForSectionList.get(s)+"\t"+sectionList.get(s).getSectionName());
+		}
+		mapMaker.setFillSurfaces(false);
+		mapMaker.setSectOutlineChar(null);
+		try {
+			String name = "Catalog_"+subCatalogIndex+"_Map_Mag";
+			if(!includeGriddedSeis)
+				name += "_noGridded";
+			mapMaker.plot(outputDir, name, "");
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		
+		// make map with color based on generation
+		GeographicMapMaker mapMakerGen = new GeographicMapMaker(sectionList);
+		if(region != null)
+			mapMakerGen.setRegion(region);
+		mapMakerGen.setSkipNaNs(true);
+		mapMakerGen.setScalarThickness(8f);
+		if(includeGriddedSeis)
+			mapMakerGen.plotScatters(hypoList, charsGen, outlineSymbol, cptGen, labelGen);
+		mapMakerGen.plotSectScalars(genForSectionList, cptGen, null);
+		// write gen for each section
+//		for(int s=0;s<sectionList.size();s++) {
+//			if(!Double.isNaN(genForSectionList.get(s)))
+//				System.out.println("here "+s+"\t"+genForSectionList.get(s)+"\t"+sectionList.get(s).getSectionName());
+//		}
+		mapMakerGen.setFillSurfaces(false);
+		mapMakerGen.setSectOutlineChar(null);
+		try {
+			String name = "Catalog_"+subCatalogIndex+"_Map_Gen";
+			if(!includeGriddedSeis)
+				name += "_noGridded";
+			mapMakerGen.plot(outputDir, name, "");
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+	}
+
+	
+	
 	
 	
 	/**
@@ -2337,15 +4069,144 @@ public class U3ETAS_LossSimulationAnalysis {
 				if(aveLoss==0)
 					randomLossForEventID[etasRup.getID()] = 0;
 				else {
-					double randLoss = covModel.getDistribution(aveLoss, randomGen).sample(); // get randome sample
+					double randLoss = covModel.getDistribution(aveLoss, randomGen).sample(); // get random sample
 					randomLossForEventID[etasRup.getID()] = randLoss;
 				}
 			}
 		}
 	}
+	
+	
+	/**
+	 * 
+	 */
+	public void testIncrVsExceedCurveTanslations() {
+
+		UncertainArbDiscFunc incrFuncTI = getLossIncrProbDistFromCatalogsRandomFromCOV(getRandomizedCatalogs(), 1.0);
+		ArbitrarilyDiscretizedFunc testExceedTI = convertIncrToExceedProbDist(incrFuncTI);
+		UncertainArbDiscFunc exceedFuncTI = getLossExceedProbCurveFromCatalogsRandomFromCOV(getRandomizedCatalogs(), 1.0);
+		ArbitrarilyDiscretizedFunc testIncrFuncTI = convertExceedToIncrProbDist(exceedFuncTI);
+		ArbitrarilyDiscretizedFunc testIncrDistFromRates = testLossIncrProbDistFromCatalogsRandomFromCOV(getRandomizedCatalogs(), 1.0);
+		
+		UncertainArbDiscFunc incrFuncTD = getLossIncrProbDistFromCatalogsRandomFromCOV(getCatalogs(), 1.0);
+		ArbitrarilyDiscretizedFunc testExceedTD = convertIncrToExceedProbDist(incrFuncTD);
+		UncertainArbDiscFunc exceedFuncTD = getLossExceedProbCurveFromCatalogsRandomFromCOV(getCatalogs(), 1.0);
+		ArbitrarilyDiscretizedFunc testIncrFuncTD = convertExceedToIncrProbDist(exceedFuncTD);
+
+		exceedFuncTI.setName("TI Exceed");
+		testExceedTI.setName("TI Exceed converted from Incremental");
+		incrFuncTI.setName("TI Incremental");
+		testIncrFuncTI.setName("TI Incremental converted from Exceed");
+		testIncrDistFromRates.setName("testIncrDistFromRates");
+		ArrayList<XY_DataSet> funcList = new ArrayList<XY_DataSet>(); 
+		funcList.add(exceedFuncTI);
+		funcList.add(testExceedTI);
+		funcList.add(incrFuncTI);
+		funcList.add(testIncrFuncTI);
+		funcList.add(testIncrDistFromRates);
+		ArrayList<PlotCurveCharacterstics> plotChars = new ArrayList<PlotCurveCharacterstics>();	
+		plotChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 2f, Color.RED));
+		plotChars.add(new PlotCurveCharacterstics(PlotSymbol.CROSS, 2f, Color.RED));
+		plotChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 2f, Color.BLACK));
+		plotChars.add(new PlotCurveCharacterstics(PlotSymbol.CROSS, 2f, Color.BLACK));
+		plotChars.add(new PlotCurveCharacterstics(PlotSymbol.X, 2f, Color.MAGENTA));
+		PlottingUtils.writeAndOrPlotFuncs(funcList, plotChars, "TI Test", "Loss ($)", "Probability", new Range(1e6,1e12), new Range(1e-6,1.0), true, true, null, true);
+
+		ArrayList<XY_DataSet> funcList2 = new ArrayList<XY_DataSet>(); 
+
+		exceedFuncTD.setName("TD Exceed");
+		testExceedTD.setName("TD Exceed converted from Incremental");
+		incrFuncTD.setName("TD Incremental");
+		testIncrFuncTD.setName("TD Incremental converted from Exceed");
+
+		funcList2.add(exceedFuncTD);
+		funcList2.add(testExceedTD);
+		funcList2.add(incrFuncTD);
+		funcList2.add(testIncrFuncTD);
+		ArrayList<PlotCurveCharacterstics> plotChars2 = new ArrayList<PlotCurveCharacterstics>();	
+		plotChars2.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 2f, Color.BLUE));
+		plotChars2.add(new PlotCurveCharacterstics(PlotSymbol.CROSS, 2f, Color.BLUE));
+		plotChars2.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 2f, Color.BLACK));
+		plotChars2.add(new PlotCurveCharacterstics(PlotSymbol.CROSS, 2f, Color.BLACK));
+		PlottingUtils.writeAndOrPlotFuncs(funcList2, plotChars2, "TD Test", "Loss ($)", "Probability", new Range(1e6,1e12), new Range(1e-6,1.0), true, true, null, true);
+	}
+	
+	/**
+	 * 
+	 */
+	public void testAggrIncrVsExceedCurveTanslations() {
+
+		UncertainArbDiscFunc incrFuncTI = getAggrLossIncrProbDistFromCatalogsRandomFromCOV(getRandomizedCatalogs(), 1.0);
+		ArbitrarilyDiscretizedFunc testExceedTI = convertAggIncrToExceedProbDist(incrFuncTI);
+		UncertainArbDiscFunc exceedFuncTI = getAggrLossExceedProbCurveFromCatalogsRandomFromCOV(getRandomizedCatalogs(), 1.0);
+		ArbitrarilyDiscretizedFunc testIncrFuncTI = convertAggrExceedToIncrProbDist(exceedFuncTI);
+		
+		UncertainArbDiscFunc incrFuncTD = getAggrLossIncrProbDistFromCatalogsRandomFromCOV(getCatalogs(), 1.0);
+		ArbitrarilyDiscretizedFunc testExceedTD = convertAggIncrToExceedProbDist(incrFuncTD);
+		UncertainArbDiscFunc exceedFuncTD = getAggrLossExceedProbCurveFromCatalogsRandomFromCOV(getCatalogs(), 1.0);
+		ArbitrarilyDiscretizedFunc testIncrFuncTD = convertAggrExceedToIncrProbDist(exceedFuncTD);
+
+		exceedFuncTI.setName("TI Aggr Exceed");
+		testExceedTI.setName("TI Aggr Exceed converted from Incremental");
+		incrFuncTI.setName("TI Aggr Incremental");
+		testIncrFuncTI.setName("TI Aggr Incremental converted from Exceed");
+		ArrayList<XY_DataSet> funcList = new ArrayList<XY_DataSet>(); 
+		funcList.add(exceedFuncTI);
+		funcList.add(testExceedTI);
+		funcList.add(incrFuncTI);
+		funcList.add(testIncrFuncTI);
+		ArrayList<PlotCurveCharacterstics> plotChars = new ArrayList<PlotCurveCharacterstics>();	
+		plotChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 2f, Color.RED));
+		plotChars.add(new PlotCurveCharacterstics(PlotSymbol.CROSS, 2f, Color.RED));
+		plotChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 2f, Color.BLACK));
+		plotChars.add(new PlotCurveCharacterstics(PlotSymbol.CROSS, 2f, Color.BLACK));
+		PlottingUtils.writeAndOrPlotFuncs(funcList, plotChars, "TI Aggr Test", "Loss ($)", "Probability", new Range(1e6,1e12), new Range(1e-6,1.0), true, true, null, true);
+
+		ArrayList<XY_DataSet> funcList2 = new ArrayList<XY_DataSet>(); 
+
+		exceedFuncTD.setName("TD Aggr Exceed");
+		testExceedTD.setName("TD Aggr Exceed converted from Incremental");
+		incrFuncTD.setName("TD Aggr Incremental");
+		testIncrFuncTD.setName("TD Aggr Incremental converted from Exceed");
+
+		funcList2.add(exceedFuncTD);
+		funcList2.add(testExceedTD);
+		funcList2.add(incrFuncTD);
+		funcList2.add(testIncrFuncTD);
+		ArrayList<PlotCurveCharacterstics> plotChars2 = new ArrayList<PlotCurveCharacterstics>();	
+		plotChars2.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 2f, Color.BLUE));
+		plotChars2.add(new PlotCurveCharacterstics(PlotSymbol.CROSS, 2f, Color.BLUE));
+		plotChars2.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 2f, Color.BLACK));
+		plotChars2.add(new PlotCurveCharacterstics(PlotSymbol.CROSS, 2f, Color.BLACK));
+		PlottingUtils.writeAndOrPlotFuncs(funcList2, plotChars2, "TD Aggr Test", "Loss ($)", "Probability", new Range(1e6,1e12), new Range(1e-6,1.0), true, true, null, true);
+	}
+
+	
+	/**
+	 * This tests whether averaging non-exceedcance probabilities from catalogs reaches a different answer
+	 * than averaging exceedcance probabilities.  Both TI and TD match here
+	 */
+	public void testAveragingNonExceedProbs() {
+		UncertainArbDiscFunc exceedFuncTI = getLossExceedProbCurveFromCatalogsRandomFromCOV(getRandomizedCatalogs(), 1.0);
+		UncertainArbDiscFunc exceedFuncTI_Alt = testGetLossExceedProbCurveFromCatalogsRandomFromCOV(getRandomizedCatalogs(), 1.0);
+		ArrayList<XY_DataSet> funcList = new ArrayList<XY_DataSet>(); 
+		funcList.add(exceedFuncTI);
+		funcList.add(exceedFuncTI_Alt);
+		ArrayList<PlotCurveCharacterstics> plotChars = new ArrayList<PlotCurveCharacterstics>();	
+		plotChars.add(new PlotCurveCharacterstics(PlotSymbol.CROSS, 2f, Color.RED));
+		plotChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 2f, Color.RED));
+		PlottingUtils.writeAndOrPlotFuncs(funcList, plotChars, "Alt Exceed Test TI", "Loss ($)", "Probability", new Range(1e6,1e12), new Range(1e-6,1.0), true, true, null, true);
+
+		UncertainArbDiscFunc exceedFuncTD = getLossExceedProbCurveFromCatalogsRandomFromCOV(getCatalogs(), 1.0);
+		UncertainArbDiscFunc exceedFuncTD_Alt = testGetLossExceedProbCurveFromCatalogsRandomFromCOV(getCatalogs(), 1.0);
+		ArrayList<XY_DataSet> funcList2 = new ArrayList<XY_DataSet>(); 
+		funcList2.add(exceedFuncTD);
+		funcList2.add(exceedFuncTD_Alt);
+		PlottingUtils.writeAndOrPlotFuncs(funcList2, plotChars, "Alt Exceed Test TD", "Loss ($)", "Probability", new Range(1e6,1e12), new Range(1e-6,1.0), true, true, null, true);
+	}
 
 
-
+	
 	
 	
 	
@@ -2363,21 +4224,180 @@ public class U3ETAS_LossSimulationAnalysis {
 		 * 
 		 * 
 		 */
-		
-		
 				
 		// make results reproducible
-		int seed = 123470;
+		int seed = 123471;
 		U3ETAS_LossSimulationAnalysis analysis = new U3ETAS_LossSimulationAnalysis(seed);
 		
+		// this shows the MagProbDist discrepancy is less for 1 day than 1 wk or 1 month, as found for losses
+		analysis.makeFigSetG_MagExceedances();
+		
+		// this examines  conditional loss exceedance curves for the year 2024
+//		analysis.make1yrConditionalLossExceedComparisonFig();
+//		analysis.make1yrConditionalAggrLossExceedComparisonFig();
+		
+		
+		// This is to find interesting catalogs
+//		analysis.make1yr_StatsCSV_File();
+		// largest aggregate loss (for both rand and ave loss) is for subcatalog 216231 in main catalog=432
+		
+		// Map & info for above highest aggr loss
+//		Location loc1 = new Location(33d,-120d,0d);
+//		Location loc2 = new Location(35d,-117d,0d);
+//		Region region = new Region(loc1,loc2);
+//		analysis.plotCatalogMap(216231, region, true);
+//		analysis.plotCatalogMap(216231, region, false);
+//		analysis.write1yrLargeEvents(216231);
+		// last method implies the sequences starts on year 2243, which is 2243-2012 = 231 years into the main catalog.
+		
+		// no popup window here
+//		analysis.makeFig1_100yrRates(432, 231-50); // put sequence at 50-yr mark
+		
+		
+		// these are long term MFDs so COV not needed
+//		analysis.plotMFDs();
+
 //		analysis.writeAAL_ValuesBillions();
 		
-//		UncertainArbDiscFunc lossExceedProbFromTD_CatalogsRandFromCOV = analysis.getLossExceedProbCurveFromCatalogsRandomFromCOV(analysis.getCatalogs(), 1d);
-//		UncertainArbDiscFunc lossExceedProbFromPoisCatalogsRandFromCOV = analysis.getLossExceedProbCurveFromCatalogsRandomFromCOV(analysis.getRandomizedCatalogs(), 1d);
-//		
+		// this assumes COV = 0
+//		analysis.plotLossRateVsMag();
+		
+		// Traditional loss exceedance curves:
+//		analysis.makeFigAndTableSetA_Exceedances(1d, true);
+		
+//		analysis.makeFigSetF_N_ExceedHists();
+
+		// Aggregate loss exceedance curves:
+//		analysis.makeFigAndTableSetB_1yr_Exceedances();
+		
+		// This makes/plots TD and TI exceedance curves and ratios for different forecast durations.
+//		analysis.makeFigSetD_Exceedances();
+		
+		// This makes/plots Aggregate TD and TI exceedance curves and ratios for different forecast durations.
+//		analysis.makeFigSetE_Exceedances();
+		
+//		analysis.plotMaxAndAggrLossesPerYearInCatalog(432);
+
+
+		// this plots the distribution of rupture losses as a function of magnitude (not including rup rates)
+//		analysis.plotRupLossVsMagStats(analysis.getCatalogs(), false, true);
+//		analysis.plotRupLossVsMagStats(analysis.getCatalogs(), true, true);
+
+		
+		// this isn't that informative (comment out part allows to toggle to 1.0-CDF); PDF is more informative
+//		analysis.plotCumAggrYearlyLossDistributions(true, true);
+		
+//		System.exit(0);
+		
+		
+
+		
+//		// Map with greatest number of exceedances of loss=40e6 in subcat = 409649; for both 1000 and 2000 500-yr simulations
+//		analysis.plotCatalogMap(409649, null, true);
+//		analysis.plotCatalogMap(409649, null, false);
+//		analysis.write1yrLargeEvents(409649);
+
+
+		
+		
+		
+		// OLD:
+//		analysis.makeFig1_100yrRates(421, 113); // this start time is 50 yrs before first event
+		
+		// this doesn't look great (it save to file; no pop up window)
+//		analysis.makeFigSetC_500yrRates(421);
+		
+//		// Map for highest aggr loss year for the 1000 500-yr simulations (first set)
+//		Location loc1 = new Location(32.5d,-119.5d,0d);
+//		Location loc2 = new Location(34.5d,-116.5d,0d);
+//		Region region = new Region(loc1,loc2);
+//		analysis.plotCatalogMap(210663, region, true);	
+//		// this writes the large events in 1 yr TD subCatalog
+//		analysis.write1yrLargeEvents(210663);
+
+		
+		
+		// this doesn't look great
+//		analysis.plotAccumulatedLossVsTimeForCatalog(421);
+		
+		/**
+		 * This tests whether exceed and incremental distributions agree with respect to translations.
+		 * The TI results do, but not the TD results, which I don't yet understand.  For TD, values are higher
+		 * & closer to Poisson for incremental calculations (less discrepancy), which seems consistent with the
+		 * overall rates being lower for incremental calculations (again, less discrepancy).  Why the conversion matches
+		 * for Poisson and not for TD is still mysterious.
+		 */
+//		analysis.testIncrVsExceedCurveTanslations();
+		//	This tests whether aggregate incremental distributions from exceedance (and vise versa) are the same.  
+		//  They both are identical, but the conversions are different. 
+//		analysis.testAggrIncrVsExceedCurveTanslations();
+		
+		/**
+		 * This tests whether averaging non-exceed probs among catalogs (rather than exceed probs) gives a different result.
+		 * The answer is no for both TI and TD.
+		 */
+//		analysis.testAveragingNonExceedProbs();
+		
+		
+
+		
+
+		
+
+		
+
+
+
+		
+//		// TEST different time-ind curves - full PDF
+//		// Any one of the following three work
+////		ArbitrarilyDiscretizedFunc lossRateCurveFromCatalogs = analysis.getLossRateCurveFromCatalogs(analysis.getCatalogs());
+////		ArbitrarilyDiscretizedFunc lossRateCurveFromCatalogs = analysis.getLossRateCurveFromCatalogs(analysis.getRandomizedCatalogs());
+//		ArbitrarilyDiscretizedFunc lossRateCurveFromCatalogs = analysis.getLossRateCurveFromCatalogs(analysis.getSubcatalogList(analysis.getRandomizedCatalogs(), 1.0));
+//		lossRateCurveFromCatalogs.scale(500d); // need this for the last option above
+//		ArbitrarilyDiscretizedFunc lossExceedProbFromRateCatalogs = analysis.getBlankLossCurve(0.0);
+//		lossExceedProbFromRateCatalogs.setName("lossExceedProbFromRateCatalogs");
+//		for(int i=0;i<lossExceedProbFromRateCatalogs.size();i++) {
+//			lossExceedProbFromRateCatalogs.set(i,1.0-Math.exp(-lossRateCurveFromCatalogs.getY(i)));
+//		}
+//		UncertainArbDiscFunc lossExceedProbFromCatalogsRandomizedCat = analysis.getLossExceedProbCurveFromCatalogs(analysis.getRandomizedCatalogs(), 1d);
+//		lossExceedProbFromCatalogsRandomizedCat.setName("lossExceedProbFromCatalogsRandomizedCat");
+//		ArrayList<XY_DataSet> funcProb3 = new ArrayList<XY_DataSet>(); 
+//		funcProb3.add(lossExceedProbFromRateCatalogs);
+//		funcProb3.add(lossExceedProbFromCatalogsRandomizedCat);
+//		analysis.quickPlot(funcProb3, "Loss (thousand $)", "Prob (/yr)", "Test", true, true);
+
+		
+		// TEST different time-ind curves - random loss
+//		// Any one of the following three work
+//		ArbitrarilyDiscretizedFunc lossRateCurveFromCatalogs = analysis.getLossRateCurveFromCatalogsRandomFromCOV(analysis.getCatalogs());
+////		ArbitrarilyDiscretizedFunc lossRateCurveFromCatalogs = analysis.getLossRateCurveFromCatalogsRandomFromCOV(analysis.getRandomizedCatalogs());
+////		ArbitrarilyDiscretizedFunc lossRateCurveFromCatalogs = analysis.getLossRateCurveFromCatalogsRandomFromCOV(analysis.getSubcatalogList(analysis.getRandomizedCatalogs(), 1.0));
+////		lossRateCurveFromCatalogs.scale(500d); // need this for the last option above
+//		ArbitrarilyDiscretizedFunc lossExceedProbFromRateCatalogs = analysis.getBlankLossCurve(0.0);
+//		lossExceedProbFromRateCatalogs.setName("lossExceedProbFromRateCatalogsRandomFromCOV");
+//		for(int i=0;i<lossExceedProbFromRateCatalogs.size();i++) {
+//			lossExceedProbFromRateCatalogs.set(i,1.0-Math.exp(-lossRateCurveFromCatalogs.getY(i)));
+//		}
+//		UncertainArbDiscFunc lossExceedProbFromCatalogsRandomizedCat = analysis.getLossExceedProbCurveFromCatalogsRandomFromCOV(analysis.getRandomizedCatalogs(), 1d);
+//		lossExceedProbFromCatalogsRandomizedCat.setName("lossExceedProbFromCatalogsRandomizedCatRandomFromCOV");
+//		ArrayList<XY_DataSet> funcProb3 = new ArrayList<XY_DataSet>(); 
+//		funcProb3.add(lossExceedProbFromRateCatalogs);
+//		funcProb3.add(lossExceedProbFromCatalogsRandomizedCat);
+//		analysis.quickPlot(funcProb3, "Loss (thousand $)", "Prob (/yr)", "Test", true, true);
+
+		
+		
 //		// trying to figure out what's wrong with the incremental distributions
+//		UncertainArbDiscFunc lossExceedProbFromTD_CatalogsRandFromCOV = analysis.getLossExceedProbCurveFromCatalogsRandomFromCOV(analysis.getCatalogs(), 1d);
+//		lossExceedProbFromTD_CatalogsRandFromCOV.setName("lossExceedProbFromTD_CatalogsRandFromCOV");
+//		UncertainArbDiscFunc lossExceedProbFromPoisCatalogsRandFromCOV = analysis.getLossExceedProbCurveFromCatalogsRandomFromCOV(analysis.getRandomizedCatalogs(), 1d);
+//		lossExceedProbFromPoisCatalogsRandFromCOV.setName("lossExceedProbFromPoisCatalogsRandFromCOV");
+//		
 //		UncertainArbDiscFunc incrTestTD = analysis.getLossIncrProbDistFromCatalogsRandomFromCOV(analysis.getCatalogs(), 1d);
+//		incrTestTD.setName("incrTestTD");
 //		UncertainArbDiscFunc incrTestPoiss = analysis.getLossIncrProbDistFromCatalogsRandomFromCOV(analysis.getRandomizedCatalogs(), 1d);
+//		incrTestPoiss.setName("incrTestPoiss");
 //		ArrayList<UncertainArbDiscFunc> funcList = new ArrayList<UncertainArbDiscFunc>(); 
 //		funcList.add(incrTestTD);
 //		funcList.add(incrTestPoiss);
@@ -2387,7 +4407,7 @@ public class U3ETAS_LossSimulationAnalysis {
 //		plotChars2.add(new PlotCurveCharacterstics(PlotLineType.DASHED, 2f, Color.BLUE));
 //		plotChars2.add(new PlotCurveCharacterstics(PlotLineType.DASHED, 2f, Color.RED));
 //		String fileNamePrefix = null;
-//		PlottingUtils.writeAndOrPlotUncertFuncs(funcList, plotChars2, "Incr Test", "Loss ($1000)", "Probability", new Range(1e3,1e9), new Range(1e-6,1.0), true, true, fileNamePrefix, true);
+//		PlottingUtils.writeAndOrPlotUncertFuncs(funcList, plotChars2, "Incr Test", "Loss ($)", "Probability", new Range(1e6,1e12), new Range(1e-6,1.0), true, true, fileNamePrefix, true);
 //		
 //		ArbitrarilyDiscretizedFunc exceedTestTD = getBlankLossCurve(0d);
 //		ArbitrarilyDiscretizedFunc exceedTestPois = getBlankLossCurve(0d);
@@ -2400,30 +4420,19 @@ public class U3ETAS_LossSimulationAnalysis {
 //			exceedTestTD.set(i,1.0-nonExceed1);
 //			exceedTestPois.set(i,1.0-nonExceed2);
 //		}
+//		exceedTestTD.setName("exceedTestTD");
+//		exceedTestPois.setName("exceedTestPois");
 //		ArrayList<XY_DataSet> funcList2 = new ArrayList<XY_DataSet>(); // AbstractDiscretizedFunc
 //		funcList2.add(exceedTestTD);
 //		funcList2.add(exceedTestPois);
 //		funcList2.add(lossExceedProbFromTD_CatalogsRandFromCOV);
 //		funcList2.add(lossExceedProbFromPoisCatalogsRandFromCOV);
 //		
-//		PlottingUtils.writeAndOrPlotFuncs(funcList2, plotChars2, "Exceed Test", "Loss ($1000)", "Probability", new Range(1e3,1e9), new Range(1e-6,1.0), true, true, fileNamePrefix, true);
+//		PlottingUtils.writeAndOrPlotFuncs(funcList2, plotChars2, "Exceed Test", "Loss ($)", "Probability", new Range(1e6,1e12), new Range(1e-6,1.0), true, true, fileNamePrefix, true);
 
 		
 
 
-		// this plots the distribution of rupture losses as a function of magnitude (not including rup rates)
-//		analysis.plotRupLossVsMagStats(analysis.getCatalogs(), false, false);
-//		analysis.plotRupLossVsMagStats(analysis.getCatalogs(), true, false);
-		
-		// these are long term MFDs so COV not needed
-		// if I want these for the paper see scratch.ned.GK_Declustering.MakeFigures.makeFigure2_Parts(*)
-//		analysis.plotMFDs();
-
-		// this assumes COV = 0
-//		analysis.plotLossRateVsMag();
-		
-		analysis.makeFigAndTableSetA_1yr_Exceedances(true);
-//		analysis.makeFigAndTableSetB_1yr_Exceedances();
 	
 		
 //		// Plotting
@@ -2504,7 +4513,8 @@ public class U3ETAS_LossSimulationAnalysis {
 //
 //		
 
-//		// plot PDF in log10 space & compare to pure gaussian (this ignores spike at zero loss)
+//		// plot loss PDF in log10 space & compare to pure gaussian (this ignores spike at zero loss)
+		// note that this filters out the gazillion little earthquakes that have zero loss (so median and mode are really zero)
 //		ArbitrarilyDiscretizedFunc testCurve = analysis.getLossExceedProbCurveFromERF();
 //		HistogramFunction testHist = convertExceedCurveToLog10_PDF_Hist(testCurve);
 //		testHist.setName("testHist");
