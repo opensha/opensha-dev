@@ -4232,6 +4232,7 @@ if(subCatalogIndex==210663 && rupID == 77552) { // this is the parent of the fir
 		// this shows the MagProbDist discrepancy is less for 1 day than 1 wk or 1 month, as found for losses
 		analysis.makeFigSetG_MagExceedances();
 		
+		
 		// this examines  conditional loss exceedance curves for the year 2024
 //		analysis.make1yrConditionalLossExceedComparisonFig();
 //		analysis.make1yrConditionalAggrLossExceedComparisonFig();
