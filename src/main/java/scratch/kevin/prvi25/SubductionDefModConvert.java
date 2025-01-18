@@ -641,7 +641,7 @@ public class SubductionDefModConvert {
 		
 		mapMaker.setFillSurfaces(true);
 		
-		CPT slipCPT = GMT_CPT_Files.SEQUENTIAL_BATLOW_UNIFORM.instance().rescale(0d, 5d);
+		CPT slipCPT = GMT_CPT_Files.SEQUENTIAL_BATLOW_UNIFORM.instance().rescale(0d, 4d);
 		CPT slipUncertCPT = GMT_CPT_Files.SEQUENTIAL_BATLOW_UNIFORM.instance().rescale(0d, 2d);
 		CPT rakeCPT = GMT_CPT_Files.SEQUENTIAL_NAVIA_UNIFORM.instance().rescale(0d, 90d);
 		
@@ -656,7 +656,7 @@ public class SubductionDefModConvert {
 			}
 			System.out.println("Plotting "+arrows.size()+" arrow lines for "+prefix);
 //			mapMaker.plotLines(arrows, Color.BLACK, 2f);
-			mapMaker.plotArrows(arrows, 20d, Color.BLACK, 2f);
+			mapMaker.plotArrows(arrows, 20d, Colors.tab_red.darker(), 2f);
 			mapMaker.setFillArrowheads(true);
 			
 			mapMaker.plotSectScalars(slips, slipCPT, null);
@@ -667,6 +667,10 @@ public class SubductionDefModConvert {
 		mapMaker.plot(outputDir, prefix+"_slips", fmDmTitle);
 		mapMaker.plotSectScalars(rakes, rakeCPT, "Rake Angle");
 		mapMaker.plot(outputDir, prefix+"_rakes", fmDmTitle);
+		// now add annotations
+		mapMaker.addAnnotations(PRVI_SubductionSubSectPlots.getLabelAnns(mapMaker));
+		mapMaker.plotSectScalars(slips, slipCPT, "Slip Rate (mm/yr)");
+		mapMaker.plot(outputDir, prefix+"_slips_ann", fmDmTitle);
 	}
 	
 	private static void debugWriteInterpFuncsOrders(File outputDir, String prefix, String name,

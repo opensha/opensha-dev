@@ -5,6 +5,7 @@ import java.awt.Font;
 import java.awt.geom.Point2D;
 import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.text.DecimalFormat;
@@ -45,17 +46,18 @@ import com.google.common.collect.HashBasedTable;
 import com.google.common.collect.Table;
 
 import net.mahdilamb.colormap.Colors;
+import scratch.kevin.latex.LaTeXUtils;
 
 import static scratch.kevin.prvi25.figures.PRVI_Paths.*;
 
 public class MapSourceTypeDisagg {
 	
 	enum MapType {
-		COMBINED("Complete Model", Colors.tab_brown),
-		CRUSTAL("Crustal Sources", Colors.tab_blue),
-		SUBDUCTION("All Subduction Sources", Colors.tab_red),
-		SUBDUCTION_INTERFACE("Subduction Interface Sources", Colors.tab_pink),
-		SUBDUCTION_SLAB("Subduction Slab Sources", Colors.tab_green, IncludeBackgroundOption.ONLY);
+		COMBINED("Complete model", Colors.tab_brown),
+		CRUSTAL("Crustal sources", Colors.tab_blue),
+		SUBDUCTION("All subduction sources", Colors.tab_red),
+		SUBDUCTION_INTERFACE("Subduction interface sources", Colors.tab_pink),
+		SUBDUCTION_SLAB("Subduction intraslab sources", Colors.tab_green, IncludeBackgroundOption.ONLY);
 		
 		private String name;
 		private Color color;
@@ -78,14 +80,21 @@ public class MapSourceTypeDisagg {
 		double[] periods = {0d, 0.2d, 1d, 5d};
 		ReturnPeriods[] rps = SolHazardMapCalc.MAP_RPS;
 		
-//		String suffix = "-vs760";
-		String suffix = "-vs260";
+		String suffix = "-vs760";
+//		String suffix = "-vs260";
 		
 		dirs.put(MapType.COMBINED, new File(INV_DIR, COMBINED_DIR.getName()+"-ba_only"+suffix));
 		dirs.put(MapType.CRUSTAL, new File(INV_DIR, CRUSTAL_DIR.getName()+"-ba_only"+suffix));
 		dirs.put(MapType.SUBDUCTION, new File(INV_DIR, SUBDUCTION_DIR.getName()+"-ba_only-both_fms"+suffix));
 		dirs.put(MapType.SUBDUCTION_INTERFACE, new File(INV_DIR, SUBDUCTION_DIR.getName()+"-ba_only-INTERFACE_only"+suffix));
 		dirs.put(MapType.SUBDUCTION_SLAB, new File(INV_DIR, SUBDUCTION_DIR.getName()+"-ba_only-SLAB_only"+suffix));
+		
+		File texFile = new File(new File(FIGURES_DIR, "hazard_map_disagg"), "disagg_stats.tex");
+		FileWriter texFW = null;
+		if (suffix.contains("760"))
+			texFW = new FileWriter(texFile);
+		double texPeriod = 1d;
+		ReturnPeriods texRP = ReturnPeriods.TWO_IN_50;
 		
 		double debugPeriod = 5d;
 		ReturnPeriods debugRP = ReturnPeriods.TWO_IN_50;
@@ -341,27 +350,32 @@ public class MapSourceTypeDisagg {
 						cpt = cpt.asDiscrete(discreteDelta, false);
 					System.out.println("------------------");
 					
-					String includeLabel, excludeLabel, onlyLabel;
+					String includeLabel, excludeLabel, onlyLabel, texPrefix;
 					if (compType == MapType.COMBINED) {
 						includeLabel = null;
 						excludeLabel = "All Fault Sources";
 						onlyLabel = "All Gridded Sources";
+						texPrefix = "DisaggCombined";
 					} else if (compType == MapType.CRUSTAL) {
 						includeLabel = "All Crustal Sources";
 						excludeLabel = "Crustal Fault Sources";
 						onlyLabel = "Crustal Gridded Sources";
+						texPrefix = "DisaggCrustal";
 					} else if (compType == MapType.SUBDUCTION) {
 						includeLabel = "All Subduction Sources";
 						excludeLabel = "Subduction Interface Fault Sources";
 						onlyLabel = "Subduction Gridded Sources (Interface & Slab)";
+						texPrefix = "DisaggSubduction";
 					} else if (compType == MapType.SUBDUCTION_INTERFACE) {
 						includeLabel = "All Subduction Interface Sources";
 						excludeLabel = "Subduction Interface Fault Sources";
 						onlyLabel = "Subduction Interface Gridded Sources";
+						texPrefix = "DisaggInterface";
 					} else if (compType == MapType.SUBDUCTION_SLAB) {
 						includeLabel = null;
 						excludeLabel = null;
-						onlyLabel = "Subduction Slab Sources";
+						onlyLabel = "Subduction Intraslab Sources";
+						texPrefix = "DisaggSlab";
 					} else {
 						throw new IllegalStateException();
 					}
@@ -431,6 +445,21 @@ public class MapSourceTypeDisagg {
 						mapMaker.plot(resourcesDir, prefix, label);
 						
 						table.addColumn("![Map]("+resourcesDir.getName()+"/"+prefix+".png)");
+						
+						if (periods[p] == texPeriod && rps[r] == texRP && texFW != null) {
+							String myTexPrefix = texPrefix;
+							if (compBGTypes[i] == IncludeBackgroundOption.EXCLUDE)
+								myTexPrefix += "Fault";
+							else if (compBGTypes[i] == IncludeBackgroundOption.ONLY)
+								myTexPrefix += "Gridded";
+							System.out.println("Writing tex for T="+(float)periods[p]+"s, "+rps[r]+" with prefix: "+myTexPrefix);
+							texFW.write(LaTeXUtils.defineValueCommand(myTexPrefix+"Min",
+									LaTeXUtils.numberAsPercent(min, 0))+"\n");
+							texFW.write(LaTeXUtils.defineValueCommand(myTexPrefix+"Max",
+									LaTeXUtils.numberAsPercent(max, 0))+"\n");
+							texFW.write(LaTeXUtils.defineValueCommand(myTexPrefix+"Avg",
+									LaTeXUtils.numberAsPercent(sum/numWith, 0))+"\n");
+						}
 					}
 					table.finalizeLine();
 					
@@ -447,6 +476,9 @@ public class MapSourceTypeDisagg {
 
 		// write markdown
 		MarkdownUtils.writeReadmeAndHTML(lines, reportDir);
+		
+		if (texFW != null)
+			texFW.close();
 	}
 
 }

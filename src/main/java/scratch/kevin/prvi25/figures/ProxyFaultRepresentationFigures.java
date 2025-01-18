@@ -22,6 +22,7 @@ import org.opensha.commons.geo.json.Geometry;
 import org.opensha.commons.geo.json.Geometry.LineString;
 import org.opensha.commons.gui.plot.GeographicMapMaker;
 import org.opensha.commons.gui.plot.PlotCurveCharacterstics;
+import org.opensha.commons.gui.plot.PlotLineType;
 import org.opensha.commons.gui.plot.PlotSymbol;
 import org.opensha.commons.mapping.gmt.elements.GMT_CPT_Files;
 import org.opensha.commons.util.DataUtils.MinMaxAveTracker;
@@ -59,7 +60,7 @@ public class ProxyFaultRepresentationFigures {
 		
 		FaultSystemRupSet rupSet = new PRVI25_InvConfigFactory().buildRuptureSet(
 				PRVI25_LogicTreeBranch.DEFAULT_CRUSTAL_ON_FAULT, FaultSysTools.defaultNumThreads());
-		ProxyFaultSectionInstances proxyModule = ProxyFaultSectionInstances.build(rupSet, 5, 5d);
+		ProxyFaultSectionInstances proxyModule = ProxyFaultSectionInstances.build(rupSet, 5, 3d);
 		rupSet.addModule(proxyModule);
 		
 		File outputDir = new File(FIGURES_DIR, "proxy_faults");
@@ -113,6 +114,8 @@ public class ProxyFaultRepresentationFigures {
 //				}
 //			}
 		}
+		
+		PlotCurveCharacterstics polyChar = new PlotCurveCharacterstics(PlotLineType.POLYGON_SOLID, 1f, new Color(127, 127, 127, 26));
 		
 		for (int parentID : parentProxyNames.keySet()) {
 			String parentName = parentProxyNames.get(parentID);
@@ -188,6 +191,8 @@ public class ProxyFaultRepresentationFigures {
 				GeographicMapMaker mapMaker = new GeographicMapMaker(region);
 				mapMaker.setWriteGeoJSON(false);
 				mapMaker.setScalarThickness(3f);
+				mapMaker.setSectOutlineChar(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, new Color(220, 220, 220)));
+				mapMaker.setSectPolygonChar(polyChar);
 				
 				if (type == RupType.PROXY) {
 					mapMaker.setFaultSections(proxySects);
@@ -211,7 +216,7 @@ public class ProxyFaultRepresentationFigures {
 					mapMaker.plot(outputDir, prefix+"_gridded", titles ? "Gridded Ruptures" : " ");
 				} else if (type == RupType.SPLIT_PROXIES) {
 					List<FaultSection> combFaultSects = new ArrayList<>();
-					List<Color> sectColors = new ArrayList<>();
+					List<PlotCurveCharacterstics> sectChars = new ArrayList<>();
 					Map<Integer, Integer> subProxyIDs = new HashMap<>();
 					for (FaultSection sect : proxyModule.getProxySects()) {
 						if (sect.getParentSectionName().startsWith(parentName)) {
@@ -219,19 +224,23 @@ public class ProxyFaultRepresentationFigures {
 							combFaultSects.add(sect);
 						}
 					}
-					combFaultSects.addAll(proxySects);
+//					combFaultSects.addAll(proxySects);
 					mapMaker.setFaultSections(combFaultSects);
 					for (int i=0; i<combFaultSects.size(); i++)
-						sectColors.add(null);
+						sectChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, Color.DARK_GRAY));
 					
 					List<List<Integer>> rupProxyIndexes = proxyModule.getRupProxySectIndexes(rupID);
 					for (int i=0; i<rupProxyIndexes.size(); i++) {
 						Color color = color(colors, i);
 						for (int index : rupProxyIndexes.get(i))
-							sectColors.set(subProxyIDs.get(index), color);
+							sectChars.set(subProxyIDs.get(index), new PlotCurveCharacterstics(PlotLineType.SOLID, 3f, color));
 					}
 					mapMaker.setSkipNaNs(true);
-					mapMaker.plotSectColors(sectColors);
+					mapMaker.plotSectChars(sectChars);
+					List<Region> polys = new ArrayList<>();
+					for (FaultSection sect : proxySects)
+						polys.add(sect.getZonePolygon());
+					mapMaker.plotInsetRegions(polys, null, polyChar.getColor(), 1d);
 					mapMaker.plot(outputDir, prefix+"_split_proxy_faults", titles ? "Distributed Proxy Fault Rupture Instances" : " ");
 				} else if (type == RupType.FINITE) {
 					List<FaultSection> combFaultSects = new ArrayList<>();

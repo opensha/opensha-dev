@@ -1129,7 +1129,7 @@ public class DoAnaylysis {
 		mags.add(scratchTargetMFD.getX(0));
 		for(int i=2;i<scratchTargetMFD.size();i++) // skip the second element
 			mags.add(scratchTargetMFD.getX(i));
-		IncrementalMagFreqDist inversionMFD = SparseGutenbergRichterSolver.getEquivGR(scratchTargetMFD, mags, toMoRate, summedEquivGR_MFD.get_bValue());
+		IncrementalMagFreqDist inversionMFD = SparseGutenbergRichterSolver.getEquivGR(scratchTargetMFD, mags, toMoRate, summedEquivGR_MFD.get_bValue(), Double.NaN);
 //		System.out.println(summedEquivGR_MFD+"\n\n"+inversionMFD);
 		ScalingRelationshipEnum scalingRel = ScalingRelationshipEnum.ELLSWORTH_B;
 		boolean popUpPlots = true;

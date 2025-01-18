@@ -32,7 +32,7 @@ import scratch.kevin.nshm23.figures.MethodsAndIngredientsHazChangeFigures;
 import scratch.kevin.nshm23.figures.WUS_HazardChangePageGen;
 import scratch.kevin.prvi25.figures.PRVI_Paths;
 
-public class HazardComp2003PageGen {
+public class HazardCompNSHMPHazPageGen {
 	
 	private static enum CompType {
 			TOTAL,
@@ -55,24 +55,25 @@ public class HazardComp2003PageGen {
 //		ReturnPeriods[] rps = ReturnPeriods.values();
 		ReturnPeriods[] rps = { ReturnPeriods.TWO_IN_50, ReturnPeriods.TEN_IN_50 };
 		
-		String name25 = "NSHM25";
-		String name03 = "NSHM03";
+		String nameMine = "OpenSHA";
+		String nameTheirs = "NSHMP-Haz";
 		
-		File combinedDir = PRVI_Paths.COMBINED_DIR;
-		File crustalDir = PRVI_Paths.CRUSTAL_DIR;
-		File subDir = PRVI_Paths.SUBDUCTION_DIR;
-//		File combinedDir = new File(PRVI_Paths.INV_DIR, "2024_12_12-prvi25_crustal_subduction_combined_branches");
-//		File crustalDir = new File(PRVI_Paths.INV_DIR, "2024_12_12-prvi25_crustal_branches-dmSample5x");
-//		File subDir = new File(PRVI_Paths.INV_DIR, "2024_12_12-prvi25_subduction_branches");
+//		File combinedDir = PRVI_Paths.COMBINED_DIR;
+//		File crustalDir = PRVI_Paths.CRUSTAL_DIR;
+//		File subDir = PRVI_Paths.SUBDUCTION_DIR;
+		File combinedDir = new File(PRVI_Paths.INV_DIR, "2024_12_12-prvi25_crustal_subduction_combined_branches");
+		File crustalDir = new File(PRVI_Paths.INV_DIR, "2024_12_12-prvi25_crustal_branches-dmSample5x");
+		File subDir = new File(PRVI_Paths.INV_DIR, "2024_12_12-prvi25_subduction_branches");
 		
 		File inputDirFull25 = new File(PRVI_Paths.INV_DIR, combinedDir.getName()+"-ba_only-vs760");
 		File inputDirCrustal25 = new File(PRVI_Paths.INV_DIR, crustalDir.getName()+"-ba_only-vs760");
 		File inputDirInterface25 = new File(PRVI_Paths.INV_DIR, subDir.getName()+"-ba_only-INTERFACE_only-vs760");
 		File inputDirSlab25 = new File(PRVI_Paths.INV_DIR, subDir.getName()+"-ba_only-SLAB_only-vs760");
-		File outputDir = new File(combinedDir, "nshm03_erf_comparisons_"+imtDir);
+		File outputDir = new File(combinedDir, "nshmp_haz_comparisons_"+imtDir);
 		double sourceSpacing = 0.01;
 		File sourcesDir03 = new File("/home/kevin/OpenSHA/nshm23/nshmp-haz-models/ext_hazard_calcs/"
-				+ "prvi-t12-2003-ERF-2025-GMMs-vB1-2025conf-0p01-vs760-20250113-1008e874e6a289/vs30-760/"+imtDir+"/source");
+				+ "prvi-t0-2025-opensha-check-0p01-vs760-prob-20250110-15af27ef6c7c69/vs30-760/"+imtDir+"/source");
+		boolean convertToProb = false;
 
 		System.out.println("Output dir: "+outputDir.getAbsolutePath());
 		Preconditions.checkState(outputDir.exists() || outputDir.mkdir());
@@ -89,20 +90,21 @@ public class HazardComp2003PageGen {
 		DiscretizedFunc[] full25 = loadRegularCurves(inputDirFull25, IncludeBackgroundOption.INCLUDE, mapReg, period);
 		
 		DiscretizedFunc[] crustalFault03 = add(
-				loadExtCurves(new File(sourcesDir03, "FAULT/curves.csv"), mapReg),
-				loadExtCurves(new File(sourcesDir03, "ZONE/curves.csv"), mapReg)
+				loadExtCurves(new File(sourcesDir03, "FAULT_SYSTEM/curves.csv"), mapReg)
 				);
 		DiscretizedFunc[] crustalGrid03 = loadExtCurves(new File(sourcesDir03, "GRID/curves.csv"), mapReg);
-		DiscretizedFunc[] interface03 = loadExtCurves(new File(sourcesDir03, "INTERFACE/curves.csv"), mapReg);
+		DiscretizedFunc[] interface03 = loadExtCurves(new File(sourcesDir03, "INTERFACE_SYSTEM/curves.csv"), mapReg);
 		DiscretizedFunc[] slab03 = loadExtCurves(new File(sourcesDir03, "SLAB/curves.csv"), mapReg);
 		DiscretizedFunc[] full03 = add(crustalFault03, crustalGrid03, interface03, slab03);
 		
 		// convert to probabilities
-		crustalFault03 = ratesToProbs(crustalFault03);
-		crustalGrid03 = ratesToProbs(crustalGrid03);
-		interface03 = ratesToProbs(interface03);
-		slab03 = ratesToProbs(slab03);
-		full03 = ratesToProbs(full03);
+		if (convertToProb) {
+			crustalFault03 = ratesToProbs(crustalFault03);
+			crustalGrid03 = ratesToProbs(crustalGrid03);
+			interface03 = ratesToProbs(interface03);
+			slab03 = ratesToProbs(slab03);
+			full03 = ratesToProbs(full03);
+		}
 		
 		// interpolate 03 onto our x-value spacing
 		crustalFault03 = interpolateToMatch(crustalFault03, full25[0]);
@@ -123,11 +125,11 @@ public class HazardComp2003PageGen {
 		
 		Color transparent = new Color(255, 255, 255, 0);
 		
-//		CPT hazCPT = GMT_CPT_Files.RAINBOW_UNIFORM.instance().rescale(-3, 1);
-		CPT hazCPT = GMT_CPT_Files.RAINBOW_UNIFORM.instance().rescale(-1.5, 0.5);
+		CPT hazCPT = GMT_CPT_Files.RAINBOW_UNIFORM.instance().rescale(-3, 1);
 		hazCPT.setNanColor(transparent);
 		
-		CPT pDiffCPT = MethodsAndIngredientsHazChangeFigures.getCenterMaskedCPT(GMT_CPT_Files.DIVERGING_VIK_UNIFORM.instance(), 10d, 50d);
+//		CPT pDiffCPT = MethodsAndIngredientsHazChangeFigures.getCenterMaskedCPT(GMT_CPT_Files.DIVERGING_VIK_UNIFORM.instance(), 10d, 50d);
+		CPT pDiffCPT = GMT_CPT_Files.DIVERGING_VIK_UNIFORM.instance().rescale(-50d, 50d);
 		pDiffCPT.setNanColor(transparent);
 		
 		CPT diffCPT = GMT_CPT_Files.DIVERGING_BAM_UNIFORM.instance().reverse().rescale(-0.2d, 0.2d);
@@ -135,10 +137,10 @@ public class HazardComp2003PageGen {
 		
 		List<String> lines = new ArrayList<>();
 		
-		lines.add("# Hazard Comparisons, "+name25+" vs "+name03);
+		lines.add("# Hazard Comparisons, "+nameMine+" vs "+nameTheirs);
 		lines.add("");
 		
-		lines.add("This page compares "+name25+" and "+name03+" hazard maps. "
+		lines.add("This page compares "+nameMine+" and "+nameTheirs+" hazard maps. "
 				+ "Each individual ERF contributor to hazard changes are plotted separately, but GMMs are held constant.");
 		lines.add("");
 		
@@ -146,9 +148,9 @@ public class HazardComp2003PageGen {
 		for (ReturnPeriods rp : rps) {
 			System.out.println("Building CSV for "+rp);
 			CSVFile<String> csv = new CSVFile<>(true);
-			csv.addLine("Location Index", "Latitude", "Longitude", name25, name03,
-					name03+" Crustal Faults", name03+" Crustal Gridded", name03+" Crustal",
-					name03+" Interface", name03+" Slab");
+			csv.addLine("Location Index", "Latitude", "Longitude", nameMine, nameTheirs,
+					nameTheirs+" Crustal Faults", nameTheirs+" Crustal Gridded", nameTheirs+" Crustal",
+					nameTheirs+" Interface", nameTheirs+" Slab");
 			
 			GriddedGeoDataSet[] maps = {
 					curvestoMap(full25, mapReg, rp),
@@ -201,35 +203,35 @@ public class HazardComp2003PageGen {
 				curves25 = full25;
 				curves03 = withCrustalFaults03;
 				label = "Crustal Fault-Only Comparison";
-				description = "Crustal fault-only comparison, holding gridded and subduction sources constant (using those from "+name25+").";
+				description = "Crustal fault-only comparison, holding gridded and subduction sources constant (using those from "+nameMine+").";
 				mapLabelAdd = "Crustal Faults, ";
 				break;
 			case CRUSTAL_GRIDDED:
 				curves25 = full25;
 				curves03 = withCrustalGrid03;
 				label = "Crustal Gridded-Only Comparison";
-				description = "Crustal Gridded-only comparison, holding crustal fault and subduction sources constant (using those from "+name25+").";
+				description = "Crustal Gridded-only comparison, holding crustal fault and subduction sources constant (using those from "+nameMine+").";
 				mapLabelAdd = "Crustal Gridded, ";
 				break;
 			case CRUSTAL:
 				curves25 = full25;
 				curves03 = withCrustal03;
 				label = "Crustal-Only (Fault & Gridded) Comparison";
-				description = "Crustal-only comparison, holding subduction sources constant (using those from "+name25+").";
+				description = "Crustal-only comparison, holding subduction sources constant (using those from "+nameMine+").";
 				mapLabelAdd = "Crustal, ";
 				break;
 			case INTERFACE:
 				curves25 = full25;
 				curves03 = withInterface03;
 				label = "Interface-Only Comparison";
-				description = "Subduction interface-only comparison, crustal and slab sources constant (using those from "+name25+").";
+				description = "Subduction interface-only comparison, crustal and slab sources constant (using those from "+nameMine+").";
 				mapLabelAdd = "Interface, ";
 				break;
 			case SLAB:
 				curves25 = full25;
 				curves03 = withSlab03;
 				label = "Slab-Only Comparison";
-				description = "Subduction intraslab-only comparison, crustal and interface sources constant (using those from "+name25+").";
+				description = "Subduction intraslab-only comparison, crustal and interface sources constant (using those from "+nameMine+").";
 				mapLabelAdd = "Slab, ";
 				break;
 
@@ -257,14 +259,14 @@ public class HazardComp2003PageGen {
 				
 				TableBuilder table = MarkdownUtils.tableBuilder();
 				
-				table.addLine(name25, name03);
+				table.addLine(nameMine, nameTheirs);
 				
 				table.initNewLine();
 				
-				mapMaker.plotXYZData(asLog10(map25), hazCPT, mapLabelAdd+name25+", "+hazLabel+" (g)");
+				mapMaker.plotXYZData(asLog10(map25), hazCPT, mapLabelAdd+nameMine+", "+hazLabel+" (g)");
 				mapMaker.plot(resourcesDir, prefix+"_nshm25", " ");
 				table.addColumn("![Map]("+resourcesDir.getName()+"/"+prefix+"_nshm25.png)");
-				mapMaker.plotXYZData(asLog10(map03), hazCPT, mapLabelAdd+name03+", "+hazLabel+" (g)");
+				mapMaker.plotXYZData(asLog10(map03), hazCPT, mapLabelAdd+nameTheirs+", "+hazLabel+" (g)");
 				mapMaker.plot(resourcesDir, prefix+"_nshm03", " ");
 				table.addColumn("![Map]("+resourcesDir.getName()+"/"+prefix+"_nshm03.png)");
 				
@@ -277,10 +279,10 @@ public class HazardComp2003PageGen {
 				
 				table.initNewLine();
 				
-				mapMaker.plotXYZData(pDiff, pDiffCPT, mapLabelAdd+name25+" vs "+name03+", % Change, "+hazLabel);
+				mapMaker.plotXYZData(pDiff, pDiffCPT, mapLabelAdd+nameMine+" vs "+nameTheirs+", % Change, "+hazLabel);
 				mapMaker.plot(resourcesDir, prefix+"_pDiff", " ");
 				table.addColumn("![Map]("+resourcesDir.getName()+"/"+prefix+"_pDiff.png)");
-				mapMaker.plotXYZData(diff, diffCPT, mapLabelAdd+name25+" - "+name03+", "+hazLabel+" (g)");
+				mapMaker.plotXYZData(diff, diffCPT, mapLabelAdd+nameMine+" - "+nameTheirs+", "+hazLabel+" (g)");
 				mapMaker.plot(resourcesDir, prefix+"_diff", " ");
 				table.addColumn("![Map]("+resourcesDir.getName()+"/"+prefix+"_diff.png)");
 				

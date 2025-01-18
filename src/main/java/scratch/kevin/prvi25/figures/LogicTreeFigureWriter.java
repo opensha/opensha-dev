@@ -11,6 +11,7 @@ import java.awt.image.BufferedImage;
 import java.io.BufferedOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
@@ -45,6 +46,8 @@ import com.itextpdf.text.pdf.PdfContentByte;
 import com.itextpdf.text.pdf.PdfTemplate;
 import com.itextpdf.text.pdf.PdfWriter;
 
+import scratch.kevin.latex.LaTeXUtils;
+
 import static scratch.kevin.prvi25.figures.PRVI_Paths.*;
 
 public class LogicTreeFigureWriter extends JPanel {
@@ -62,22 +65,31 @@ public class LogicTreeFigureWriter extends JPanel {
 		List<LogicTree<?>> trees = new ArrayList<>();
 		List<String> prefixes = new ArrayList<>();
 		
-		trees.add(LogicTree.read(new File("/data/kevin/nshm23/batch_inversions/"
-				+ "2024_11_19-prvi25_crustal_branches-dmSample5x/logic_tree.json")));
+		LogicTree<?> crustalFaultTree = LogicTree.read(new File(CRUSTAL_DIR, "logic_tree.json"));
+		trees.add(crustalFaultTree);
 //		trees.set(trees.size()-1, reorderTree(trees.get(trees.size()-1), PRVI25_CrustalRandomlySampledDeformationModelLevel.NAME, 0));
 		prefixes.add("crustal_inversion");
-		trees.add(new PRVI25_InvConfigFactory().getGridSourceTree(trees.get(trees.size()-1)));
+		LogicTree<?> crustalGriddedTree = new PRVI25_InvConfigFactory().getGridSourceTree(crustalFaultTree);
+		trees.add(crustalGriddedTree);
 		prefixes.add("crustal_gridded");
 		
-		trees.add(LogicTree.read(new File("/data/kevin/nshm23/batch_inversions/"
-				+ "2024_11_19-prvi25_subduction_branches/logic_tree.json")));
+		LogicTree<LogicTreeNode> subFaultTree = LogicTree.read(new File(SUBDUCTION_DIR, "logic_tree.json"));
+		trees.add(subFaultTree);
 		prefixes.add("subduction_inversion");
-		trees.add(new PRVI25_InvConfigFactory().getGridSourceTree(trees.get(trees.size()-1)));
+		LogicTree<?> subGridTree = new PRVI25_InvConfigFactory().getGridSourceTree(subFaultTree);
+		trees.add(subGridTree);
 		prefixes.add("subduction_gridded");
 		
-		List<LogicTreeLevel<? extends LogicTreeNode>> gmmLevels = PRVI25_LogicTreeBranch.levelsCrustalGMM;
-		trees.add(LogicTree.buildExhaustive(gmmLevels, true));
+		List<LogicTreeLevel<? extends LogicTreeNode>> crustalGMMLevels = PRVI25_LogicTreeBranch.levelsCrustalGMM;
+		LogicTree<LogicTreeNode> crustalGMMTree = LogicTree.buildExhaustive(crustalGMMLevels, true);
+		trees.add(crustalGMMTree);
 		prefixes.add("gmm");
+		
+		List<LogicTreeLevel<? extends LogicTreeNode>> interfaceGMMLevels = PRVI25_LogicTreeBranch.levelsInterfaceGMM;
+		LogicTree<LogicTreeNode> interfaceGMMTree = LogicTree.buildExhaustive(interfaceGMMLevels, true);
+		
+		List<LogicTreeLevel<? extends LogicTreeNode>> slabGMMLevels = PRVI25_LogicTreeBranch.levelsSlabGMM;
+		LogicTree<LogicTreeNode> slabGMMTree = LogicTree.buildExhaustive(slabGMMLevels, true);
 		
 		for (int i=0; i<trees.size(); i++) {
 			LogicTree<?> tree = trees.get(i);
@@ -89,6 +101,45 @@ public class LogicTreeFigureWriter extends JPanel {
 			
 			System.out.println();
 		}
+		
+		FileWriter texFW = new FileWriter(new File(outputDir, "logic_tree_stats.tex"));
+		
+		texFW.write(LaTeXUtils.defineValueCommand("CrustalFaultBranches", LaTeXUtils.groupedIntNumber(crustalFaultTree.size()))+"\n");
+		texFW.write(LaTeXUtils.defineValueCommand("CrustalGriddedBranches", LaTeXUtils.groupedIntNumber(crustalGriddedTree.size()))+"\n");
+		int crustalERFbranches = crustalFaultTree.size()*crustalGriddedTree.size();
+		texFW.write(LaTeXUtils.defineValueCommand("CrustalCombinedERFBranches", LaTeXUtils.groupedIntNumber(crustalERFbranches))+"\n");
+		int numWithoutRand = 1;
+		HashSet<LogicTreeNode> crustalFaultNodesUsed = new HashSet<>();
+		for (LogicTreeBranch<?> branch : crustalFaultTree)
+			for (LogicTreeNode node : branch)
+				crustalFaultNodesUsed.add(node);
+		for (LogicTreeLevel<?> level : crustalFaultTree.getLevels()) {
+			if (level instanceof RandomlySampledLevel<?>) {
+				int numRand = level.getNodes().size();
+				texFW.write(LaTeXUtils.defineValueCommand("CrustalFaultBranchesNumRand", LaTeXUtils.groupedIntNumber(numRand))+"\n");
+			} else {
+				int myNumNodes = 0;
+				for (LogicTreeNode node : level.getNodes())
+					if (crustalFaultNodesUsed.contains(node))
+						myNumNodes++;
+				Preconditions.checkState(myNumNodes > 0);
+				numWithoutRand *= myNumNodes;
+			}
+		}
+		texFW.write(LaTeXUtils.defineValueCommand("CrustalFaultBranchesWithoutRand", LaTeXUtils.groupedIntNumber(numWithoutRand))+"\n");
+		int randMultiplier = crustalFaultTree.size() / numWithoutRand;
+		texFW.write(LaTeXUtils.defineValueCommand("CrustalFaultBranchesRandMultiplier", LaTeXUtils.groupedIntNumber(randMultiplier))+"\n");
+		
+		texFW.write(LaTeXUtils.defineValueCommand("SubductionFaultBranches", LaTeXUtils.groupedIntNumber(subFaultTree.size()))+"\n");
+		texFW.write(LaTeXUtils.defineValueCommand("SubductionGriddedBranches", LaTeXUtils.groupedIntNumber(subGridTree.size()))+"\n");
+		int subERFbranches = subFaultTree.size()*subGridTree.size();
+		texFW.write(LaTeXUtils.defineValueCommand("SubductionCombinedERFBranches", LaTeXUtils.groupedIntNumber(subERFbranches))+"\n");
+		
+		int totalERFbranches = crustalERFbranches * subERFbranches;
+		texFW.write(LaTeXUtils.defineValueCommand("CombinedERFBranches", LaTeXUtils.groupedIntNumber(totalERFbranches))+"\n");
+		texFW.write(LaTeXUtils.defineValueCommand("CombinedERFBranchesMillions", LaTeXUtils.groupedIntNumber(totalERFbranches*1e-6))+"\n");
+		
+		texFW.close();
 	}
 	
 	private static LogicTree<LogicTreeNode> reorderTree(LogicTree<?> tree, String levelName, int targetIndex) {

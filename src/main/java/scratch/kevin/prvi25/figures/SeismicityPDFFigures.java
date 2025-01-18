@@ -23,11 +23,14 @@ import org.opensha.sha.earthquake.faultSysSolution.FaultSystemSolution;
 import org.opensha.sha.earthquake.faultSysSolution.modules.GridSourceList;
 import org.opensha.sha.earthquake.faultSysSolution.util.FaultSysTools;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.gridded.PRVI25_GridSourceBuilder;
+import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_CrustalSeismicityRate;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_DeclusteringAlgorithms;
-import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_RegionalSeismicity;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_SeisSmoothingAlgorithms;
+import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_SubductionCaribbeanSeismicityRate;
+import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_SubductionMuertosSeismicityRate;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.util.PRVI25_RegionLoader;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.util.PRVI25_RegionLoader.PRVI25_SeismicityRegions;
+import org.opensha.sha.magdist.IncrementalMagFreqDist;
 import org.opensha.sha.util.TectonicRegionType;
 
 import com.google.common.base.Preconditions;
@@ -81,9 +84,30 @@ class SeismicityPDFFigures {
 			boolean remap = !pdf.getRegion().equalsRegion(gridReg);
 			
 			double rateScalar = 1;
-			if (magForRate > 0d)
-				rateScalar = PRVI25_RegionalSeismicity.PREFFERRED.build(seisReg, refMFD,
-						refMFD.getMaxX()).getCumRate(refMFD.getClosestXIndex(magForRate+0.01));
+			if (magForRate > 0d) {
+				IncrementalMagFreqDist mfd;
+				switch (seisReg) {
+				case CRUSTAL:
+					mfd = PRVI25_CrustalSeismicityRate.PREFFERRED.build(refMFD, refMFD.getMaxX());
+					break;
+				case CAR_INTERFACE:
+					mfd = PRVI25_SubductionCaribbeanSeismicityRate.PREFFERRED.build(refMFD, refMFD.getMaxX(), false);
+					break;
+				case CAR_INTRASLAB:
+					mfd = PRVI25_SubductionCaribbeanSeismicityRate.PREFFERRED.build(refMFD, refMFD.getMaxX(), true);
+					break;
+				case MUE_INTERFACE:
+					mfd = PRVI25_SubductionMuertosSeismicityRate.PREFFERRED.build(refMFD, refMFD.getMaxX(), false);
+					break;
+				case MUE_INTRASLAB:
+					mfd = PRVI25_SubductionMuertosSeismicityRate.PREFFERRED.build(refMFD, refMFD.getMaxX(), true);
+					break;
+
+				default:
+					throw new IllegalStateException();
+				}
+				rateScalar = mfd.getCumRate(refMFD.getClosestXIndex(magForRate+0.01));
+			}
 			
 			Region reg = seisReg.load();
 			if (!reg.isRectangular())

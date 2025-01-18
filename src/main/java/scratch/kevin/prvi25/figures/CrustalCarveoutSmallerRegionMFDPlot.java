@@ -22,9 +22,9 @@ import org.opensha.commons.logicTree.LogicTreeBranch;
 import org.opensha.sha.earthquake.faultSysSolution.FaultSystemSolution;
 import org.opensha.sha.earthquake.faultSysSolution.util.FaultSysTools;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_MaxMagOffFault;
+import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_CrustalSeismicityRate;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_DeclusteringAlgorithms;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_LogicTreeBranch;
-import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_RegionalSeismicity;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_SeisSmoothingAlgorithms;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.util.PRVI25_RegionLoader;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.util.PRVI25_RegionLoader.PRVI25_SeismicityRegions;
@@ -76,18 +76,18 @@ public class CrustalCarveoutSmallerRegionMFDPlot {
 			
 			System.out.println("fractN="+(float)fractN+" for "+names.get(r));
 			
-			IncrementalMagFreqDist lower = PRVI25_RegionalSeismicity.LOW.build(PRVI25_SeismicityRegions.CRUSTAL, refMFD, mMax.getMaxMagOffFault());
-			IncrementalMagFreqDist upper = PRVI25_RegionalSeismicity.HIGH.build(PRVI25_SeismicityRegions.CRUSTAL, refMFD, mMax.getMaxMagOffFault());
-			IncrementalMagFreqDist pref = PRVI25_RegionalSeismicity.PREFFERRED.build(PRVI25_SeismicityRegions.CRUSTAL, refMFD, mMax.getMaxMagOffFault());
+			IncrementalMagFreqDist lower = PRVI25_CrustalSeismicityRate.LOW.build(refMFD, mMax.getMaxMagOffFault());
+			IncrementalMagFreqDist upper = PRVI25_CrustalSeismicityRate.HIGH.build(refMFD, mMax.getMaxMagOffFault());
+			IncrementalMagFreqDist pref = PRVI25_CrustalSeismicityRate.PREFFERRED.build(refMFD, mMax.getMaxMagOffFault());
 			IncrementalMagFreqDist origPref = pref.deepClone();
 			if (remapped) {
 				lower.scale(fractN);
 				upper.scale(fractN);
 				pref.scale(fractN);
 			}
-			double lowerWeight = PRVI25_RegionalSeismicity.LOW.getNodeWeight(null);
-			double upperWeight = PRVI25_RegionalSeismicity.HIGH.getNodeWeight(null);
-			double prefWeight = PRVI25_RegionalSeismicity.PREFFERRED.getNodeWeight(null);
+			double lowerWeight = PRVI25_CrustalSeismicityRate.LOW.getNodeWeight(null);
+			double upperWeight = PRVI25_CrustalSeismicityRate.HIGH.getNodeWeight(null);
+			double prefWeight = PRVI25_CrustalSeismicityRate.PREFFERRED.getNodeWeight(null);
 			UncertainBoundedIncrMagFreqDist dist = new UncertainBoundedIncrMagFreqDist(pref, lower, upper, UncertaintyBoundType.TWO_SIGMA);
 			
 			for (int i=0; i<refMFD.size(); i++) {

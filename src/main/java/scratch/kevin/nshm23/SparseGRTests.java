@@ -108,7 +108,7 @@ public class SparseGRTests {
 				//				+(float)minAdded+"\tfirstBin="+(float)gr.getMinX()+"\tlowerEdge="+(float)minMag);
 
 				IncrementalMagFreqDist sparseGR = SparseGutenbergRichterSolver.getEquivGR(orig, mags, orig.getTotalMomentRate(),
-						bValue, sampleDiscr, method, preserveRates);
+						bValue, Double.NaN, sampleDiscr, method, preserveRates);
 				//		IncrementalMagFreqDist sparseGR = invertEquivGR(orig, mags, orig.getTotalMomentRate(), bValue);
 
 				double equivB = SectBValuePlot.estBValue(gr.getMinX(), gr.getMaxX(),

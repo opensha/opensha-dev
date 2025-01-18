@@ -71,15 +71,15 @@ public class GMMLogicTreeWriter {
 //		File sourceDir = CRUSTAL_DIR;
 //		File outputDir = new File(sourceDir.getParentFile(), sourceDir.getName()+"-gmTreeCalcs"+dirSuffix);
 //		// supra-seis only
-////		File sourceTreeFile = new File(sourceDir, "logic_tree.json");
-////		int mins = 1440;
-////		IncludeBackgroundOption bgOp = IncludeBackgroundOption.EXCLUDE;
+//		File sourceTreeFile = new File(sourceDir, "logic_tree.json");
+//		int mins = 1440;
+//		IncludeBackgroundOption bgOp = IncludeBackgroundOption.EXCLUDE;
 //		// including gridded
-//		int mins = 1440*5;
-//		File sourceTreeFile = new File(sourceDir, "logic_tree_full_gridded.json");
-//		erfSamples = 10000; gmmSamplesPerERF = 1; jobSuffix = "_sampled"; logicTreeOutputName = "logic_tree_full_gridded_sampled.json";
-////		File sourceTreeFile = new File(sourceDir, "logic_tree_full_gridded_sampled.json"); jobSuffix = "_sampled";
-//		IncludeBackgroundOption bgOp = IncludeBackgroundOption.INCLUDE;
+////		int mins = 1440*5;
+////		File sourceTreeFile = new File(sourceDir, "logic_tree_full_gridded.json");
+////		erfSamples = 10000; gmmSamplesPerERF = 1; jobSuffix = "_sampled"; logicTreeOutputName = "logic_tree_full_gridded_sampled.json";
+//////		File sourceTreeFile = new File(sourceDir, "logic_tree_full_gridded_sampled.json"); jobSuffix = "_sampled";
+////		IncludeBackgroundOption bgOp = IncludeBackgroundOption.INCLUDE;
 		
 		/*
 		 * Interface separate slab and interface
@@ -88,26 +88,26 @@ public class GMMLogicTreeWriter {
 		 * 
 		 * then need to separately combine the slab logic tree
 		 */
-		List<LogicTreeLevel<? extends LogicTreeNode>> gmmLevels = PRVI25_LogicTreeBranch.levelsInterfaceGMM;
-		File sourceDir = SUBDUCTION_DIR;
-		File outputDir = new File(sourceDir.getParentFile(), sourceDir.getName()+"-gmTreeCalcs"+dirSuffix);
-		// supra-seis only
-//		File sourceTreeFile = new File(sourceDir, "logic_tree.json");
-//		int mins = 1440;
-//		IncludeBackgroundOption bgOp = IncludeBackgroundOption.EXCLUDE;
-		// interface gridded only
-		int mins = 1440;
-//		File sourceTreeFile = new File(sourceDir, "logic_tree_gridded_only.json");
-		File sourceTreeFile = new File(sourceDir, "logic_tree_full_gridded_for_only_calc.json");
-		logicTreeOutputName = "logic_tree_gridded_interface_only.json";
-		IncludeBackgroundOption bgOp = IncludeBackgroundOption.ONLY;
-		// this was for if gridded only depended on FM but it also depends on scale
-//		forceInputFileName = "results_gridded_branches_interface_only.zip";
-		// use this one because it has scaling relationship specific gridded models
-		forceInputFileName = "results_full_gridded_interface_only.zip";
-		jobSuffix = "_interface";
-		outputSuffix = jobSuffix;
-		// interface both (combine only)
+//		List<LogicTreeLevel<? extends LogicTreeNode>> gmmLevels = PRVI25_LogicTreeBranch.levelsInterfaceGMM;
+//		File sourceDir = SUBDUCTION_DIR;
+//		File outputDir = new File(sourceDir.getParentFile(), sourceDir.getName()+"-gmTreeCalcs"+dirSuffix);
+//		// supra-seis only
+////		File sourceTreeFile = new File(sourceDir, "logic_tree.json");
+////		int mins = 1440;
+////		IncludeBackgroundOption bgOp = IncludeBackgroundOption.EXCLUDE;
+//		// interface gridded only
+////		int mins = 1440;
+//////		File sourceTreeFile = new File(sourceDir, "logic_tree_gridded_only.json");
+////		File sourceTreeFile = new File(sourceDir, "logic_tree_full_gridded_for_only_calc.json");
+////		logicTreeOutputName = "logic_tree_gridded_interface_only.json";
+////		IncludeBackgroundOption bgOp = IncludeBackgroundOption.ONLY;
+////		// this was for if gridded only depended on FM but it also depends on scale
+//////		forceInputFileName = "results_gridded_branches_interface_only.zip";
+////		// use this one because it has scaling relationship specific gridded models
+////		forceInputFileName = "results_full_gridded_interface_only.zip";
+////		jobSuffix = "_interface";
+////		outputSuffix = jobSuffix;
+//		// interface both (combine only)
 //		combineOnly = true;
 //		int mins = 1440;
 //		forceInputFileName = "results_full_gridded_interface_only.zip";
@@ -120,25 +120,27 @@ public class GMMLogicTreeWriter {
 		/*
 		 * Slab
 		 */
-//		List<LogicTreeLevel<? extends LogicTreeNode>> gmmLevels = PRVI25_LogicTreeBranch.levelsSlabGMM;
-//		File sourceDir = SUBDUCTION_DIR;
-//		File outputDir = new File(sourceDir.getParentFile(), sourceDir.getName()+"-gmTreeCalcs"+dirSuffix);
-//		// always slab gridded only
-//		int mins = 1440;
-//		File sourceTreeFile = new File(sourceDir, "logic_tree_gridded_only.json");
-//		logicTreeOutputName = "logic_tree_gridded_slab_only.json";
-//		IncludeBackgroundOption bgOp = IncludeBackgroundOption.ONLY;
-//		forceInputFileName = "results_gridded_branches_slab_only.zip";
-//		jobSuffix = "_slab";
-//		outputSuffix = jobSuffix;
+		List<LogicTreeLevel<? extends LogicTreeNode>> gmmLevels = PRVI25_LogicTreeBranch.levelsSlabGMM;
+		File sourceDir = SUBDUCTION_DIR;
+		File outputDir = new File(sourceDir.getParentFile(), sourceDir.getName()+"-gmTreeCalcs"+dirSuffix);
+		// always slab gridded only
+		int mins = 1440;
+		File sourceTreeFile = new File(sourceDir, "logic_tree_gridded_only.json");
+		logicTreeOutputName = "logic_tree_gridded_slab_only.json";
+		IncludeBackgroundOption bgOp = IncludeBackgroundOption.ONLY;
+		forceInputFileName = "results_gridded_branches_slab_only.zip";
+		jobSuffix = "_slab";
+		outputSuffix = jobSuffix;
 		
 		/*
 		 * Branch averaged (GMM-only)
 		 */
 //		List<LogicTreeLevel<? extends LogicTreeNode>> gmmLevels = PRVI25_LogicTreeBranch.levelsCombinedGMM;
 //		File sourceDir = COMBINED_DIR;
+////		File sourceDir = new File(INV_DIR, "2025_01_02-prvi25_crustal_subduction_combined_branches");
 //		File outputDir = new File(sourceDir.getParentFile(), sourceDir.getName()+"-ba_only-gmTreeCalcs"+dirSuffix);
 //		// write out a SLT that only contains that node
+//		Preconditions.checkState(outputDir.exists() || outputDir.mkdir());
 //		File sourceTreeFile = new File(outputDir, "fake_erf_logic_tree.json");
 //		FileBackedLevel fakeLevel = new FileBackedLevel("ERF Model", "ERF",
 //				List.of(new FileBackedNode("Branch Averaged ERF", "BranchAveragedERF", 1d, "BA_ERF")));
@@ -147,7 +149,7 @@ public class GMMLogicTreeWriter {
 //		File sourceFile = new File(outputDir, "fake_erf_slt.zip");
 //		SolutionLogicTree.FileBuilder builder = new SolutionLogicTree.FileBuilder(sourceFile);
 //		builder.setSerializeGridded(true);
-//		builder.solution(FaultSystemSolution.load(COMBINED_SOL), tempTree.getBranch(0));
+//		builder.solution(FaultSystemSolution.load(new File(sourceDir, COMBINED_SOL.getName())), tempTree.getBranch(0));
 //		builder.close();
 //		forceInputFileName = sourceFile.getName();
 //		tempTree.write(sourceTreeFile);

@@ -20,8 +20,9 @@ import org.opensha.sha.earthquake.rupForecastImpl.prvi25.PRVI25_InvConfigFactory
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.gridded.PRVI25_GridSourceBuilder;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_DeclusteringAlgorithms;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_LogicTreeBranch;
-import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_RegionalSeismicity;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_SeisSmoothingAlgorithms;
+import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_SubductionCaribbeanSeismicityRate;
+import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_SubductionMuertosSeismicityRate;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_SubductionScalingRelationships;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.util.PRVI25_RegionLoader.PRVI25_SeismicityRegions;
 import org.opensha.sha.util.TectonicRegionType;
@@ -41,7 +42,8 @@ public class SubductionDefModAverageTest {
 		LogicTreeBranch<LogicTreeNode> branch = new LogicTreeBranch<>(allLevels);
 		for (LogicTreeNode node : PRVI25_LogicTreeBranch.DEFAULT_SUBDUCTION_INTERFACE)
 			branch.setValue(node);
-		branch.setValue(PRVI25_RegionalSeismicity.PREFFERRED);
+		branch.setValue(PRVI25_SubductionCaribbeanSeismicityRate.PREFFERRED);
+		branch.setValue(PRVI25_SubductionMuertosSeismicityRate.PREFFERRED);
 		branch.setValue(PRVI25_DeclusteringAlgorithms.AVERAGE);
 		branch.setValue(PRVI25_SeisSmoothingAlgorithms.AVERAGE);
 		

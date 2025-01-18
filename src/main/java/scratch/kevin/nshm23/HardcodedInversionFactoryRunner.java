@@ -46,6 +46,7 @@ import org.opensha.sha.earthquake.rupForecastImpl.nshm23.prior2018.NSHM18_Deform
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.prior2018.NSHM18_FaultModels;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.prior2018.NSHM18_LogicTreeBranch;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.PRVI25_InvConfigFactory;
+import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_CrustalDeformationModels;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_LogicTreeBranch;
 import org.opensha.sha.faultSurface.FaultSection;
 import org.opensha.sha.magdist.IncrementalMagFreqDist;
@@ -128,10 +129,10 @@ public class HardcodedInversionFactoryRunner {
 //		NSHM23_InvConfigFactory factory = new DefModSamplingEnabledInvConfig.ConnDistB0p5MidSegCorrCapSigma();
 //		dirName += "-nshm23-dm_sample_cap_sigma";
 		
-//		PRVI25_InvConfigFactory factory = new PRVI25_InvConfigFactory();
-//		dirName += "-prvi25";
-		PRVI25_InvConfigFactory factory = new PRVI25_InvConfigFactory.LimitCrustalBelowObserved_0p9();
-		dirName += "-prvi25-limit_below_obs";
+		PRVI25_InvConfigFactory factory = new PRVI25_InvConfigFactory();
+		dirName += "-prvi25";
+//		PRVI25_InvConfigFactory factory = new PRVI25_InvConfigFactory.LimitCrustalBelowObserved_0p9();
+//		dirName += "-prvi25-limit_below_obs";
 //		PRVI25_InvConfigFactory.SUB_SECT_DDW_FRACT = 0.25; dirName += "-quarter_len_sub_sects";
 		
 		factory.setCacheDir(new File("/home/kevin/OpenSHA/nshm23/rup_sets/cache"));
@@ -145,10 +146,13 @@ public class HardcodedInversionFactoryRunner {
 		LogicTreeBranch<LogicTreeNode> branch = PRVI25_LogicTreeBranch.DEFAULT_CRUSTAL_ON_FAULT;
 		branch = branch.copy();
 
-		branch.setValue(NSHM23_SegmentationModels.CLASSIC);
-//		branch.setValue(NSHM23_SegmentationModels.AVERAGE);
+//		branch.setValue(NSHM23_SegmentationModels.NONE);
+//		branch.setValue(SupraSeisBValues.B_0p0);
+//		branch.setValue(NSHM23_SegmentationModels.CLASSIC);
+		branch.setValue(NSHM23_SegmentationModels.AVERAGE);
 //		branch.setValue(SupraSeisBValues.AVERAGE);
-//		branch.setValue(NSHM23_ScalingRelationships.AVERAGE);
+		branch.setValue(NSHM23_ScalingRelationships.AVERAGE);
+		branch.setValue(PRVI25_CrustalDeformationModels.GEOLOGIC_DIST_AVG);
 		
 //		branch.setValue(NSHM23_SegmentationModels.CLASSIC);
 		

@@ -39,7 +39,7 @@ public class LaTeXUtils {
 	 * @return
 	 */
 	public static String defineValueCommand(String name, String value, boolean escapeValue) {
-		String sanitizedName = name.replaceAll("[^a-zA-Z]", "");
+		String sanitizedName = sanitizeForCommandName(name);
 
 		Preconditions.checkState(sanitizedName.equals(name),
 				"Only letters and numbers are allowed in latex commands: %s (sanitized: %s)", name, sanitizedName);
@@ -48,6 +48,10 @@ public class LaTeXUtils {
 			value = escapeLaTeX(value);
 		
 		return "\\newcommand{\\"+VAR_PREFIX+name+"}{"+value+"}";
+	}
+	
+	public static String sanitizeForCommandName(String name) {
+		return name.replaceAll("[^a-zA-Z]", "");
 	}
 
 	private static final Map<Character, String> LATEX_ESCAPE_MAP = new HashMap<>();

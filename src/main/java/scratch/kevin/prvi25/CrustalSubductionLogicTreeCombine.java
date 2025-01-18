@@ -291,8 +291,10 @@ public class CrustalSubductionLogicTreeCombine extends AbstractLogicTreeHazardCo
 			Map<LogicTreeNode, LogicTreeNode> nodeRemaps, String nameAdd, String shortNameAdd) {
 		for (LogicTreeLevel<?> level : tree.getLevels()) {
 			String name = level.getName();
-			if (name.toLowerCase().contains("crustal") || name.toLowerCase().contains("subduction")
-					|| name.toLowerCase().contains("interface") || name.toLowerCase().contains("slab")) {
+			String lowerName = name.toLowerCase();
+			if (lowerName.contains("crustal") || lowerName.contains("subduction")
+					|| lowerName.contains("interface") || lowerName.contains("slab")
+					|| lowerName.contains("muertos") || lowerName.contains("caribbean")) {
 				// keep it as is
 				levelRemaps.put(level, level);
 				for (LogicTreeNode node : level.getNodes())

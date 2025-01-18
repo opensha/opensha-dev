@@ -146,6 +146,7 @@ import org.opensha.sha.earthquake.faultSysSolution.ruptures.util.UniqueRupture;
 import org.opensha.sha.earthquake.faultSysSolution.util.BranchAverageSolutionCreator;
 import org.opensha.sha.earthquake.faultSysSolution.util.FaultSectionUtils;
 import org.opensha.sha.earthquake.faultSysSolution.util.FaultSysTools;
+import org.opensha.sha.earthquake.faultSysSolution.util.SolHazardMapCalc.ReturnPeriods;
 import org.opensha.sha.earthquake.faultSysSolution.util.SubSectionBuilder;
 import org.opensha.sha.earthquake.observedEarthquake.ObsEqkRupList;
 import org.opensha.sha.earthquake.param.ApplyGardnerKnopoffAftershockFilterParam;
@@ -176,7 +177,6 @@ import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_Crusta
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_CrustalGMMs;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_DeclusteringAlgorithms;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_LogicTreeBranch;
-import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_RegionalSeismicity;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_SeisSmoothingAlgorithms;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_SubductionDeformationModels;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_SubductionFaultModels;
@@ -2239,29 +2239,29 @@ public class PureScratch {
 		}
 	}
 	
-	private static void test312() throws IOException {
-		double OVERALL_MMIN = 2.55;
-		double maxMagOff = 7.95;
-		PRVI25_SeismicityRegions seisRegion = PRVI25_SeismicityRegions.CAR_INTRASLAB;
-		
-//		PRVI25_RegionalSeismicity seisBranch = PRVI25_RegionalSeismicity.HIGH;
-//		PRVI25_DeclusteringAlgorithms declusteringAlg = branch.requireValue(PRVI25_DeclusteringAlgorithms.class);
-//		PRVI25_SeisSmoothingAlgorithms seisSmooth = branch.requireValue(PRVI25_SeisSmoothingAlgorithms.class);
-		
-		for (PRVI25_RegionalSeismicity seisBranch : PRVI25_RegionalSeismicity.values()) {
-			// total G-R up to Mmax
-			IncrementalMagFreqDist totalGR = seisBranch.build(seisRegion, FaultSysTools.initEmptyMFD(OVERALL_MMIN, maxMagOff), maxMagOff);
-//			System.out.println("Gridded style GR:\n"+totalGR);
-			System.out.println(seisBranch+" M5 rate: "+(float)totalGR.getCumRateDistWithOffset().getY(5d));
-		}
-		
-//		double maxMinMag = 8.05;
-//		IncrementalMagFreqDist interfaceRefMFD = FaultSysTools.initEmptyMFD(maxMinMag);
-//		IncrementalMagFreqDist slabRefMFD = FaultSysTools.initEmptyMFD(PRVI25_GridSourceBuilder.SLAB_MMAX);
-//		UncertainBoundedIncrMagFreqDist buggy = PRVI25_RegionalSeismicity.getBounded(seisRegion,
-//				slabRefMFD, slabRefMFD.getX(interfaceRefMFD.getClosestXIndex(PRVI25_GridSourceBuilder.SLAB_MMAX)));
-//		System.out.println("Buggy M5 rate: "+(float)buggy.getCumRateDistWithOffset().getY(5d));
-	}
+//	private static void test312() throws IOException {
+//		double OVERALL_MMIN = 2.55;
+//		double maxMagOff = 7.95;
+//		PRVI25_SeismicityRegions seisRegion = PRVI25_SeismicityRegions.CAR_INTRASLAB;
+//		
+////		PRVI25_RegionalSeismicity seisBranch = PRVI25_RegionalSeismicity.HIGH;
+////		PRVI25_DeclusteringAlgorithms declusteringAlg = branch.requireValue(PRVI25_DeclusteringAlgorithms.class);
+////		PRVI25_SeisSmoothingAlgorithms seisSmooth = branch.requireValue(PRVI25_SeisSmoothingAlgorithms.class);
+//		
+//		for (PRVI25_RegionalSeismicity seisBranch : PRVI25_RegionalSeismicity.values()) {
+//			// total G-R up to Mmax
+//			IncrementalMagFreqDist totalGR = seisBranch.build(seisRegion, FaultSysTools.initEmptyMFD(OVERALL_MMIN, maxMagOff), maxMagOff);
+////			System.out.println("Gridded style GR:\n"+totalGR);
+//			System.out.println(seisBranch+" M5 rate: "+(float)totalGR.getCumRateDistWithOffset().getY(5d));
+//		}
+//		
+////		double maxMinMag = 8.05;
+////		IncrementalMagFreqDist interfaceRefMFD = FaultSysTools.initEmptyMFD(maxMinMag);
+////		IncrementalMagFreqDist slabRefMFD = FaultSysTools.initEmptyMFD(PRVI25_GridSourceBuilder.SLAB_MMAX);
+////		UncertainBoundedIncrMagFreqDist buggy = PRVI25_RegionalSeismicity.getBounded(seisRegion,
+////				slabRefMFD, slabRefMFD.getX(interfaceRefMFD.getClosestXIndex(PRVI25_GridSourceBuilder.SLAB_MMAX)));
+////		System.out.println("Buggy M5 rate: "+(float)buggy.getCumRateDistWithOffset().getY(5d));
+//	}
 	
 	private static void test313() throws IOException {
 		FaultSystemSolution sol = FaultSystemSolution.load(new File("/data/kevin/nshm23/batch_inversions/"
@@ -2838,23 +2838,23 @@ public class PureScratch {
 		tree.write(outFile);
 	}
 	
-	private static void test326() throws IOException {
-		File dir = new File("/home/kevin/OpenSHA/nshm23/batch_inversions/2024_08_16-prvi25_crustal_branches-dmSample5x/");
-		File baSolFile = new File(dir, "results_PRVI_CRUSTAL_FM_V1p1_branch_averaged.zip");
-		FaultSystemSolution baSol = FaultSystemSolution.load(baSolFile);
-		
-		LogicTreeBranch<?> gridBranch = PRVI25_LogicTreeBranch.fromValues(PRVI25_LogicTreeBranch.levelsCrustalOffFault,
-				PRVI25_RegionalSeismicity.PREFFERRED,
-				PRVI25_DeclusteringAlgorithms.AVERAGE,
-				PRVI25_SeisSmoothingAlgorithms.AVERAGE,
-				NSHM23_MaxMagOffFault.MAG_7p6);
-		
-		PRVI25_GridSourceBuilder.doPreGridBuildHook(baSol, baSol.requireModule(LogicTreeBranch.class));
-		GridSourceList gridSources = PRVI25_GridSourceBuilder.buildCrustalGridSourceProv(baSol, gridBranch);
-		baSol.setGridSourceProvider(gridSources);
-		
-		baSol.write(new File("/tmp/prvi_test_grid.zip"));
-	}
+//	private static void test326() throws IOException {
+//		File dir = new File("/home/kevin/OpenSHA/nshm23/batch_inversions/2024_08_16-prvi25_crustal_branches-dmSample5x/");
+//		File baSolFile = new File(dir, "results_PRVI_CRUSTAL_FM_V1p1_branch_averaged.zip");
+//		FaultSystemSolution baSol = FaultSystemSolution.load(baSolFile);
+//		
+//		LogicTreeBranch<?> gridBranch = PRVI25_LogicTreeBranch.fromValues(PRVI25_LogicTreeBranch.levelsCrustalOffFault,
+//				PRVI25_RegionalSeismicity.PREFFERRED,
+//				PRVI25_DeclusteringAlgorithms.AVERAGE,
+//				PRVI25_SeisSmoothingAlgorithms.AVERAGE,
+//				NSHM23_MaxMagOffFault.MAG_7p6);
+//		
+//		PRVI25_GridSourceBuilder.doPreGridBuildHook(baSol, baSol.requireModule(LogicTreeBranch.class));
+//		GridSourceList gridSources = PRVI25_GridSourceBuilder.buildCrustalGridSourceProv(baSol, gridBranch);
+//		baSol.setGridSourceProvider(gridSources);
+//		
+//		baSol.write(new File("/tmp/prvi_test_grid.zip"));
+//	}
 	
 	private static void test327() throws IOException {
 		File dir = new File("/data/kevin/nshm23/batch_inversions/2024_02_02-nshm23_branches-WUS_FM_v3");
@@ -3108,13 +3108,21 @@ public class PureScratch {
 		}
 	}
 	
+	private static void test338() throws IOException {
+		for (ReturnPeriods rp : ReturnPeriods.values()) {
+			System.out.println(rp);
+			System.out.println("prob: "+rp.oneYearProb);
+			System.out.println("equiv RP: "+rp.returnPeriod);
+		}
+	}
+	
 	/**
 	 * @param args
 	 * @throws Exception 
 	 */
 	public static void main(String[] args) throws Exception {
 		try {
-			test337();
+			test338();
 		} catch (Throwable t) {
 			t.printStackTrace();
 			System.exit(1);

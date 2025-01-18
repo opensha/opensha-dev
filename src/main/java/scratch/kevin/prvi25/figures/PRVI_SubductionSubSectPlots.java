@@ -33,6 +33,7 @@ import org.opensha.sha.faultSurface.FaultTrace;
 import org.opensha.sha.faultSurface.RuptureSurface;
 
 import com.google.common.base.Preconditions;
+import com.google.common.collect.MapMaker;
 
 import net.mahdilamb.colormap.Colors;
 import scratch.kevin.prvi25.FaultSystemLineIntegralCalculator;
@@ -110,26 +111,10 @@ public class PRVI_SubductionSubSectPlots {
 			mapMaker.addAnnotation(rangeAnn);
 			mapMaker.plot(outputDir, "subduction_min_mag_"+fm.getFilePrefix(), fmName);
 			
-			Font subInterfaceFont = new Font(Font.SANS_SERIF, Font.BOLD, 18);
-			XYTextAnnotation hspAnn = new XYTextAnnotation("Northern Hispaniola", -69.8, 20.05);
-			hspAnn.setRotationAngle(mapMaker.getRotationAngleCorrectedForAspectRatio(Math.toRadians(18)));
-			hspAnn.setTextAnchor(TextAnchor.BASELINE_CENTER);
-			hspAnn.setFont(subInterfaceFont);
-			mapMaker.addAnnotation(hspAnn);
-			
-			XYTextAnnotation prviAnn = new XYTextAnnotation("Puerto Rico-Virgin Islands", -65.5, 20.05);
-//			prviAnn.setRotationAngle(mapMaker.getRotationAngleCorrectedForAspectRatio(Math.toRadians(20)));
-			prviAnn.setTextAnchor(TextAnchor.BASELINE_CENTER);
-			prviAnn.setFont(subInterfaceFont);
-			mapMaker.addAnnotation(prviAnn);
-			
-			XYTextAnnotation laAnn = new XYTextAnnotation("Lesser Antilles", -62, 19.55);
-			laAnn.setRotationAngle(mapMaker.getRotationAngleCorrectedForAspectRatio(Math.toRadians(23)));
-			laAnn.setTextAnchor(TextAnchor.BASELINE_CENTER);
-			laAnn.setFont(subInterfaceFont);
-			mapMaker.addAnnotation(laAnn);
+			List<XYTextAnnotation> labelAnns = getLabelAnns(mapMaker);
 
-			mapMaker.plot(outputDir, "subduction_min_mag_"+fm.getFilePrefix()+"_names", fmName);
+			mapMaker.setAnnotations(labelAnns);
+			mapMaker.plot(outputDir, "subduction_min_mag_"+fm.getFilePrefix()+"_names", " ");
 			
 			mapMaker.plotSectScalars(maxMags, magCPT, "Maximum Magnitude ("+scaleLabel+")");
 			mapMaker.clearAnnotations();
@@ -139,16 +124,7 @@ public class PRVI_SubductionSubSectPlots {
 			mapMaker.addAnnotation(rangeAnn);
 			mapMaker.plot(outputDir, "subduction_max_mag_"+fm.getFilePrefix(), fmName);
 			
-			Font interfaceFont = new Font(Font.SANS_SERIF, Font.BOLD, 26);
-			XYTextAnnotation carAnn = new XYTextAnnotation("Caribbean Trench", -65.5, 20.05);
-			carAnn.setTextAnchor(TextAnchor.BASELINE_CENTER);
-			carAnn.setFont(interfaceFont);
-			mapMaker.addAnnotation(carAnn);
-			XYTextAnnotation mueAnn = new XYTextAnnotation("Muertos Trough", -68, 17.2);
-			mueAnn.setTextAnchor(TextAnchor.TOP_CENTER);
-			mueAnn.setFont(interfaceFont);
-			mapMaker.addAnnotation(mueAnn);
-			
+			mapMaker.setAnnotations(labelAnns);
 			mapMaker.plot(outputDir, "subduction_max_mag_"+fm.getFilePrefix()+"_names", fmName);
 			
 			mapMaker.clearAnnotations();
@@ -197,6 +173,39 @@ public class PRVI_SubductionSubSectPlots {
 				mapMaker.clearArrows();
 			}
 		}
+	}
+
+	public static List<XYTextAnnotation> getLabelAnns(GeographicMapMaker mapMaker) {
+		List<XYTextAnnotation> labelAnns = new ArrayList<>();
+		Font subInterfaceFont = new Font(Font.SANS_SERIF, Font.BOLD, 18);
+		XYTextAnnotation hspAnn = new XYTextAnnotation("Northern Hispaniola", -69.8, 20.05);
+		hspAnn.setRotationAngle(mapMaker.getRotationAngleCorrectedForAspectRatio(Math.toRadians(18)));
+		hspAnn.setTextAnchor(TextAnchor.BASELINE_CENTER);
+		hspAnn.setFont(subInterfaceFont);
+		labelAnns.add(hspAnn);
+		
+		XYTextAnnotation prviAnn = new XYTextAnnotation("Puerto Rico-Virgin Islands", -65.5, 20.05);
+//			prviAnn.setRotationAngle(mapMaker.getRotationAngleCorrectedForAspectRatio(Math.toRadians(20)));
+		prviAnn.setTextAnchor(TextAnchor.BASELINE_CENTER);
+		prviAnn.setFont(subInterfaceFont);
+		labelAnns.add(prviAnn);
+		
+		XYTextAnnotation laAnn = new XYTextAnnotation("Lesser Antilles", -62, 19.55);
+		laAnn.setRotationAngle(mapMaker.getRotationAngleCorrectedForAspectRatio(Math.toRadians(23)));
+		laAnn.setTextAnchor(TextAnchor.BASELINE_CENTER);
+		laAnn.setFont(subInterfaceFont);
+		labelAnns.add(laAnn);
+		
+		Font interfaceFont = new Font(Font.SANS_SERIF, Font.BOLD, 26);
+		XYTextAnnotation carAnn = new XYTextAnnotation("Caribbean Trench", -65.5, 20.4);
+		carAnn.setTextAnchor(TextAnchor.BASELINE_CENTER);
+		carAnn.setFont(interfaceFont);
+		labelAnns.add(carAnn);
+		XYTextAnnotation mueAnn = new XYTextAnnotation("Muertos Trough", -68, 17.2);
+		mueAnn.setTextAnchor(TextAnchor.TOP_CENTER);
+		mueAnn.setFont(interfaceFont);
+		labelAnns.add(mueAnn);
+		return labelAnns;
 	}
 	
 	public static List<LocationList> buildRakeArrows(FaultSection sect, double slipForMaxLen) {

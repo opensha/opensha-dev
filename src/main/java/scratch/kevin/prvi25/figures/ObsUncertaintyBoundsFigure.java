@@ -24,7 +24,7 @@ import org.opensha.sha.earthquake.rupForecastImpl.prvi25.gridded.SeismicityRateF
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.gridded.SeismicityRateFileLoader.PureGR;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.gridded.SeismicityRateFileLoader.RateRecord;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.gridded.SeismicityRateFileLoader.RateType;
-import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_RegionalSeismicity;
+import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_CrustalSeismicityRate;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.util.PRVI25_RegionLoader.PRVI25_SeismicityRegions;
 import org.opensha.sha.magdist.GutenbergRichterMagFreqDist;
 
@@ -57,7 +57,7 @@ public class ObsUncertaintyBoundsFigure {
 		};
 		
 		for (RateType type : RateType.values()) {
-			List<? extends RateRecord> rates = PRVI25_RegionalSeismicity.loadRates(PRVI25_SeismicityRegions.CRUSTAL, type);
+			List<? extends RateRecord> rates = PRVI25_CrustalSeismicityRate.loadRates(type);
 			
 			RateRecord meanRec = SeismicityRateFileLoader.locateMean(rates);
 			if (m1 == null)
