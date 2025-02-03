@@ -13,6 +13,7 @@ import org.opensha.commons.logicTree.LogicTreeLevel;
 import org.opensha.commons.logicTree.LogicTreeNode;
 import org.opensha.sha.earthquake.faultSysSolution.FaultSystemSolution;
 import org.opensha.sha.earthquake.faultSysSolution.hazard.AbstractLogicTreeHazardCombiner;
+import org.opensha.sha.earthquake.faultSysSolution.hazard.AbstractLogicTreeHazardCombiner.CombinedRupSetMappings;
 import org.opensha.sha.earthquake.faultSysSolution.modules.FaultGridAssociations;
 import org.opensha.sha.earthquake.faultSysSolution.modules.GridSourceList;
 import org.opensha.sha.earthquake.faultSysSolution.modules.GridSourceProvider;
@@ -127,6 +128,9 @@ public class CrustalSubductionTrueMeanCreator {
 			if (gridded) {
 				GridSourceList crustalGridded = crustalSol.requireModule(GridSourceList.class);
 				GridSourceList subductionGridded = subductionSol.requireModule(GridSourceList.class);
+				CombinedRupSetMappings mappings = combined.getRupSet().requireModule(CombinedRupSetMappings.class);
+				crustalGridded = GridSourceList.remapAssociations(crustalGridded, mappings.getInnerSectMappings());
+				subductionGridded = GridSourceList.remapAssociations(subductionGridded, mappings.getOuterSectMappings());
 				combined.setGridSourceProvider(GridSourceList.combine(subductionGridded, crustalGridded));
 			}
 			

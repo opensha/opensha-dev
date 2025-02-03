@@ -192,10 +192,8 @@ public class SubductionInterfaceSlabHazardLogicTreeCombine extends AbstractLogic
 	private static List<LogicTreeLevel<?>> getCommonLevels(LogicTree<?> innerTree) {
 		List<LogicTreeLevel<?>> commonLevels = new ArrayList<>();
 		for (LogicTreeLevel<?> level : innerTree.getLevels()) {
-			// everything is common except GMM branches and rate
-			if (!PRVI25_SubductionMuertosSeismicityRate.class.isAssignableFrom(level.getType())
-					&& !PRVI25_SubductionCaribbeanSeismicityRate.class.isAssignableFrom(level.getType())
-					&& !ScalarIMRsLogicTreeNode.class.isAssignableFrom(level.getType())
+			// everything is common except GMM branches
+			if (!ScalarIMRsLogicTreeNode.class.isAssignableFrom(level.getType())
 					&& !ScalarIMR_ParamsLogicTreeNode.class.isAssignableFrom(level.getType()))
 				commonLevels.add(level);
 		}

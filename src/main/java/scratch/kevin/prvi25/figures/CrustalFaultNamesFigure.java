@@ -66,8 +66,12 @@ class CrustalFaultNamesFigure {
 				labelFont, TextAnchor.TOP_CENTER, 0d, anns, arrows);
 		buildLabelsAndArrows(sects, "Septentrional", false, new Location(19.0, -69.5),
 				labelFont, TextAnchor.TOP_CENTER, 9d, anns, arrows);
-		buildLabelsAndArrows(sects, "South Lajas", false, new Location(17.5, -67.35),
-				labelFont, TextAnchor.TOP_CENTER, 0d, anns, arrows);
+		buildLabelsAndArrows(sects, "South Lajas", false, new Location(17.75, -67.35),
+				labelFont, TextAnchor.CENTER, 0d, anns, arrows);
+		buildLabelsAndArrows(sects, "Mona Passage", false, new Location(17.5, -68.25),
+				labelFont, TextAnchor.CENTER, 0d, anns, arrows);
+		buildLabelsAndArrows(sects, "Great Southern Puerto Rico", false, new Location(17.25, -66.25),
+				labelFont, TextAnchor.CENTER, 0d, anns, arrows);
 		
 		mapMaker.addAnnotations(anns);
 		mapMaker.plotArrows(arrows, 6d, new Color(0, 0, 0, 180), 1f);
@@ -103,7 +107,6 @@ class CrustalFaultNamesFigure {
 				}
 			}
 		}
-		
 		XYTextAnnotation ann = new XYTextAnnotation(plotName, textLoc.getLongitude(), textLoc.getLatitude());
 		ann.setTextAnchor(textAnchor);
 		ann.setFont(font);

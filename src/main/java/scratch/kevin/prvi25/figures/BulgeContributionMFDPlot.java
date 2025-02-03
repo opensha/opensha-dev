@@ -31,6 +31,8 @@ import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_Crusta
 import org.opensha.sha.faultSurface.FaultSection;
 import org.opensha.sha.magdist.IncrementalMagFreqDist;
 
+import com.google.common.base.Preconditions;
+
 import static scratch.kevin.prvi25.figures.PRVI_Paths.*;
 
 public class BulgeContributionMFDPlot {
@@ -38,19 +40,37 @@ public class BulgeContributionMFDPlot {
 	public static void main(String[] args) throws IOException {
 //		FaultSystemSolution sol = FaultSystemSolution.load(new File("/home/kevin/OpenSHA/nshm23/batch_inversions/"
 //				+ "2024_12_12-prvi25_crustal_branches-dmSample5x/results_PRVI_CRUSTAL_FM_V1p1_branch_averaged_gridded.zip"));
-//		FaultSystemSolution sol = FaultSystemSolution.load(CRUSTAL_SOL_GRIDDED);
-		FaultSystemSolution sol = FaultSystemSolution.load(new File("/home/kevin/markdown/inversions/"
-				+ "2025_01_16-prvi25-GEOLOGIC_DIST_AVG_NSHM23_Avg_SupraB0.5_AvgSeg/solution.zip"));
+		FaultSystemSolution sol = FaultSystemSolution.load(CRUSTAL_SOL_GRIDDED);
+//		FaultSystemSolution sol = FaultSystemSolution.load(new File("/home/kevin/markdown/inversions/"
+//				+ "2025_01_16-prvi25-GEOLOGIC_DIST_AVG_NSHM23_Avg_SupraB0.5_AvgSeg/solution.zip"));
 		File outputDir = new File("/tmp");
 		
-		double sortMag = 6.75;
 		
 		EvenlyDiscretizedFunc refMFD = FaultSysTools.initEmptyMFD(2.55, 8.05);
-		int sortMagIndex = refMFD.getClosestXIndex(sortMag);
 		
 		IncrementalMagFreqDist fullMFD = sol.calcNucleationMFD_forRegion(null, refMFD.getMinX(), refMFD.getMaxX(), refMFD.getDelta(), false);
 		
 		UncertainBoundedIncrMagFreqDist obsBounds = PRVI25_CrustalSeismicityRate.loadRateModel().getBounded(refMFD, 8.05);
+		// find the largest bulge;
+		double maxRatio = 0d;
+		double sortMag = Double.NaN;
+		int sortMagIndex = -1;
+		for (int i=0; i<fullMFD.size(); i++) {
+			double mag = fullMFD.getX(i);
+			Preconditions.checkState((float)mag == (float)obsBounds.getX(i));
+			double obsRate = obsBounds.getY(i);
+			double invRate = fullMFD.getY(i);
+			if (invRate > obsRate) {
+				double ratio = invRate / obsRate;
+				if (ratio > maxRatio) {
+					maxRatio = ratio;
+					sortMag = mag;
+					sortMagIndex = i;
+				}
+			}
+		}
+		Preconditions.checkState(sortMagIndex >= 0, "No bulge");
+		System.out.println("Largest bulge is for M"+(float)sortMag+"; ratio="+(float)maxRatio);
 		
 		CPT colors = GMT_CPT_Files.CATEGORICAL_TAB10_NOGRAY.instance();
 		
@@ -138,8 +158,11 @@ public class BulgeContributionMFDPlot {
 			funcs.add(obsUpper);
 			chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, Color.GRAY));
 			
+			System.out.println("Sorted faults (remapped="+remapped+")");
 			for (int i=0; i<sortedParents.size(); i++) {
-				funcs.add(parentParticMFDs.get(sortedParents.get(i)));
+				IncrementalMagFreqDist mfd = parentParticMFDs.get(sortedParents.get(i));
+				System.out.println("\t"+mfd.getName());
+				funcs.add(mfd);
 				chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 2f, colors.get(i).minColor));
 			}
 			

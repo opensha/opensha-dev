@@ -173,7 +173,16 @@ public class DefModelSampleLineIntegralsPlot {
 				
 				String plotPrefix = prefix+"_"+components[c].name();
 				if (individual) {
-					lowerIntegrals[c].setName("Original Extrema");
+					plotPrefix += "_indv";
+					for (int i=0; i<randIndexes.size(); i++) {
+						DiscretizedFunc func = randIntegralsList.get(randIndexes.get(i))[c];
+						func.setName(i == 0 ? randIndexes.size()+" random examples" : null);
+						funcs.add(func);
+						chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1.5f,
+								randColorCPT == null ? Color.BLACK : randColorCPT.get(i % randColorCPT.size()).minColor));
+					}
+					
+					lowerIntegrals[c].setName("Original extrema");
 					funcs.add(lowerIntegrals[c]);
 					chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 3f, Color.BLACK));
 					
@@ -184,15 +193,6 @@ public class DefModelSampleLineIntegralsPlot {
 					upperIntegrals[c].setName(null);
 					funcs.add(upperIntegrals[c]);
 					chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 3f, Color.BLACK));
-					
-					plotPrefix += "_indv";
-					for (int i=0; i<randIndexes.size(); i++) {
-						DiscretizedFunc func = randIntegralsList.get(randIndexes.get(i))[c];
-						func.setName(i == 0 ? randIndexes.size()+" Random Examples" : null);
-						funcs.add(func);
-						chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1.5f,
-								randColorCPT == null ? Color.BLACK : randColorCPT.get(i % randColorCPT.size()).minColor));
-					}
 				} else {
 					lowerIntegrals[c].setName("All Low");
 					funcs.add(lowerIntegrals[c]);
@@ -215,7 +215,8 @@ public class DefModelSampleLineIntegralsPlot {
 				
 				PlotSpec plot = new PlotSpec(funcs, chars, titles ? "Deformation Model Line Integrals" : " ", "Longitude",
 						components[c].label+" Summed Rate (mm/yr)");
-				plot.setLegendInset(RectangleAnchor.TOP_RIGHT, 0.975, 0.975, 0.9, false);
+//				plot.setLegendInset(RectangleAnchor.TOP_RIGHT, 0.975, 0.975, 0.9, false);
+				plot.setLegendInset(RectangleAnchor.TOP_LEFT);
 				
 				Range yRange = FaultSystemLineIntegralCalculator.getPlotYRange(plot);
 				

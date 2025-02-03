@@ -82,6 +82,7 @@ import org.opensha.sha.earthquake.rupForecastImpl.nshm23.prior2018.NSHM18_LogicT
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.util.NSHM23_RegionLoader;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_LogicTreeBranch;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_SubductionFaultModels;
+import org.opensha.sha.earthquake.rupForecastImpl.prvi25.util.PRVI25_RegionLoader;
 import org.opensha.sha.imr.AttenRelRef;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.PRVI25_InvConfigFactory;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_CrustalDeformationModels;
@@ -626,11 +627,11 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 		 * PRVI25 logic tree
 		 * TODO (this is a just a marker to find this part quickly, not an actual todo)
 		 */
-//		List<LogicTreeLevel<? extends LogicTreeNode>> levels = PRVI25_LogicTreeBranch.levelsOnFault;
-//		dirName += "-prvi25_crustal_branches";
-//		double avgNumRups = 50000;
-//		gmpes = new AttenRelRef[] { AttenRelRef.USGS_PRVI_ACTIVE };
-//		
+		List<LogicTreeLevel<? extends LogicTreeNode>> levels = PRVI25_LogicTreeBranch.levelsOnFault;
+		dirName += "-prvi25_crustal_branches";
+		double avgNumRups = 50000;
+		gmpes = new AttenRelRef[] { AttenRelRef.USGS_PRVI_ACTIVE };
+		
 //		// random DM sampling
 //		levels = new ArrayList<>(levels);
 //		int origNumLevels = levels.size();
@@ -648,10 +649,10 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 //		if (samplingBranchCountMultiplier > 1)
 //			dirName += samplingBranchCountMultiplier+"x";
 		
-		List<LogicTreeLevel<? extends LogicTreeNode>> levels = PRVI25_LogicTreeBranch.levelsSubduction;
-		dirName += "-prvi25_subduction_branches";
-		double avgNumRups = 10000;
-		gmpes = new AttenRelRef[] { AttenRelRef.USGS_PRVI_INTERFACE, AttenRelRef.USGS_PRVI_SLAB };
+//		List<LogicTreeLevel<? extends LogicTreeNode>> levels = PRVI25_LogicTreeBranch.levelsSubduction;
+//		dirName += "-prvi25_subduction_branches";
+//		double avgNumRups = 10000;
+//		gmpes = new AttenRelRef[] { AttenRelRef.USGS_PRVI_INTERFACE, AttenRelRef.USGS_PRVI_SLAB };
 		
 //		levels = new ArrayList<>(levels);
 //		levels.add(NSHM23_LogicTreeBranch.SUB_SECT_CONSTR);
@@ -704,7 +705,7 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 //				RupturePlausibilityModels.COULOMB_5km,
 				
 				// DEFORMATION MODELS
-//				PRVI25_CrustalDeformationModels.GEOLOGIC,
+				PRVI25_CrustalDeformationModels.GEOLOGIC,
 //				PRVI25_CrustalDeformationModels.GEOLOGIC_DIST_AVG,
 				
 				// SCALING RELATIONSHIPS
@@ -1177,13 +1178,7 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 						sites.add(new Site(site.location(), site.toString()));
 				}
 			} else if (fm instanceof PRVI25_CrustalFaultModels || fm instanceof PRVI25_SubductionFaultModels) {
-				CSVFile<String> csv = CSVFile.readStream(PRVI25_CrustalFaultModels.class.getResourceAsStream("/data/erf/prvi25/sites/prvi_sites.csv"), true);
-				sites = new ArrayList<>();
-				for (int row=1; row<csv.getNumRows(); row++) {
-					String name = csv.get(row, 0);
-					Location loc = new Location(csv.getDouble(row, 1), csv.getDouble(row, 2));
-					sites.add(new Site(loc, name));
-				}
+				sites = PRVI25_RegionLoader.loadHazardSites();
 			}
 			if (sites != null && !sites.isEmpty()) {
 				CSVFile<String> csv = new CSVFile<>(true);

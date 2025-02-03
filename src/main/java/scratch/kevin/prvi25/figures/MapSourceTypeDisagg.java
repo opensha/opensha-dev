@@ -123,40 +123,12 @@ public class MapSourceTypeDisagg {
 		
 		List<String> lines = new ArrayList<>();
 		
-		XY_DataSet[] polBounds = PoliticalBoundariesData.loadDefaultOutlines(gridReg);
-		GeographicMapMaker mapMaker = new GeographicMapMaker(gridReg, polBounds);
+		GeographicMapMaker mapMaker = new GeographicMapMaker(gridReg);
 		mapMaker.setWritePDFs(true);
 		mapMaker.setWriteGeoJSON(false);
 		
 		GriddedGeoDataSet mask = null;
-		mask = new GriddedGeoDataSet(gridReg);
-		for (XY_DataSet polBound : polBounds) {
-			LocationList list = new LocationList();
-			for (Point2D pt : polBound)
-				list.add(new Location(pt.getY(), pt.getX()));
-			Region reg = new Region(list, BorderType.MERCATOR_LINEAR);
-			double halfLatSpacing = gridReg.getLatSpacing()*0.5;
-			double halfLonSpacing = gridReg.getLonSpacing()*0.5;
-			for (int i=0; i<gridReg.getNodeCount(); i++) {
-				if (mask.get(i) == 1d)
-					continue;
-				Location center = gridReg.getLocation(i);
-				Location[] testLocs = {
-						center,
-						new Location(center.lat+halfLatSpacing, center.lon+halfLonSpacing),
-						new Location(center.lat+halfLatSpacing, center.lon-halfLonSpacing),
-						new Location(center.lat-halfLatSpacing, center.lon+halfLonSpacing),
-						new Location(center.lat-halfLatSpacing, center.lon-halfLonSpacing),
-				};
-				for (Location loc : testLocs) {
-					if (reg.contains(loc)) {
-						mask.set(i, 1d);
-						break;
-					}
-				}
-			}
-		}
-		System.out.println("Mask kept "+(float)(100d*mask.getSumZ()/gridReg.getNodeCount())+" % of locations");
+		mask = buildLandMask(gridReg);
 		
 		lines.add("# PRVI Map Disaggregations");
 		lines.add("");
@@ -479,6 +451,39 @@ public class MapSourceTypeDisagg {
 		
 		if (texFW != null)
 			texFW.close();
+	}
+
+	public static GriddedGeoDataSet buildLandMask(GriddedRegion gridReg) {
+		GriddedGeoDataSet mask;
+		mask = new GriddedGeoDataSet(gridReg);
+		for (XY_DataSet polBound : PoliticalBoundariesData.loadDefaultOutlines(gridReg)) {
+			LocationList list = new LocationList();
+			for (Point2D pt : polBound)
+				list.add(new Location(pt.getY(), pt.getX()));
+			Region reg = new Region(list, BorderType.MERCATOR_LINEAR);
+			double halfLatSpacing = gridReg.getLatSpacing()*0.5;
+			double halfLonSpacing = gridReg.getLonSpacing()*0.5;
+			for (int i=0; i<gridReg.getNodeCount(); i++) {
+				if (mask.get(i) == 1d)
+					continue;
+				Location center = gridReg.getLocation(i);
+				Location[] testLocs = {
+						center,
+						new Location(center.lat+halfLatSpacing, center.lon+halfLonSpacing),
+						new Location(center.lat+halfLatSpacing, center.lon-halfLonSpacing),
+						new Location(center.lat-halfLatSpacing, center.lon+halfLonSpacing),
+						new Location(center.lat-halfLatSpacing, center.lon-halfLonSpacing),
+				};
+				for (Location loc : testLocs) {
+					if (reg.contains(loc)) {
+						mask.set(i, 1d);
+						break;
+					}
+				}
+			}
+		}
+		System.out.println("Mask kept "+(float)(100d*mask.getSumZ()/gridReg.getNodeCount())+" % of locations");
+		return mask;
 	}
 
 }

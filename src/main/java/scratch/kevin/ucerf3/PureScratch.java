@@ -233,6 +233,7 @@ import scratch.UCERF3.erf.ETAS.launcher.TriggerRupture.EdgeFault;
 import scratch.UCERF3.griddedSeismicity.AbstractGridSourceProvider;
 import scratch.kevin.nshm23.dmCovarianceTests.RandomDefModSampleLevel;
 import scratch.kevin.pointSources.InvCDF_RJBCorrPointSurface;
+import scratch.kevin.prvi25.figures.PRVI_Paths;
 import scratch.kevin.simulators.RSQSimCatalog;
 import scratch.kevin.simulators.RSQSimCatalog.Catalogs;
 import scratch.kevin.simulators.ruptures.RSQSimGeographicMapMaker;
@@ -3116,13 +3117,40 @@ public class PureScratch {
 		}
 	}
 	
+	private static void test339() throws IOException {
+		FaultSystemSolution sol = FaultSystemSolution.load(PRVI_Paths.COMBINED_SOL);
+		GridSourceList gridList = sol.requireModule(GridSourceList.class);
+		for (int l=0; l<gridList.getNumLocations(); l++) {
+			for (GriddedRupture rup : gridList.getRuptures(TectonicRegionType.SUBDUCTION_INTERFACE, l)) {
+				Preconditions.checkNotNull(rup.associatedSections);
+				if (rup.associatedSections.length != 1) {
+					System.err.println("Unexpected number of associations: "+rup.associatedSections.length);
+					for (int sect : rup.associatedSections)
+						System.err.println("\t"+sect+". "+sol.getRupSet().getFaultSectionData(sect).getSectionName());
+					throw new IllegalStateException();
+				}
+			}
+		}
+		System.out.println("All good");
+	}
+	
+	private static void test340() throws IOException {
+		FaultSystemSolution sol = FaultSystemSolution.load(
+				new File("/home/kevin/git/ucerf3-etas-launcher/inputs/"
+						+ "2013_05_10-ucerf3p3-production-10runs_COMPOUND_SOL_FM3_1_SpatSeisU3_MEAN_BRANCH_AVG_SOL.zip"));
+		sol.setGridSourceProvider(GridSourceList.convert((MFDGridSourceProvider)sol.getGridSourceProvider(),
+				sol.getRupSet().requireModule(FaultGridAssociations.class), new NSHM23_WUS_FiniteRuptureConverter()));
+		
+		sol.write(new File("/tmp/u3_sol_with_grid_source_list.zip"));
+	}
+	
 	/**
 	 * @param args
 	 * @throws Exception 
 	 */
 	public static void main(String[] args) throws Exception {
 		try {
-			test338();
+			test340();
 		} catch (Throwable t) {
 			t.printStackTrace();
 			System.exit(1);

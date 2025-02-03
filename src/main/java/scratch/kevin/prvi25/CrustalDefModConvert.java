@@ -24,14 +24,17 @@ import org.opensha.sha.faultSurface.GeoJSONFaultSection;
 
 import com.google.common.base.Preconditions;
 
-public class InitialDefModConvert {
+public class CrustalDefModConvert {
 
 	public static void main(String[] args) throws IOException {
 		File dir = new File("/home/kevin/workspace/opensha/src/main/resources/data/erf/prvi25/fault_models/crustal");
 //		File dir = new File("C:\\Users\\kmilner\\git\\opensha\\opensha\\src\\main\\resources\\data\\erf\\prvi25\\fault_models\\initial");
-		File inputFile = new File(dir, "NSHM2025_GeoDefModel_PRVI_v1-1.geojson");
+//		File inputFile = new File(dir, "NSHM2025_GeoDefModel_PRVI_v1-1.geojson");
+//		File inputPolys = new File(dir, "NSHM2025_FaultPolygons_PRVI_v1.geojson");
+//		File outputFile = new File(dir, "NSHM2025_GeoDefModel_PRVI_v1-1_mod.geojson");
+		File inputFile = new File(dir, "NSHM2025_GeoDefModel_PRVI_v1-1_ProjRates.geojson");
 		File inputPolys = new File(dir, "NSHM2025_FaultPolygons_PRVI_v1.geojson");
-		File outputFile = new File(dir, "NSHM2025_GeoDefModel_PRVI_v1-1_mod.geojson");
+		File outputFile = new File(dir, "NSHM2025_GeoDefModel_PRVI_v1-2_ProjRates_mod.geojson");
 		List<Feature> features = new ArrayList<>(FeatureCollection.read(inputFile).features);
 		List<Feature> polyFeatures = new ArrayList<>(FeatureCollection.read(inputPolys).features);
 		
@@ -73,8 +76,8 @@ public class InitialDefModConvert {
 			String origID = props.getString("FaultID");
 			Preconditions.checkNotNull(origID);
 			
-			String name = props.getString("Fault");
-			props.remove("Fault");
+			String name = props.getString("FaultName");
+			props.remove("FaultName");
 			props.set(GeoJSONFaultSection.FAULT_NAME, name);
 			
 			System.out.println("Processing "+id+". "+origID+": "+name);
@@ -87,9 +90,11 @@ public class InitialDefModConvert {
 			double upDepth = props.getDouble("UpDep", Double.NaN);
 			props.remove("UpDep");
 			props.set(GeoJSONFaultSection.UPPER_DEPTH, upDepth);
-			
-			double lowDepth = props.getDouble("LowerDep", Double.NaN);
-			props.remove("LowerDep");
+
+			double lowDepth = props.getDouble("LowerDepth", Double.NaN);
+			props.remove("LowerDepth");
+//			double lowDepth = props.getDouble("LowerDep", Double.NaN);
+//			props.remove("LowerDep");
 			props.set(GeoJSONFaultSection.LOW_DEPTH, lowDepth);
 			
 			double dip = props.getDouble("FaultDip", Double.NaN);
@@ -99,20 +104,27 @@ public class InitialDefModConvert {
 			
 			props.remove("DipDir");
 			
-			double slip = props.getDouble("PrefSlpRat", Double.NaN);
-			props.remove("PrefSlpRat");
+			double slip = props.getDouble("PrefRate_Projected", Double.NaN);
+			props.remove("PrefRate_Projected");
+//			double slip = props.getDouble("PrefSlpRat", Double.NaN);
+//			props.remove("PrefSlpRat");
 			props.set(GeoJSONFaultSection.SLIP_RATE, slip);
-			
-			double lowSlip = props.getDouble("MinSlpRat", Double.NaN);
-			props.remove("MinSlpRat");
+
+			double lowSlip = props.getDouble("MinRate_Projected", Double.NaN);
+			props.remove("MinRate_Projected");
+//			double lowSlip = props.getDouble("MinSlpRat", Double.NaN);
+//			props.remove("MinSlpRat");
 			props.set("LowRate", lowSlip);
-			
-			double highSlip = props.getDouble("MaxSlpRat", Double.NaN);
-			props.remove("MaxSlpRat");
+
+			double highSlip = props.getDouble("MaxRate_Projected", Double.NaN);
+			props.remove("MaxRate_Projected");
+//			double highSlip = props.getDouble("MaxSlpRat", Double.NaN);
+//			props.remove("MaxSlpRat");
 			props.set("HighRate", highSlip);
 			
 			double rake = props.getDouble("Rake", Double.NaN);
 			FaultUtils.assertValidRake(rake);
+			props.set("Rake", rake);
 			
 			LineString trace;
 			if (feature.geometry.type == GeoJSON_Type.MultiLineString) {

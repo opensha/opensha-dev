@@ -47,6 +47,7 @@ import org.opensha.sha.earthquake.rupForecastImpl.nshm23.prior2018.NSHM18_FaultM
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.prior2018.NSHM18_LogicTreeBranch;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.PRVI25_InvConfigFactory;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_CrustalDeformationModels;
+import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_CrustalFaultModels;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_LogicTreeBranch;
 import org.opensha.sha.faultSurface.FaultSection;
 import org.opensha.sha.magdist.IncrementalMagFreqDist;
@@ -152,6 +153,7 @@ public class HardcodedInversionFactoryRunner {
 		branch.setValue(NSHM23_SegmentationModels.AVERAGE);
 //		branch.setValue(SupraSeisBValues.AVERAGE);
 		branch.setValue(NSHM23_ScalingRelationships.AVERAGE);
+		branch.setValue(PRVI25_CrustalFaultModels.PRVI_CRUSTAL_FM_V1p2);
 		branch.setValue(PRVI25_CrustalDeformationModels.GEOLOGIC_DIST_AVG);
 		
 //		branch.setValue(NSHM23_SegmentationModels.CLASSIC);

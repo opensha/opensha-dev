@@ -11,6 +11,7 @@ import org.apache.commons.math3.geometry.euclidean.threed.Vector3D;
 import org.jfree.chart.annotations.XYTextAnnotation;
 import org.jfree.chart.ui.RectangleAnchor;
 import org.jfree.chart.ui.TextAnchor;
+import org.opensha.commons.data.function.XY_DataSet;
 import org.opensha.commons.geo.Location;
 import org.opensha.commons.geo.LocationList;
 import org.opensha.commons.geo.LocationUtils;
@@ -18,8 +19,10 @@ import org.opensha.commons.geo.Region;
 import org.opensha.commons.gui.plot.GeographicMapMaker;
 import org.opensha.commons.gui.plot.HeadlessGraphPanel;
 import org.opensha.commons.gui.plot.PlotCurveCharacterstics;
+import org.opensha.commons.gui.plot.PlotElement;
 import org.opensha.commons.gui.plot.PlotLineType;
 import org.opensha.commons.gui.plot.PlotSpec;
+import org.opensha.commons.gui.plot.PlotSymbol;
 import org.opensha.commons.gui.plot.PlotUtils;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_CrustalFaultModels;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_SubductionDeformationModels;
@@ -56,6 +59,7 @@ public class TectonicSettingPlot {
 		List<FaultSection> allSects = new ArrayList<>();
 		List<PlotCurveCharacterstics> allSectChars = new ArrayList<>();
 		PlotCurveCharacterstics crustalChar = new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, Color.DARK_GRAY);
+		PlotCurveCharacterstics polyChar = new PlotCurveCharacterstics(PlotLineType.POLYGON_SOLID, 1f, new Color(0, 0, 0, 30));
 		PlotCurveCharacterstics subChar = new PlotCurveCharacterstics(PlotLineType.SOLID, 6f, Color.DARK_GRAY);
 		allSects.addAll(PRVI25_CrustalFaultModels.PRVI_CRUSTAL_FM_V1p1.getFaultSections());
 		while (allSectChars.size() < allSects.size())
@@ -65,10 +69,15 @@ public class TectonicSettingPlot {
 			allSectChars.add(subChar);
 		mapMaker.setFaultSections(allSects);
 		mapMaker.setSectOutlineChar(null);
-		mapMaker.setPlotProxySectPolys(false);
+		mapMaker.setPlotProxySectPolys(polyChar != null);
 		mapMaker.plotSectChars(allSectChars);
 		legendItems.add("Crustal traces");
 		legendChars.add(crustalChar);
+		if (polyChar != null) {
+			mapMaker.setSectPolygonChar(polyChar);
+			legendItems.add("Crustal zones");
+			legendChars.add(new PlotCurveCharacterstics(PlotSymbol.FILLED_SQUARE, 7f, polyChar.getColor()));
+		}
 		legendItems.add("Inteface traces");
 		legendChars.add(subChar);
 		
@@ -96,12 +105,12 @@ public class TectonicSettingPlot {
 //		legendItems.add("Map Region");
 //		legendChars.add(outlines.get(outlines.size()-1));
 		Font mapRegFont = new Font(Font.SANS_SERIF, Font.PLAIN, 20);
-		XYTextAnnotation mapRegAnn = new XYTextAnnotation("Map region", mapRegion.getMaxLon(), mapRegion.getMaxLat());
+		XYTextAnnotation mapRegAnn = new XYTextAnnotation("Assessment region", mapRegion.getMaxLon(), mapRegion.getMaxLat());
 		mapRegAnn.setTextAnchor(TextAnchor.BOTTOM_RIGHT);
 		mapRegAnn.setFont(mapRegFont);
 		mapMaker.addAnnotation(mapRegAnn);
 		
-		PlotCurveCharacterstics interfaceChar = new PlotCurveCharacterstics(PlotLineType.SOLID, 3f, Colors.tab_blue);
+		PlotCurveCharacterstics interfaceChar = new PlotCurveCharacterstics(PlotLineType.SHORT_DASHED, 3f, Colors.tab_blue);
 		PlotCurveCharacterstics slabChar = new PlotCurveCharacterstics(PlotLineType.SOLID, 3f, Colors.tab_green);
 		
 		regions.add(PRVI25_SeismicityRegions.CAR_INTRASLAB.load());
@@ -125,12 +134,12 @@ public class TectonicSettingPlot {
 		fills.add(null);
 		
 		Font interfaceFont = new Font(Font.SANS_SERIF, Font.BOLD, 22);
-		XYTextAnnotation carAnn = new XYTextAnnotation("Caribbean Trench", -65.5, 20.05);
+		XYTextAnnotation carAnn = new XYTextAnnotation("Caribbean trench", -65.5, 20.05);
 		carAnn.setTextAnchor(TextAnchor.BASELINE_CENTER);
 		carAnn.setFont(interfaceFont);
 		carAnn.setPaint(subChar.getColor());
 		mapMaker.addAnnotation(carAnn);
-		XYTextAnnotation mueAnn = new XYTextAnnotation("Muertos Trough", -68, 17.2);
+		XYTextAnnotation mueAnn = new XYTextAnnotation("Muertos trough", -68, 17.2);
 		mueAnn.setTextAnchor(TextAnchor.TOP_CENTER);
 		mueAnn.setFont(interfaceFont);
 		mueAnn.setPaint(subChar.getColor());
@@ -183,6 +192,10 @@ public class TectonicSettingPlot {
 		mapMaker.plot(outputDir, "tectonic_setting", " ");
 		PlotSpec plot = mapMaker.buildPlot(" ");
 		plot.setLegendInset(RectangleAnchor.BOTTOM_LEFT, 0.05, 0.05, 0.55, false);
+		
+		for (PlotElement elem : plot.getPlotElems())
+			if (elem instanceof XY_DataSet && ((XY_DataSet)elem).getName().contains("Proxy Fault"))
+				((XY_DataSet)elem).setName(null);
 		
 		HeadlessGraphPanel gp = PlotUtils.initHeadless();
 		

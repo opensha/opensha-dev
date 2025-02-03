@@ -1,8 +1,12 @@
 package scratch.kevin.prvi25;
 
+import static scratch.kevin.prvi25.figures.PRVI_Paths.FIGURES_DIR;
+
 import java.awt.Color;
 import java.io.File;
+import java.io.FileWriter;
 import java.io.IOException;
+import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -15,6 +19,7 @@ import org.opensha.commons.geo.Location;
 import org.opensha.commons.geo.LocationUtils;
 import org.opensha.commons.gui.plot.GeographicMapMaker;
 import org.opensha.commons.mapping.gmt.elements.GMT_CPT_Files;
+import org.opensha.commons.util.DataUtils.MinMaxAveTracker;
 import org.opensha.commons.util.MarkdownUtils;
 import org.opensha.commons.util.MarkdownUtils.TableBuilder;
 import org.opensha.commons.util.cpt.CPT;
@@ -28,8 +33,10 @@ import org.opensha.sha.earthquake.rupForecastImpl.prvi25.util.PRVI25_RegionLoade
 
 import com.google.common.base.Preconditions;
 
+import scratch.kevin.latex.LaTeXUtils;
 import scratch.kevin.nshm23.figures.MethodsAndIngredientsHazChangeFigures;
 import scratch.kevin.nshm23.figures.WUS_HazardChangePageGen;
+import scratch.kevin.prvi25.figures.MapSourceTypeDisagg;
 import scratch.kevin.prvi25.figures.PRVI_Paths;
 
 public class HazardComp2003PageGen {
@@ -72,7 +79,7 @@ public class HazardComp2003PageGen {
 		File outputDir = new File(combinedDir, "nshm03_erf_comparisons_"+imtDir);
 		double sourceSpacing = 0.01;
 		File sourcesDir03 = new File("/home/kevin/OpenSHA/nshm23/nshmp-haz-models/ext_hazard_calcs/"
-				+ "prvi-t12-2003-ERF-2025-GMMs-vB1-2025conf-0p01-vs760-20250113-1008e874e6a289/vs30-760/"+imtDir+"/source");
+				+ "prvi-t14-2003-ERF-2025-GMMs-v157-2025conf-0p01ext-vs760-20250128-8583ec0cfc90a1/vs30-760/"+imtDir+"/source");
 
 		System.out.println("Output dir: "+outputDir.getAbsolutePath());
 		Preconditions.checkState(outputDir.exists() || outputDir.mkdir());
@@ -81,6 +88,10 @@ public class HazardComp2003PageGen {
 		
 		GriddedRegion mapReg = new GriddedRegion(PRVI25_RegionLoader.loadPRVI_MapExtents(),
 				sourceSpacing, GriddedRegion.ANCHOR_0_0);
+		GriddedGeoDataSet landMask = MapSourceTypeDisagg.buildLandMask(mapReg);
+		
+		File texFile = new File(resourcesDir, "stats.tex");
+		FileWriter texFW = new FileWriter(texFile);
 		
 		DiscretizedFunc[] crustalFault25 = loadRegularCurves(inputDirCrustal25, IncludeBackgroundOption.EXCLUDE, mapReg, period);
 		DiscretizedFunc[] crustalGrid25 = loadRegularCurves(inputDirCrustal25, IncludeBackgroundOption.ONLY, mapReg, period);
@@ -127,7 +138,8 @@ public class HazardComp2003PageGen {
 		CPT hazCPT = GMT_CPT_Files.RAINBOW_UNIFORM.instance().rescale(-1.5, 0.5);
 		hazCPT.setNanColor(transparent);
 		
-		CPT pDiffCPT = MethodsAndIngredientsHazChangeFigures.getCenterMaskedCPT(GMT_CPT_Files.DIVERGING_VIK_UNIFORM.instance(), 10d, 50d);
+//		CPT pDiffCPT = MethodsAndIngredientsHazChangeFigures.getCenterMaskedCPT(GMT_CPT_Files.DIVERGING_VIK_UNIFORM.instance(), 10d, 50d);
+		CPT pDiffCPT = GMT_CPT_Files.DIVERGING_VIK_UNIFORM.instance().rescale(-50d, 50d);
 		pDiffCPT.setNanColor(transparent);
 		
 		CPT diffCPT = GMT_CPT_Files.DIVERGING_BAM_UNIFORM.instance().reverse().rescale(-0.2d, 0.2d);
@@ -186,11 +198,12 @@ public class HazardComp2003PageGen {
 		
 		for (CompType type : CompType.values()) {
 			DiscretizedFunc[] curves25, curves03;
-			String label, description;
+			String label, description, texPrefix;
 			String mapLabelAdd;
 			
 			switch (type) {
 			case TOTAL:
+				texPrefix = "HazardChangeTotal";
 				curves25 = full25;
 				curves03 = full03;
 				label = "Full Model Comparison";
@@ -198,6 +211,7 @@ public class HazardComp2003PageGen {
 				mapLabelAdd = "";
 				break;
 			case CRUSTAL_FAULTS:
+				texPrefix = "HazardChangeCrustalFault";
 				curves25 = full25;
 				curves03 = withCrustalFaults03;
 				label = "Crustal Fault-Only Comparison";
@@ -205,6 +219,7 @@ public class HazardComp2003PageGen {
 				mapLabelAdd = "Crustal Faults, ";
 				break;
 			case CRUSTAL_GRIDDED:
+				texPrefix = "HazardChangeCrustalGridded";
 				curves25 = full25;
 				curves03 = withCrustalGrid03;
 				label = "Crustal Gridded-Only Comparison";
@@ -212,6 +227,7 @@ public class HazardComp2003PageGen {
 				mapLabelAdd = "Crustal Gridded, ";
 				break;
 			case CRUSTAL:
+				texPrefix = "HazardChangeCrustal";
 				curves25 = full25;
 				curves03 = withCrustal03;
 				label = "Crustal-Only (Fault & Gridded) Comparison";
@@ -219,6 +235,7 @@ public class HazardComp2003PageGen {
 				mapLabelAdd = "Crustal, ";
 				break;
 			case INTERFACE:
+				texPrefix = "HazardChangeInterface";
 				curves25 = full25;
 				curves03 = withInterface03;
 				label = "Interface-Only Comparison";
@@ -226,6 +243,7 @@ public class HazardComp2003PageGen {
 				mapLabelAdd = "Interface, ";
 				break;
 			case SLAB:
+				texPrefix = "HazardChangeSlab";
 				curves25 = full25;
 				curves03 = withSlab03;
 				label = "Slab-Only Comparison";
@@ -288,6 +306,36 @@ public class HazardComp2003PageGen {
 				
 				lines.addAll(table.build());
 				lines.add("");
+				
+				table = MarkdownUtils.tableBuilder();
+				table.addLine("", "Average % Change", "% Change Range", "Average Difference", "Difference Range");
+				
+				for (boolean land : new boolean[] {false,true}) {
+					for (boolean abs : new boolean[] {false,true}) {
+						MinMaxAveTracker diffStats = mapStats(diff, abs, land ? landMask : null);
+						MinMaxAveTracker pDiffStats = mapStats(pDiff, abs, land ? landMask : null);
+						String tableLabel = land ? "On land" : "Full map";
+						if (abs)
+							tableLabel += ", absolute value";
+						table.addLine("__"+tableLabel+"__",
+								withPercentAndPlusIfPositive(pDiffStats.getAverage()),
+								"["+withPercentAndPlusIfPositive(pDiffStats.getMin())+", "+withPercentAndPlusIfPositive(pDiffStats.getMax())+"]",
+								twoDigits.format(diffStats.getAverage()),
+								"["+twoDigits.format(diffStats.getMin())+", "+twoDigits.format(diffStats.getMax())+"]");
+						
+						if (land && rp == ReturnPeriods.TWO_IN_50) {
+							String myPrefix = texPrefix;
+							if (abs)
+								myPrefix += "Abs";
+							texFW.write(LaTeXUtils.defineValueCommand(myPrefix+"Average", withPercent(pDiffStats.getAverage()))+"\n");
+							texFW.write(LaTeXUtils.defineValueCommand(myPrefix+"Min", withPercent(pDiffStats.getMin()))+"\n");
+							texFW.write(LaTeXUtils.defineValueCommand(myPrefix+"Max", withPercent(pDiffStats.getMax()))+"\n");
+						}
+					}
+				}
+				
+				lines.addAll(table.build());
+				lines.add("");
 			}
 		}
 		
@@ -297,6 +345,36 @@ public class HazardComp2003PageGen {
 
 		// write markdown
 		MarkdownUtils.writeReadmeAndHTML(lines, outputDir);
+		
+		texFW.close();
+	}
+	
+	private static final DecimalFormat oneDigit = new DecimalFormat("0.0");
+	private static final DecimalFormat twoDigits = new DecimalFormat("0.00");
+	
+	private static String withPercent(double percent) {
+		return oneDigit.format(percent)+"%";
+	}
+	
+	private static String withPercentAndPlusIfPositive(double percent) {
+		String ret = withPercent(percent);
+		if (percent > 0)
+			ret = "+"+ret;
+		return ret;
+	}
+	
+	private static MinMaxAveTracker mapStats(GriddedGeoDataSet map, boolean abs, GriddedGeoDataSet mask) {
+		MinMaxAveTracker track = new MinMaxAveTracker();
+		for (int i=0; i<map.size(); i++) {
+			if (mask != null && mask.get(i) != 1d)
+				continue;
+			double val = map.get(i);
+			if (abs)
+				val = Math.abs(val);
+			if (Double.isFinite(val))
+				track.addValue(val);
+		}
+		return track;
 	}
 	
 	private static DiscretizedFunc[] loadRegularCurves(File runDir, IncludeBackgroundOption bgOp,
@@ -348,13 +426,25 @@ public class HazardComp2003PageGen {
 		return curves;
 	}
 	
+	private static double[] getXVals(DiscretizedFunc[] curves) {
+		for (DiscretizedFunc curve : curves) {
+			if (curve != null) {
+				double[] xVals = new double[curve.size()];
+				for (int i=0; i<xVals.length; i++)
+					xVals[i] = curve.getX(i);
+				return xVals;
+			}
+		}
+		throw new IllegalStateException("All curves are null");
+	}
+	
 	private static DiscretizedFunc[] ratesToProbs(DiscretizedFunc[] curves) {
 		DiscretizedFunc[] ret = new DiscretizedFunc[curves.length];
-		double[] xVals = new double[curves[0].size()];
-		for (int i=0; i<xVals.length; i++)
-			xVals[i] = curves[0].getX(i);
+		double[] xVals = getXVals(curves);
 		for (int n=0; n<curves.length; n++) {
 			DiscretizedFunc curve = curves[n];
+			if (curve == null)
+				continue;
 			double[] probs = new double[xVals.length];
 			for (int i=0; i<probs.length; i++)
 				probs[i] = 1d - Math.exp(-curve.getY(i));
@@ -370,6 +460,8 @@ public class HazardComp2003PageGen {
 			xVals[i] = targetSpacing.getX(i);
 		for (int n=0; n<curves.length; n++) {
 			DiscretizedFunc curve = curves[n];
+			if (curve == null)
+				continue;
 			double[] interpY = new double[xVals.length];
 			for (int i=0; i<interpY.length; i++) {
 				double x = xVals[i];
@@ -388,14 +480,16 @@ public class HazardComp2003PageGen {
 	private static DiscretizedFunc[] add(DiscretizedFunc[]... allCurves) {
 		DiscretizedFunc[] ret = new DiscretizedFunc[allCurves[0].length];
 		
-		double[] xVals = new double[allCurves[0][0].size()];
-		for (int i=0; i<xVals.length; i++)
-			xVals[i] = allCurves[0][0].getX(i);
+		double[] xVals = getXVals(allCurves[0]);
 		
 		for (int i=0; i<ret.length; i++) {
 			double[] yVals = new double[xVals.length];
 			for (DiscretizedFunc[] curves : allCurves) {
 				DiscretizedFunc curve = curves[i];
+				if (curve == null || yVals == null) {
+					yVals = null;
+					continue;
+				}
 				Preconditions.checkState(curve.size() == xVals.length,
 						"X-value count mismatch: %s vs %s; minX: %s vs %s; maxX: %s vs %s",
 						curve.size(), xVals.length, (float)curve.getMinX(), (float)xVals[0],
@@ -405,7 +499,8 @@ public class HazardComp2003PageGen {
 					yVals[j] += curve.getY(j);
 				}
 			}
-			ret[i] = new LightFixedXFunc(xVals, yVals);
+			if (yVals != null)
+				ret[i] = new LightFixedXFunc(xVals, yVals);
 		}
 		
 		return ret;

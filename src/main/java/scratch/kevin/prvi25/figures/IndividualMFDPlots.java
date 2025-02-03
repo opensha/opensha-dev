@@ -5,9 +5,12 @@ import java.awt.geom.Point2D;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.nio.file.Path;
+import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import org.jfree.data.Range;
 import org.opensha.commons.data.function.DiscretizedFunc;
@@ -19,6 +22,8 @@ import org.opensha.commons.gui.plot.PlotCurveCharacterstics;
 import org.opensha.commons.gui.plot.PlotLineType;
 import org.opensha.commons.gui.plot.PlotSpec;
 import org.opensha.commons.gui.plot.PlotUtils;
+import org.opensha.sha.earthquake.ProbEqkRupture;
+import org.opensha.sha.earthquake.ProbEqkSource;
 import org.opensha.sha.earthquake.faultSysSolution.FaultSystemSolution;
 import org.opensha.sha.earthquake.faultSysSolution.modules.BranchRegionalMFDs;
 import org.opensha.sha.earthquake.faultSysSolution.modules.BranchRegionalMFDs.MFDType;
@@ -26,6 +31,7 @@ import org.opensha.sha.earthquake.faultSysSolution.modules.BranchSectNuclMFDs;
 import org.opensha.sha.earthquake.faultSysSolution.modules.RegionsOfInterest;
 import org.opensha.sha.earthquake.faultSysSolution.util.FaultSectionUtils;
 import org.opensha.sha.earthquake.faultSysSolution.util.FaultSysTools;
+import org.opensha.sha.earthquake.param.IncludeBackgroundOption;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.gridded.PRVI25_GridSourceBuilder;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.gridded.SeismicityRateModel;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_CrustalSeismicityRate;
@@ -43,6 +49,7 @@ import org.opensha.sha.util.TectonicRegionType;
 import com.google.common.base.Preconditions;
 import com.google.common.primitives.Ints;
 
+import gov.usgs.earthquake.nshmp.model.NshmErf;
 import net.mahdilamb.colormap.Colors;
 import scratch.kevin.latex.LaTeXUtils;
 import scratch.kevin.prvi25.SubductionCombinedModelCreator;
@@ -156,11 +163,13 @@ public class IndividualMFDPlots {
 				else if (trt == TectonicRegionType.SUBDUCTION_INTERFACE)
 					onFaultMean = CombinedMFDsPlot.calcFaultMFD(reg, sol, refMFD);
 				UncertainBoundedIncrMagFreqDist obs;
-				if (r == 0)
+				if (r == 0) {
 					obs = siesModel.getBounded(refMFD, xRange.getUpperBound()+0.1);
-				else
+				} else {
 					obs = siesModel.getRemapped(reg, seisReg, PRVI25_DeclusteringAlgorithms.AVERAGE,
 							PRVI25_SeisSmoothingAlgorithms.AVERAGE, refMFD, xRange.getUpperBound()+0.1);
+					obs.setName("Observed (subset), N5="+new DecimalFormat("0.0#").format(obs.getCumRate(obs.getClosestXIndex(5.01))));
+				}
 				IncrementalMagFreqDist gridded;
 				UncertainBoundedIncrMagFreqDist[] griddedDists;
 				if (trt == TectonicRegionType.ACTIVE_SHALLOW || trt == TectonicRegionType.SUBDUCTION_INTERFACE) {
@@ -175,19 +184,35 @@ public class IndividualMFDPlots {
 						gridded = PRVI25_SubductionMuertosSeismicityRate.AVERAGE.build(refMFD, PRVI25_GridSourceBuilder.SLAB_MMAX, true);
 					griddedDists = new UncertainBoundedIncrMagFreqDist[] { siesModel.getBounded(refMFD, PRVI25_GridSourceBuilder.SLAB_MMAX) };
 				}
-				
-				if (trt == TectonicRegionType.SUBDUCTION_SLAB) {
-					if (seisReg == PRVI25_SeismicityRegions.CAR_INTRASLAB) {
-						// combined slab plot
-						plotMultiSlab(subductionOutputDir, "subduction_mfds_slab_combined", new Range(5d, 8d),
-								siesModel.getBounded(refMFD, PRVI25_GridSourceBuilder.SLAB_MMAX),
-								PRVI25_SubductionMuertosSeismicityRate.loadRateModel(true).getBounded(refMFD, PRVI25_GridSourceBuilder.SLAB_MMAX));
-					}
-				}
+
 				if (r > 0)
 					texFW.write("% "+seisReg.name()+" subset "+r+"\n");
 				else
 					texFW.write("% "+seisReg.name()+"\n");
+				
+				if (trt == TectonicRegionType.SUBDUCTION_SLAB) {
+					if (seisReg == PRVI25_SeismicityRegions.CAR_INTRASLAB) {
+						// combined slab plot
+						IncrementalMagFreqDist slab03 = loadSlab03(refMFD);
+						UncertainBoundedIncrMagFreqDist carDist = siesModel.getBounded(refMFD, PRVI25_GridSourceBuilder.SLAB_MMAX);
+						UncertainBoundedIncrMagFreqDist mueDist = PRVI25_SubductionMuertosSeismicityRate.loadRateModel(true)
+								.getBounded(refMFD, PRVI25_GridSourceBuilder.SLAB_MMAX);
+						plotMultiSlab(subductionOutputDir, "subduction_mfds_slab_combined", new Range(5d, 8d),
+								carDist,
+								mueDist,
+								slab03);
+						double prevM5 = slab03.getCumRate(slab03.getClosestXIndex(5.01));
+						texFW.write(LaTeXUtils.defineValueCommand("SubSlabPrevModelMFDMFiveRate",
+								LaTeXUtils.numberExpFormatSigFigs(prevM5, 2), false)+"\n");
+						texFW.write(LaTeXUtils.defineValueCommand("SubSlabPrevModelMFDMFiveRI",
+								LaTeXUtils.numberExpFormatFixedDecimal(1d/prevM5, 1), false)+"\n");
+						double sumSlabRate = carDist.getCumRate(carDist.getClosestXIndex(5.01)) + mueDist.getCumRate(mueDist.getClosestXIndex(5.01));
+						texFW.write(LaTeXUtils.defineValueCommand("SubSlabCombModelMFDMFiveRate",
+								LaTeXUtils.numberExpFormatSigFigs(sumSlabRate, 2), false)+"\n");
+						texFW.write(LaTeXUtils.defineValueCommand("SubSlabCombModelMFDMFiveRI",
+								LaTeXUtils.numberExpFormatFixedDecimal(1d/sumSlabRate, 1), false)+"\n");
+					}
+				}
 				double obsM5 = obs.getCumRate(obs.getClosestXIndex(5.01));
 				texFW.write(LaTeXUtils.defineValueCommand(texPrefix+"ObsMFiveRate",
 						LaTeXUtils.numberExpFormatSigFigs(obsM5, 2), false)+"\n");
@@ -538,12 +563,17 @@ public class IndividualMFDPlots {
 	
 	private static void plotMultiSlab(File outputDir, String prefix, Range xRange,
 			UncertainBoundedIncrMagFreqDist carDist,
-			UncertainBoundedIncrMagFreqDist mueDist) throws IOException {
+			UncertainBoundedIncrMagFreqDist mueDist,
+			IncrementalMagFreqDist slab03) throws IOException {
 		Color carColor = Colors.tab_orange;
 		Color mueColor = Colors.tab_green;
 		
 		List<DiscretizedFunc> funcs = new ArrayList<>();
 		List<PlotCurveCharacterstics> chars = new ArrayList<>();
+		
+		slab03.setName("2003 Model");
+		funcs.add(slab03);
+		chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 3f, Color.GRAY));
 		
 		mueDist.setName("Muertos Preferred");
 		funcs.add(mueDist);
@@ -579,6 +609,37 @@ public class IndividualMFDPlots {
 		gp.drawGraphPanel(plot, false, true, xRange, yRange);
 		
 		PlotUtils.writePlots(outputDir, prefix, gp, 800, 750, true, true, false);
+	}
+	
+	private static IncrementalMagFreqDist loadSlab03(EvenlyDiscretizedFunc refMFD) {
+		NshmErf erf = new NshmErf(Path.of("/home/kevin/OpenSHA/nshm23/nshmp-haz-models/nshm-prvi-2003-main"),
+				Set.of(TectonicRegionType.SUBDUCTION_SLAB), IncludeBackgroundOption.INCLUDE);
+		erf.getTimeSpan().setDuration(1d);
+		erf.updateForecast();
+		
+		IncrementalMagFreqDist mfd = new IncrementalMagFreqDist(refMFD.getMinX(), refMFD.size(), refMFD.getDelta());
+		
+		for (ProbEqkSource source : erf) {
+//			System.out.println("Source: "+source.getName()+" ("+source.getClass().getName()+")");
+			for (ProbEqkRupture rup : source) {
+				double rate = rup.getMeanAnnualRate(1d);
+				double mag = rup.getMag();
+//				System.out.println("M"+(float)mag+", "+(float)rate);
+				mfd.add(mfd.getClosestXIndex(mag), rate);
+			}
+		}
+		
+		Preconditions.checkState(mfd.calcSumOfY_Vals() > 0d);
+		
+		// set to NaN below Mmin to prevent a vertical line at the start of the dist
+		for (int i=0; i<mfd.size(); i++) {
+			if (mfd.getY(i) == 0d)
+				mfd.set(i, Double.NaN);
+			else
+				break;
+		}
+		
+		return mfd;
 	}
 
 	private static double[] fractiles = {0d, 0.025, 0.16, 0.84, 0.975d, 1d};

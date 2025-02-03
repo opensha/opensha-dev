@@ -103,7 +103,7 @@ public class SlipRateFigures {
 		GeographicMapMaker mapMaker = new GeographicMapMaker(CRUSTAL_FAULT_MAP_REG, origSubSects);
 		mapMaker.setWriteGeoJSON(false);
 		
-		CPT slipCPT = GMT_CPT_Files.SEQUENTIAL_BATLOW_UNIFORM.instance().rescale(0d, 11d);
+		CPT slipCPT = GMT_CPT_Files.SEQUENTIAL_BATLOW_UNIFORM.instance().rescale(0d, 10d);
 		slipCPT.setPreferredTickInterval(2d);
 		
 		for (boolean target : new boolean[] {false,true}) {
@@ -112,7 +112,7 @@ public class SlipRateFigures {
 			List<Double> slipRates = getDMSlipRates(subSects, false);
 			System.out.println("Max crustal is "+slipRates.stream().mapToDouble(D->D).max().getAsDouble());
 			
-			String label = (target ? "Target " : "")+"Slip Rate (mm/yr)";
+			String label = (target ? "Target " : "")+"slip rate (mm/yr)";
 			mapMaker.plotSectScalars(slipRates, slipCPT, label);
 			
 			mapMaker.plot(dmOutputDir, prefix, " ");
@@ -214,7 +214,7 @@ public class SlipRateFigures {
 			List<? extends FaultSection> sects = sol.getRupSet().getFaultSectionDataList();
 			List<XYTextAnnotation> anns = new ArrayList<>();
 			List<LocationList> arrows = new ArrayList<>();
-			Font labelFont = new Font(Font.SANS_SERIF, Font.BOLD, 14);
+			Font labelFont = new Font(Font.SANS_SERIF, Font.BOLD, 16);
 			CrustalFaultNamesFigure.buildLabelsAndArrows(sects, "Bouillante Montserrat", false, new Location(16.55, -62.4),
 					labelFont, TextAnchor.CENTER_RIGHT, 0, anns, arrows);
 			CrustalFaultNamesFigure.buildLabelsAndArrows(sects, "Main Ridge 2", false, new Location(19.2, -65.9),
@@ -228,16 +228,16 @@ public class SlipRateFigures {
 			mapMaker.plotArrows(arrows, 6d, new Color(0, 0, 0, 180), 1f);
 			mapMaker.setFillArrowheads(true);
 			
-			mapMaker.plotSectScalars(difference(targetSlips, solSlips), diffCPT, solName+" - Target Slip Rates (mm/yr)");
+			mapMaker.plotSectScalars(difference(targetSlips, solSlips), diffCPT, solName+" - target slip rates (mm/yr)");
 			mapMaker.plot(solOutputDir, prefix+"_diff", " ");
 			
-			mapMaker.plotSectScalars(percentDifference(targetSlips, solSlips), pDiffCPT, solName+" vs Target Slip Rates (% Difference)");
+			mapMaker.plotSectScalars(percentDifference(targetSlips, solSlips), pDiffCPT, solName+" vs target slip rates (% Difference)");
 			mapMaker.plot(solOutputDir, prefix+"_pDiff", " ");
 			
 			List<XYAnnotation> linearAnns = circleFaultAnns(targetSubSects, "Main Ridge", solSlips, targetSlips, TextAnchor.TOP_LEFT);
 			linearAnns.addAll(circleFaultAnns(targetSubSects, "Bouillante Montserrat", solSlips, targetSlips, TextAnchor.BASELINE_RIGHT));
 			
-			Range linearRange = new Range(0d, 13d);
+			Range linearRange = new Range(0d, 10d);
 			Range logRange = new Range(1e-1, 2e1);
 			
 			plotScatter(solOutputDir, prefix+"_scatter", targetSlips, solSlips,
@@ -440,11 +440,11 @@ public class SlipRateFigures {
 			sortables.add((double)i);
 		
 		mapMaker.plotSectScalars(difference(combSectTargetSlipRates, combSectSolSlipRates),
-				sortables, diffCPT, "Solution - Target Slip Rates (mm/yr)");
+				sortables, diffCPT, "Solution - target slip rates (mm/yr)");
 		mapMaker.plot(outputDir, "sub_slip_diff", " ");
 		
 		mapMaker.plotSectScalars(percentDifference(combSectTargetSlipRates, combSectSolSlipRates),
-				sortables, pDiffCPT, "Solution vs Target Slip Rates (% Difference)");
+				sortables, pDiffCPT, "Solution vs target slip rates (% difference)");
 		mapMaker.plot(outputDir, "sub_slip_pDiff", " ");
 		
 		Range linearRange = new Range(0d, 4d);
@@ -618,7 +618,7 @@ public class SlipRateFigures {
 			DefaultXY_DataSet scatter = new DefaultXY_DataSet();
 			for (int id : solParentSlips.keySet())
 				scatter.set(targetParentSlips.get(id), solParentSlips.get(id));
-			scatter.setName("Fault Section Averages");
+			scatter.setName("Fault section averages");
 			
 			funcs.add(scatter);
 			Color color = Colors.tab_blue;
@@ -626,7 +626,7 @@ public class SlipRateFigures {
 			chars.add(new PlotCurveCharacterstics(PlotSymbol.FILLED_CIRCLE, 6f, color));
 		}
 		
-		PlotSpec plot = new PlotSpec(funcs, chars, " ", "Target Slip Rate (mm/yr)", "Solution Slip Rate (mm/yr)");
+		PlotSpec plot = new PlotSpec(funcs, chars, " ", "Target slip rate (mm/yr)", "Solution slip rate (mm/yr)");
 		if (solSlips != null && solParentSlips != null)
 			plot.setLegendInset(RectangleAnchor.TOP_LEFT);
 		

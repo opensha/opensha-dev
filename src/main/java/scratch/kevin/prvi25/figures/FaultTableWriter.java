@@ -12,8 +12,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import org.opensha.commons.logicTree.LogicTreeBranch;
 import org.opensha.sha.earthquake.faultSysSolution.FaultSystemRupSet;
 import org.opensha.sha.earthquake.faultSysSolution.FaultSystemSolution;
+import org.opensha.sha.earthquake.faultSysSolution.modules.SolutionLogicTree;
 import org.opensha.sha.faultSurface.FaultSection;
 
 import com.google.common.base.Preconditions;
@@ -47,6 +49,11 @@ public class FaultTableWriter {
 		FaultSystemSolution sol = FaultSystemSolution.load(CRUSTAL_SOL_SUPRA_ONLY);
 		FaultSystemRupSet rupSet = sol.getRupSet();
 		
+		SolutionLogicTree slt = SolutionLogicTree.load(CRUSTAL_SLT);
+		List<double[]> branchRates = new ArrayList<>(slt.getLogicTree().size());
+		for (LogicTreeBranch<?> branch : slt.getLogicTree())
+			branchRates.add(slt.loadRatesForBranch(branch));
+		
 		Map<String, String> prefixRemappings = getNameRemappings();
 		
 		Map<String, Set<Integer>> namesToSectIDs = new HashMap<>();
@@ -72,36 +79,52 @@ public class FaultTableWriter {
 		FileWriter fw = new FileWriter(outputFile);
 		
 		fw.write("\\begin{table}[h!]\n");
-		fw.write("\\tbl{Participation recurrence intervals and magnitude ranges (using average scaling) for crustal faults. Faults consisting of multiple sections or zones are grouped.\\label{tbl:crustal_fault_ris}}\n");
+		fw.write("\\tbl{Participation recurrence intervals (branch-averaged and the extrema across all "
+				+ "\\dynvalCrustalFaultBranches{} branches) and magnitude ranges (using average scaling) for crustal faults. "
+				+ "Faults consisting of multiple sections or zones are grouped.\\label{tbl:crustal_fault_ris}}\n");
 		fw.write("{\\begin{tabular*}{\\columnwidth}{@{\\extracolsep{\\fill}}lccc@{}}\n");
-		fw.write("\\textbf{Name} & \\multicolumn{1}{c}{\\textbf{Magnitude range}} & \\multicolumn{1}{c}{\\textbf{Recurrence interval (years)}} \\\\\n");
+		fw.write("\\textbf{Name} "
+				+ "& \\multicolumn{1}{c}{\\textbf{Magnitude range}} "
+				+ "& \\multicolumn{1}{c}{\\textbf{Recurrence interval (years)}} "
+				+ "& \\multicolumn{1}{c}{\\textbf{Branch recurrence extrema (years)}} "
+				+ "\\\\\n");
 		fw.write("\\colrule\n");
 		DecimalFormat magDF = new DecimalFormat("0.0");
 		for (String name : namesSorted) {
 			Set<Integer> ids = namesToSectIDs.get(name);
 			double mMin = Double.POSITIVE_INFINITY;
 			double mMax = 0d;
-			double rate = 0d;
+			
+			List<Integer> rupIDs = new ArrayList<>();
 			for (int r=0; r<rupSet.getNumRuptures(); r++) {
-				boolean match = false;
 				for (int sectID : rupSet.getSectionsIndicesForRup(r)) {
 					if (ids.contains(sectID)) {
-						match = true;
+						rupIDs.add(r);
 						break;
 					}
 				}
-				if (match) {
-					double rupRate = sol.getRateForRup(r);
-					if (rupRate == 0d)
-						continue;
-					rate += rupRate;
-					double mag = rupSet.getMagForRup(r);
-					mMin = Math.min(mMin, mag);
-					mMax = Math.max(mMax, mag);
-				}
 			}
-			fw.write(name+" & $["+magDF.format(mMin)+", "+magDF.format(mMax)+"]$ & "
-					+LaTeXUtils.groupedIntNumber(1d/rate)+" \\\\\n");
+			for (int rupIndex : rupIDs) {
+				double rupRate = sol.getRateForRup(rupIndex);
+				if (rupRate == 0d)
+					continue;
+				double mag = rupSet.getMagForRup(rupIndex);
+				mMin = Math.min(mMin, mag);
+				mMax = Math.max(mMax, mag);
+			}
+			double ri = calcRI(rupIDs, sol.getRateForAllRups());
+			double minRI = Double.POSITIVE_INFINITY;
+			double maxRI = 0d;
+			for (double[] rates : branchRates) {
+				double branchRI = calcRI(rupIDs, rates);
+				minRI = Math.min(maxRI, branchRI);
+				maxRI = Math.max(maxRI, branchRI);
+			}
+			String line = name+" & ["+magDF.format(mMin)+", "+magDF.format(mMax)+"] "
+					+ "& "+LaTeXUtils.groupedIntNumber(ri)+" "
+					+ "& ["+(int)(minRI+0.5)+", "+(int)(maxRI+0.5)+"]"+" \\\\";
+			System.out.println(line);
+			fw.write(line+"\n");
 		}
 		fw.write("\\botrule\n");
 		fw.write("\\end{tabular*}}\n");
@@ -109,6 +132,14 @@ public class FaultTableWriter {
 		fw.write("\\end{table}\n");
 		
 		fw.close();
+	}
+	
+	private static double calcRI(List<Integer> rupIDs, double[] rates) {
+		double rate = 0d;
+		for (int rupIndex : rupIDs) {
+			rate += rates[rupIndex];
+		}
+		return 1d/rate;
 	}
 
 }
