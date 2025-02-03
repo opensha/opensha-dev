@@ -14,6 +14,7 @@ import org.opensha.sha.faultSurface.cache.SurfaceDistances;
 
 import gov.usgs.earthquake.nshmp.fault.surface.DefaultGriddedSurface;
 import gov.usgs.earthquake.nshmp.fault.surface.GriddedSurface;
+import gov.usgs.earthquake.nshmp.model.PointSource.PointSurface;
 import gov.usgs.earthquake.nshmp.model.PointSourceFinite.FiniteSurface;
 
 /**
@@ -143,9 +144,9 @@ public class NshmSurface implements CacheEnabledSurface {
 	@Override
 	public LocationList getEvenlyDiscritizedListOfLocsOnSurface() {
 		if (delegate instanceof FiniteSurface) {
-			LocationList locs = new LocationList();
-			locs.add(NshmUtil.toOpenShaLocation(((FiniteSurface) delegate).loc));
-			return locs;
+			return LocationList.of(NshmUtil.toOpenShaLocation(((FiniteSurface) delegate).loc));
+		} else if (delegate instanceof PointSurface) {
+			return LocationList.of(NshmUtil.toOpenShaLocation(((PointSurface) delegate).loc));
 		}
 		return NshmUtil.toOpenShaLocationList(
 				((GriddedSurface) delegate).getEvenlyDiscritizedListOfLocsOnSurface());
