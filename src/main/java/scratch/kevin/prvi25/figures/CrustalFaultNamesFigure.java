@@ -72,6 +72,8 @@ class CrustalFaultNamesFigure {
 				labelFont, TextAnchor.CENTER, 0d, anns, arrows);
 		buildLabelsAndArrows(sects, "Great Southern Puerto Rico", false, new Location(17.25, -66.25),
 				labelFont, TextAnchor.CENTER, 0d, anns, arrows);
+		buildLabelsAndArrows(sects, "Salinas", false, new Location(18.15, -66.35),
+				labelFont, TextAnchor.BASELINE_CENTER, 0d, anns, arrows);
 		
 		mapMaker.addAnnotations(anns);
 		mapMaker.plotArrows(arrows, 6d, new Color(0, 0, 0, 180), 1f);

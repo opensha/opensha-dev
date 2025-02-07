@@ -40,7 +40,7 @@ class SegResultPlots {
 		FaultSystemRupSet rupSet = sol.getRupSet();
 		// overwrite the segmentation choice so that the colors used in the dist-depend plot are uniform
 		sol.requireModule(LogicTreeBranch.class).setValue(NSHM23_SegmentationModels.NONE);
-		SegmentationCalculator.PASSTHROUGH_LABEL = "Pass-through rate";
+		SegmentationCalculator.PASSTHROUGH_LABEL = "Fractional pass-through rate";
 		SegmentationCalculator segCalc = new SegmentationCalculator(sol, cRups.getAll(),
 				connStrat, config.getDistAzCalc(), new double[] { 0d });
 		
@@ -58,6 +58,7 @@ class SegResultPlots {
 		CPT cpt = SegmentationCalculator.getConnectionFractCPT();
 		
 		mapMaker.plotJumpScalars(segCalc.calcJumpPassthroughs(0, RateCombiner.MIN), cpt, SegmentationCalculator.PASSTHROUGH_LABEL);
+		mapMaker.setJumpLineThickness(4f);
 		
 		mapMaker.plot(outputDir, "passthrough_map", " ", 800);
 	}

@@ -81,7 +81,8 @@ public class FaultTableWriter {
 		fw.write("\\begin{table}[h!]\n");
 		fw.write("\\tbl{Participation recurrence intervals (branch-averaged and the extrema across all "
 				+ "\\dynvalCrustalFaultBranches{} branches) and magnitude ranges (using average scaling) for crustal faults. "
-				+ "Faults consisting of multiple sections or zones are grouped.\\label{tbl:crustal_fault_ris}}\n");
+				+ "Faults with multiple sections or zones are grouped, and the listed recurrence intervals apply to any "
+				+ "rupture involving any part of any section.\\label{tbl:crustal_fault_ris}}\n");
 		fw.write("{\\begin{tabular*}{\\columnwidth}{@{\\extracolsep{\\fill}}lccc@{}}\n");
 		fw.write("\\textbf{Name} "
 				+ "& \\multicolumn{1}{c}{\\textbf{Magnitude range}} "

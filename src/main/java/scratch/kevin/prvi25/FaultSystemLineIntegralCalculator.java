@@ -951,6 +951,7 @@ public class FaultSystemLineIntegralCalculator {
 //		FaultSystemLineIntegralCalculator calc = new FaultSystemLineIntegralCalculator(sol.getRupSet());
 		
 		File outputDir = new File("/tmp/prvi_line_integrals");
+		Preconditions.checkState(outputDir.exists() || outputDir.mkdir());
 		
 		List<List<? extends FaultSection>> plotSects = new ArrayList<>();
 		List<String> plotPrefixes = new ArrayList<>();

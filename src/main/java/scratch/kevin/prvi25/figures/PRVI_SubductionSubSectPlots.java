@@ -155,7 +155,7 @@ public class PRVI_SubductionSubSectPlots {
 					if (sect.getSectionId() % rakeMod == 0)
 						rakeArrows.addAll(buildRakeArrows(sect, 5d));
 				mapMaker.plotArrows(rakeArrows, 20d, Colors.tab_red.darker(), 2f);
-				mapMaker.setFillArrowheads(true);
+				mapMaker.setFillArrowheads(true, Color.WHITE, 0.5f);
 //				mapMaker.plotLines(rakeArrows, Color.BLACK, 2f);
 				
 				mapMaker.plotSectScalars(slips, slipCPT, dm.getShortName()+" Slip Rate (mm/yr)");

@@ -24,6 +24,7 @@ import org.opensha.commons.gui.plot.PlotSpec;
 import org.opensha.commons.gui.plot.PlotUtils;
 import org.opensha.sha.earthquake.ProbEqkRupture;
 import org.opensha.sha.earthquake.ProbEqkSource;
+import org.opensha.sha.earthquake.faultSysSolution.FaultSystemRupSet;
 import org.opensha.sha.earthquake.faultSysSolution.FaultSystemSolution;
 import org.opensha.sha.earthquake.faultSysSolution.modules.BranchRegionalMFDs;
 import org.opensha.sha.earthquake.faultSysSolution.modules.BranchRegionalMFDs.MFDType;
@@ -32,6 +33,7 @@ import org.opensha.sha.earthquake.faultSysSolution.modules.RegionsOfInterest;
 import org.opensha.sha.earthquake.faultSysSolution.util.FaultSectionUtils;
 import org.opensha.sha.earthquake.faultSysSolution.util.FaultSysTools;
 import org.opensha.sha.earthquake.param.IncludeBackgroundOption;
+import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_SegmentationModels;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.gridded.PRVI25_GridSourceBuilder;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.gridded.SeismicityRateModel;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_CrustalSeismicityRate;
@@ -44,6 +46,7 @@ import org.opensha.sha.earthquake.rupForecastImpl.prvi25.util.PRVI25_RegionLoade
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.util.PRVI25_RegionLoader.PRVI25_SeismicityRegions;
 import org.opensha.sha.faultSurface.FaultSection;
 import org.opensha.sha.magdist.IncrementalMagFreqDist;
+import org.opensha.sha.magdist.SummedMagFreqDist;
 import org.opensha.sha.util.TectonicRegionType;
 
 import com.google.common.base.Preconditions;
@@ -286,24 +289,37 @@ public class IndividualMFDPlots {
 									LaTeXUtils.numberAsPercent(100d*indvRate/onFaultTotalRate, 0), false)+"\n");
 							
 							if (indvFaultNames[i].equals("Anegada")) {
-								// add classic RI
-								FaultSystemSolution classicSol = FaultSystemSolution.load(new File(
-										new File(CRUSTAL_DIR, "node_branch_averaged"), "SegModel_Classic.zip"));
-								double classicRate = 0d;
-								for (int rupIndex=0; rupIndex<classicSol.getRupSet().getNumRuptures(); rupIndex++) {
-									for (FaultSection sect : classicSol.getRupSet().getFaultSectionDataForRupture(rupIndex)) {
-										if (sect.getParentSectionName().contains(indvFaultNames[i])) {
-											classicRate += classicSol.getRateForRup(rupIndex);
-											break;
+								// add segmentation-model specific RIs
+								File baDir = new File(CRUSTAL_DIR, "node_branch_averaged");
+								Preconditions.checkState(baDir.exists(), "Need node branch-averaged solutions: %s", baDir.getAbsolutePath());
+								for (NSHM23_SegmentationModels segModel : NSHM23_SegmentationModels.values()) {
+									File segFile = new File(new File(CRUSTAL_DIR, "node_branch_averaged"), "SegModel_"+segModel.getFilePrefix()+".zip");
+									if (segFile.exists()) {
+										FaultSystemSolution segSol = FaultSystemSolution.load(segFile);
+										FaultSystemRupSet segRS = segSol.getRupSet();
+										int parentID1 = FaultSectionUtils.findParentSectionID(segRS.getFaultSectionDataList(), "Anegada", "SW PROXY");
+										int parentID2 = FaultSectionUtils.findParentSectionID(segRS.getFaultSectionDataList(), "Anegada", "NE PROXY");
+										SummedMagFreqDist summedMFD = new SummedMagFreqDist(refMFD.getMinX(), refMFD.getMaxX(), refMFD.size());
+										summedMFD.addIncrementalMagFreqDist(segSol.calcNucleationMFD_forParentSect(
+												parentID1, refMFD.getMinX(), refMFD.getMaxX(), refMFD.size()));
+										summedMFD.addIncrementalMagFreqDist(segSol.calcNucleationMFD_forParentSect(
+												parentID2, refMFD.getMinX(), refMFD.getMaxX(), refMFD.size()));
+										double segRate = summedMFD.calcSumOfY_Vals();
+										double segRate7p5 = summedMFD.getCumRate(summedMFD.getClosestXIndex(7.501));
+										String segPefix = indvPrefix+segModel.getFilePrefix();
+										texFW.write(LaTeXUtils.defineValueCommand(segPefix+"Rate",
+												LaTeXUtils.numberExpFormatSigFigs(segRate, 3), false)+"\n");
+										texFW.write(LaTeXUtils.defineValueCommand(segPefix+"RI",
+												LaTeXUtils.groupedIntNumber(1d/segRate), false)+"\n");
+										if (segRate7p5 > 0) {
+											segPefix += "SevenFive";
+											texFW.write(LaTeXUtils.defineValueCommand(segPefix+"Rate",
+													LaTeXUtils.numberExpFormatSigFigs(segRate7p5, 3), false)+"\n");
+											texFW.write(LaTeXUtils.defineValueCommand(segPefix+"RI",
+													LaTeXUtils.groupedIntNumber(1d/segRate7p5), false)+"\n");
 										}
 									}
 								}
-								indvPrefix += "Classic";
-								texFW.write(LaTeXUtils.defineValueCommand(indvPrefix+"Rate",
-										LaTeXUtils.numberExpFormatSigFigs(classicRate, 3), false)+"\n");
-								double classicRI = 1d/classicRate;
-								texFW.write(LaTeXUtils.defineValueCommand(indvPrefix+"RI",
-										LaTeXUtils.groupedIntNumber(classicRI), false)+"\n");
 							}
 						}
 						// add south lajas M>7

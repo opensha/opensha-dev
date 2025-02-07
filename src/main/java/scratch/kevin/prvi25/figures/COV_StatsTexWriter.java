@@ -25,7 +25,10 @@ public class COV_StatsTexWriter {
 
 	public static void main(String[] args) throws IOException {
 		File outputDir = new File(FIGURES_DIR, "logic_tree_hazard");
-		Preconditions.checkState(outputDir.exists() || outputDir.mkdir());
+		Preconditions.checkState(outputDir.exists());
+		
+		File gmmDir = new File(outputDir, "gmm_csvs");
+		Preconditions.checkState(gmmDir.exists());
 		
 		FileWriter fw = new FileWriter(new File(outputDir, "cov_stats.tex"));
 		
@@ -40,71 +43,87 @@ public class COV_StatsTexWriter {
 			polRegions[i] = new Region(list, BorderType.MERCATOR_LINEAR);
 		}
 		
-		for (boolean gmm : new boolean[] {false,true}) {
-			if (gmm)
-				System.out.println("GMM");
-			else
-				System.out.println("ERF");
-			String prefix = "Hazard";
-			CSVFile<String> csv;
-			double gridSpacing;
-			if (gmm) {
-				csv = CSVFile.readFile(new File(outputDir, "gmm_1.0s_TWO_IN_50.csv"), true);
-				gridSpacing = 0.025;
-				prefix = "GMM"+prefix;
+		double[] periods = { 0d, 1d };
+		
+		for (double period : periods) {
+			String csvName, texPrefix;
+			if (period == 0d) {
+				System.out.println("PGA");
+				csvName = "pga_TWO_IN_50.csv";
+				texPrefix = "HazardPGA";
+			} else if (period == 1d) {
+				System.out.println("1s SA");
+				csvName = "1.0s_TWO_IN_50.csv";
+				texPrefix = "HazardOneSec";
 			} else {
-				csv = CSVFile.readFile(new File(outputDir, "1.0s_TWO_IN_50.csv"), true);
-				gridSpacing = 0.1;
+				throw new IllegalStateException();
 			}
-			
-			MinMaxAveTracker overallTrack = new MinMaxAveTracker();
-			MinMaxAveTracker insideTrack = new MinMaxAveTracker();
-			double halfSpacing = 0.5*gridSpacing;
-			for (int row=1; row<csv.getNumRows(); row++) {
-				double lat = csv.getDouble(row, 1);
-				double lon = csv.getDouble(row, 2);
-				double cov = csv.getDouble(row, 7);
-				overallTrack.addValue(cov);
+			for (boolean gmm : new boolean[] {false,true}) {
+				if (gmm)
+					System.out.println("GMM");
+				else
+					System.out.println("ERF");
+				String myTexPrefix = texPrefix;
+				CSVFile<String> csv;
+				double gridSpacing;
+				if (gmm) {
+					csv = CSVFile.readFile(new File(gmmDir, csvName), true);
+					gridSpacing = 0.025;
+					myTexPrefix = "GMM"+texPrefix;
+				} else {
+					csv = CSVFile.readFile(new File(outputDir, csvName), true);
+					gridSpacing = 0.1;
+				}
 				
-				Location center = new Location(lat, lon);
-				if (mapReg.contains(center)) {
-					Location[] testLocs = {
-							center,
-							new Location(lat-halfSpacing, lon-halfSpacing),
-							new Location(lat-halfSpacing, lon+halfSpacing),
-							new Location(lat+halfSpacing, lon-halfSpacing),
-							new Location(lat+halfSpacing, lon+halfSpacing),
-					};
-					boolean inside = false;
-					for (Location loc : testLocs) {
-						for (Region reg : polRegions) {
-							if (reg.contains(loc)) {
-								inside = true;
-								break;
+				MinMaxAveTracker overallTrack = new MinMaxAveTracker();
+				MinMaxAveTracker insideTrack = new MinMaxAveTracker();
+				double halfSpacing = 0.5*gridSpacing;
+				for (int row=1; row<csv.getNumRows(); row++) {
+					double lat = csv.getDouble(row, 1);
+					double lon = csv.getDouble(row, 2);
+					double cov = csv.getDouble(row, 7);
+					overallTrack.addValue(cov);
+					
+					Location center = new Location(lat, lon);
+					if (mapReg.contains(center)) {
+						Location[] testLocs = {
+								center,
+								new Location(lat-halfSpacing, lon-halfSpacing),
+								new Location(lat-halfSpacing, lon+halfSpacing),
+								new Location(lat+halfSpacing, lon-halfSpacing),
+								new Location(lat+halfSpacing, lon+halfSpacing),
+						};
+						boolean inside = false;
+						for (Location loc : testLocs) {
+							for (Region reg : polRegions) {
+								if (reg.contains(loc)) {
+									inside = true;
+									break;
+								}
 							}
+							if (inside)
+								break;
 						}
 						if (inside)
-							break;
+							insideTrack.addValue(cov);
 					}
-					if (inside)
-						insideTrack.addValue(cov);
 				}
-			}
-			System.out.println("Overall stats: "+overallTrack);
-			System.out.println("Inside stats: "+insideTrack);
+				System.out.println("Overall stats: "+overallTrack);
+				System.out.println("Inside stats: "+insideTrack);
 
-			fw.write(LaTeXUtils.defineValueCommand(prefix+"Min",
-					LaTeXUtils.numberExpFormatFixedDecimal(overallTrack.getMin(), 2))+"\n");
-			fw.write(LaTeXUtils.defineValueCommand(prefix+"COVMax",
-					LaTeXUtils.numberExpFormatFixedDecimal(overallTrack.getMax(), 2))+"\n");
-			fw.write(LaTeXUtils.defineValueCommand(prefix+"COVAvg",
-					LaTeXUtils.numberExpFormatFixedDecimal(overallTrack.getAverage(), 2))+"\n");
-			fw.write(LaTeXUtils.defineValueCommand(prefix+"LandCOVMin",
-					LaTeXUtils.numberExpFormatFixedDecimal(insideTrack.getMin(), 2))+"\n");
-			fw.write(LaTeXUtils.defineValueCommand(prefix+"LandCOVMax",
-					LaTeXUtils.numberExpFormatFixedDecimal(insideTrack.getMax(), 2))+"\n");
-			fw.write(LaTeXUtils.defineValueCommand(prefix+"LandCOVAvg",
-					LaTeXUtils.numberExpFormatFixedDecimal(insideTrack.getAverage(), 2))+"\n");
+				fw.write(LaTeXUtils.defineValueCommand(myTexPrefix+"Min",
+						LaTeXUtils.numberExpFormatFixedDecimal(overallTrack.getMin(), 2))+"\n");
+				fw.write(LaTeXUtils.defineValueCommand(myTexPrefix+"COVMax",
+						LaTeXUtils.numberExpFormatFixedDecimal(overallTrack.getMax(), 2))+"\n");
+				fw.write(LaTeXUtils.defineValueCommand(myTexPrefix+"COVAvg",
+						LaTeXUtils.numberExpFormatFixedDecimal(overallTrack.getAverage(), 2))+"\n");
+				fw.write(LaTeXUtils.defineValueCommand(myTexPrefix+"LandCOVMin",
+						LaTeXUtils.numberExpFormatFixedDecimal(insideTrack.getMin(), 2))+"\n");
+				fw.write(LaTeXUtils.defineValueCommand(myTexPrefix+"LandCOVMax",
+						LaTeXUtils.numberExpFormatFixedDecimal(insideTrack.getMax(), 2))+"\n");
+				fw.write(LaTeXUtils.defineValueCommand(myTexPrefix+"LandCOVAvg",
+						LaTeXUtils.numberExpFormatFixedDecimal(insideTrack.getAverage(), 2))+"\n");
+			}
 		}
 		
 		fw.close();
