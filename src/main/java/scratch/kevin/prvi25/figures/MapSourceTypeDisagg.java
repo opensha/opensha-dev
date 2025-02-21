@@ -404,7 +404,8 @@ public class MapSourceTypeDisagg {
 						}
 						
 						mapMaker.clearAnnotations();
-						XYTextAnnotation rangeAnn = new XYTextAnnotation("Range: ["+(int)(min+0.5)+"%, "+(int)(max+0.5)+"%]", annX, annY1);
+						String lowerStr = (min < 0.5) ? "<1" : (int)(min+0.5)+"";
+						XYTextAnnotation rangeAnn = new XYTextAnnotation("Range: ["+lowerStr+"%, "+(int)(max+0.5)+"%]", annX, annY1);
 						rangeAnn.setFont(annFont);
 						rangeAnn.setTextAnchor(TextAnchor.TOP_RIGHT);
 						mapMaker.addAnnotation(rangeAnn);

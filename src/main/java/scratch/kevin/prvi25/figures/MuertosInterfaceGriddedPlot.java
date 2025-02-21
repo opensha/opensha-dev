@@ -61,6 +61,7 @@ public class MuertosInterfaceGriddedPlot {
 		branch.setValue(PRVI25_DeclusteringAlgorithms.AVERAGE);
 		
 		Location targetLoc = new Location(17.96, -66.30);
+//		Location targetLoc = new Location(17.8, -66.30);
 		double targetMag = 7.45;
 		
 		Range latRange = new Range(17.2, 18.2);
@@ -72,9 +73,19 @@ public class MuertosInterfaceGriddedPlot {
 		PRVI25_GridSourceBuilder.INTERFACE_USE_SECT_PROPERTIES = true;
 		GridSourceList sectSurfaceGridList = PRVI25_GridSourceBuilder.buildInterfaceGridSourceList(
 				subSol, branch, PRVI25_SeismicityRegions.MUE_INTERFACE);
+		File sectFile = new File("/tmp/sect_surf_mue_interface.zip");
+		if (!sectFile.exists()) {
+			subSol.setGridSourceProvider(sectSurfaceGridList);
+			subSol.write(sectFile);
+		}
 		PRVI25_GridSourceBuilder.INTERFACE_USE_SECT_PROPERTIES = false;
 		GridSourceList slabSurfaceGridList = PRVI25_GridSourceBuilder.buildInterfaceGridSourceList(
 				subSol, branch, PRVI25_SeismicityRegions.MUE_INTERFACE);
+		File slabFile = new File("/tmp/slab_surf_mue_interface.zip");
+		if (!slabFile.exists()) {
+			subSol.setGridSourceProvider(slabSurfaceGridList);
+			subSol.write(slabFile);
+		}
 		
 		int closestLocIndex = -1;
 		Location mappedLoc = null;
@@ -109,6 +120,11 @@ public class MuertosInterfaceGriddedPlot {
 			}
 		}
 		Preconditions.checkNotNull(sectSurfRup, "Couldn't find sect surface rupture for M%s", (float)targetMag);
+		
+		System.out.println("Slab rup has dip="+(float)slabSurfRup.properties.dip+", depth range=["
+				+(float)slabSurfRup.properties.upperDepth+", "+(float)slabSurfRup.properties.lowerDepth+"]");
+		System.out.println("Sect rup has dip="+(float)sectSurfRup.properties.dip+", depth range=["
+				+(float)sectSurfRup.properties.upperDepth+", "+(float)sectSurfRup.properties.lowerDepth+"]");
 		
 		DiscretizedFunc slabDepthProfile = new ArbitrarilyDiscretizedFunc();
 		for (int l=0; l<slabSurfaceGridList.getNumLocations(); l++) {

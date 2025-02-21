@@ -42,6 +42,7 @@ import org.jfree.chart.ui.RectangleAnchor;
 import org.jfree.data.Range;
 import org.opensha.commons.calc.FaultMomentCalc;
 import org.opensha.commons.calc.GaussianDistCalc;
+import org.opensha.commons.calc.GaussianExceedProbCalculator;
 import org.opensha.commons.calc.WeightedSampler;
 import org.opensha.commons.calc.magScalingRelations.magScalingRelImpl.Somerville_2006_MagAreaRel;
 import org.opensha.commons.data.CSVFile;
@@ -51,6 +52,7 @@ import org.opensha.commons.data.comcat.ComcatRegionAdapter;
 import org.opensha.commons.data.function.ArbitrarilyDiscretizedFunc;
 import org.opensha.commons.data.function.DiscretizedFunc;
 import org.opensha.commons.data.function.EvenlyDiscretizedFunc;
+import org.opensha.commons.data.function.LightFixedXFunc;
 import org.opensha.commons.data.region.CaliforniaRegions;
 import org.opensha.commons.data.siteData.SiteData;
 import org.opensha.commons.data.siteData.impl.CVM4i26_M01_TaperBasinDepth;
@@ -86,6 +88,7 @@ import org.opensha.commons.logicTree.LogicTreeNode;
 import org.opensha.commons.logicTree.LogicTreeNode.RandomlySampledNode;
 import org.opensha.commons.mapping.PoliticalBoundariesData;
 import org.opensha.commons.mapping.gmt.elements.GMT_CPT_Files;
+import org.opensha.commons.param.Parameter;
 import org.opensha.commons.util.DataUtils.MinMaxAveTracker;
 import org.opensha.commons.util.IDPairing;
 import org.opensha.commons.util.Interpolate;
@@ -111,6 +114,7 @@ import org.opensha.sha.earthquake.faultSysSolution.RupSetDeformationModel;
 import org.opensha.sha.earthquake.faultSysSolution.RupSetFaultModel;
 import org.opensha.sha.earthquake.faultSysSolution.RuptureSets;
 import org.opensha.sha.earthquake.faultSysSolution.RuptureSets.CoulombRupSetConfig;
+import org.opensha.sha.earthquake.faultSysSolution.erf.BaseFaultSystemSolutionERF;
 import org.opensha.sha.earthquake.faultSysSolution.hazard.mpj.MPJ_LogicTreeHazardCalc;
 import org.opensha.sha.earthquake.faultSysSolution.modules.BranchAveragingOrder;
 import org.opensha.sha.earthquake.faultSysSolution.modules.BranchParentSectParticMFDs;
@@ -184,6 +188,7 @@ import org.opensha.sha.earthquake.rupForecastImpl.prvi25.util.PRVI25_RegionLoade
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.util.PRVI25_RegionLoader.PRVI25_SeismicityRegions;
 import org.opensha.sha.faultSurface.FaultSection;
 import org.opensha.sha.faultSurface.GeoJSONFaultSection;
+import org.opensha.sha.faultSurface.PointSurface;
 import org.opensha.sha.faultSurface.RuptureSurface;
 import org.opensha.sha.gui.infoTools.IMT_Info;
 import org.opensha.sha.imr.AttenRelRef;
@@ -192,6 +197,7 @@ import org.opensha.sha.imr.attenRelImpl.nshmp.NSHMP_GMM_Wrapper;
 import org.opensha.sha.imr.attenRelImpl.nshmp.util.NSHMP_GMM_Branch;
 import org.opensha.sha.imr.attenRelImpl.nshmp.util.NSHMP_GMM_EpistemicBranchLevel;
 import org.opensha.sha.imr.param.IntensityMeasureParams.PGA_Param;
+import org.opensha.sha.imr.param.IntensityMeasureParams.SA_Param;
 import org.opensha.sha.imr.param.OtherParams.TectonicRegionTypeParam;
 import org.opensha.sha.imr.param.SiteParams.DepthTo1pt0kmPerSecParam;
 import org.opensha.sha.imr.param.SiteParams.Vs30_Param;
@@ -214,6 +220,10 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 
 import gov.usgs.earthquake.nshmp.gmm.Gmm;
+import gov.usgs.earthquake.nshmp.gmm.GmmInput;
+import gov.usgs.earthquake.nshmp.gmm.GroundMotion;
+import gov.usgs.earthquake.nshmp.gmm.GroundMotionModel;
+import gov.usgs.earthquake.nshmp.gmm.Imt;
 import gov.usgs.earthquake.nshmp.mfd.Mfd.Properties.GutenbergRichter;
 import gov.usgs.earthquake.nshmp.model.NshmErf;
 import gov.usgs.earthquake.nshmp.model.NshmSurface;
@@ -3144,13 +3154,80 @@ public class PureScratch {
 		sol.write(new File("/tmp/u3_sol_with_grid_source_list.zip"));
 	}
 	
+	private static void test341() throws IOException {
+		GroundMotionModel gmm = Gmm.USGS_PRVI_INTRASLAB_COMBINED_TREE.instance(Imt.SA0P2);
+		
+		double depth = 80d;
+		double rJB = 0d;
+		double rX = 0d;
+		double rRup = Math.sqrt(rJB*rJB + depth*depth);
+		
+		double dip = 0d;
+		double mag = 6.55d;
+		double rake = 0d;
+		double vs30 = 760;
+		double width = 0d;
+		
+		GmmInput input = GmmInput.builder().dip(dip).distances(rJB, rRup, rX).mag(mag).rake(rake).vs30(vs30)
+				.width(width).z1p0(Double.NaN).z2p5(Double.NaN).zSed(Double.NaN).zHyp(depth).zTor(depth).build();
+		System.out.println(input);
+		gov.usgs.earthquake.nshmp.tree.LogicTree<GroundMotion> result = gmm.calc(input);
+		System.out.println("Ground motion logic tree:\n"+result);
+		System.out.println("weighted mean="+(float)Math.exp(NSHMP_GMM_Wrapper.getWeightedMean(result))
+			+", sigma="+(float)NSHMP_GMM_Wrapper.getWeightedStdDev(result));
+		DiscretizedFunc linearExceeds = new LightFixedXFunc(new double[] {1d, 1.5d, 2d, 2.5d}, new double[4]);
+		DiscretizedFunc logExceeds = new ArbitrarilyDiscretizedFunc();
+		for (int i=0; i<linearExceeds.size(); i++)
+			logExceeds.set(Math.log(linearExceeds.getX(i)), 0d);
+		GaussianExceedProbCalculator exceedCalc = GaussianExceedProbCalculator.getPrecomputedExceedProbCalc(1, 3d);
+		NSHMP_GMM_Wrapper.getWeightedExceedProbabilities(result, exceedCalc, logExceeds);
+		for (int i=0; i<logExceeds.size(); i++)
+			System.out.println("P(X>"+(float)linearExceeds.getX(i)+"): "+(float)logExceeds.getY(i));
+	}
+	
+	private static void test342() throws IOException {
+		FaultSystemSolution sol = FaultSystemSolution.load(PRVI_Paths.COMBINED_SOL);
+		GridSourceList gridList = sol.requireModule(GridSourceList.class);
+		for (int l=0; l<gridList.getNumLocations(); l++) {
+			for (GriddedRupture rup : gridList.getRuptures(TectonicRegionType.SUBDUCTION_SLAB, l)) {
+				Preconditions.checkState(rup.properties.length == 0d, "Expected len=0: %s", rup);
+			}
+		}
+		
+		Site site = PRVI25_RegionLoader.loadHazardSites().get(0);
+		BaseFaultSystemSolutionERF erf = new BaseFaultSystemSolutionERF();
+		erf.setSolution(sol);
+		erf.setParameter(IncludeBackgroundParam.NAME, IncludeBackgroundOption.ONLY);
+		erf.updateForecast();
+		for (ProbEqkSource source : erf) {
+			if (source.getTectonicRegionType() != TectonicRegionType.SUBDUCTION_SLAB)
+				continue;
+			double siteDist = source.getMinDistance(site);
+			for (ProbEqkRupture rup : source) {
+				RuptureSurface surf = rup.getRuptureSurface();
+				Preconditions.checkState(surf.getAveLength() == 0d, "Expected len=0, but was %s", (float)surf.getAveLength());
+				double rJB = surf.getDistanceJB(site.getLocation());
+				double rRup = surf.getDistanceRup(site.getLocation());
+				double zTor = surf.getAveRupTopDepth();
+				Preconditions.checkState((float)rJB == (float)siteDist, "rJB=%s but siteDist=%s; type=%s; distCorr=%s",
+						(float)rJB, (float)siteDist, surf.getClass().getName(),
+						surf instanceof PointSurface ? ((PointSurface)surf).getDistanceCorrection() : null);
+				double calcRup = Math.sqrt(rJB*rJB + zTor*zTor);
+				Preconditions.checkState((float)rRup == (float)calcRup, "rRup=%s, expected sqrt(%s^2 + %s^2)=%s; type=%s; distCorr=%s",
+						(float)rRup, (float)rJB, (float)zTor, (float)calcRup, surf.getClass().getName(),
+						surf instanceof PointSurface ? ((PointSurface)surf).getDistanceCorrection() : null);
+			}
+		}
+		System.out.println("All good");
+	}
+	
 	/**
 	 * @param args
 	 * @throws Exception 
 	 */
 	public static void main(String[] args) throws Exception {
 		try {
-			test340();
+			test342();
 		} catch (Throwable t) {
 			t.printStackTrace();
 			System.exit(1);

@@ -209,11 +209,14 @@ public class IndividualMFDPlots {
 								LaTeXUtils.numberExpFormatSigFigs(prevM5, 2), false)+"\n");
 						texFW.write(LaTeXUtils.defineValueCommand("SubSlabPrevModelMFDMFiveRI",
 								LaTeXUtils.numberExpFormatFixedDecimal(1d/prevM5, 1), false)+"\n");
-						double sumSlabRate = carDist.getCumRate(carDist.getClosestXIndex(5.01)) + mueDist.getCumRate(mueDist.getClosestXIndex(5.01));
+						IncrementalMagFreqDist mueGridded = PRVI25_SubductionMuertosSeismicityRate.AVERAGE.build(refMFD, PRVI25_GridSourceBuilder.SLAB_MMAX, true);
+						double sumSlabRate = gridded.getCumRate(gridded.getClosestXIndex(5.01)) + mueGridded.getCumRate(mueGridded.getClosestXIndex(5.01));
 						texFW.write(LaTeXUtils.defineValueCommand("SubSlabCombModelMFDMFiveRate",
 								LaTeXUtils.numberExpFormatSigFigs(sumSlabRate, 2), false)+"\n");
 						texFW.write(LaTeXUtils.defineValueCommand("SubSlabCombModelMFDMFiveRI",
 								LaTeXUtils.numberExpFormatFixedDecimal(1d/sumSlabRate, 1), false)+"\n");
+						texFW.write(LaTeXUtils.defineValueCommand("SubSlabCombModelMFDMFiveChange",
+								LaTeXUtils.numberAsPercent(100d*(sumSlabRate-prevM5)/prevM5, r), false)+"\n");
 					}
 				}
 				double obsM5 = obs.getCumRate(obs.getClosestXIndex(5.01));

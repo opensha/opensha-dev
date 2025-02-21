@@ -12,10 +12,14 @@ import org.apache.commons.math3.geometry.euclidean.threed.Vector3D;
 import org.jfree.chart.annotations.XYTextAnnotation;
 import org.jfree.chart.ui.TextAnchor;
 import org.jfree.data.Range;
+import org.opensha.commons.geo.BorderType;
 import org.opensha.commons.geo.Location;
 import org.opensha.commons.geo.LocationList;
+import org.opensha.commons.geo.LocationUtils;
 import org.opensha.commons.geo.Region;
 import org.opensha.commons.gui.plot.GeographicMapMaker;
+import org.opensha.commons.gui.plot.PlotCurveCharacterstics;
+import org.opensha.commons.gui.plot.PlotLineType;
 import org.opensha.commons.gui.plot.PlotUtils;
 import org.opensha.commons.logicTree.LogicTreeBranch;
 import org.opensha.commons.logicTree.LogicTreeNode;
@@ -62,12 +66,13 @@ public class PRVI_SubductionSubSectPlots {
 		DecimalFormat magDF = new DecimalFormat("0.0");
 		
 		CPT magCPT = GMT_CPT_Files.SEQUENTIAL_BATLOW_UNIFORM.instance().rescale(7.5d, 9d);
+		CPT minMagCPT = GMT_CPT_Files.SEQUENTIAL_BATLOW_UNIFORM.instance().rescale(7.5d, 8.400001d);
 		CPT slipCPT = GMT_CPT_Files.SEQUENTIAL_BATLOW_UNIFORM.instance().rescale(0d, 4d);
 		CPT slipUncertCPT = GMT_CPT_Files.SEQUENTIAL_BATLOW_UNIFORM.instance().rescale(0d, 2d);
 		CPT rakeCPT = GMT_CPT_Files.SEQUENTIAL_NAVIA_UNIFORM.instance().rescale(0d, 90d);
 		
 		PlotUtils.writeScaleLegendOnly(outputDir, "slip_cpt",
-				GeographicMapMaker.buildCPTLegend(slipCPT, "Slip Rate (mm/yr)"),
+				GeographicMapMaker.buildCPTLegend(slipCPT, "Slip Deficit Rate (mm/yr)"),
 				GeographicMapMaker.PLOT_WIDTH_DEFAULT, true, true);
 		for (PRVI25_SubductionFaultModels fm : PRVI25_SubductionFaultModels.values()) {
 			if (fm.getNodeWeight(branch) == 0d)
@@ -113,8 +118,49 @@ public class PRVI_SubductionSubSectPlots {
 			
 			List<XYTextAnnotation> labelAnns = getLabelAnns(mapMaker);
 
+			mapMaker.plotSectScalars(minMags, minMagCPT, "Minimum Magnitude ("+scaleLabel+")");
 			mapMaker.setAnnotations(labelAnns);
 			mapMaker.plot(outputDir, "subduction_min_mag_"+fm.getFilePrefix()+"_names", " ");
+			
+			// now highlight the largest and smallest  supra-seis ruptures
+			int smallestOverallRupIndex = -1;
+			double smallestOverallMag = Double.POSITIVE_INFINITY;
+			int largestSmallestSectRupIndex = -1;
+			double largestSmallestMag = 0d;
+			for (int s=0; s<sects.size(); s++) {
+				double mySmallest = Double.POSITIVE_INFINITY;
+				int mySmallestIndex = -1;
+				for (int rupIndex : rupSet.getRupturesForSection(s)) {
+					double mag = rupSet.getMagForRup(rupIndex);
+					if (mag < mySmallest) {
+						mySmallest = mag;
+						mySmallestIndex = rupIndex;
+					}
+				}
+				if (mySmallest < smallestOverallMag) {
+					smallestOverallMag = mySmallest;
+					smallestOverallRupIndex = mySmallestIndex;
+				}
+				if (mySmallest > largestSmallestMag) {
+					largestSmallestMag = mySmallest;
+					largestSmallestSectRupIndex = mySmallestIndex;
+				}
+			}
+			
+			Region smallRupRegion = getRupRegion(rupSet, smallestOverallRupIndex);
+			Region largeRupRegion = getRupRegion(rupSet, largestSmallestSectRupIndex);
+//			List<Region> rupRegions = List.of(smallRupRegion, largeRupRegion);
+			List<Region> rupRegions = List.of(smallRupRegion, largeRupRegion, smallRupRegion, largeRupRegion);
+			List<PlotCurveCharacterstics> rupChars = List.of(
+//					new PlotCurveCharacterstics(PlotLineType.SOLID, 4f, Colors.tab_blue),
+//					new PlotCurveCharacterstics(PlotLineType.SOLID, 4f, Colors.tab_orange));
+					new PlotCurveCharacterstics(PlotLineType.SOLID, 5f, Color.WHITE),
+					new PlotCurveCharacterstics(PlotLineType.SOLID, 5f, Color.WHITE),
+					new PlotCurveCharacterstics(PlotLineType.DASHED, 5f, Color.BLACK),
+					new PlotCurveCharacterstics(PlotLineType.DASHED, 5f, Color.BLACK));
+			mapMaker.plotInsetRegions(rupRegions, rupChars, null, 0f);
+			mapMaker.plot(outputDir, "subduction_min_mag_"+fm.getFilePrefix()+"_names_outlines", " ");
+			mapMaker.clearInsetRegions();
 			
 			mapMaker.plotSectScalars(maxMags, magCPT, "Maximum Magnitude ("+scaleLabel+")");
 			mapMaker.clearAnnotations();
@@ -173,6 +219,31 @@ public class PRVI_SubductionSubSectPlots {
 				mapMaker.clearArrows();
 			}
 		}
+	}
+	
+	private static Region getRupRegion(FaultSystemRupSet rupSet, int rupIndex) {
+//		RuptureSurface surf = rupSet.getSurfaceForRupture(rupIndex, 5d);
+//		LocationList border = surf.getEvenlyDiscritizedPerimeter();
+//		if (!border.first().equals(border.last()))
+//			border.add(border.first());
+//		System.out.println(border);
+		LocationList border = new LocationList();
+		List<FaultSection> sects = rupSet.getFaultSectionDataForRupture(rupIndex);
+		for (FaultSection sect : sects) {
+			for (Location loc : sect.getFaultTrace())
+				if (border.isEmpty() || !LocationUtils.areSimilar(loc, border.last()))
+					border.add(loc);
+		}
+		for (int i=sects.size(); --i>=0;) {
+			FaultTrace trace = sects.get(i).getLowerFaultTrace();
+			for (int j=trace.size(); --j>=0;) {
+				Location loc = trace.get(j);
+				if (border.isEmpty() || !LocationUtils.areSimilar(loc, border.last()))
+					border.add(loc);
+			}
+		}
+		border.add(border.first());
+		return new Region(border, BorderType.MERCATOR_LINEAR);
 	}
 
 	public static List<XYTextAnnotation> getLabelAnns(GeographicMapMaker mapMaker) {

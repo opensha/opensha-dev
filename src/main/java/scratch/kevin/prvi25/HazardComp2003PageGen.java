@@ -22,6 +22,7 @@ import org.opensha.commons.mapping.gmt.elements.GMT_CPT_Files;
 import org.opensha.commons.util.DataUtils.MinMaxAveTracker;
 import org.opensha.commons.util.MarkdownUtils;
 import org.opensha.commons.util.MarkdownUtils.TableBuilder;
+import org.opensha.commons.util.MarkdownUtils.TableTextAlignment;
 import org.opensha.commons.util.cpt.CPT;
 import org.opensha.sha.earthquake.faultSysSolution.hazard.mpj.MPJ_LogicTreeHazardCalc;
 import org.opensha.sha.earthquake.faultSysSolution.ruptures.util.RupSetMapMaker;
@@ -42,22 +43,38 @@ import scratch.kevin.prvi25.figures.PRVI_Paths;
 public class HazardComp2003PageGen {
 	
 	private static enum CompType {
-			TOTAL,
-			CRUSTAL_FAULTS,
-			CRUSTAL_GRIDDED,
-			CRUSTAL,
-			INTERFACE,
-			SLAB
+			TOTAL("Full Model", "HazardChangeTotal"),
+			CRUSTAL("Crustal-Only (Fault & Gridded)", "HazardChangeCrustal"),
+			CRUSTAL_FAULTS("Crustal Fault-Only", "HazardChangeCrustalFault"),
+			CRUSTAL_GRIDDED("Crustal Gridded-Only", "HazardChangeCrustalGridded"),
+			INTERFACE("Interface-Only", "HazardChangeInterface"),
+			SLAB("Slab-Only", "HazardChangeSlab");
+		
+		private String label;
+		private String texPrefix;
+
+		private CompType(String label, String texPrefix) {
+			this.label = label;
+			this.texPrefix = texPrefix;
+		}
 	};
 	
 	public static void main(String[] args) throws IOException {
-//		String imtName = "PGA";
-//		String imtDir = "PGA";
-//		double period = 0d;
+		String imtName = "PGA";
+		String imtDir = "PGA";
+		double period = 0d;
 		
-		String imtName = "1s SA";
-		String imtDir = "SA1P0";
-		double period = 1d;
+//		String imtName = "0.2s SA";
+//		String imtDir = "SA0P2";
+//		double period = 0.2d;
+		
+//		String imtName = "1s SA";
+//		String imtDir = "SA1P0";
+//		double period = 1d;
+		
+//		String imtName = "5s SA";
+//		String imtDir = "SA5P0";
+//		double period = 5d;
 		
 //		ReturnPeriods[] rps = ReturnPeriods.values();
 		ReturnPeriods[] rps = { ReturnPeriods.TWO_IN_50, ReturnPeriods.TEN_IN_50 };
@@ -150,7 +167,7 @@ public class HazardComp2003PageGen {
 		lines.add("# Hazard Comparisons, "+name25+" vs "+name03);
 		lines.add("");
 		
-		lines.add("This page compares "+name25+" and "+name03+" hazard maps. "
+		lines.add("This page compares "+name25+" and "+name03+" hazard maps due to the ERF. "
 				+ "Each individual ERF contributor to hazard changes are plotted separately, but GMMs are held constant.");
 		lines.add("");
 		
@@ -196,57 +213,59 @@ public class HazardComp2003PageGen {
 		int tocIndex = lines.size();
 		String topLink = "*[(top)](#table-of-contents)*";
 		
+		lines.add("## Change Summaries");
+		lines.add(topLink); lines.add("");
+		int summaryTableIndex = lines.size();
+		lines.add("");
+		TableBuilder[] rpTables = new TableBuilder[rps.length];
+		for (int r=0; r<rpTables.length; r++) {
+			rpTables[r] = MarkdownUtils.tableBuilder().textAlign(TableTextAlignment.CENTER).initNewLine();
+			for (CompType type : CompType.values())
+				rpTables[r].addColumn("__"+type.label+"__");
+			rpTables[r].finalizeLine().initNewLine();
+		}
+		
 		for (CompType type : CompType.values()) {
 			DiscretizedFunc[] curves25, curves03;
-			String label, description, texPrefix;
+			String label = type.label+" Comparison";
+			String texPrefix = type.texPrefix;
+			String description;
 			String mapLabelAdd;
 			
 			switch (type) {
 			case TOTAL:
-				texPrefix = "HazardChangeTotal";
 				curves25 = full25;
 				curves03 = full03;
-				label = "Full Model Comparison";
 				description = "Full model comparison, including fault, gridded, and subduction model changes.";
 				mapLabelAdd = "";
 				break;
+			case CRUSTAL:
+				curves25 = full25;
+				curves03 = withCrustal03;
+				description = "Crustal-only comparison, holding subduction sources constant (using those from "+name25+").";
+				mapLabelAdd = "Crustal, ";
+				break;
 			case CRUSTAL_FAULTS:
-				texPrefix = "HazardChangeCrustalFault";
 				curves25 = full25;
 				curves03 = withCrustalFaults03;
-				label = "Crustal Fault-Only Comparison";
 				description = "Crustal fault-only comparison, holding gridded and subduction sources constant (using those from "+name25+").";
 				mapLabelAdd = "Crustal Faults, ";
 				break;
 			case CRUSTAL_GRIDDED:
-				texPrefix = "HazardChangeCrustalGridded";
 				curves25 = full25;
 				curves03 = withCrustalGrid03;
-				label = "Crustal Gridded-Only Comparison";
 				description = "Crustal Gridded-only comparison, holding crustal fault and subduction sources constant (using those from "+name25+").";
 				mapLabelAdd = "Crustal Gridded, ";
 				break;
-			case CRUSTAL:
-				texPrefix = "HazardChangeCrustal";
-				curves25 = full25;
-				curves03 = withCrustal03;
-				label = "Crustal-Only (Fault & Gridded) Comparison";
-				description = "Crustal-only comparison, holding subduction sources constant (using those from "+name25+").";
-				mapLabelAdd = "Crustal, ";
-				break;
 			case INTERFACE:
-				texPrefix = "HazardChangeInterface";
 				curves25 = full25;
 				curves03 = withInterface03;
-				label = "Interface-Only Comparison";
 				description = "Subduction interface-only comparison, crustal and slab sources constant (using those from "+name25+").";
 				mapLabelAdd = "Interface, ";
 				break;
 			case SLAB:
-				texPrefix = "HazardChangeSlab";
 				curves25 = full25;
 				curves03 = withSlab03;
-				label = "Slab-Only Comparison";
 				description = "Subduction intraslab-only comparison, crustal and interface sources constant (using those from "+name25+").";
 				mapLabelAdd = "Slab, ";
 				break;
@@ -261,7 +280,8 @@ public class HazardComp2003PageGen {
 			lines.add(description);
 			lines.add("");
 			
-			for (ReturnPeriods rp : rps) {
+			for (int r=0; r<rps.length; r++) {
+				ReturnPeriods rp = rps[r];
 				System.out.println("Plotting "+label+", "+rp.label);
 				
 				lines.add("### "+label+", "+rp.label);
@@ -304,6 +324,8 @@ public class HazardComp2003PageGen {
 				
 				table.finalizeLine();
 				
+				rpTables[r].addColumn("![Map]("+resourcesDir.getName()+"/"+prefix+"_pDiff.png)");
+				
 				lines.addAll(table.build());
 				lines.add("");
 				
@@ -338,6 +360,16 @@ public class HazardComp2003PageGen {
 				lines.add("");
 			}
 		}
+		
+		List<String> rpSummaryLines = new ArrayList<>();
+		for (int r=0; r<rps.length; r++) {
+			rpSummaryLines.add("### "+rps[r].label+" Summary");
+			rpSummaryLines.add(topLink); rpSummaryLines.add("");
+			rpTables[r].finalizeLine();
+			rpSummaryLines.addAll(rpTables[r].wrap(2, 0).build());
+			rpSummaryLines.add("");
+		}
+		lines.addAll(summaryTableIndex, rpSummaryLines);
 		
 		// add TOC
 		lines.addAll(tocIndex, MarkdownUtils.buildTOC(lines, 2));

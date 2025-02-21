@@ -28,6 +28,7 @@ import org.opensha.sha.earthquake.ProbEqkRupture;
 import org.opensha.sha.earthquake.ProbEqkSource;
 import org.opensha.sha.earthquake.faultSysSolution.FaultSystemSolution;
 import org.opensha.sha.earthquake.faultSysSolution.modules.GridSourceList;
+import org.opensha.sha.earthquake.faultSysSolution.modules.GridSourceList.GriddedRupture;
 import org.opensha.sha.earthquake.faultSysSolution.util.FaultSysTools;
 import org.opensha.sha.earthquake.param.IncludeBackgroundOption;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.gridded.PRVI25_GridSourceBuilder;
@@ -99,6 +100,10 @@ class SeismicityPDFFigures {
 		plotPrevNucleationRates(subOutputDir, "sub_interface_2003_m7", subERF, 7d,
 				TectonicRegionType.SUBDUCTION_INTERFACE, fullGrid, "2003 Interface", null);
 		
+		GridSourceList subGridProv = FaultSystemSolution.load(SUBDUCTION_SOLS_COMBINED).requireModule(GridSourceList.class);
+		plotSlabDepths(subOutputDir, "sub_slab_depths", subGridProv, fullGrid,
+				List.of(PRVI25_SeismicityRegions.CAR_INTRASLAB.load(), PRVI25_SeismicityRegions.MUE_INTRASLAB.load()));
+		
 		NshmErf crustalERF = new NshmErf(prevModel, Set.of(TectonicRegionType.ACTIVE_SHALLOW),
 				IncludeBackgroundOption.ONLY);
 		crustalERF.getTimeSpan().setDuration(1d);
@@ -119,6 +124,7 @@ class SeismicityPDFFigures {
 		GriddedGeoDataSet xyz = new GriddedGeoDataSet(gridReg, false);
 		List<Region> plotRegions = new ArrayList<>();
 		BitSet everSets = new BitSet(xyz.size());
+		double totalRate = 0d;
 		for (PRVI25_SeismicityRegions seisReg : seisRegs) {
 			GriddedGeoDataSet pdf = smooth.loadXYZ(seisReg, decluster);
 			
@@ -148,6 +154,7 @@ class SeismicityPDFFigures {
 					throw new IllegalStateException();
 				}
 				rateScalar = mfd.getCumRate(refMFD.getClosestXIndex(magForRate+0.01));
+				totalRate += rateScalar;
 			}
 			
 			Region reg = seisReg.load();
@@ -164,6 +171,11 @@ class SeismicityPDFFigures {
 		for (int i=0; i<xyz.size(); i++)
 			if (!everSets.get(i))
 				xyz.set(i, Double.NaN);
+		
+		if (magForRate > 0d) {
+			System.out.println(name);
+			System.out.println("Rate M>"+(float)magForRate+": "+(float)totalRate);
+		}
 		
 		CPT cpt;
 		String label;
@@ -224,11 +236,12 @@ class SeismicityPDFFigures {
 			TectonicRegionType trt, GriddedRegion gridReg, String name, Range<Double> depthRange) throws IOException {
 		GriddedGeoDataSet xyz = new GriddedGeoDataSet(gridReg, false);
 		HashSet<Double> slabDepths = trt == TectonicRegionType.SUBDUCTION_SLAB ? new HashSet<>() : null;
+		double totalRate = 0d;
 		for (ProbEqkSource source : erf) {
 			if (source.getTectonicRegionType() == trt) {
-				if (trt == TectonicRegionType.SUBDUCTION_INTERFACE)
-					System.out.println("Including source "+source.getName()+" ("+source+") for trt="+trt.name()
-							+" with "+source.getNumRuptures()+" ruptures");
+//				if (trt == TectonicRegionType.SUBDUCTION_INTERFACE)
+//					System.out.println("Including source "+source.getName()+" ("+source+") for trt="+trt.name()
+//							+" with "+source.getNumRuptures()+" ruptures");
 //				RuptureSurface sourceSurf = source.getRupture(0).getRuptureSurface();
 //				LocationList sourceLocs = sourceSurf.getEvenlyDiscritizedListOfLocsOnSurface();
 //				Preconditions.checkState(sourceLocs.size() == 1, "Not a point surface (%s locs): %s", sourceLocs.size(), sourceSurf);
@@ -250,7 +263,9 @@ class SeismicityPDFFigures {
 					sourceMaxMag = Math.max(sourceMaxMag, rup.getMag());
 					RuptureSurface sourceSurf = rup.getRuptureSurface();
 					LocationList sourceLocs = sourceSurf.getEvenlyDiscritizedListOfLocsOnSurface();
-					double rupRateEach = rup.getMeanAnnualRate(1d) / sourceLocs.size();
+					double rupRate = rup.getMeanAnnualRate(1d);
+					totalRate += rupRate;
+					double rupRateEach = rupRate / sourceLocs.size();
 					for (Location loc : sourceLocs) {
 						if (depthRange != null && !depthRange.contains(loc.depth))
 							continue;
@@ -261,10 +276,12 @@ class SeismicityPDFFigures {
 							xyz.add(index, rupRateEach);
 					}
 				}
-				if (trt == TectonicRegionType.SUBDUCTION_INTERFACE)
-					System.out.println("\tMag range: ["+(float)sourceMinMag+", "+(float)sourceMaxMag+"]");
+//				if (trt == TectonicRegionType.SUBDUCTION_INTERFACE)
+//					System.out.println("\tMag range: ["+(float)sourceMinMag+", "+(float)sourceMaxMag+"]");
 			}
 		}
+		System.out.println(name);
+		System.out.println("Rate M>"+(float)minMag+": "+(float)totalRate);
 		if (slabDepths != null)
 			System.out.println("Slab depths: "+slabDepths);
 		for (int i=0; i<xyz.size(); i++)
@@ -278,6 +295,44 @@ class SeismicityPDFFigures {
 		GeographicMapMaker mapMaker = new GeographicMapMaker(gridReg);
 		mapMaker.setWriteGeoJSON(false);
 		
+		mapMaker.plotXYZData(xyz, cpt, label);
+		
+		mapMaker.plot(outputDir, prefix, " ");
+	}
+	
+	private static void plotSlabDepths(File outputDir, String prefix, GridSourceList gridSources,
+			GriddedRegion gridReg, List<Region> plotRegions) throws IOException {
+		GriddedGeoDataSet xyz = new GriddedGeoDataSet(gridReg, false);
+		for (int i=0; i<xyz.size(); i++)
+			xyz.set(i, Double.POSITIVE_INFINITY);
+		BitSet everSets = new BitSet(xyz.size());
+		boolean remap = gridSources.getGriddedRegion() == null || !gridReg.equalsRegion(gridSources.getGriddedRegion());
+		
+		for (int l=0; l<gridSources.getNumLocations(); l++) {
+			int index = remap ? gridReg.indexForLocation(gridSources.getLocation(l)) : l;
+			if (index < 0)
+				continue;
+			everSets.set(index);
+			
+			double depth = xyz.get(index);
+			for (GriddedRupture rup : gridSources.getRuptures(TectonicRegionType.SUBDUCTION_SLAB, l))
+				depth = Math.min(depth, rup.properties.upperDepth);
+			xyz.set(index, depth);
+		}
+		for (int i=0; i<xyz.size(); i++)
+			if (!everSets.get(i))
+				xyz.set(i, Double.NaN);
+//		CPT cpt = GMT_CPT_Files.SEQUENTIAL_BATLOW_UNIFORM.instance();
+		CPT cpt = GMT_CPT_Files.RAINBOW_UNIFORM.instance();
+		cpt = cpt.rescale(0d, 80);
+		String label = "Slab Depth (km)";
+		cpt.setNanColor(new Color(255, 255, 255));
+		
+		GeographicMapMaker mapMaker = new GeographicMapMaker(gridReg);
+		mapMaker.setWriteGeoJSON(false);
+		
+		if (plotRegions != null && !plotRegions.isEmpty())
+			mapMaker.plotInsetRegions(plotRegions, new PlotCurveCharacterstics(PlotLineType.SOLID, 2f, Color.DARK_GRAY), null, 1);
 		mapMaker.plotXYZData(xyz, cpt, label);
 		
 		mapMaker.plot(outputDir, prefix, " ");

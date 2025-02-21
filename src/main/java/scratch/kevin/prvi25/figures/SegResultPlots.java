@@ -8,6 +8,7 @@ import org.opensha.commons.gui.plot.GeographicMapMaker;
 import org.opensha.commons.gui.plot.PlotCurveCharacterstics;
 import org.opensha.commons.gui.plot.PlotLineType;
 import org.opensha.commons.logicTree.LogicTreeBranch;
+import org.opensha.commons.mapping.gmt.elements.GMT_CPT_Files;
 import org.opensha.commons.util.cpt.CPT;
 import org.opensha.sha.earthquake.faultSysSolution.FaultSystemRupSet;
 import org.opensha.sha.earthquake.faultSysSolution.FaultSystemSolution;
@@ -55,10 +56,11 @@ class SegResultPlots {
 		mapMaker.setSectOutlineChar(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, new Color(210, 210, 210)));
 //		plotter.setJumpLineThickness(4f);
 		
-		CPT cpt = SegmentationCalculator.getConnectionFractCPT();
+//		CPT cpt = SegmentationCalculator.getConnectionFractCPT();
+		CPT cpt = GMT_CPT_Files.SEQUENTIAL_BATLOW_UNIFORM.instance().rescale(0d, 1d);
 		
 		mapMaker.plotJumpScalars(segCalc.calcJumpPassthroughs(0, RateCombiner.MIN), cpt, SegmentationCalculator.PASSTHROUGH_LABEL);
-		mapMaker.setJumpLineThickness(4f);
+		mapMaker.setJumpLineThickness(5f);
 		
 		mapMaker.plot(outputDir, "passthrough_map", " ", 800);
 	}

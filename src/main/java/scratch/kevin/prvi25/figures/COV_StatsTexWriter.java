@@ -30,6 +30,9 @@ public class COV_StatsTexWriter {
 		File gmmDir = new File(outputDir, "gmm_csvs");
 		Preconditions.checkState(gmmDir.exists());
 		
+		File combDir = new File(outputDir, "erf_plus_gmm_csvs");
+		Preconditions.checkState(combDir.exists());
+		
 		FileWriter fw = new FileWriter(new File(outputDir, "cov_stats.tex"));
 		
 		Region mapReg = PRVI25_RegionLoader.loadPRVI_MapExtents();
@@ -58,21 +61,24 @@ public class COV_StatsTexWriter {
 			} else {
 				throw new IllegalStateException();
 			}
-			for (boolean gmm : new boolean[] {false,true}) {
-				if (gmm)
-					System.out.println("GMM");
-				else
-					System.out.println("ERF");
+			for (int i=0; i<3; i++) {
 				String myTexPrefix = texPrefix;
 				CSVFile<String> csv;
 				double gridSpacing;
-				if (gmm) {
+				if (i == 0) {
+					System.out.println("ERF");
+					csv = CSVFile.readFile(new File(outputDir, csvName), true);
+					gridSpacing = 0.1;
+				} else if (i == 1) {
+					System.out.println("GMM");
 					csv = CSVFile.readFile(new File(gmmDir, csvName), true);
 					gridSpacing = 0.025;
 					myTexPrefix = "GMM"+texPrefix;
 				} else {
-					csv = CSVFile.readFile(new File(outputDir, csvName), true);
-					gridSpacing = 0.1;
+					System.out.println("ERF+GMM");
+					csv = CSVFile.readFile(new File(combDir, csvName), true);
+					gridSpacing = 0.025;
+					myTexPrefix = "Comb"+texPrefix;
 				}
 				
 				MinMaxAveTracker overallTrack = new MinMaxAveTracker();
@@ -108,8 +114,10 @@ public class COV_StatsTexWriter {
 							insideTrack.addValue(cov);
 					}
 				}
-				System.out.println("Overall stats: "+overallTrack);
-				System.out.println("Inside stats: "+insideTrack);
+				System.out.println("Overall:\t"+(float)overallTrack.getAverage()+" ["+
+						(float)overallTrack.getMin()+", "+(float)overallTrack.getMax()+"]");
+				System.out.println("Inside stats:\t"+(float)insideTrack.getAverage()+" ["+
+						(float)insideTrack.getMin()+", "+(float)insideTrack.getMax()+"]");
 
 				fw.write(LaTeXUtils.defineValueCommand(myTexPrefix+"Min",
 						LaTeXUtils.numberExpFormatFixedDecimal(overallTrack.getMin(), 2))+"\n");

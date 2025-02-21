@@ -56,6 +56,12 @@ public class ObsUncertaintyBoundsFigure {
 				Colors.tab_green
 		};
 		
+		PlotLineType[] lineTypes = {
+				PlotLineType.DASHED,
+				PlotLineType.SOLID,
+				PlotLineType.DOTTED
+		};
+		
 		for (RateType type : RateType.values()) {
 			List<? extends RateRecord> rates = PRVI25_CrustalSeismicityRate.loadRates(type);
 			
@@ -77,6 +83,7 @@ public class ObsUncertaintyBoundsFigure {
 			}
 			
 			Color color = colors[type.ordinal()];
+			PlotLineType plt = lineTypes[type.ordinal()];
 			RateRecord low = SeismicityRateFileLoader.locateQuantile(rates, 0.025);
 			RateRecord high = SeismicityRateFileLoader.locateQuantile(rates, 0.975);
 
@@ -92,10 +99,10 @@ public class ObsUncertaintyBoundsFigure {
 			
 			lowMFD.setName(type.toString());
 			funcs.add(lowMFD);
-			chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 3f, color));
+			chars.add(new PlotCurveCharacterstics(plt, 3f, color));
 			highMFD.setName(null);
 			funcs.add(highMFD);
-			chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 3f, color));
+			chars.add(new PlotCurveCharacterstics(plt, 3f, color));
 		}
 		
 		for (XY_DataSet func : funcs) {

@@ -110,24 +110,25 @@ public class TectonicSettingPlot {
 		mapRegAnn.setFont(mapRegFont);
 		mapMaker.addAnnotation(mapRegAnn);
 		
-		PlotCurveCharacterstics interfaceChar = new PlotCurveCharacterstics(PlotLineType.SHORT_DASHED, 3f, Colors.tab_blue);
+		PlotCurveCharacterstics interfaceChar = new PlotCurveCharacterstics(PlotLineType.SHORT_DASHED, 5f, Colors.tab_blue.darker());
 		PlotCurveCharacterstics slabChar = new PlotCurveCharacterstics(PlotLineType.SOLID, 3f, Colors.tab_green);
 		
 		regions.add(PRVI25_SeismicityRegions.CAR_INTRASLAB.load());
 		outlines.add(slabChar);
 		fills.add(null);
 		
+		legendItems.add("Interface seismicity regions");
+		legendChars.add(interfaceChar);
+		
 		regions.add(PRVI25_SeismicityRegions.MUE_INTRASLAB.load());
 		outlines.add(slabChar);
 		fills.add(null);
-		legendItems.add("Intraslab regions");
+		legendItems.add("Intraslab seismicity regions");
 		legendChars.add(slabChar);
 		
 		regions.add(PRVI25_SeismicityRegions.CAR_INTERFACE.load());
 		outlines.add(interfaceChar);
 		fills.add(null);
-		legendItems.add("Interface regions");
-		legendChars.add(interfaceChar);
 		
 		regions.add(PRVI25_SeismicityRegions.MUE_INTERFACE.load());
 		outlines.add(interfaceChar);
@@ -191,7 +192,7 @@ public class TectonicSettingPlot {
 		
 		mapMaker.plot(outputDir, "tectonic_setting", " ");
 		PlotSpec plot = mapMaker.buildPlot(" ");
-		plot.setLegendInset(RectangleAnchor.BOTTOM_LEFT, 0.05, 0.05, 0.55, false);
+		plot.setLegendInset(RectangleAnchor.BOTTOM_LEFT, 0.05, 0.05, 0.66, false);
 		
 		for (PlotElement elem : plot.getPlotElems())
 			if (elem instanceof XY_DataSet && ((XY_DataSet)elem).getName().contains("Proxy Fault"))

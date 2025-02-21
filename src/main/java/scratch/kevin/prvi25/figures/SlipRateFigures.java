@@ -440,21 +440,21 @@ public class SlipRateFigures {
 			sortables.add((double)i);
 		
 		mapMaker.plotSectScalars(difference(combSectTargetSlipRates, combSectSolSlipRates),
-				sortables, diffCPT, "Solution - target slip rates (mm/yr)");
+				sortables, diffCPT, "Solution - target slip deficit rates (mm/yr)");
 		mapMaker.plot(outputDir, "sub_slip_diff", " ");
 		
 		mapMaker.plotSectScalars(percentDifference(combSectTargetSlipRates, combSectSolSlipRates),
-				sortables, pDiffCPT, "Solution vs target slip rates (% difference)");
+				sortables, pDiffCPT, "Solution vs target slip deficit rates (% difference)");
 		mapMaker.plot(outputDir, "sub_slip_pDiff", " ");
 		
 		mapMaker.addAnnotations(PRVI_SubductionSubSectPlots.getLabelAnns(mapMaker));
 		
 		mapMaker.plotSectScalars(difference(combSectTargetSlipRates, combSectSolSlipRates),
-				sortables, diffCPT, "Solution - target slip rates (mm/yr)");
+				sortables, diffCPT, "Solution - target slip deficit rates (mm/yr)");
 		mapMaker.plot(outputDir, "sub_slip_diff_labeled", " ");
 		
 		mapMaker.plotSectScalars(percentDifference(combSectTargetSlipRates, combSectSolSlipRates),
-				sortables, pDiffCPT, "Solution vs target slip rates (% difference)");
+				sortables, pDiffCPT, "Solution vs target slip deficit rates (% difference)");
 		mapMaker.plot(outputDir, "sub_slip_pDiff_labeled", " ");
 		
 		Range linearRange = new Range(0d, 4d);
