@@ -297,7 +297,7 @@ public class ObservedUncertainMFDComparisons {
 			String prefix;
 			String label;
 			if (level != null) {
-				prefix = MPJ_LogicTreeBranchAverageBuilder.levelPrefix(level);
+				prefix = level.getFilePrefix();
 				for (LogicTreeNode node : level.getNodes()) {
 					File solFile = new File(nodeDir, prefix+"_"+node.getFilePrefix()+".zip");
 					if (solFile.exists()) {

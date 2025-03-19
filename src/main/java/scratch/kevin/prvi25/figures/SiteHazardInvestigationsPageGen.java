@@ -34,6 +34,7 @@ import org.opensha.commons.gui.plot.PlotLineType;
 import org.opensha.commons.gui.plot.PlotSpec;
 import org.opensha.commons.gui.plot.PlotUtils;
 import org.opensha.commons.util.ComparablePairing;
+import org.opensha.commons.util.FileNameUtils;
 import org.opensha.commons.util.MarkdownUtils;
 import org.opensha.commons.util.MarkdownUtils.TableBuilder;
 import org.opensha.commons.util.MarkdownUtils.TableTextAlignment;
@@ -135,9 +136,7 @@ public class SiteHazardInvestigationsPageGen {
 			BaseFaultSystemSolutionERF disaggIndvERF, NshmErf prevERF) throws IOException {
 		String siteName = site.getName();
 		System.out.println("Starting "+siteName);
-		String sitePrefix = siteName.replaceAll("\\W+", "_");
-		while (sitePrefix.contains("__"))
-			sitePrefix = sitePrefix.replace("__", "_");
+		String sitePrefix = FileNameUtils.simplify(siteName);
 		File outputDir = new File(mainOutputDir, sitePrefix);
 		Preconditions.checkState(outputDir.exists() || outputDir.mkdir());
 		File resourcesDir = new File(outputDir, "resources");
