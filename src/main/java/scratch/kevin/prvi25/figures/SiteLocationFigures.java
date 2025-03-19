@@ -6,10 +6,12 @@ import java.io.IOException;
 import java.util.List;
 
 import org.opensha.commons.data.CSVFile;
+import org.opensha.commons.data.Site;
 import org.opensha.commons.geo.Location;
 import org.opensha.commons.geo.Region;
 import org.opensha.commons.gui.plot.GeographicMapMaker;
 import org.opensha.commons.gui.plot.PlotSymbol;
+import org.opensha.commons.util.FileNameUtils;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_CrustalFaultModels;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.util.PRVI25_RegionLoader;
 
@@ -25,18 +27,14 @@ public class SiteLocationFigures {
 		
 		Region reg = PRVI25_RegionLoader.loadPRVI_MapExtents();
 		
-		CSVFile<String> csv = CSVFile.readStream(PRVI25_CrustalFaultModels.class.getResourceAsStream(
-				"/data/erf/prvi25/sites/prvi_sites.csv"), true);
+		List<Site> sites = PRVI25_RegionLoader.loadHazardSites();
 		GeographicMapMaker mapMaker = new GeographicMapMaker(reg);
 		mapMaker.setWritePDFs(true);
 		mapMaker.setWriteGeoJSON(false);
 		mapMaker.setScatterSymbol(PlotSymbol.FILLED_INV_TRIANGLE, 10f, PlotSymbol.INV_TRIANGLE, Color.BLACK);
-		for (int row=1; row<csv.getNumRows(); row++) {
-			String name = csv.get(row, 0);
-			Location loc = new Location(csv.getDouble(row, 1), csv.getDouble(row, 2));
-			
-			mapMaker.plotScatters(List.of(loc), Colors.tab_green.darker());
-			String fname = name.replaceAll("\\W+", "_");
+		for (Site site : sites) {
+			mapMaker.plotScatters(List.of(site.getLocation()), Colors.tab_green.darker());
+			String fname = FileNameUtils.simplify(site.getName());
 			mapMaker.plot(outputDir, fname, " ");
 		}
 	}

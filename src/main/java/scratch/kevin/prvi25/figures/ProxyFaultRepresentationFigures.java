@@ -25,6 +25,7 @@ import org.opensha.commons.gui.plot.PlotCurveCharacterstics;
 import org.opensha.commons.gui.plot.PlotLineType;
 import org.opensha.commons.gui.plot.PlotSymbol;
 import org.opensha.commons.mapping.gmt.elements.GMT_CPT_Files;
+import org.opensha.commons.util.FileNameUtils;
 import org.opensha.commons.util.DataUtils.MinMaxAveTracker;
 import org.opensha.commons.util.cpt.CPT;
 import org.opensha.sha.earthquake.faultSysSolution.FaultSystemRupSet;
@@ -123,13 +124,7 @@ public class ProxyFaultRepresentationFigures {
 			Location lowerLeft = new Location(regTracks[0].getMin(), regTracks[1].getMin());
 			Location upperRight = new Location(regTracks[0].getMax(), regTracks[1].getMax());
 			
-			String prefix = parentName.replaceAll("\\W+", "_");
-			while (parentName.startsWith("_"))
-				parentName = parentName.substring(1);
-			while (parentName.endsWith("_"))
-				parentName = parentName.substring(0, parentName.length()-1);
-			while (parentName.contains("__"))
-				parentName = parentName.replace("__", "_");
+			String prefix = FileNameUtils.simplify(parentName);
 			
 			List<FaultSection> proxySects = new ArrayList<>();
 			for (FaultSection sect : rupSet.getFaultSectionDataList())
