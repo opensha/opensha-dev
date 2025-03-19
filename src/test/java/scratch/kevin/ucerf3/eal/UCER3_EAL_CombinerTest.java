@@ -473,10 +473,10 @@ public class UCER3_EAL_CombinerTest {
 		}
 	}
 	
-	@Test
-	public void testGriddedCrosshair() throws DocumentException, IOException {
-		doTestGridded(BackgroundRupType.CROSSHAIR);
-	}
+//	@Test
+//	public void testGriddedCrosshair() throws DocumentException, IOException {
+//		doTestGridded(BackgroundRupType.CROSSHAIR);
+//	}
 	
 	@Test
 	public void testGriddedFininte() throws DocumentException, IOException {

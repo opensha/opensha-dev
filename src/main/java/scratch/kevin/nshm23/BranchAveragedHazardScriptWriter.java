@@ -3,6 +3,7 @@ package scratch.kevin.nshm23;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 
 import org.opensha.commons.geo.GriddedRegion;
@@ -14,10 +15,13 @@ import org.opensha.commons.hpc.mpj.NoMPJSingleNodeShellScriptWriter;
 import org.opensha.commons.hpc.pbs.BatchScriptWriter;
 import org.opensha.commons.hpc.pbs.HovenweepScriptWriter;
 import org.opensha.commons.hpc.pbs.USC_CARC_ScriptWriter;
+import org.opensha.sha.earthquake.faultSysSolution.erf.BaseFaultSystemSolutionERF;
 import org.opensha.sha.earthquake.faultSysSolution.hazard.mpj.MPJ_SingleSolHazardCalc;
+import org.opensha.sha.earthquake.param.BackgroundRupType;
 import org.opensha.sha.earthquake.param.IncludeBackgroundOption;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.util.NSHM23_RegionLoader;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.util.PRVI25_RegionLoader;
+import org.opensha.sha.faultSurface.utils.PointSourceDistanceCorrections;
 import org.opensha.sha.imr.AttenRelRef;
 
 import com.google.common.base.Preconditions;
@@ -39,12 +43,19 @@ public class BranchAveragedHazardScriptWriter {
 		double[] periods = { 0d, 0.2d, 1d, 5d };
 		AttenRelRef[] gmms = null;
 		
+		PointSourceDistanceCorrections distCorr = null;
+		BackgroundRupType bgRupType = null;
+		Integer bgFiniteNum = null;
+		String extraGridArgs = null;
+		
 		Region region = NSHM23_RegionLoader.loadFullConterminousWUS();
+		
+		String forceOutputName = null;
 		
 		/*
 		 * NSHM23
 		 */
-//		String baseDirName = "2024_02_02-nshm23_branches-WUS_FM_v3";
+		String baseDirName = "2024_02_02-nshm23_branches-WUS_FM_v3";
 //		String baseDirName = "2023_11_20-nshm23_branches-dm_sampling-randB-randSeg-NSHM23_v2-CoulombRupSet-DsrUni-TotNuclRate-NoRed-ThreshAvgIterRelGR";
 //		String baseDirName = "2023_11_17-nshm23_branches-dm_sampling-NSHM23_v2-CoulombRupSet-DsrUni-TotNuclRate-NoRed-ThreshAvgIterRelGR";
 //		String baseDirName = "2023_11_16-nshm23_branches-randB-randSeg-NSHM23_v2-CoulombRupSet-DsrUni-TotNuclRate-NoRed-ThreshAvgIterRelGR";
@@ -54,58 +65,94 @@ public class BranchAveragedHazardScriptWriter {
 //		String solFileName = "true_mean_solution.zip";
 		
 //		String suffix = "ba_only";
-//		String solFileName = "results_NSHM23_v2_CoulombRupSet_branch_averaged_gridded.zip";
-////		String solFileName = "results_WUS_FM_v3_branch_averaged_gridded.zip";
+////		String solFileName = "results_NSHM23_v2_CoulombRupSet_branch_averaged_gridded.zip";
+//		String solFileName = "results_WUS_FM_v3_branch_averaged_gridded.zip";
 		
 //		String suffix = "ba_only-mod_gridded";
 //		String solFileName = "results_WUS_FM_v3_branch_averaged_mod_gridded.zip";
 		
+		forceOutputName = "2025_03_18-nshm23_pt_src_tests";
+		String solFileName = "results_WUS_FM_v3_branch_averaged_gridded.zip";
+		gmms = new AttenRelRef[] {AttenRelRef.USGS_NSHM23_ACTIVE};
+		sigmaTrunc = 3d;
+		supersample = true;
+		
+		String suffix = "pure_pt_src";
+		distCorr = PointSourceDistanceCorrections.NONE;
+		bgRupType = BackgroundRupType.POINT;
+		
+//		String suffix = "pt_src_corr";
+//		distCorr = PointSourceDistanceCorrections.NSHM_2013;
+//		bgRupType = BackgroundRupType.POINT;
+		
+//		String suffix = "finite_single";
+//		bgRupType = BackgroundRupType.FINITE;
+//		bgFiniteNum = 1;
+		
+//		String suffix = "finite_crosshair";
+//		bgRupType = BackgroundRupType.FINITE;
+//		bgFiniteNum = 2;
+		
+//		String suffix = "finite_oct_crosshair";
+//		bgRupType = BackgroundRupType.FINITE;
+//		bgFiniteNum = 8;
+		
+//		String suffix = "finite_oct_crosshair-sample_along";
+//		bgRupType = BackgroundRupType.FINITE;
+//		bgFiniteNum = 8;
+//		extraGridArgs = "--point-finite-sample-along-strike";
+		
+//		String suffix = "finite_oct_crosshair-sample_along_and_down";
+//		bgRupType = BackgroundRupType.FINITE;
+//		bgFiniteNum = 8;
+//		extraGridArgs = "--point-finite-sample-along-strike --point-finite-sample-down-dip";
+		
 		/*
 		 * PRVI
 		 */
-//		region = PRVI25_RegionLoader.loadPRVI_ModelBroad();
-		region = PRVI25_RegionLoader.loadPRVI_MapExtents();
-		gridSpacing = 0.01;
-		
-		gmms = new AttenRelRef[] { AttenRelRef.USGS_PRVI_ACTIVE, AttenRelRef.USGS_PRVI_INTERFACE, AttenRelRef.USGS_PRVI_SLAB };
-		periods = new double[] { 0d, 0.2d, 1d, 5d };
-		supersample = true;
-		sigmaTrunc = 3d;
-		
-		String baseDirName = "2025_01_17-prvi25_crustal_subduction_combined_branches";
-		String suffix = "ba_only";
-		String solFileName = "combined_branch_averaged_solution.zip";
-		
+////		region = PRVI25_RegionLoader.loadPRVI_ModelBroad();
+//		region = PRVI25_RegionLoader.loadPRVI_MapExtents();
+//		gridSpacing = 0.01;
+//		
+//		gmms = new AttenRelRef[] { AttenRelRef.USGS_PRVI_ACTIVE, AttenRelRef.USGS_PRVI_INTERFACE, AttenRelRef.USGS_PRVI_SLAB };
+//		periods = new double[] { 0d, 0.2d, 1d, 5d };
+//		supersample = true;
+//		sigmaTrunc = 3d;
+//		
 //		String baseDirName = "2025_01_17-prvi25_crustal_subduction_combined_branches";
-//		String suffix = "ba_only-mue_use_crustal";
-//		String solFileName = "combined_branch_averaged_solution_mue_as_crustal.zip";
-//		gridSpacing = 0.05;
-		
-//		region = PRVI25_RegionLoader.loadPRVI_IntermediateModelMapExtents();
-//		gridSpacing = 0.02;
-//		periods = new double[] { 0d, 1d };
-//		String baseDirName = "2025_01_17-prvi25_crustal_subduction_combined_branches";
-//		String suffix = "ba_only-wider_region";
-//		String solFileName = "combined_branch_averaged_solution.zip";
-		
-//		String baseDirName = "2025_01_17-prvi25_crustal_branches-dmSample10x";
 //		String suffix = "ba_only";
-//		String solFileName = "results_PRVI_CRUSTAL_FM_V1p1_branch_averaged_gridded.zip";
-		
-//		String baseDirName = "2025_01_17-prvi25_subduction_branches";
-//		// slab (gridded only)
-//		String suffix = "ba_only-SLAB_only";
-//		String solFileName = "results_PRVI_SLAB_ONLY_branch_averaged_gridded.zip";
-//		bgOps = new IncludeBackgroundOption[] { IncludeBackgroundOption.ONLY };
-//		// interface (will do fault + gridded)
-////		String suffix = "ba_only-INTERFACE_only";
-////		String solFileName = "results_PRVI_INTERFACE_ONLY_branch_averaged_gridded.zip";
-//		// both
-////		String suffix = "ba_only-both_fms";
-////		String solFileName = "results_PRVI_SUB_FMs_combined_branch_averaged_gridded.zip";
-		
-//		vs30 = 760d; suffix += "-vs760";
-		vs30 = 260d; suffix += "-vs260";
+//		String solFileName = "combined_branch_averaged_solution.zip";
+//		
+////		String baseDirName = "2025_01_17-prvi25_crustal_subduction_combined_branches";
+////		String suffix = "ba_only-mue_use_crustal";
+////		String solFileName = "combined_branch_averaged_solution_mue_as_crustal.zip";
+////		gridSpacing = 0.05;
+//		
+////		region = PRVI25_RegionLoader.loadPRVI_IntermediateModelMapExtents();
+////		gridSpacing = 0.02;
+////		periods = new double[] { 0d, 1d };
+////		String baseDirName = "2025_01_17-prvi25_crustal_subduction_combined_branches";
+////		String suffix = "ba_only-wider_region";
+////		String solFileName = "combined_branch_averaged_solution.zip";
+//		
+////		String baseDirName = "2025_01_17-prvi25_crustal_branches-dmSample10x";
+////		String suffix = "ba_only";
+////		String solFileName = "results_PRVI_CRUSTAL_FM_V1p1_branch_averaged_gridded.zip";
+//		
+////		String baseDirName = "2025_01_17-prvi25_subduction_branches";
+////		// slab (gridded only)
+////		String suffix = "ba_only-SLAB_only";
+////		String solFileName = "results_PRVI_SLAB_ONLY_branch_averaged_gridded.zip";
+////		bgOps = new IncludeBackgroundOption[] { IncludeBackgroundOption.ONLY };
+////		// interface (will do fault + gridded)
+//////		String suffix = "ba_only-INTERFACE_only";
+//////		String solFileName = "results_PRVI_INTERFACE_ONLY_branch_averaged_gridded.zip";
+////		// both
+//////		String suffix = "ba_only-both_fms";
+//////		String solFileName = "results_PRVI_SUB_FMs_combined_branch_averaged_gridded.zip";
+//		
+////		vs30 = 760d; suffix += "-vs760";
+//		vs30 = 260d; suffix += "-vs260";
 		
 		/*
 		 * RSQSim
@@ -132,7 +179,7 @@ public class BranchAveragedHazardScriptWriter {
 //				PRVI25_RegionLoader.loadPRVI_ModelBroad(), gridSpacing, GriddedRegion.ANCHOR_0_0);
 		System.out.println("Region has "+gridReg.getNodeCount()+" nodes");
 		
-		String dirName = baseDirName;
+		String dirName = forceOutputName == null ? baseDirName : forceOutputName;
 		if (suffix != null && !suffix.isBlank())
 			dirName += "-"+suffix;
 		if (noMFDs)
@@ -244,6 +291,16 @@ public class BranchAveragedHazardScriptWriter {
 				argz += " --no-mfds";
 			
 			argz += " --gridded-seis "+bgOp.name();
+			if (bgOp != IncludeBackgroundOption.EXCLUDE) {
+				if (distCorr != null)
+					argz += " --dist-corr "+distCorr.name();
+				if (bgRupType != null)
+					argz += " --point-source-type "+bgRupType.name();
+				if (bgFiniteNum != null)
+					argz += " --point-finite-num-rand-surfaces "+bgFiniteNum;
+				if (extraGridArgs != null && !extraGridArgs.isBlank())
+					argz += " "+extraGridArgs;
+			}
 			if (gmms != null)
 				for (AttenRelRef gmm : gmms)
 					argz += " --gmpe "+gmm.name();

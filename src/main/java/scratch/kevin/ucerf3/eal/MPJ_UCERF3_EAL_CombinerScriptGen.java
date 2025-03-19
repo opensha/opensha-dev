@@ -43,7 +43,8 @@ public class MPJ_UCERF3_EAL_CombinerScriptGen {
 		// only used for tracts, can be from either directory
 		File portfolioFile = new File(remoteDir, "Porter-09-Feb-2020-CEA-100-pct-procy-portfolio-wills2015.csv");
 		
-		BackgroundRupType bgType = BackgroundRupType.CROSSHAIR;
+//		BackgroundRupType bgType = BackgroundRupType.CROSSHAIR;
+		BackgroundRupType bgType = null; // TODO support new options
 		
 		File erfProbsDir = new File("/project/scec_608/kmilner/ucerf3/erf_probs/2014_10_07-ucerf3-erf-probs");
 		double erfProbsDuration = 1d;
