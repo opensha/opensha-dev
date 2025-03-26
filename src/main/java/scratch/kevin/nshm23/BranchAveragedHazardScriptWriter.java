@@ -34,11 +34,42 @@ public class BranchAveragedHazardScriptWriter {
 		
 		IncludeBackgroundOption[] bgOps = IncludeBackgroundOption.values();
 		
+		File remoteMainDir = new File("/project/scec_608/kmilner/nshm23/batch_inversions");
+		int remoteTotalThreads = 20;
+		int remoteTotalMemGB = 50;
+		String queue = "scec";
+		int nodes = 36;
+		int mins = 600;
+//		int nodes = 18;
+//		JavaShellScriptWriter mpjWrite = new MPJExpressShellScriptWriter(
+//				USC_CARC_ScriptWriter.JAVA_BIN, remoteTotalMemGB*1024, null, USC_CARC_ScriptWriter.MPJ_HOME);
+		JavaShellScriptWriter parallelMPJWrite = new FastMPJShellScriptWriter(
+				USC_CARC_ScriptWriter.JAVA_BIN, remoteTotalMemGB*1024, null, USC_CARC_ScriptWriter.FMPJ_HOME);
+		JavaShellScriptWriter singleMPJWrite = new NoMPJSingleNodeShellScriptWriter(USC_CARC_ScriptWriter.JAVA_BIN,
+				remoteTotalMemGB*1024, null);
+		BatchScriptWriter pbsWrite = new USC_CARC_ScriptWriter();
+		
+//		File remoteMainDir = new File("/caldera/hovenweep/projects/usgs/hazards/ehp/kmilner/nshm23/batch_inversions");
+//		int remoteTotalThreads = 128;
+//		int remoteTotalMemGB = 448;
+//		String queue = null;
+//		int nodes = 4;
+//		int mins = 180;
+////		int nodes = 18;
+////		JavaShellScriptWriter mpjWrite = new MPJExpressShellScriptWriter(
+////				USC_CARC_ScriptWriter.JAVA_BIN, remoteTotalMemGB*1024, null, USC_CARC_ScriptWriter.MPJ_HOME);
+//		JavaShellScriptWriter parallelMPJWrite = new FastMPJShellScriptWriter(
+//				HovenweepScriptWriter.JAVA_BIN, remoteTotalMemGB*1024, null, HovenweepScriptWriter.FMPJ_HOME);
+//		JavaShellScriptWriter singleMPJWrite = new NoMPJSingleNodeShellScriptWriter(HovenweepScriptWriter.JAVA_BIN,
+//				remoteTotalMemGB*1024, null);
+//		BatchScriptWriter pbsWrite = new HovenweepScriptWriter();
+		
 		boolean linkFromBase = true;
 		Double vs30 = null;
 		Double sigmaTrunc = null;
 		double gridSpacing = 0.1;
 		boolean supersample = false;
+		boolean supersampleFinite = false;
 		
 		double[] periods = { 0d, 0.2d, 1d, 5d };
 		AttenRelRef[] gmms = null;
@@ -47,6 +78,9 @@ public class BranchAveragedHazardScriptWriter {
 		BackgroundRupType bgRupType = null;
 		Integer bgFiniteNum = null;
 		String extraGridArgs = null;
+		Double pointFiniteMinMag = null;
+		
+		Integer forceMaxDispatch = null;
 		
 		Region region = NSHM23_RegionLoader.loadFullConterminousWUS();
 		
@@ -71,19 +105,25 @@ public class BranchAveragedHazardScriptWriter {
 //		String suffix = "ba_only-mod_gridded";
 //		String solFileName = "results_WUS_FM_v3_branch_averaged_mod_gridded.zip";
 		
-		forceOutputName = "2025_03_18-nshm23_pt_src_tests";
+		forceOutputName = "2025_03_25-nshm23_pt_src_tests";
 		String solFileName = "results_WUS_FM_v3_branch_averaged_gridded.zip";
-		gmms = new AttenRelRef[] {AttenRelRef.USGS_NSHM23_ACTIVE};
+//		gmms = new AttenRelRef[] {AttenRelRef.USGS_NSHM23_ACTIVE};
+		gmms = new AttenRelRef[] {AttenRelRef.NGAWest_2014_AVG_NOIDRISS};
 		sigmaTrunc = 3d;
 		supersample = true;
+		pointFiniteMinMag = 5d;
+		forceMaxDispatch = 100;
+		if (supersample)
+			forceOutputName += "-supersample";
 		
-		String suffix = "pure_pt_src";
-		distCorr = PointSourceDistanceCorrections.NONE;
-		bgRupType = BackgroundRupType.POINT;
+//		String suffix = "pure_pt_src";
+//		distCorr = PointSourceDistanceCorrections.NONE;
+//		bgRupType = BackgroundRupType.POINT;
 		
-//		String suffix = "pt_src_corr";
+//		String suffix = "pt_src_corr-2013";
 //		distCorr = PointSourceDistanceCorrections.NSHM_2013;
 //		bgRupType = BackgroundRupType.POINT;
+//		pointFiniteMinMag = 6d;
 		
 //		String suffix = "finite_single";
 //		bgRupType = BackgroundRupType.FINITE;
@@ -93,19 +133,46 @@ public class BranchAveragedHazardScriptWriter {
 //		bgRupType = BackgroundRupType.FINITE;
 //		bgFiniteNum = 2;
 		
+//		String suffix = "finite_quad_crosshair";
+//		bgRupType = BackgroundRupType.FINITE;
+//		bgFiniteNum = 4;
+//		mins = 24*60;
+		
+//		String suffix = "finite_quad_crosshair-sample_along";
+//		bgRupType = BackgroundRupType.FINITE;
+//		bgFiniteNum = 4;
+//		extraGridArgs = "--point-finite-min-mag 5--point-finite-sample-along-strike";
+//		mins = 24*60;
+		
+//		String suffix = "finite_quad_crosshair-sample_along_and_down";
+//		bgRupType = BackgroundRupType.FINITE;
+//		bgFiniteNum = 4;
+//		extraGridArgs = "--point-finite-sample-along-strike --point-finite-sample-down-dip";
+//		mins = 24*60;
+		
 //		String suffix = "finite_oct_crosshair";
 //		bgRupType = BackgroundRupType.FINITE;
 //		bgFiniteNum = 8;
+//		mins = 24*60;
 		
-//		String suffix = "finite_oct_crosshair-sample_along";
-//		bgRupType = BackgroundRupType.FINITE;
-//		bgFiniteNum = 8;
-//		extraGridArgs = "--point-finite-sample-along-strike";
+		String suffix = "finite_dodec_crosshair";
+		bgRupType = BackgroundRupType.FINITE;
+		bgFiniteNum = 12;
+		mins = 2*24*60;
 		
-//		String suffix = "finite_oct_crosshair-sample_along_and_down";
+//		String suffix = "finite_dodec_crosshair_to_m6";
 //		bgRupType = BackgroundRupType.FINITE;
-//		bgFiniteNum = 8;
-//		extraGridArgs = "--point-finite-sample-along-strike --point-finite-sample-down-dip";
+//		bgFiniteNum = 12;
+//		extraGridArgs = "--point-finite-min-mag 6";
+		
+//		String suffix = "pt_src_corr-analytical_5pt";
+//		distCorr = PointSourceDistanceCorrections.ANALYTICAL_FIVE_POINT;
+//		bgRupType = BackgroundRupType.POINT;
+		
+//		String suffix = "pt_src_corr-analytical_5pt-approx_ss";
+//		distCorr = PointSourceDistanceCorrections.SUPERSAMPLING_0p1_FIVE_POINT;
+//		bgRupType = BackgroundRupType.POINT;
+//		Preconditions.checkState(!supersample);
 		
 		/*
 		 * PRVI
@@ -189,36 +256,6 @@ public class BranchAveragedHazardScriptWriter {
 		File localDir = new File(localMainDir, dirName);
 		Preconditions.checkState(localDir.exists() || localDir.mkdir());
 		
-		File remoteMainDir = new File("/project/scec_608/kmilner/nshm23/batch_inversions");
-		int remoteTotalThreads = 20;
-		int remoteTotalMemGB = 50;
-		String queue = "scec";
-		int nodes = 36;
-		int mins = 600;
-//		int nodes = 18;
-//		JavaShellScriptWriter mpjWrite = new MPJExpressShellScriptWriter(
-//				USC_CARC_ScriptWriter.JAVA_BIN, remoteTotalMemGB*1024, null, USC_CARC_ScriptWriter.MPJ_HOME);
-		JavaShellScriptWriter parallelMPJWrite = new FastMPJShellScriptWriter(
-				USC_CARC_ScriptWriter.JAVA_BIN, remoteTotalMemGB*1024, null, USC_CARC_ScriptWriter.FMPJ_HOME);
-		JavaShellScriptWriter singleMPJWrite = new NoMPJSingleNodeShellScriptWriter(USC_CARC_ScriptWriter.JAVA_BIN,
-				remoteTotalMemGB*1024, null);
-		BatchScriptWriter pbsWrite = new USC_CARC_ScriptWriter();
-		
-//		File remoteMainDir = new File("/caldera/hovenweep/projects/usgs/hazards/ehp/kmilner/nshm23/batch_inversions");
-//		int remoteTotalThreads = 128;
-//		int remoteTotalMemGB = 448;
-//		String queue = null;
-//		int nodes = 4;
-//		int mins = 180;
-////		int nodes = 18;
-////		JavaShellScriptWriter mpjWrite = new MPJExpressShellScriptWriter(
-////				USC_CARC_ScriptWriter.JAVA_BIN, remoteTotalMemGB*1024, null, USC_CARC_ScriptWriter.MPJ_HOME);
-//		JavaShellScriptWriter parallelMPJWrite = new FastMPJShellScriptWriter(
-//				HovenweepScriptWriter.JAVA_BIN, remoteTotalMemGB*1024, null, HovenweepScriptWriter.FMPJ_HOME);
-//		JavaShellScriptWriter singleMPJWrite = new NoMPJSingleNodeShellScriptWriter(HovenweepScriptWriter.JAVA_BIN,
-//				remoteTotalMemGB*1024, null);
-//		BatchScriptWriter pbsWrite = new HovenweepScriptWriter();
-		
 		if (parallelMPJWrite instanceof FastMPJShellScriptWriter)
 			((FastMPJShellScriptWriter)parallelMPJWrite).setUseLaunchWrapper(true);
 		
@@ -271,7 +308,9 @@ public class BranchAveragedHazardScriptWriter {
 				mpjWrite = parallelMPJWrite;
 				
 				int maxDispatch;
-				if (gridReg.getNodeCount() > 50000)
+				if (forceMaxDispatch != null)
+					maxDispatch = forceMaxDispatch;
+				else if (gridReg.getNodeCount() > 50000)
 					maxDispatch = Integer.max(remoteTotalThreads*20, 1000);
 				else if (gridReg.getNodeCount() > 10000)
 					maxDispatch = Integer.max(remoteTotalThreads*10, 500);
@@ -298,6 +337,8 @@ public class BranchAveragedHazardScriptWriter {
 					argz += " --point-source-type "+bgRupType.name();
 				if (bgFiniteNum != null)
 					argz += " --point-finite-num-rand-surfaces "+bgFiniteNum;
+				if (pointFiniteMinMag != null)
+					argz += " --point-finite-min-mag "+pointFiniteMinMag.floatValue();
 				if (extraGridArgs != null && !extraGridArgs.isBlank())
 					argz += " "+extraGridArgs;
 			}
@@ -314,8 +355,12 @@ public class BranchAveragedHazardScriptWriter {
 			}
 			if (vs30 != null)
 				argz += " --vs30 "+vs30.floatValue();
-			if (supersample)
-				argz += " --supersample";
+			if (supersample) {
+				if (supersampleFinite)
+					argz += " --supersample-finite";
+				else
+					argz += " --supersample";
+			}
 			if (sigmaTrunc != null)
 				argz += " --gmm-sigma-trunc-one-sided "+sigmaTrunc.floatValue();
 			argz += " "+dispatchArgs;

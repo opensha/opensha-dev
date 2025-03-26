@@ -45,6 +45,7 @@ import org.opensha.commons.calc.GaussianDistCalc;
 import org.opensha.commons.calc.GaussianExceedProbCalculator;
 import org.opensha.commons.calc.WeightedSampler;
 import org.opensha.commons.calc.magScalingRelations.magScalingRelImpl.Somerville_2006_MagAreaRel;
+import org.opensha.commons.calc.magScalingRelations.magScalingRelImpl.WC1994_MagLengthRelationship;
 import org.opensha.commons.data.CSVFile;
 import org.opensha.commons.data.Site;
 import org.opensha.commons.data.comcat.ComcatAccessor;
@@ -90,6 +91,7 @@ import org.opensha.commons.mapping.PoliticalBoundariesData;
 import org.opensha.commons.mapping.gmt.elements.GMT_CPT_Files;
 import org.opensha.commons.param.Parameter;
 import org.opensha.commons.util.DataUtils.MinMaxAveTracker;
+import org.opensha.commons.util.FaultUtils;
 import org.opensha.commons.util.IDPairing;
 import org.opensha.commons.util.Interpolate;
 import org.opensha.commons.util.MarkdownUtils;
@@ -106,6 +108,7 @@ import org.opensha.refFaultParamDb.vo.DeformationModelSummary;
 import org.opensha.sha.calc.HazardCurveCalculator;
 import org.opensha.sha.earthquake.AbstractNthRupERF;
 import org.opensha.sha.earthquake.EqkRupture;
+import org.opensha.sha.earthquake.PointSource;
 import org.opensha.sha.earthquake.ProbEqkRupture;
 import org.opensha.sha.earthquake.ProbEqkSource;
 import org.opensha.sha.earthquake.faultSysSolution.FaultSystemRupSet;
@@ -165,6 +168,7 @@ import org.opensha.sha.earthquake.rupForecastImpl.WGCEP_UCERF_2_Final.FaultSegme
 import org.opensha.sha.earthquake.rupForecastImpl.WGCEP_UCERF_2_Final.MeanUCERF2.MeanUCERF2;
 import org.opensha.sha.earthquake.rupForecastImpl.WGCEP_UCERF_2_Final.data.A_FaultsFetcher;
 import org.opensha.sha.earthquake.rupForecastImpl.WGCEP_UCERF_2_Final.data.finalReferenceFaultParamDb.DeformationModelSummaryFinal;
+import org.opensha.sha.earthquake.rupForecastImpl.nshm23.erf.NSHM23_WUS_BranchAveragedERF;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.gridded.NSHM23_SingleRegionGridSourceProvider.NSHM23_WUS_FiniteRuptureConverter;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_DeformationModels;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_FaultModels;
@@ -186,10 +190,14 @@ import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_Subduc
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_SubductionFaultModels;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.util.PRVI25_RegionLoader;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.util.PRVI25_RegionLoader.PRVI25_SeismicityRegions;
+import org.opensha.sha.earthquake.util.GridCellSupersamplingSettings;
+import org.opensha.sha.earthquake.util.GriddedFiniteRuptureSettings;
+import org.opensha.sha.earthquake.util.GriddedSeismicitySettings;
 import org.opensha.sha.faultSurface.FaultSection;
 import org.opensha.sha.faultSurface.GeoJSONFaultSection;
 import org.opensha.sha.faultSurface.PointSurface;
 import org.opensha.sha.faultSurface.RuptureSurface;
+import org.opensha.sha.faultSurface.utils.PointSourceDistanceCorrections;
 import org.opensha.sha.gui.infoTools.IMT_Info;
 import org.opensha.sha.imr.AttenRelRef;
 import org.opensha.sha.imr.ScalarIMR;
@@ -3221,13 +3229,71 @@ public class PureScratch {
 		System.out.println("All good");
 	}
 	
+	private static void test343() throws IOException {
+		WC1994_MagLengthRelationship wc = new WC1994_MagLengthRelationship();
+		for (Point2D pt : FaultSysTools.initEmptyMFD(5.01, 8.01)) {
+			System.out.println((float)pt.getX()+":\t"+wc.getMedianLength(pt.getX())+" km");
+		}
+	}
+	
+	private static void test344() throws IOException {
+		BaseFaultSystemSolutionERF erf = new NSHM23_WUS_BranchAveragedERF();
+		int numFinite = 12;
+		
+		GriddedSeismicitySettings settings = erf.getGriddedSeismicitySettings();
+		
+		settings = settings.forSurfaceType(BackgroundRupType.FINITE)
+				.forDistanceCorrections(PointSourceDistanceCorrections.NONE)
+				.forPointSourceMagCutoff(5d)
+				.forFiniteRuptureSettings(GriddedFiniteRuptureSettings.DEFAULT_CROSSHAIR.forNumSurfaces(numFinite))
+				.forSupersamplingSettings(null);
+		
+		erf.setParameter(IncludeBackgroundParam.NAME, IncludeBackgroundOption.ONLY);
+		erf.setGriddedSeismicitySettings(settings);
+		
+		System.out.println("Updating forecast");
+		erf.updateForecast();
+		
+		int numSourcesToShow = 1000;
+		float magToShow = 7.05f;
+		float rakeToShow = 0f;
+		DecimalFormat strikeDF = new DecimalFormat("000.00");
+		for (int s=0; s<erf.getNumSources() && s<numSourcesToShow; s++) {
+			ProbEqkSource source = erf.getSource(s);
+			Preconditions.checkState(source instanceof PointSource);
+			Location loc = ((PointSource)source).getLocation();
+			System.out.println("Source "+s+" at "+loc);
+			List<Double> strikes = new ArrayList<>();
+			for (ProbEqkRupture rup : source) {
+				if (magToShow == (float)rup.getMag() && rakeToShow == (float)rup.getAveRake())
+					strikes.add(rup.getRuptureSurface().getAveStrike());
+//				System.out.println("\tM"+(float)rup.getMag()+", rake="+(float)rup.getAveRake()
+//						+", strike="+(float)rup.getRuptureSurface().getAveStrike());
+			}
+			StringBuilder str = new StringBuilder("\t");
+			for (int i=0; i<strikes.size(); i++) {
+				if (i > 0) {
+					str.append("; ");
+				}
+				double strike = strikes.get(i);
+				str.append(strikeDF.format(strikes.get(i)));
+				if (i > 0) {
+					double prev = strikes.get(i-1);
+					double diff = FaultUtils.getAbsAngleDiff(strike, prev);
+					str.append(" (|diff|="+strikeDF.format(diff)+")");
+				}
+			}
+			System.out.println(str);
+		}
+	}
+	
 	/**
 	 * @param args
 	 * @throws Exception 
 	 */
 	public static void main(String[] args) throws Exception {
 		try {
-			test342();
+			test344();
 		} catch (Throwable t) {
 			t.printStackTrace();
 			System.exit(1);

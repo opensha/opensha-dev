@@ -121,7 +121,7 @@ public class PointSourceHazardComparison {
 			@Override
 			public ProbEqkSource buildSource(Location centerLoc, IncrementalMagFreqDist mfd,
 					double aveRake, double aveDip, boolean isSupersample, Random r) {
-				return new PointSourceNshm(centerLoc, mfd, 1d, mechWtMapForRake(aveRake), getDistCorrs());
+				return new PointSourceNshm(centerLoc, mfd, 1d, mechWtMapForRake(aveRake), getDistCorrs(), 6d);
 			}
 		},
 		APROX_SUPERSAMPLE_POINT_SOURCE_NSHM("Approx. Supersampled PointSourceNshm", false, PointSourceDistanceCorrections.NONE) { // none is fine here, it's baked in
@@ -314,20 +314,20 @@ public class PointSourceHazardComparison {
 		
 		private String label;
 		private boolean stochastic;
-		private WeightedList<PointSourceDistanceCorrection> distCorrs;
+		private WeightedList<? extends PointSourceDistanceCorrection> distCorrs;
 
 		private PointSourceType(String label, boolean stochastic, PointSourceDistanceCorrections distCorrType) {
 			this(label, stochastic, distCorrType.get());
 		}
 
-		private PointSourceType(String label, boolean stochastic, WeightedList<PointSourceDistanceCorrection> distCorrs) {
+		private PointSourceType(String label, boolean stochastic, WeightedList<? extends PointSourceDistanceCorrection> distCorrs) {
 			this.label = label;
 			this.stochastic = stochastic;
-			Preconditions.checkNotNull(distCorrs);
+//			Preconditions.checkNotNull(distCorrs);
 			this.distCorrs = distCorrs;
 		}
 		
-		public WeightedList<PointSourceDistanceCorrection> getDistCorrs() {
+		public WeightedList<? extends PointSourceDistanceCorrection> getDistCorrs() {
 			return distCorrs;
 		}
 		
@@ -398,7 +398,7 @@ public class PointSourceHazardComparison {
 	}
 	
 	private static ProbEqkSource buildPointSource(Location centerLoc, Region cell, IncrementalMagFreqDist mfd,
-			double aveRake, double aveDip, Random r, WeightedList<PointSourceDistanceCorrection> distCorrs) {
+			double aveRake, double aveDip, Random r, WeightedList<? extends PointSourceDistanceCorrection> distCorrs) {
 		PointSurfaceBuilder builder = new PointSurfaceBuilder(centerLoc);
 		builder.dip(aveDip);
 		builder.random(r);
@@ -977,10 +977,10 @@ public class PointSourceHazardComparison {
 		boolean doSingleCellHazard = true;
 		boolean doNSHMModelHazard = true;
 		boolean doHighRes = false;
-		boolean doSupersample = true;
+		boolean doSupersample = false;
 		boolean forceWriteIntermediate = true;
 		boolean writeTables = false;
-		boolean strikeSlipOnly = true;
+		boolean strikeSlipOnly = false;
 		
 		AttenRelRef gmmRef = AttenRelRef.NGAWest_2014_AVG_NOIDRISS;
 		double[] periods = {0d, 1d};

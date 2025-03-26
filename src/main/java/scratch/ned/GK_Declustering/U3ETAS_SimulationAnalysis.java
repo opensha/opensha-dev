@@ -1189,7 +1189,7 @@ public class U3ETAS_SimulationAnalysis {
 		
 		HazardCurveCalculator calc = getHazardCurveCalculator();
 		
-		WeightedList<PointSourceDistanceCorrection> distCorrs = PointSourceDistanceCorrections.NSHM_2013.get();
+		WeightedList<? extends PointSourceDistanceCorrection> distCorrs = PointSourceDistanceCorrections.NSHM_2013.get();
 		
 		ArrayList<EqkRupture> eqkRupList = new ArrayList<EqkRupture>();
 		for(ObsEqkRupture rup: obsQkList) {
@@ -1250,7 +1250,7 @@ public class U3ETAS_SimulationAnalysis {
 		
 		HazardCurveCalculator calc = getHazardCurveCalculator();
 		
-		WeightedList<PointSourceDistanceCorrection> distCorr = PointSourceDistanceCorrections.NSHM_2013.get();
+		WeightedList<? extends PointSourceDistanceCorrection> distCorr = PointSourceDistanceCorrections.NSHM_2013.get();
 		
 		ArrayList<EqkRupture> eqkRupList = new ArrayList<EqkRupture>();
 		for(ObsEqkRupture rup: obsQkList) {
@@ -1294,7 +1294,7 @@ public class U3ETAS_SimulationAnalysis {
 		
 		HazardCurveCalculator calc = getHazardCurveCalculator();
 		
-		WeightedList<PointSourceDistanceCorrection> distCorr = PointSourceDistanceCorrections.NSHM_2013.get();
+		WeightedList<? extends PointSourceDistanceCorrection> distCorr = PointSourceDistanceCorrections.NSHM_2013.get();
 		
 		ArrayList<EqkRupture> eqkRupList = new ArrayList<EqkRupture>();
 		for(ObsEqkRupture rup: obsQkList) {
