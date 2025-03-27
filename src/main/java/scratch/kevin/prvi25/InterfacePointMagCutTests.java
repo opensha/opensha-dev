@@ -56,7 +56,7 @@ public class InterfacePointMagCutTests {
 //		Gmm gmmRef = Gmm.AG_20_GLOBAL_INTERFACE;
 //		Gmm gmmRef = Gmm.KBCG_20_GLOBAL_INTERFACE;
 		Gmm gmmRef = Gmm.PSBAH_20_GLOBAL_INTERFACE;
-		ScalarIMR gmm = new NSHMP_GMM_Wrapper(gmmRef, gmmRef.toString(), gmmRef.name(), false, null);
+		ScalarIMR gmm = new NSHMP_GMM_Wrapper.Single(gmmRef, gmmRef.toString(), gmmRef.name(), false, null);
 		gmm.setIntensityMeasure(PGA_Param.NAME);
 		
 		for (int q=0; q<quants.length; q++) {
