@@ -40,6 +40,7 @@ import org.opensha.sha.earthquake.util.GriddedFiniteRuptureSettings;
 import org.opensha.sha.earthquake.util.GriddedSeismicitySettings;
 import org.opensha.sha.faultSurface.utils.PointSourceDistanceCorrections;
 import org.opensha.sha.gui.infoTools.IMT_Info;
+import org.opensha.sha.imr.AttenRelRef;
 import org.opensha.sha.imr.ScalarIMR;
 import org.opensha.sha.imr.attenRelImpl.nshmp.NSHMP_GMM_Wrapper;
 import org.opensha.sha.imr.param.IntensityMeasureParams.PGA_Param;
@@ -56,24 +57,29 @@ public class GriddedHazardSingleSiteComparison {
 		erf.updateForecast();
 		
 //		PointSourceDistanceCorrections corrType = PointSourceDistanceCorrections.ANALYTICAL_TWENTY_POINT;
-//		PointSourceDistanceCorrections corrType = PointSourceDistanceCorrections.ANALYTICAL_FIVE_POINT;
-		PointSourceDistanceCorrections corrType = PointSourceDistanceCorrections.SUPERSAMPLING_0p1_FIVE_POINT_RJB_DIST;
-//		PointSourceDistanceCorrections corrType = PointSourceDistanceCorrections.ANALYTICAL_MEDIAN;
+//		PointSourceDistanceCorrections corrType = PointSourceDistanceCorrections.FIVE_POINT_RJB_DIST;
+//		PointSourceDistanceCorrections corrType = PointSourceDistanceCorrections.FIVE_POINT_RJB_DIST_ALONG;
+//		PointSourceDistanceCorrections corrType = PointSourceDistanceCorrections.SUPERSAMPLING_0p1_FIVE_POINT_RJB_DIST;
+		PointSourceDistanceCorrections corrType = PointSourceDistanceCorrections.SUPERSAMPLING_0p1_TWENTY_POINT_RJB_DIST;
+//		PointSourceDistanceCorrections corrType = PointSourceDistanceCorrections.MEDIAN_RJB;
 //		GridCellSupersamplingSettings ssSettings = GridCellSupersamplingSettings.DEFAULT;
 		GridCellSupersamplingSettings ssSettings = null;
+//		PointSourceDistanceCorrections compCorrType = null;
+		PointSourceDistanceCorrections compCorrType = PointSourceDistanceCorrections.FIVE_POINT_RJB_DIST;
 		GridCellSupersamplingSettings compSSSettings = GridCellSupersamplingSettings.DEFAULT.forApplyToFinite(true);
+//		GridCellSupersamplingSettings compSSSettings = new GridCellSupersamplingSettings(0.5, 40d, 100d, 0, true);
 //		GridCellSupersamplingSettings compSSSettings = null;
 		int numFinite = 12;
 		String title = corrType.toString();
 		
 		// switch to single-mechanism
-////		FocalMech mech = FocalMech.STRIKE_SLIP;
+		FocalMech mech = FocalMech.STRIKE_SLIP;
 //		FocalMech mech = FocalMech.REVERSE;
-//		title += ", "+mech.toString()+" Only";
-//		FaultSystemSolution sol = erf.getSolution();
-//		sol.setGridSourceProvider(getAsOnlyMech(sol.requireModule(GridSourceList.class), mech));
-//		erf = new BaseFaultSystemSolutionERF();
-//		erf.setSolution(sol);
+		title += ", "+mech.toString()+" Only";
+		FaultSystemSolution sol = erf.getSolution();
+		sol.setGridSourceProvider(getAsOnlyMech(sol.requireModule(GridSourceList.class), mech));
+		erf = new BaseFaultSystemSolutionERF();
+		erf.setSolution(sol);
 		
 		GriddedSeismicitySettings settings = erf.getGriddedSeismicitySettings();
 		
@@ -82,16 +88,23 @@ public class GriddedHazardSingleSiteComparison {
 				.forMinimumMagnitude(5d).forPointSourceMagCutoff(5d)
 				.forSupersamplingSettings(ssSettings);
 		
-		GriddedSeismicitySettings compSettings = settings.forSurfaceType(BackgroundRupType.FINITE)
-				.forDistanceCorrections(PointSourceDistanceCorrections.NONE)
-				.forFiniteRuptureSettings(GriddedFiniteRuptureSettings.DEFAULT_CROSSHAIR.forNumSurfaces(numFinite))
-				.forSupersamplingSettings(compSSSettings);
+		GriddedSeismicitySettings compSettings;
+		if (compCorrType == null)
+			compSettings = settings.forSurfaceType(BackgroundRupType.FINITE).forDistanceCorrections(PointSourceDistanceCorrections.NONE)
+					.forFiniteRuptureSettings(GriddedFiniteRuptureSettings.DEFAULT_CROSSHAIR.forNumSurfaces(numFinite));
+		else
+			compSettings = settings.forSurfaceType(BackgroundRupType.POINT).forDistanceCorrections(compCorrType);
+		compSettings = compSettings.forSupersamplingSettings(compSSSettings);
 		
-		ScalarIMR gmm = new NSHMP_GMM_Wrapper(Gmm.COMBINED_ACTIVE_CRUST_2023);
+//		ScalarIMR gmm = new NSHMP_GMM_Wrapper.Single(Gmm.COMBINED_ACTIVE_CRUST_2023);
+		ScalarIMR gmm = AttenRelRef.USGS_NSHM23_ACTIVE.get();
 		gmm.setIntensityMeasure(PGA_Param.NAME);
 		
 //		Site site = new Site(new Location(37.6, -118.9));
-		Site site = new Site(new Location(37.7, -119.2));
+//		Site site = new Site(new Location(37.7, -119.2)); // site where median rJB is a particularly bad approximation (-6.5%)
+		Site site = new Site(new Location(37.4, -118.9)); // super-sampling test site
+//		Site site = new Site(new Location(37.45, -118.95)); // super-sampling test site at node corner
+//		Site site = new Site(new Location(37.45, -118.9)); // super-sampling test site at node edge
 		site.addParameterList(gmm.getSiteParams());
 		
 		erf.setParameter(IncludeBackgroundParam.NAME, IncludeBackgroundOption.EXCLUDE);
@@ -134,6 +147,7 @@ public class GriddedHazardSingleSiteComparison {
 		System.out.println("DONE");
 		
 		double primary2In50 = primaryCurve.getFirstInterpolatedX_inLogXLogYDomain(ReturnPeriods.TWO_IN_50.oneYearProb); 
+		System.out.println("Primary 2% in 50: "+(float)primary2In50);
 		
 		erf.setParameter(IncludeBackgroundParam.NAME, IncludeBackgroundOption.ONLY);
 		erf.setGriddedSeismicitySettings(compSettings);
@@ -153,6 +167,7 @@ public class GriddedHazardSingleSiteComparison {
 		System.out.println("DONE");
 		
 		double comp2In50 = compCurve.getFirstInterpolatedX_inLogXLogYDomain(ReturnPeriods.TWO_IN_50.oneYearProb);
+		System.out.println("Comparison 2% in 50: "+(float)comp2In50);
 		
 		List<DiscretizedFunc> funcs = new ArrayList<>();
 		List<PlotCurveCharacterstics> chars = new ArrayList<>();

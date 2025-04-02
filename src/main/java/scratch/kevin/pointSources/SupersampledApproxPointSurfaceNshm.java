@@ -64,7 +64,7 @@ public class SupersampledApproxPointSurfaceNshm extends PointSurface {
 			dists[i] = LocationUtils.horzDistanceFast(supersampledCell.getLocation(i), siteLoc);
 		if (AVERAGE_CORRECTED)
 			for (int i=0; i<dists.length; i++)
-				dists[i] = distCorr.getCorrectedDistanceJB(mag, ptSurf, dists[i]);
+				dists[i] = distCorr.getCorrectedDistanceJB(siteLoc, mag, ptSurf, dists[i]);
 		double avg;
 		if (MEDIAN_DIST)
 			avg = DataUtils.median(dists);
@@ -72,7 +72,7 @@ public class SupersampledApproxPointSurfaceNshm extends PointSurface {
 			avg = StatUtils.mean(dists);
 		if (!AVERAGE_CORRECTED)
 			// correct the average
-			avg = distCorr.getCorrectedDistanceJB(mag, ptSurf, avg);
+			avg = distCorr.getCorrectedDistanceJB(null, mag, ptSurf, avg);
 		return avg;
 	}
 

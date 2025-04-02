@@ -28,8 +28,11 @@ public class HazardZipBiggestDifferenceFinder {
 		
 		int numLocs = 20;
 		
-		File mainDir = new File(invsDir, "2025_03_25-nshm23_pt_src_tests-pt_src_corr-analytical_5pt");
-		File compDir = new File(invsDir, "2025_03_25-nshm23_pt_src_tests-finite_crosshair");
+//		File mainDir = new File(invsDir, "2025_03_25-nshm23_pt_src_tests-pt_src_corr-analytical_5pt");
+//		File compDir = new File(invsDir, "2025_03_25-nshm23_pt_src_tests-finite_crosshair");
+		
+		File mainDir = new File(invsDir, "2025_03_25-nshm23_pt_src_tests-pt_src_corr-analytical_5pt-approx_ss");
+		File compDir = new File(invsDir, "2025_03_25-nshm23_pt_src_tests-supersample-pt_src_corr-analytical_5pt");
 		
 		ZipFile mainZip = new ZipFile(new File(mainDir, zipName));
 		ZipFile compZip = new ZipFile(new File(compDir, zipName));

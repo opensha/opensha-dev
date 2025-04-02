@@ -40,12 +40,18 @@ public class GriddedHazardBenchmark {
 		
 //		settings = settings.forSurfaceType(BackgroundRupType.FINITE);
 //		settings = settings.forPointSourceMagCutoff(5d);
-//		settings = settings.forFiniteRuptureSettings(settings.finiteRuptureSettings.forNumSurfaces(2));
+//		settings = settings.forFiniteRuptureSettings(settings.finiteRuptureSettings.forNumSurfaces(12));
+//		settings = settings.forSupersamplingSettings(GridCellSupersamplingSettings.DEFAULT.forApplyToFinite(true));
+////		settings = settings.forSupersamplingSettings(null);
 		
 		settings = settings.forSurfaceType(BackgroundRupType.POINT);
-		settings = settings.forDistanceCorrections(PointSourceDistanceCorrections.MEDIAN_RJB);
-		
-		settings = settings.forSupersamplingSettings(GridCellSupersamplingSettings.DEFAULT);
+//		settings = settings.forDistanceCorrections(PointSourceDistanceCorrections.NONE);
+//		settings = settings.forDistanceCorrections(PointSourceDistanceCorrections.MEDIAN_RJB);
+//		settings = settings.forDistanceCorrections(PointSourceDistanceCorrections.FIVE_POINT_RJB_DIST);
+		settings = settings.forDistanceCorrections(PointSourceDistanceCorrections.SUPERSAMPLING_0p1_FIVE_POINT_RJB_DIST);
+		settings = settings.forPointSourceMagCutoff(5d);
+//		settings = settings.forSupersamplingSettings(GridCellSupersamplingSettings.DEFAULT);
+		settings = settings.forSupersamplingSettings(null);
 		
 		erf.setCacheGridSources(true);
 		erf.setGriddedSeismicitySettings(settings);
@@ -53,8 +59,9 @@ public class GriddedHazardBenchmark {
 		erf.updateForecast();
 		
 		int numToCalc = 1000;
-//		ScalarIMR gmm = AttenRelRef.NGAWest_2014_AVG_NOIDRISS.get();
-		ScalarIMR gmm = new NSHMP_GMM_Wrapper(Gmm.COMBINED_ACTIVE_CRUST_2023);
+		ScalarIMR gmm = AttenRelRef.NGAWest_2014_AVG_NOIDRISS.get();
+//		ScalarIMR gmm = new NSHMP_GMM_Wrapper.Single(Gmm.COMBINED_ACTIVE_CRUST_2023);
+//		ScalarIMR gmm = AttenRelRef.USGS_NSHM23_ACTIVE.get();
 		gmm.setIntensityMeasure(PGA_Param.NAME);
 		HazardCurveCalculator calc = new HazardCurveCalculator(new SourceFilterManager(SourceFilters.TRT_DIST_CUTOFFS));
 		

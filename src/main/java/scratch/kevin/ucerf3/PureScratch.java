@@ -3287,13 +3287,40 @@ public class PureScratch {
 		}
 	}
 	
+	private static void test345() throws IOException {
+		double min = 0d;
+		double max = 1d;
+		int num = 4;
+		boolean sampleEdges = true;
+		
+//		double min = 0d;
+//		double max = 90d;
+//		int num = 40;
+//		boolean sampleEdges = false;
+		
+//		double min = 0d;
+//		double max = 360d;
+//		int num = 40;
+		
+		double delta = (max-min)/(double)(sampleEdges ? num-1 : num);
+		double ret0 = sampleEdges ? 0d : min + 0.5*delta;
+		double[] ret = new double[num];
+		for (int i=0; i<num; i++)
+			ret[i] = ret0 + i*delta;
+		
+		System.out.println("min="+(float)min+", max="+(float)max+", num="+num+", delta="+delta);
+		System.out.println("Samples:");
+		for (double val : ret)
+			System.out.println("\t"+(float)val);
+	}
+	
 	/**
 	 * @param args
 	 * @throws Exception 
 	 */
 	public static void main(String[] args) throws Exception {
 		try {
-			test344();
+			test345();
 		} catch (Throwable t) {
 			t.printStackTrace();
 			System.exit(1);

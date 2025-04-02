@@ -7,6 +7,7 @@ import java.util.Iterator;
 import java.util.List;
 
 import org.opensha.commons.geo.GriddedRegion;
+import org.opensha.commons.geo.Location;
 import org.opensha.commons.geo.Region;
 import org.opensha.commons.geo.json.Feature;
 import org.opensha.commons.hpc.JavaShellScriptWriter;
@@ -105,12 +106,15 @@ public class BranchAveragedHazardScriptWriter {
 //		String suffix = "ba_only-mod_gridded";
 //		String solFileName = "results_WUS_FM_v3_branch_averaged_mod_gridded.zip";
 		
-		forceOutputName = "2025_03_25-nshm23_pt_src_tests";
+		forceOutputName = "2025_04_01-nshm23_pt_src_tests";
 		String solFileName = "results_WUS_FM_v3_branch_averaged_gridded.zip";
-//		gmms = new AttenRelRef[] {AttenRelRef.USGS_NSHM23_ACTIVE};
-		gmms = new AttenRelRef[] {AttenRelRef.NGAWest_2014_AVG_NOIDRISS};
+		gmms = new AttenRelRef[] {AttenRelRef.USGS_NSHM23_ACTIVE};
+//		gmms = new AttenRelRef[] {AttenRelRef.NGAWest_2014_AVG_NOIDRISS};
+		region = new Region(new Location(36, -120), new Location(39, -117)); gridSpacing = 0.02; forceOutputName += "-zoom";
+//		region = new Region(new Location(37, -119), new Location(37.6, -118.4)); gridSpacing = 0.01; forceOutputName += "-tiny_zoom";
 		sigmaTrunc = 3d;
 		supersample = true;
+		supersampleFinite = true; // only applies if supersample == true
 		pointFiniteMinMag = 5d;
 		forceMaxDispatch = 100;
 		if (supersample)
@@ -141,12 +145,6 @@ public class BranchAveragedHazardScriptWriter {
 //		String suffix = "finite_quad_crosshair-sample_along";
 //		bgRupType = BackgroundRupType.FINITE;
 //		bgFiniteNum = 4;
-//		extraGridArgs = "--point-finite-min-mag 5--point-finite-sample-along-strike";
-//		mins = 24*60;
-		
-//		String suffix = "finite_quad_crosshair-sample_along_and_down";
-//		bgRupType = BackgroundRupType.FINITE;
-//		bgFiniteNum = 4;
 //		extraGridArgs = "--point-finite-sample-along-strike --point-finite-sample-down-dip";
 //		mins = 24*60;
 		
@@ -155,22 +153,37 @@ public class BranchAveragedHazardScriptWriter {
 //		bgFiniteNum = 8;
 //		mins = 24*60;
 		
-		String suffix = "finite_dodec_crosshair";
+//		String suffix = "finite_dodec_crosshair";
+//		bgRupType = BackgroundRupType.FINITE;
+//		bgFiniteNum = 12;
+//		mins = 2*24*60;
+		
+		String suffix = "finite_dodec_crosshair-sample_along";
 		bgRupType = BackgroundRupType.FINITE;
 		bgFiniteNum = 12;
-		mins = 2*24*60;
+		extraGridArgs = "--point-finite-sample-along-strike --point-finite-sample-down-dip";
+		mins = 24*60;
 		
 //		String suffix = "finite_dodec_crosshair_to_m6";
 //		bgRupType = BackgroundRupType.FINITE;
 //		bgFiniteNum = 12;
 //		extraGridArgs = "--point-finite-min-mag 6";
 		
-//		String suffix = "pt_src_corr-analytical_5pt";
-//		distCorr = PointSourceDistanceCorrections.ANALYTICAL_FIVE_POINT;
+//		String suffix = "pt_src_corr-5pt";
+//		distCorr = PointSourceDistanceCorrections.FIVE_POINT_RJB_DIST;
 //		bgRupType = BackgroundRupType.POINT;
 		
-//		String suffix = "pt_src_corr-analytical_5pt-approx_ss";
-//		distCorr = PointSourceDistanceCorrections.SUPERSAMPLING_0p1_FIVE_POINT;
+//		String suffix = "pt_src_corr-5pt-approx_ss";
+//		distCorr = PointSourceDistanceCorrections.SUPERSAMPLING_0p1_FIVE_POINT_RJB_DIST;
+//		bgRupType = BackgroundRupType.POINT;
+//		Preconditions.checkState(!supersample);
+		
+//		String suffix = "pt_src_corr-5pt-sample_along";
+//		distCorr = PointSourceDistanceCorrections.FIVE_POINT_RJB_DIST_ALONG;
+//		bgRupType = BackgroundRupType.POINT;
+		
+//		String suffix = "pt_src_corr-5pt-approx_ss-sample_along";
+//		distCorr = PointSourceDistanceCorrections.SUPERSAMPLING_0p1_FIVE_POINT_RJB_DIST_ALONG;
 //		bgRupType = BackgroundRupType.POINT;
 //		Preconditions.checkState(!supersample);
 		

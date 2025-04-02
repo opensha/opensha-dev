@@ -1,5 +1,7 @@
 package scratch.kevin.pointSources;
 
+import static org.opensha.commons.geo.GeoTools.TO_RAD;
+
 import java.awt.Color;
 import java.awt.Font;
 import java.awt.geom.Point2D;
@@ -190,6 +192,7 @@ public class PointSourceHazardComparison {
 					double aveDip, boolean isSupersample, Random r) {
 				PointSurfaceBuilder builder = new PointSurfaceBuilder(centerLoc);
 				builder.dip(aveDip);
+				builder.fractionalDAS(0.5d);
 				builder.fractionalHypocentralDepth(0d);
 				builder.random(r);
 				return buildQuadSource(builder, mfd, aveRake, aveDip, 1);
@@ -201,6 +204,7 @@ public class PointSourceHazardComparison {
 					double aveDip, boolean isSupersample, Random r) {
 				PointSurfaceBuilder builder = new PointSurfaceBuilder(centerLoc);
 				builder.dip(aveDip);
+				builder.fractionalDAS(0.5d);
 				builder.fractionalHypocentralDepth(0.5);
 				builder.random(r);
 				return buildQuadSource(builder, mfd, aveRake, aveDip, 1);
@@ -212,6 +216,7 @@ public class PointSourceHazardComparison {
 					double aveDip, boolean isSupersample, Random r) {
 				PointSurfaceBuilder builder = new PointSurfaceBuilder(centerLoc);
 				builder.dip(aveDip);
+				builder.fractionalDAS(0.5d);
 				builder.fractionalHypocentralDepth(0.5d);
 				builder.random(r);
 				return buildQuadSource(builder, mfd, aveRake, aveDip, 2);
@@ -223,6 +228,7 @@ public class PointSourceHazardComparison {
 					double aveDip, boolean isSupersample, Random r) {
 				PointSurfaceBuilder builder = new PointSurfaceBuilder(centerLoc);
 				builder.dip(aveDip);
+				builder.fractionalDAS(0.5d);
 				builder.fractionalHypocentralDepth(0.5d);
 				builder.random(r);
 				return buildQuadSource(builder, mfd, aveRake, aveDip, isSupersample ? 2 : 4);
@@ -234,6 +240,7 @@ public class PointSourceHazardComparison {
 					double aveDip, boolean isSupersample, Random r) {
 				PointSurfaceBuilder builder = new PointSurfaceBuilder(centerLoc);
 				builder.dip(aveDip);
+				builder.fractionalDAS(0.5d);
 				builder.fractionalHypocentralDepth(0.5d);
 				builder.random(r);
 				return buildQuadSource(builder, mfd, aveRake, aveDip, isSupersample ? 2 : 8);
@@ -310,6 +317,84 @@ public class PointSourceHazardComparison {
 					double aveDip, boolean isSupersample, Random r) {
 				return buildRJBCorrSource(centerLoc, mfd, aveRake, aveDip, isSupersample ? OCT_QUAD : OCT_QUAD_RAND_CELL, 5);
 			}
+		},
+		FIVE_POINT_RJB_DIST("5-pt RJB Distribution", false, PointSourceDistanceCorrections.FIVE_POINT_RJB_DIST) {
+			@Override
+			public ProbEqkSource buildSource(Location centerLoc, IncrementalMagFreqDist mfd, double aveRake,
+					double aveDip, boolean isSupersample, Random r) {
+//				return buildRJBCorrSource(centerLoc, mfd, aveRake, aveDip, isSupersample ? OCT_QUAD : OCT_QUAD_RAND_CELL, 5);
+				return PointSource.poissonBuilder(centerLoc)
+						.surfaceBuilder(PointSourceNshm.SURF_BUILDER_DEFAULT)
+						.forMFDAndFocalMech(mfd, new FocalMechanism(Double.NaN, aveDip, aveRake))
+						.duration(1d)
+						.distCorrs(getDistCorrs(), 5d)
+						.build();
+			}
+		},
+		FIVE_POINT_RJB_DIST_ALONG("5-pt RJB Distribution (sample along)", false, PointSourceDistanceCorrections.FIVE_POINT_RJB_DIST_ALONG) {
+			@Override
+			public ProbEqkSource buildSource(Location centerLoc, IncrementalMagFreqDist mfd, double aveRake,
+					double aveDip, boolean isSupersample, Random r) {
+//				return buildRJBCorrSource(centerLoc, mfd, aveRake, aveDip, isSupersample ? OCT_QUAD : OCT_QUAD_RAND_CELL, 5);
+				return PointSource.poissonBuilder(centerLoc)
+						.surfaceBuilder(PointSourceNshm.SURF_BUILDER_DEFAULT)
+						.forMFDAndFocalMech(mfd, new FocalMechanism(Double.NaN, aveDip, aveRake))
+						.duration(1d)
+						.distCorrs(getDistCorrs(), 5d)
+						.build();
+			}
+		},
+		TWENTY_POINT_RJB_DIST("5-pt RJB Distribution", false, PointSourceDistanceCorrections.TWENTY_POINT_RJB_DIST) {
+			@Override
+			public ProbEqkSource buildSource(Location centerLoc, IncrementalMagFreqDist mfd, double aveRake,
+					double aveDip, boolean isSupersample, Random r) {
+//				return buildRJBCorrSource(centerLoc, mfd, aveRake, aveDip, isSupersample ? OCT_QUAD : OCT_QUAD_RAND_CELL, 5);
+				return PointSource.poissonBuilder(centerLoc)
+						.surfaceBuilder(PointSourceNshm.SURF_BUILDER_DEFAULT)
+						.forMFDAndFocalMech(mfd, new FocalMechanism(Double.NaN, aveDip, aveRake))
+						.duration(1d)
+						.distCorrs(getDistCorrs(), 5d)
+						.build();
+			}
+		},
+		TWENTY_POINT_RJB_DIST_ALONG("20-pt RJB Distribution (sample along)", false, PointSourceDistanceCorrections.TWENTY_POINT_RJB_DIST_ALONG) {
+			@Override
+			public ProbEqkSource buildSource(Location centerLoc, IncrementalMagFreqDist mfd, double aveRake,
+					double aveDip, boolean isSupersample, Random r) {
+//				return buildRJBCorrSource(centerLoc, mfd, aveRake, aveDip, isSupersample ? OCT_QUAD : OCT_QUAD_RAND_CELL, 5);
+				return PointSource.poissonBuilder(centerLoc)
+						.surfaceBuilder(PointSourceNshm.SURF_BUILDER_DEFAULT)
+						.forMFDAndFocalMech(mfd, new FocalMechanism(Double.NaN, aveDip, aveRake))
+						.duration(1d)
+						.distCorrs(getDistCorrs(), 5d)
+						.build();
+			}
+		},
+		FIVE_POINT_APPROX_SS_RJB_DIST("5-pt Approx SS RJB Distribution", false, PointSourceDistanceCorrections.SUPERSAMPLING_0p1_FIVE_POINT_RJB_DIST) {
+			@Override
+			public ProbEqkSource buildSource(Location centerLoc, IncrementalMagFreqDist mfd, double aveRake,
+					double aveDip, boolean isSupersample, Random r) {
+//				return buildRJBCorrSource(centerLoc, mfd, aveRake, aveDip, isSupersample ? OCT_QUAD : OCT_QUAD_RAND_CELL, 5);
+				return PointSource.poissonBuilder(centerLoc)
+						.surfaceBuilder(PointSourceNshm.SURF_BUILDER_DEFAULT)
+						.forMFDAndFocalMech(mfd, new FocalMechanism(Double.NaN, aveDip, aveRake))
+						.duration(1d)
+						.distCorrs(isSupersample ? FIVE_POINT_RJB_DIST.getDistCorrs() : getDistCorrs(), 5d)
+						.build();
+			}
+		},
+		TWENTY_POINT_APPROX_SS_RJB_DIST("20-pt Approx SS RJB Distribution", false, PointSourceDistanceCorrections.SUPERSAMPLING_0p1_TWENTY_POINT_RJB_DIST) {
+			@Override
+			public ProbEqkSource buildSource(Location centerLoc, IncrementalMagFreqDist mfd, double aveRake,
+					double aveDip, boolean isSupersample, Random r) {
+//				return buildRJBCorrSource(centerLoc, mfd, aveRake, aveDip, isSupersample ? OCT_QUAD : OCT_QUAD_RAND_CELL, 5);
+				return PointSource.poissonBuilder(centerLoc)
+						.surfaceBuilder(PointSourceNshm.SURF_BUILDER_DEFAULT)
+						.forMFDAndFocalMech(mfd, new FocalMechanism(Double.NaN, aveDip, aveRake))
+						.duration(1d)
+						.distCorrs(isSupersample ? TWENTY_POINT_RJB_DIST.getDistCorrs() : getDistCorrs(), 5d)
+						.build();
+			}
 		};
 		
 		private String label;
@@ -379,15 +464,19 @@ public class PointSourceHazardComparison {
 		List<ProbEqkRupture> rups = new ArrayList<>(mfd.size()*numEach);
 		for (int i=0; i<mfd.size(); i++) {
 			double mag = mfd.getX(i);
-			double depth = (float)mag < 6.5f ? 5d : 1d;
-			double length = WC94.getMedianLength(mag);
-			double aspectWidth = length / 1.5;
-			double ddWidth = (14.0 - depth) / Math.sin(dipRad);
-			ddWidth = Math.min(aspectWidth, ddWidth);
-			double lower = depth + ddWidth * Math.sin(dipRad);
+//			double depth = (float)mag < 6.5f ? 5d : 1d;
+//			double length = WC94.getMedianLength(mag);
+//			double aspectWidth = length / 1.5;
+//			double ddWidth = (14.0 - depth) / Math.sin(dipRad);
+//			ddWidth = Math.min(aspectWidth, ddWidth);
+//			double lower = depth + ddWidth * Math.sin(dipRad);
+			
+			double zTop = PointSourceNshm.SURF_BUILDER_DEFAULT.depthForMag(mag);
+			double widthDD = PointSourceNshm.SURF_BUILDER_DEFAULT.calcWidth(mag, zTop, dipRad);
+			double length = PointSourceNshm.SURF_BUILDER_DEFAULT.calcLength(mag);
+			builder.upperDepthWidthAndDip(zTop, widthDD, aveDip);
 
 			builder.length(length);
-			builder.upperDepth(depth).lowerDepth(lower);
 			
 			double rateEach = mfd.getY(i)/(double)numEach;
 			double probEach = 1-Math.exp(-rateEach);
@@ -940,8 +1029,18 @@ public class PointSourceHazardComparison {
 
 	// TODO: this is just a marker to make it easy to find the top of main
 	public static void main(String[] args) throws IOException {
+//		double pDiffMax = 20;
+		double pDiffMax = 5;
+		double latitude = 0d;
+//		double latitude = 45d;
+//		PointSourceType mainType = PointSourceType.FIVE_POINT_RJB_DIST;
+//		PointSourceType mainType = PointSourceType.TWENTY_POINT_RJB_DIST;
+//		PointSourceType mainType = PointSourceType.FIVE_POINT_APPROX_SS_RJB_DIST;
+		PointSourceType mainType = PointSourceType.FIVE_POINT_RJB_DIST_ALONG;
+//		PointSourceType mainType = PointSourceType.TWENTY_POINT_RJB_DIST_ALONG;
+//		PointSourceType mainType = PointSourceType.TWENTY_POINT_APPROX_SS_RJB_DIST;
 //		PointSourceType mainType = PointSourceType.POINT_SOURCE_13b_NSHMP_CORR;
-		PointSourceType mainType = PointSourceType.POINT_SOURCE_NSHM;
+//		PointSourceType mainType = PointSourceType.POINT_SOURCE_NSHM;
 //		PointSourceType mainType = PointSourceType.QUAD_QUAD;
 //		PointSourceType mainType = PointSourceType.QUAD_QUAD_RAND_CELL;
 //		PointSourceType mainType = PointSourceType.OCT_QUAD_RAND_CELL;
@@ -958,7 +1057,8 @@ public class PointSourceHazardComparison {
 //		PointSourceType compType = PointSourceType.SIMPLE_APPROX_FINITE_POINT_NSHMP_CORR;
 //		PointSourceType compType = PointSourceType.SIMPLE_APPROX_FINITE_POINT_NO_CORR;
 //		PointSourceType compType = PointSourceType.TABLE_FINITE_APPROX_POINT_SOURCE_SUPERSAMPLE;
-		PointSourceType compType = PointSourceType.OCT_QUAD;
+//		PointSourceType compType = PointSourceType.OCT_QUAD;
+		PointSourceType compType = PointSourceType.FIVE_POINT_RJB_DIST;
 //		PointSourceType compType = PointSourceType.OCT_QUAD_RAND_CELL;
 //		PointSourceType compType = PointSourceType.OCT_QUAD_RAND_DAS_DD;
 //		PointSourceType compType = PointSourceType.POINT_SOURCE_NSHM;
@@ -975,9 +1075,15 @@ public class PointSourceHazardComparison {
 //		} catch (InterruptedException e) {}
 		
 		boolean doSingleCellHazard = true;
-		boolean doNSHMModelHazard = true;
-		boolean doHighRes = false;
+		boolean doNSHMModelHazard = false;
+//		boolean doHighRes = true;
+//		boolean doSupersample = true;
+//		boolean doHighRes = false;
+//		boolean doSupersample = true;
+		boolean doHighRes = true;
 		boolean doSupersample = false;
+//		boolean doHighRes = false;
+//		boolean doSupersample = false;
 		boolean forceWriteIntermediate = true;
 		boolean writeTables = false;
 		boolean strikeSlipOnly = false;
@@ -1000,6 +1106,8 @@ public class PointSourceHazardComparison {
 			outputDir = new File(mainOutputDir, mainType.name());
 		else
 			outputDir = new File(mainOutputDir, mainType.name()+"_vs_"+compType.name());
+		if (latitude > 0d)
+			outputDir = new File(mainOutputDir, outputDir.getName()+"_lat"+oDF.format(latitude));
 		if (!doSupersample)
 			outputDir = new File(mainOutputDir, outputDir.getName()+"_no_supersample");
 		if (strikeSlipOnly)
@@ -1011,11 +1119,11 @@ public class PointSourceHazardComparison {
 		File resourcesDir = new File(outputDir, "resources");
 		Preconditions.checkState(resourcesDir.exists() || resourcesDir.mkdir());
 		
-		Region calcRegion = new Region(new Location(0d, 0d), new Location(1d, 1d));
+		Region calcRegion = new Region(new Location(latitude, 0d), new Location(latitude+1d, 1d));
 		double spacing = 0.1;
 		double halfSpacing = 0.5*spacing;
 		GriddedRegion colocatedGridded = new GriddedRegion(calcRegion, spacing, GriddedRegion.ANCHOR_0_0);
-		Location gridCenter = new Location(0.5d, 0.5d);
+		Location gridCenter = new Location(latitude+0.5d, 0.5d);
 		int gridCenterIndex = colocatedGridded.indexForLocation(gridCenter);
 		Preconditions.checkState(LocationUtils.areSimilar(gridCenter, colocatedGridded.getLocation(gridCenterIndex)));
 		
@@ -1024,7 +1132,8 @@ public class PointSourceHazardComparison {
 		
 		EvenlyDiscretizedFunc tableDistFunc = writeTables ?
 				new EvenlyDiscretizedFunc(0d, 300d, 301) : new EvenlyDiscretizedFunc(0d, 100d, 101);
-		EvenlyDiscretizedFunc distFunc = new EvenlyDiscretizedFunc(0d, 100d, 101);
+//		EvenlyDiscretizedFunc distFunc = new EvenlyDiscretizedFunc(0d, 100d, 101);
+		EvenlyDiscretizedFunc distFunc = new EvenlyDiscretizedFunc(0d, 100d, 51);
 		Range distPlotRange = new Range(0d, 100d);
 		List<List<Location>> tableDistFuncLocs = new ArrayList<>();
 		int numEachDist = 10;
@@ -1071,7 +1180,7 @@ public class PointSourceHazardComparison {
 			System.out.println("Will do "+numPerStochasticCentered+" stocastic relizations ("+numPerStochasticSupersampled+" when supersampling)");
 		
 		GutenbergRichterMagFreqDist mfd = new GutenbergRichterMagFreqDist(5.05, 30, 0.1);
-		mfd.setAllButTotMoRate(mfd.getMinX(), mfd.getMaxX(), 1d, 1d);
+		mfd.setAllButTotMoRate(mfd.getMinX(), mfd.getMaxX(), 0.1d, 1d);
 //		GriddedRegion calcRegion = new GriddedR
 		
 		double[] distPlotMags = { 5.05, 6.05, 7.05, mfd.getMaxX() };
@@ -1186,7 +1295,7 @@ public class PointSourceHazardComparison {
 //		
 //		mapMaker.setCustomLegendItems(legendItems, legendChars);
 		
-		CPT pDiffCPT = GMT_CPT_Files.DIVERGING_VIK_UNIFORM.instance().rescale(-50d, 50d);
+		CPT pDiffCPT = GMT_CPT_Files.DIVERGING_VIK_UNIFORM.instance().rescale(-pDiffMax, pDiffMax);
 		
 		String[] perLabels = new String[periods.length];
 		String[] perPrefixes = new String[periods.length];
