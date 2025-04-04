@@ -3288,9 +3288,19 @@ public class PureScratch {
 	}
 	
 	private static void test345() throws IOException {
+//		double min = 0d;
+//		double max = 180d;
+//		int num = 180;
+//		boolean sampleEdges = false;
+		
+//		double min = 0d;
+//		double max = 200d;
+//		int num = 5;
+//		boolean sampleEdges = false;
+		
 		double min = 0d;
 		double max = 1d;
-		int num = 4;
+		int num = 11;
 		boolean sampleEdges = true;
 		
 //		double min = 0d;

@@ -383,6 +383,19 @@ public class PointSourceHazardComparison {
 						.build();
 			}
 		},
+		FIVE_POINT_APPROX_SS_RJB_DIST_ALONG("5-pt Approx SS RJB Distribution (sample along)", false, PointSourceDistanceCorrections.SUPERSAMPLING_0p1_FIVE_POINT_RJB_DIST_ALONG) {
+			@Override
+			public ProbEqkSource buildSource(Location centerLoc, IncrementalMagFreqDist mfd, double aveRake,
+					double aveDip, boolean isSupersample, Random r) {
+//				return buildRJBCorrSource(centerLoc, mfd, aveRake, aveDip, isSupersample ? OCT_QUAD : OCT_QUAD_RAND_CELL, 5);
+				return PointSource.poissonBuilder(centerLoc)
+						.surfaceBuilder(PointSourceNshm.SURF_BUILDER_DEFAULT)
+						.forMFDAndFocalMech(mfd, new FocalMechanism(Double.NaN, aveDip, aveRake))
+						.duration(1d)
+						.distCorrs(isSupersample ? FIVE_POINT_RJB_DIST_ALONG.getDistCorrs() : getDistCorrs(), 5d)
+						.build();
+			}
+		},
 		TWENTY_POINT_APPROX_SS_RJB_DIST("20-pt Approx SS RJB Distribution", false, PointSourceDistanceCorrections.SUPERSAMPLING_0p1_TWENTY_POINT_RJB_DIST) {
 			@Override
 			public ProbEqkSource buildSource(Location centerLoc, IncrementalMagFreqDist mfd, double aveRake,
@@ -1037,6 +1050,7 @@ public class PointSourceHazardComparison {
 //		PointSourceType mainType = PointSourceType.TWENTY_POINT_RJB_DIST;
 //		PointSourceType mainType = PointSourceType.FIVE_POINT_APPROX_SS_RJB_DIST;
 		PointSourceType mainType = PointSourceType.FIVE_POINT_RJB_DIST_ALONG;
+//		PointSourceType mainType = PointSourceType.FIVE_POINT_APPROX_SS_RJB_DIST_ALONG;
 //		PointSourceType mainType = PointSourceType.TWENTY_POINT_RJB_DIST_ALONG;
 //		PointSourceType mainType = PointSourceType.TWENTY_POINT_APPROX_SS_RJB_DIST;
 //		PointSourceType mainType = PointSourceType.POINT_SOURCE_13b_NSHMP_CORR;
@@ -1058,9 +1072,9 @@ public class PointSourceHazardComparison {
 //		PointSourceType compType = PointSourceType.SIMPLE_APPROX_FINITE_POINT_NO_CORR;
 //		PointSourceType compType = PointSourceType.TABLE_FINITE_APPROX_POINT_SOURCE_SUPERSAMPLE;
 //		PointSourceType compType = PointSourceType.OCT_QUAD;
-		PointSourceType compType = PointSourceType.FIVE_POINT_RJB_DIST;
+//		PointSourceType compType = PointSourceType.FIVE_POINT_RJB_DIST;
 //		PointSourceType compType = PointSourceType.OCT_QUAD_RAND_CELL;
-//		PointSourceType compType = PointSourceType.OCT_QUAD_RAND_DAS_DD;
+		PointSourceType compType = PointSourceType.OCT_QUAD_RAND_DAS_DD;
 //		PointSourceType compType = PointSourceType.POINT_SOURCE_NSHM;
 //		PointSourceType compType = PointSourceType.POINT_SOURCE_13b_NSHMP_CORR;
 //		PointSourceType compType = PointSourceType.POINT_SOURCE_13b_NO_CORR;
@@ -1075,15 +1089,15 @@ public class PointSourceHazardComparison {
 //		} catch (InterruptedException e) {}
 		
 		boolean doSingleCellHazard = true;
-		boolean doNSHMModelHazard = false;
+		boolean doNSHMModelHazard = true;
 //		boolean doHighRes = true;
 //		boolean doSupersample = true;
 //		boolean doHighRes = false;
 //		boolean doSupersample = true;
-		boolean doHighRes = true;
-		boolean doSupersample = false;
-//		boolean doHighRes = false;
+//		boolean doHighRes = true;
 //		boolean doSupersample = false;
+		boolean doHighRes = false;
+		boolean doSupersample = false;
 		boolean forceWriteIntermediate = true;
 		boolean writeTables = false;
 		boolean strikeSlipOnly = false;
