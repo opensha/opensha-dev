@@ -3298,8 +3298,13 @@ public class PureScratch {
 //		int num = 5;
 //		boolean sampleEdges = false;
 		
-		double min = 0d;
-		double max = 1d;
+//		double min = 0d;
+//		double max = 1d;
+//		int num = 11;
+//		boolean sampleEdges = true;
+		
+		double min = -5d;
+		double max = 5d;
 		int num = 11;
 		boolean sampleEdges = true;
 		
@@ -3313,7 +3318,7 @@ public class PureScratch {
 //		int num = 40;
 		
 		double delta = (max-min)/(double)(sampleEdges ? num-1 : num);
-		double ret0 = sampleEdges ? 0d : min + 0.5*delta;
+		double ret0 = sampleEdges ? min : min + 0.5*delta;
 		double[] ret = new double[num];
 		for (int i=0; i<num; i++)
 			ret[i] = ret0 + i*delta;
@@ -3324,13 +3329,27 @@ public class PureScratch {
 			System.out.println("\t"+(float)val);
 	}
 	
+	private static void test346() throws IOException {
+		double[] mags = {5d, 6d, 7d};
+		
+		WC1994_MagLengthRelationship wc = new WC1994_MagLengthRelationship();
+		
+		for (double mag : mags) {
+			double len = wc.getMedianLength(mag);
+			System.out.println("M"+(float)mag);
+			System.out.println("\tour WC:\t"+(float)len);
+			double otherLen = Math.pow(10, 0.59*mag - 2.44);
+			System.out.println("\tother WC:\t"+(float)otherLen);
+		}
+	}
+	
 	/**
 	 * @param args
 	 * @throws Exception 
 	 */
 	public static void main(String[] args) throws Exception {
 		try {
-			test345();
+			test346();
 		} catch (Throwable t) {
 			t.printStackTrace();
 			System.exit(1);

@@ -47,11 +47,11 @@ public class GriddedHazardBenchmark {
 		settings = settings.forSurfaceType(BackgroundRupType.POINT);
 //		settings = settings.forDistanceCorrections(PointSourceDistanceCorrections.NONE);
 //		settings = settings.forDistanceCorrections(PointSourceDistanceCorrections.MEDIAN_RJB);
-//		settings = settings.forDistanceCorrections(PointSourceDistanceCorrections.FIVE_POINT_RJB_DIST);
-		settings = settings.forDistanceCorrections(PointSourceDistanceCorrections.SUPERSAMPLING_0p1_FIVE_POINT_RJB_DIST);
+		settings = settings.forDistanceCorrections(PointSourceDistanceCorrections.FIVE_POINT_RJB_DIST);
+//		settings = settings.forDistanceCorrections(PointSourceDistanceCorrections.SUPERSAMPLING_0p1_FIVE_POINT_RJB_DIST);
 		settings = settings.forPointSourceMagCutoff(5d);
-//		settings = settings.forSupersamplingSettings(GridCellSupersamplingSettings.DEFAULT);
-		settings = settings.forSupersamplingSettings(null);
+		settings = settings.forSupersamplingSettings(GridCellSupersamplingSettings.DEFAULT);
+//		settings = settings.forSupersamplingSettings(null);
 		
 		erf.setCacheGridSources(true);
 		erf.setGriddedSeismicitySettings(settings);

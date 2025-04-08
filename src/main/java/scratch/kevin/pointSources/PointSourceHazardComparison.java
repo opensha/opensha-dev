@@ -1048,8 +1048,8 @@ public class PointSourceHazardComparison {
 //		double latitude = 45d;
 //		PointSourceType mainType = PointSourceType.FIVE_POINT_RJB_DIST;
 //		PointSourceType mainType = PointSourceType.TWENTY_POINT_RJB_DIST;
-//		PointSourceType mainType = PointSourceType.FIVE_POINT_APPROX_SS_RJB_DIST;
-		PointSourceType mainType = PointSourceType.FIVE_POINT_RJB_DIST_ALONG;
+		PointSourceType mainType = PointSourceType.FIVE_POINT_APPROX_SS_RJB_DIST;
+//		PointSourceType mainType = PointSourceType.FIVE_POINT_RJB_DIST_ALONG;
 //		PointSourceType mainType = PointSourceType.FIVE_POINT_APPROX_SS_RJB_DIST_ALONG;
 //		PointSourceType mainType = PointSourceType.TWENTY_POINT_RJB_DIST_ALONG;
 //		PointSourceType mainType = PointSourceType.TWENTY_POINT_APPROX_SS_RJB_DIST;
@@ -1063,7 +1063,7 @@ public class PointSourceHazardComparison {
 //		PointSourceType mainType = PointSourceType.POINT_TO_FINITE;
 //		PointSourceType mainType = PointSourceType.CROSSHAIR_QUAD;
 //		PointSourceType mainType = PointSourceType.QUAD_QUAD;
-//		PointSourceType compType = null;
+		PointSourceType compType = null;
 //		PointSourceType compType = PointSourceType.TABLE_FINITE_APPROX_POINT_SOURCE;
 //		PointSourceType compType = PointSourceType.HAZ_EQUIV_APPROX_POINT_SOURCE;
 //		PointSourceType compType = PointSourceType.CDF_BASED_RJB_CORR_APPROX_POINT_SOURCE;
@@ -1074,7 +1074,7 @@ public class PointSourceHazardComparison {
 //		PointSourceType compType = PointSourceType.OCT_QUAD;
 //		PointSourceType compType = PointSourceType.FIVE_POINT_RJB_DIST;
 //		PointSourceType compType = PointSourceType.OCT_QUAD_RAND_CELL;
-		PointSourceType compType = PointSourceType.OCT_QUAD_RAND_DAS_DD;
+//		PointSourceType compType = PointSourceType.OCT_QUAD_RAND_DAS_DD;
 //		PointSourceType compType = PointSourceType.POINT_SOURCE_NSHM;
 //		PointSourceType compType = PointSourceType.POINT_SOURCE_13b_NSHMP_CORR;
 //		PointSourceType compType = PointSourceType.POINT_SOURCE_13b_NO_CORR;
@@ -1090,14 +1090,14 @@ public class PointSourceHazardComparison {
 		
 		boolean doSingleCellHazard = true;
 		boolean doNSHMModelHazard = true;
-//		boolean doHighRes = true;
-//		boolean doSupersample = true;
+		boolean doHighRes = true;
+		boolean doSupersample = true;
 //		boolean doHighRes = false;
 //		boolean doSupersample = true;
 //		boolean doHighRes = true;
 //		boolean doSupersample = false;
-		boolean doHighRes = false;
-		boolean doSupersample = false;
+//		boolean doHighRes = false;
+//		boolean doSupersample = false;
 		boolean forceWriteIntermediate = true;
 		boolean writeTables = false;
 		boolean strikeSlipOnly = false;

@@ -104,6 +104,17 @@ public class AnalyticalRJB_Calc {
 					+distDF.format(rJBquad)+"\t(diff="+distDF.format(rJB-rJBquad)+")");
 		}
 		
+		fractDAS = 0.5;
+		fractDD = 0.5d;
+		System.out.println("Dipping with fractDAS=0.5 & fractDD=0.5");
+		for (double alphaDeg=0; alphaDeg<=360.01; alphaDeg +=10d) {
+			double alphaRad = Math.toRadians(alphaDeg);
+			double rJB = calcRJB(rEpi, rupLen, width, dipRad, fractDAS, fractDD, alphaRad);
+			double rJBquad = calcRJB_quad(rEpi, rupLen, width, dipRad, fractDAS, fractDD, alphaRad);
+			System.out.println("\t"+(int)alphaDeg+":\trJB_an="+distDF.format(rJB)+"\trJB_quad="
+					+distDF.format(rJBquad)+"\t(diff="+distDF.format(rJB-rJBquad)+")");
+		}
+		
 		// now benchmark them both
 		int numCases = 1000;
 		double[] rEips = new double[numCases];
@@ -302,8 +313,10 @@ public class AnalyticalRJB_Calc {
 		builder.upperDepthWidthAndDip(0d, rupWidth, Math.toDegrees(dipRad));
 		builder.fractionalDAS(gridNodeFractDAS).fractionalHypocentralDepth(gridNodeFractDepth);
 		builder.strike(Math.toDegrees(alphaRad));
-		QuadSurface quad = builder.buildQuadSurface();
-		return quad.getDistanceJB(siteLoc);
+//		QuadSurface quad = builder.buildQuadSurface();
+//		return quad.getDistanceJB(siteLoc);
+//		return builder.buildRectSurface().getDistanceJB(siteLoc);
+		return builder.buildRectSurface().getQuickDistance(siteLoc);
 	}
 
 }
