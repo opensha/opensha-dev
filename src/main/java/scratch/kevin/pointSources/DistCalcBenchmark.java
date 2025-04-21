@@ -31,6 +31,7 @@ class DistCalcBenchmark {
 		PT_SURF_FOOTWALL("Point Surface (footwall)"),
 		PT_SURF_HANGING_WALL("Point Surface (hanging wall)"),
 		FINITE_QUAD("Finite Quad Surface"),
+		FINITE_RECT("Finite Rect Surface"),
 		FINITE_GRIDDED("Finite Gridded Surface");
 		
 		private String label;
@@ -51,6 +52,8 @@ class DistCalcBenchmark {
 				return builder.buildGriddedSurface();
 			case FINITE_QUAD:
 				return builder.buildQuadSurface();
+			case FINITE_RECT:
+				return builder.buildRectSurface();
 
 			default:
 				throw new IllegalStateException();
