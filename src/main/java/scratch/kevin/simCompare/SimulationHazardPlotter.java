@@ -17,12 +17,14 @@ import java.util.Map;
 import javax.imageio.ImageIO;
 
 import org.apache.commons.math3.stat.StatUtils;
+import org.apache.commons.math3.util.Precision;
 import org.jfree.chart.annotations.XYAnnotation;
 import org.jfree.chart.annotations.XYTextAnnotation;
 import org.jfree.data.Range;
 import org.jfree.chart.ui.RectangleAnchor;
 import org.jfree.chart.ui.TextAnchor;
 import org.opensha.commons.calc.GaussianDistCalc;
+import org.opensha.commons.data.CSVFile;
 import org.opensha.commons.data.Site;
 import org.opensha.commons.data.function.ArbitrarilyDiscretizedFunc;
 import org.opensha.commons.data.function.DiscretizedFunc;
@@ -939,6 +941,50 @@ public class SimulationHazardPlotter<E> {
 		else
 			yAxisLabel = optionalDigitDF.format(curveDuration)+"yr Probability of Exceedance";
 		
+		if (pubFig) {
+			// if we wanted this, then we probably also want CSV files
+			List<Double> commonXValues = new ArrayList<>();
+			for (DiscretizedFunc func : funcs) {
+				for (int i=0; i<func.size(); i++) {
+					if (i < commonXValues.size()) {
+						if (!Precision.equals(func.getX(i), commonXValues.get(i), 1e-4)) {
+							commonXValues = null;
+							break;
+						}
+					} else {
+						commonXValues.add(func.getX(i));
+					}
+				}
+				if (commonXValues == null)
+					break;
+			}
+			if (commonXValues != null) {
+				// all curves use common x-values, write a CSV
+				CSVFile<String> curveCSV = new CSVFile<>(true);
+				List<String> header = new ArrayList<>();
+				header.add(xAxisLabel);
+				for (DiscretizedFunc func : funcs) {
+					String name = func.getName();
+					if (name == null || name.isBlank())
+						name = "(unnamed curve)";
+					header.add(name);
+				}
+				curveCSV.addLine(header);
+				for (int i=0; i<commonXValues.size(); i++) {
+					List<String> line = new ArrayList<>();
+					line.add(commonXValues.get(i).floatValue()+"");
+					for (DiscretizedFunc func : funcs) {
+						if (func.size() > i)
+							line.add((float)func.getY(i)+"");
+						else
+							line.add("");
+					}
+					curveCSV.addLine(line);
+				}
+				curveCSV.writeToFile(new File(outputDir, prefix+".csv"));
+			}
+		}
+		
 		if (hazardCurveRPs != null && hazardCurveRPs.length > 0) {
 			if (anns == null)
 				anns = new ArrayList<>();
@@ -991,6 +1037,7 @@ public class SimulationHazardPlotter<E> {
 			gp.saveAsPNG(pubPNGFile.getAbsolutePath());
 			File pubPDFFile = new File(outputDir, prefix+"_pub.pdf");
 			gp.saveAsPDF(pubPDFFile.getAbsolutePath());
+			
 		}
 		System.out.println("DONE "+prefix+", "+site.getName()+", "+xAxisLabel);
 		return pngFile;
