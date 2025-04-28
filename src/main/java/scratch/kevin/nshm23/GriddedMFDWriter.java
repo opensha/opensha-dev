@@ -36,6 +36,8 @@ public class GriddedMFDWriter {
 	public static void main(String[] args) throws IOException {
 		File solDir = new File("/home/kevin/OpenSHA/nshm23/batch_inversions/"
 				+ "2024_02_02-nshm23_branches-WUS_FM_v3/");
+		File baSolDir = new File(solDir, "node_branch_averaged");
+		File baPairSolDir = new File("/home/kevin/OpenSHA/nshm23/batch_inversions/2024_02_02-nshm23_branches-WUS_FM_v3-gridded_rebuild/node_branch_averaged_pairs");
 		
 		Region reg = NSHM23_RegionLoader.loadFullConterminousWUS();
 		FaultSystemSolution refSol = FaultSystemSolution.load(new File(solDir, "results_WUS_FM_v3_branch_averaged_gridded.zip"));
@@ -44,16 +46,40 @@ public class GriddedMFDWriter {
 //		FaultSystemSolution sol = refSol;
 		
 //		File outputFile = new File("/tmp/nshm23_wus_gridded_mfds_b0.csv");
-//		FaultSystemSolution sol = FaultSystemSolution.load(new File(solDir, "node_branch_averaged/SupraB_SupraB0.0.zip"));
+//		FaultSystemSolution sol = FaultSystemSolution.load(new File(baSolDir, "SupraB_SupraB0.0.zip"));
+		
+//		File outputFile = new File("/tmp/nshm23_wus_gridded_mfds_b0.25.csv");
+//		FaultSystemSolution sol = FaultSystemSolution.load(new File(baSolDir, "SupraB_SupraB0.25.zip"));
+		
+//		File outputFile = new File("/tmp/nshm23_wus_gridded_mfds_b0.5.csv");
+//		FaultSystemSolution sol = FaultSystemSolution.load(new File(baSolDir, "SupraB_SupraB0.5.zip"));
+		
+//		File outputFile = new File("/tmp/nshm23_wus_gridded_mfds_b0.75.csv");
+//		FaultSystemSolution sol = FaultSystemSolution.load(new File(baSolDir, "SupraB_SupraB0.75.zip"));
 		
 //		File outputFile = new File("/tmp/nshm23_wus_gridded_mfds_b1.csv");
-//		FaultSystemSolution sol = FaultSystemSolution.load(new File(solDir, "node_branch_averaged/SupraB_SupraB1.0.zip"));
+//		FaultSystemSolution sol = FaultSystemSolution.load(new File(baSolDir, "SupraB_SupraB1.0.zip"));
 		
 //		File outputFile = new File("/tmp/nshm23_wus_gridded_mfds_classic.csv");
-//		FaultSystemSolution sol = FaultSystemSolution.load(new File(solDir, "node_branch_averaged/SegModel_Classic.zip"));
+//		FaultSystemSolution sol = FaultSystemSolution.load(new File(baSolDir, "SegModel_Classic.zip"));
 		
-		File outputFile = new File("/tmp/nshm23_wus_gridded_mfds_seg_none.csv");
-		FaultSystemSolution sol = FaultSystemSolution.load(new File(solDir, "node_branch_averaged/SegModel_None.zip"));
+//		File outputFile = new File("/tmp/nshm23_wus_gridded_mfds_seg_low.csv");
+//		FaultSystemSolution sol = FaultSystemSolution.load(new File(baSolDir, "SegModel_Low.zip"));
+		
+//		File outputFile = new File("/tmp/nshm23_wus_gridded_mfds_seg_middle.csv");
+//		FaultSystemSolution sol = FaultSystemSolution.load(new File(baSolDir, "SegModel_Middle.zip"));
+		
+//		File outputFile = new File("/tmp/nshm23_wus_gridded_mfds_seg_high.csv");
+//		FaultSystemSolution sol = FaultSystemSolution.load(new File(baSolDir, "SegModel_High.zip"));
+		
+//		File outputFile = new File("/tmp/nshm23_wus_gridded_mfds_seg_none.csv");
+//		FaultSystemSolution sol = FaultSystemSolution.load(new File(baSolDir, "SegModel_None.zip"));
+		
+//		File outputFile = new File("/tmp/nshm23_wus_gridded_mfds_b0_seg_none.csv");
+//		FaultSystemSolution sol = FaultSystemSolution.load(new File(baPairSolDir, "SupraB_SupraB0.0_SegModel_None.zip"));
+		
+		File outputFile = new File("/tmp/nshm23_wus_gridded_mfds_b1_seg_classic.csv");
+		FaultSystemSolution sol = FaultSystemSolution.load(new File(baPairSolDir, "SupraB_SupraB1.0_SegModel_Classic.zip"));
 		
 //		File outputFile = new File("/tmp/ucerf3_gridded_mfds.csv");
 //		refSol = null;
