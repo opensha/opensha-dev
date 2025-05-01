@@ -5,7 +5,7 @@ import org.opensha.commons.geo.Location;
 import org.opensha.commons.geo.LocationUtils;
 import org.opensha.sha.faultSurface.EvenlyGriddedSurface;
 import org.opensha.sha.faultSurface.QuadSurface;
-import org.opensha.sha.faultSurface.RectangleSurface;
+import org.opensha.sha.faultSurface.RectangularSurface;
 import org.opensha.sha.faultSurface.utils.PointSurfaceBuilder;
 
 import com.google.common.base.Preconditions;
@@ -48,7 +48,7 @@ public class QuadRectCompare {
 								builder.strike(alpha);
 								
 								QuadSurface quad = builder.buildQuadSurface();
-								RectangleSurface rect = builder.buildRectSurface();
+								RectangularSurface rect = builder.buildRectSurface();
 								EvenlyGriddedSurface grid = builder.gridSpacing(0.1).buildGriddedSurface();
 								
 								String surfDescr = "len=" + (float) length + ", zTop=" + (float) zTop + ", zBot="

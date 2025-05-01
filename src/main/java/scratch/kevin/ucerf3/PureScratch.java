@@ -111,6 +111,7 @@ import org.opensha.sha.earthquake.EqkRupture;
 import org.opensha.sha.earthquake.PointSource;
 import org.opensha.sha.earthquake.ProbEqkRupture;
 import org.opensha.sha.earthquake.ProbEqkSource;
+import org.opensha.sha.earthquake.SiteAdaptiveSource;
 import org.opensha.sha.earthquake.faultSysSolution.FaultSystemRupSet;
 import org.opensha.sha.earthquake.faultSysSolution.FaultSystemSolution;
 import org.opensha.sha.earthquake.faultSysSolution.RupSetDeformationModel;
@@ -3343,13 +3344,141 @@ public class PureScratch {
 		}
 	}
 	
+	private static void test347() throws IOException {
+		BaseFaultSystemSolutionERF erf = new NSHM23_WUS_BranchAveragedERF();
+		int numFinite = 2;
+		
+		GriddedSeismicitySettings settings = erf.getGriddedSeismicitySettings();
+		
+		settings = settings
+				.forSurfaceType(BackgroundRupType.FINITE)
+//				.forSurfaceType(BackgroundRupType.POINT)
+//				.forDistanceCorrections(PointSourceDistanceCorrections.NONE)
+				.forDistanceCorrections(PointSourceDistanceCorrections.FIVE_POINT_RJB_DIST)
+				.forPointSourceMagCutoff(5d)
+				.forFiniteRuptureSettings(GriddedFiniteRuptureSettings.DEFAULT_CROSSHAIR.forNumSurfaces(numFinite))
+//				.forSupersamplingSettings(null);
+				.forSupersamplingSettings(GridCellSupersamplingSettings.DEFAULT.forApplyToFinite(true));
+		
+		erf.setParameter(IncludeBackgroundParam.NAME, IncludeBackgroundOption.ONLY);
+		erf.setGriddedSeismicitySettings(settings);
+		erf.getTimeSpan().setDuration(1d);
+
+		boolean doRawSum = false;
+		
+		System.out.println("Updating forecast");
+		erf.updateForecast();
+		
+		MinMaxAveTracker countTrack = new MinMaxAveTracker();
+		int prevNum = -1;
+		double sumRate = 0d;
+		double rawSumRate = 0d;
+		for (int i=0; i<erf.getNumSources(); i++) {
+			ProbEqkSource source = erf.getSource(i);
+			if (source instanceof SiteAdaptiveSource) {
+				Preconditions.checkState(source instanceof PointSource);
+				Location sourceLoc = ((PointSource)source).getLocation();
+				Site site = new Site(sourceLoc);
+				source = ((SiteAdaptiveSource)source).getForSite(site);
+			}
+			int numRups = source.getNumRuptures();
+			if (numRups != prevNum || i == erf.getNumSources()-1) {
+				System.out.println("Source "+i+" has "+numRups+" ruptures");
+				prevNum = numRups;
+			}
+			countTrack.addValue(numRups);
+			sumRate += source.computeTotalEquivMeanAnnualRate(1d);
+			if (doRawSum) {
+				for (ProbEqkRupture rup : source)
+					rawSumRate += rup.getMeanAnnualRate(1d);
+			} else if (i % 100 == 0) {
+				// audit it every once in a while
+				double origSourceRate = source.computeTotalEquivMeanAnnualRate(1d);
+				double rawSourceRate = 0d;
+				for (ProbEqkRupture rup : source)
+					rawSourceRate += rup.getMeanAnnualRate(1d);
+				Preconditions.checkState(Precision.equals(origSourceRate, rawSourceRate, 1e-6),
+						"Raw and source-computed rate mismatch: %s != %s", (float)origSourceRate, (float)rawSourceRate);
+			}
+		}
+		System.out.println(countTrack);
+		System.out.println("Total rate: "+(float)sumRate);
+		if (doRawSum)
+			System.out.println("Total prob-to-rate: "+(float)rawSumRate);
+	}
+	
+	private static void test348() throws IOException {
+		BaseFaultSystemSolutionERF erf = new NSHM23_WUS_BranchAveragedERF();
+		int numFinite = 2;
+		
+		GriddedSeismicitySettings settings = erf.getGriddedSeismicitySettings();
+		
+		settings = settings
+//				.forSurfaceType(BackgroundRupType.FINITE)
+				.forSurfaceType(BackgroundRupType.POINT)
+//				.forDistanceCorrections(PointSourceDistanceCorrections.NONE)
+				.forDistanceCorrections(PointSourceDistanceCorrections.FIVE_POINT_RJB_DIST)
+				.forPointSourceMagCutoff(5d)
+				.forFiniteRuptureSettings(GriddedFiniteRuptureSettings.DEFAULT_CROSSHAIR.forNumSurfaces(numFinite))
+//				.forSupersamplingSettings(null);
+				.forSupersamplingSettings(GridCellSupersamplingSettings.DEFAULT.forApplyToFinite(true));
+		
+		erf.setParameter(IncludeBackgroundParam.NAME, IncludeBackgroundOption.ONLY);
+		erf.setGriddedSeismicitySettings(settings);
+		erf.getTimeSpan().setDuration(1d);
+		
+		System.out.println("Updating forecast");
+		erf.updateForecast();
+		
+		Site site = new Site(new Location(34.053, -118.243));
+		ScalarIMR gmm = AttenRelRef.CB_2008.get();
+		site.addParameterList(gmm.getSiteParams());
+		gmm.setIntensityMeasure(SA_Param.NAME);
+		SA_Param.setPeriodInSA_Param(gmm.getIntensityMeasure(), 1d);
+		HazardCurveCalculator calc = new HazardCurveCalculator();
+		DiscretizedFunc xVals = new IMT_Info().getDefaultHazardCurve(SA_Param.NAME);
+		
+		DiscretizedFunc logXVals = new ArbitrarilyDiscretizedFunc();
+		for (Point2D pt : xVals)
+			logXVals.set(Math.log(pt.getX()), 0d);
+		System.out.println("Calculating point");
+		calc.getHazardCurve(logXVals, site, gmm, erf);
+		
+		DiscretizedFunc pointCurve = xVals.deepClone();
+		for (int i=0; i<pointCurve.size(); i++)
+			pointCurve.set(i, logXVals.getY(i));
+		
+		settings = settings.forSurfaceType(BackgroundRupType.FINITE);
+		erf.setGriddedSeismicitySettings(settings);
+		erf.updateForecast();
+		
+		System.out.println("Calculating finite");
+		calc.getHazardCurve(logXVals, site, gmm, erf);
+		DiscretizedFunc finiteCurve = xVals.deepClone();
+		for (int i=0; i<finiteCurve.size(); i++)
+			finiteCurve.set(i, logXVals.getY(i));
+		
+		DecimalFormat pDF = new DecimalFormat("0.0%");
+//		for (int i=0; i<xVals.size(); i++) {
+		int i = 40;
+			double x = xVals.getX(i);
+			double ptY = pointCurve.getY(i);
+			double finiteY = finiteCurve.getY(i);
+			double fDiff = (finiteY - ptY) / ptY;
+			String pDiffStr = pDF.format(fDiff);
+			if (fDiff >= 0)
+				pDiffStr = "+"+pDiffStr;
+			System.out.println("x="+(float)x+"\tptY="+(float)ptY+"\tfiniteY="+(float)finiteY+"\t("+pDiffStr+")");
+//		}
+	}
+	
 	/**
 	 * @param args
 	 * @throws Exception 
 	 */
 	public static void main(String[] args) throws Exception {
 		try {
-			test346();
+			test348();
 		} catch (Throwable t) {
 			t.printStackTrace();
 			System.exit(1);

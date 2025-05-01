@@ -77,7 +77,7 @@ import org.opensha.sha.earthquake.rupForecastImpl.nshm23.gridded.NSHM23_Abstract
 import org.opensha.sha.faultSurface.FiniteApproxPointSurface;
 import org.opensha.sha.faultSurface.PointSurface;
 import org.opensha.sha.faultSurface.QuadSurface;
-import org.opensha.sha.faultSurface.RectangleSurface;
+import org.opensha.sha.faultSurface.RectangularSurface;
 import org.opensha.sha.faultSurface.RuptureSurface;
 import org.opensha.sha.faultSurface.utils.PointSourceDistanceCorrection;
 import org.opensha.sha.faultSurface.utils.PointSourceDistanceCorrections;
@@ -494,7 +494,7 @@ public class PointSourceHazardComparison {
 			
 			double rateEach = mfd.getY(i)/(double)numEach;
 			double probEach = 1-Math.exp(-rateEach);
-			for (RectangleSurface surf : builder.buildRandRectSurfaces(numEach))
+			for (RectangularSurface surf : builder.buildRandRectSurfaces(numEach))
 				rups.add(new ProbEqkRupture(mag, aveRake, probEach, surf, null));
 		}
 		return new RupListSource(rups, null);

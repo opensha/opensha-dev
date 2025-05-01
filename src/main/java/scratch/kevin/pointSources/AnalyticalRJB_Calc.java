@@ -6,7 +6,7 @@ import org.opensha.commons.geo.Location;
 import org.opensha.commons.geo.LocationUtils;
 import org.opensha.sha.faultSurface.FaultTrace;
 import org.opensha.sha.faultSurface.QuadSurface;
-import org.opensha.sha.faultSurface.RectangleSurface;
+import org.opensha.sha.faultSurface.RectangularSurface;
 import org.opensha.sha.faultSurface.utils.PointSurfaceBuilder;
 
 import com.google.common.base.Stopwatch;
@@ -207,7 +207,7 @@ public class AnalyticalRJB_Calc {
 		builder.upperDepthWidthAndDip(0d, 1d, 90d);
 		builder.fractionalDAS(0.5).fractionalHypocentralDepth(0.5d);
 		builder.strike(Math.toDegrees(alphaRad));
-		RectangleSurface quad = builder.buildRectSurface();
+		RectangularSurface quad = builder.buildRectSurface();
 		return quad.getDistanceJB(siteLoc);
 	}
 
@@ -240,7 +240,7 @@ public class AnalyticalRJB_Calc {
 		builder.upperDepthWidthAndDip(0d, rupWidth, Math.toDegrees(dipRad));
 		builder.fractionalDAS(0.5).fractionalHypocentralDepth(0.5d);
 		builder.strike(Math.toDegrees(alphaRad));
-		RectangleSurface quad = builder.buildRectSurface();
+		RectangularSurface quad = builder.buildRectSurface();
 		return quad.getDistanceJB(siteLoc);
 	}
 	
