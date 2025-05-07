@@ -73,8 +73,8 @@ public class AnalyticalRRupCalc {
 			double maxRrup = StatUtils.max(rRups);
 			double avgRrup = StatUtils.mean(rRups);
 			System.out.println("\tQuad Rrup mean="+(float)avgRrup+", range=["+(float)minRrup+", "+(float)maxRrup+")");
-			double fwRrup = FiniteApproxPointSurface.getCorrDistRup(rJB, zTop, zBot, dipRad, horzWidth, true);
-			double hwRrup = FiniteApproxPointSurface.getCorrDistRup(rJB, zTop, zBot, dipRad, horzWidth, false);
+			double fwRrup = FiniteApproxPointSurface.getCorrDistRup(rJB, zTop, zBot, dipRad, length, horzWidth, true);
+			double hwRrup = FiniteApproxPointSurface.getCorrDistRup(rJB, zTop, zBot, dipRad, length, horzWidth, false);
 			System.out.println("\tfw="+(float)fwRrup+"\thw="+(float)hwRrup);
 		}
 		

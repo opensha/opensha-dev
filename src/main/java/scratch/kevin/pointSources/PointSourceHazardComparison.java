@@ -67,6 +67,9 @@ import org.opensha.sha.earthquake.PointSource;
 import org.opensha.sha.earthquake.ProbEqkRupture;
 import org.opensha.sha.earthquake.ProbEqkSource;
 import org.opensha.sha.earthquake.faultSysSolution.FaultSystemSolution;
+import org.opensha.sha.earthquake.faultSysSolution.modules.GridSourceList;
+import org.opensha.sha.earthquake.faultSysSolution.modules.GridSourceList.GriddedRupture;
+import org.opensha.sha.earthquake.faultSysSolution.modules.GridSourceList.GriddedRupturePropertiesCache;
 import org.opensha.sha.earthquake.faultSysSolution.modules.GridSourceProvider;
 import org.opensha.sha.earthquake.faultSysSolution.modules.MFDGridSourceProvider;
 import org.opensha.sha.earthquake.faultSysSolution.util.FaultSysTools;
@@ -74,6 +77,8 @@ import org.opensha.sha.earthquake.faultSysSolution.util.SolHazardMapCalc.ReturnP
 import org.opensha.sha.earthquake.rupForecastImpl.PointSourceNshm;
 import org.opensha.sha.earthquake.rupForecastImpl.PointToFiniteSource;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.gridded.NSHM23_AbstractGridSourceProvider;
+import org.opensha.sha.earthquake.rupForecastImpl.nshm23.gridded.NSHM23_SingleRegionGridSourceProvider.NSHM23_WUS_FiniteRuptureConverter;
+import org.opensha.sha.earthquake.util.GriddedSeismicitySettings;
 import org.opensha.sha.faultSurface.FiniteApproxPointSurface;
 import org.opensha.sha.faultSurface.PointSurface;
 import org.opensha.sha.faultSurface.QuadSurface;
@@ -91,6 +96,7 @@ import org.opensha.sha.imr.param.IntensityMeasureParams.SA_Param;
 import org.opensha.sha.magdist.GutenbergRichterMagFreqDist;
 import org.opensha.sha.magdist.IncrementalMagFreqDist;
 import org.opensha.sha.util.FocalMech;
+import org.opensha.sha.util.TectonicRegionType;
 
 import com.google.common.base.Preconditions;
 import com.google.common.base.Stopwatch;
@@ -324,9 +330,12 @@ public class PointSourceHazardComparison {
 			public ProbEqkSource buildSource(Location centerLoc, IncrementalMagFreqDist mfd, double aveRake,
 					double aveDip, boolean isSupersample, Random r) {
 //				return buildRJBCorrSource(centerLoc, mfd, aveRake, aveDip, isSupersample ? OCT_QUAD : OCT_QUAD_RAND_CELL, 5);
+				GriddedSeismicitySettings gridSettings = GriddedSeismicitySettings.DEFAULT;
 				return PointSource.poissonBuilder(centerLoc)
-						.surfaceBuilder(PointSourceNshm.SURF_BUILDER_DEFAULT)
-						.forMFDAndFocalMech(mfd, new FocalMechanism(Double.NaN, aveDip, aveRake))
+//						.surfaceBuilder(PointSourceNshm.SURF_BUILDER_DEFAULT)
+//						.forMFDAndFocalMech(mfd, new FocalMechanism(Double.NaN, aveDip, aveRake))
+						.data(GridSourceList.buildPointSourceData(centerLoc, buildGriddedRupListNSHM(centerLoc, mfd, aveRake, aveDip),
+								null, gridSettings))
 						.duration(1d)
 						.distCorrs(getDistCorrs(), 5d)
 						.build();
@@ -345,14 +354,17 @@ public class PointSourceHazardComparison {
 						.build();
 			}
 		},
-		TWENTY_POINT_RJB_DIST("5-pt RJB Distribution", false, PointSourceDistanceCorrections.TWENTY_POINT_RJB_DIST) {
+		TWENTY_POINT_RJB_DIST("20-pt RJB Distribution", false, PointSourceDistanceCorrections.TWENTY_POINT_RJB_DIST) {
 			@Override
 			public ProbEqkSource buildSource(Location centerLoc, IncrementalMagFreqDist mfd, double aveRake,
 					double aveDip, boolean isSupersample, Random r) {
 //				return buildRJBCorrSource(centerLoc, mfd, aveRake, aveDip, isSupersample ? OCT_QUAD : OCT_QUAD_RAND_CELL, 5);
+				GriddedSeismicitySettings gridSettings = GriddedSeismicitySettings.DEFAULT;
 				return PointSource.poissonBuilder(centerLoc)
-						.surfaceBuilder(PointSourceNshm.SURF_BUILDER_DEFAULT)
-						.forMFDAndFocalMech(mfd, new FocalMechanism(Double.NaN, aveDip, aveRake))
+//						.surfaceBuilder(PointSourceNshm.SURF_BUILDER_DEFAULT)
+//						.forMFDAndFocalMech(mfd, new FocalMechanism(Double.NaN, aveDip, aveRake))
+						.data(GridSourceList.buildPointSourceData(centerLoc, buildGriddedRupListNSHM(centerLoc, mfd, aveRake, aveDip),
+								null, gridSettings))
 						.duration(1d)
 						.distCorrs(getDistCorrs(), 5d)
 						.build();
@@ -470,6 +482,25 @@ public class PointSourceHazardComparison {
 	private static Region cellRegion(Location loc) {
 		double half = 0.05;
 		return new Region(new Location(loc.lat-half, loc.lon-half), new Location(loc.lat+half, loc.lon+half));
+	}
+	
+	private static List<GriddedRupture> buildGriddedRupListNSHM(Location loc, IncrementalMagFreqDist mfd, double aveRake, double aveDip) {
+		List<GriddedRupture> rups = new ArrayList<>();
+		
+		NSHM23_WUS_FiniteRuptureConverter converter = new NSHM23_WUS_FiniteRuptureConverter();
+		FocalMech mech = FocalMech.forFocalMechanism(new FocalMechanism(Double.NaN, aveDip, aveRake));
+		Preconditions.checkNotNull(mech);
+		
+		GriddedRupturePropertiesCache cache = new GriddedRupturePropertiesCache();
+		
+		for (int i=0; i<mfd.size(); i++) {
+			double mag = mfd.getX(i);
+			double rate = mfd.getY(i);
+			if (rate == 0d)
+				continue;
+			rups.add(converter.buildFiniteRupture(0, loc, mag, rate, mech, TectonicRegionType.ACTIVE_SHALLOW, null, null, cache));
+		}
+		return rups;
 	}
 	
 	private static ProbEqkSource buildQuadSource(PointSurfaceBuilder builder, IncrementalMagFreqDist mfd,
@@ -1048,8 +1079,8 @@ public class PointSourceHazardComparison {
 		double latitude = 0d;
 //		double latitude = 45d;
 //		PointSourceType mainType = PointSourceType.FIVE_POINT_RJB_DIST;
-//		PointSourceType mainType = PointSourceType.TWENTY_POINT_RJB_DIST;
-		PointSourceType mainType = PointSourceType.FIVE_POINT_APPROX_SS_RJB_DIST;
+		PointSourceType mainType = PointSourceType.TWENTY_POINT_RJB_DIST;
+//		PointSourceType mainType = PointSourceType.FIVE_POINT_APPROX_SS_RJB_DIST;
 //		PointSourceType mainType = PointSourceType.FIVE_POINT_RJB_DIST_ALONG;
 //		PointSourceType mainType = PointSourceType.FIVE_POINT_APPROX_SS_RJB_DIST_ALONG;
 //		PointSourceType mainType = PointSourceType.TWENTY_POINT_RJB_DIST_ALONG;
@@ -1064,7 +1095,7 @@ public class PointSourceHazardComparison {
 //		PointSourceType mainType = PointSourceType.POINT_TO_FINITE;
 //		PointSourceType mainType = PointSourceType.CROSSHAIR_QUAD;
 //		PointSourceType mainType = PointSourceType.QUAD_QUAD;
-		PointSourceType compType = null;
+//		PointSourceType compType = null;
 //		PointSourceType compType = PointSourceType.TABLE_FINITE_APPROX_POINT_SOURCE;
 //		PointSourceType compType = PointSourceType.HAZ_EQUIV_APPROX_POINT_SOURCE;
 //		PointSourceType compType = PointSourceType.CDF_BASED_RJB_CORR_APPROX_POINT_SOURCE;
@@ -1072,7 +1103,7 @@ public class PointSourceHazardComparison {
 //		PointSourceType compType = PointSourceType.SIMPLE_APPROX_FINITE_POINT_NSHMP_CORR;
 //		PointSourceType compType = PointSourceType.SIMPLE_APPROX_FINITE_POINT_NO_CORR;
 //		PointSourceType compType = PointSourceType.TABLE_FINITE_APPROX_POINT_SOURCE_SUPERSAMPLE;
-//		PointSourceType compType = PointSourceType.OCT_QUAD;
+		PointSourceType compType = PointSourceType.OCT_QUAD;
 //		PointSourceType compType = PointSourceType.FIVE_POINT_RJB_DIST;
 //		PointSourceType compType = PointSourceType.OCT_QUAD_RAND_CELL;
 //		PointSourceType compType = PointSourceType.OCT_QUAD_RAND_DAS_DD;
@@ -1091,21 +1122,27 @@ public class PointSourceHazardComparison {
 		
 		boolean doSingleCellHazard = true;
 		boolean doNSHMModelHazard = true;
-		boolean doHighRes = true;
-		boolean doSupersample = true;
+//		boolean doHighRes = true;
+//		boolean doSupersample = true;
 //		boolean doHighRes = false;
 //		boolean doSupersample = true;
-//		boolean doHighRes = true;
-//		boolean doSupersample = false;
+		boolean doHighRes = true;
+		boolean doSupersample = false;
 //		boolean doHighRes = false;
 //		boolean doSupersample = false;
 		boolean forceWriteIntermediate = true;
 		boolean writeTables = false;
-		boolean strikeSlipOnly = false;
+	
+//		FocalMech[] mechs = { FocalMech.STRIKE_SLIP, FocalMech.REVERSE };
+//		FocalMech[] mechs = { FocalMech.STRIKE_SLIP };
+		FocalMech[] mechs = { FocalMech.REVERSE };
 		
-		AttenRelRef gmmRef = AttenRelRef.NGAWest_2014_AVG_NOIDRISS;
-		double[] periods = {0d, 1d};
-		double[] rakes = strikeSlipOnly ? new double[] {0d} : new double[] {0d, 90d};
+		boolean remapNSHMrakes = false;
+		
+//		AttenRelRef gmmRef = AttenRelRef.NGAWest_2014_AVG_NOIDRISS;
+		AttenRelRef gmmRef = AttenRelRef.USGS_NSHM23_ACTIVE;
+//		double[] periods = {0d, 1d};
+		double[] periods = {0d};
 		
 		ReturnPeriods[] rps = { ReturnPeriods.TWO_IN_50, ReturnPeriods.TEN_IN_50 };
 		
@@ -1125,8 +1162,6 @@ public class PointSourceHazardComparison {
 			outputDir = new File(mainOutputDir, outputDir.getName()+"_lat"+oDF.format(latitude));
 		if (!doSupersample)
 			outputDir = new File(mainOutputDir, outputDir.getName()+"_no_supersample");
-		if (strikeSlipOnly)
-			outputDir = new File(mainOutputDir, outputDir.getName()+"_ss_only");
 		Preconditions.checkState(outputDir.exists() || outputDir.mkdir());
 		
 		boolean writeIntermediate = forceWriteIntermediate || !new File(outputDir, "index.html").exists();
@@ -1355,8 +1390,8 @@ public class PointSourceHazardComparison {
 		boolean[] falseTrue = {false,true};
 		boolean[] falseOnly = {false};
 		
-		for (double rake : rakes) {
-			FocalMech mech = mechForRake(rake);
+		for (FocalMech mech : mechs) {
+			double rake = mech.rake();
 			String mechLabel = mech.toString();
 			String mechPrefix = mech.name();
 			
@@ -2098,7 +2133,7 @@ public class PointSourceHazardComparison {
 			GridSourceProvider gridProv = FaultSystemSolution.load(new File("/home/kevin/OpenSHA/nshm23/batch_inversions/"
 					+ "2024_02_02-nshm23_branches-WUS_FM_v3/results_WUS_FM_v3_branch_averaged_gridded.zip")).getGridSourceProvider();
 			
-			if (strikeSlipOnly) {
+			if (remapNSHMrakes && mechs.length == 1) {
 				GriddedRegion region = gridProv.getGriddedRegion();
 				int nodeCount = region.getNodeCount();
 				Builder<Integer, IncrementalMagFreqDist> subSeisBuilder = ImmutableMap.builder();
@@ -2113,9 +2148,9 @@ public class PointSourceHazardComparison {
 					IncrementalMagFreqDist unassociated = gridProv.getMFD_Unassociated(i);
 					if (unassociated != null)
 						unassociatedBuilder.put(i, unassociated);
-					fracStrikeSlip[i] = 1d;
-					fracNormal[i] = 0d;
-					fracReverse[i] = 0d;
+					fracStrikeSlip[i] = mechs[0] == FocalMech.STRIKE_SLIP ? 1d : 0d;
+					fracNormal[i] = mechs[0] == FocalMech.NORMAL ? 1d : 0d;
+					fracReverse[i] = mechs[0] == FocalMech.REVERSE ? 1d : 0d;
 				}
 				ImmutableMap<Integer, IncrementalMagFreqDist> nodeSubSeisMFDs = subSeisBuilder.build();
 				ImmutableMap<Integer, IncrementalMagFreqDist> nodeUnassociatedMFDs = unassociatedBuilder.build();
