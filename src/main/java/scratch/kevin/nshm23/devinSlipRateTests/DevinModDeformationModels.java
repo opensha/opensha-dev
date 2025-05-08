@@ -11,6 +11,7 @@ import org.opensha.commons.data.CSVFile;
 import org.opensha.commons.logicTree.Affects;
 import org.opensha.commons.logicTree.DoesNotAffect;
 import org.opensha.commons.logicTree.LogicTreeBranch;
+import org.opensha.commons.logicTree.LogicTreeNode;
 import org.opensha.sha.earthquake.faultSysSolution.FaultSystemRupSet;
 import org.opensha.sha.earthquake.faultSysSolution.FaultSystemSolution;
 import org.opensha.sha.earthquake.faultSysSolution.RupSetDeformationModel;
@@ -149,49 +150,48 @@ public enum DevinModDeformationModels implements RupSetDeformationModel {
 	public boolean isApplicableTo(RupSetFaultModel faultModel) {
 		return faultModel instanceof NSHM23_FaultModels;
 	}
-	
-	static final double DOWN_DIP_FRACT_DEFAULT = 0.5;
-	static final double MAX_LEN_DEFAULT = Double.NaN;
-	static final int MIN_SUB_SECTS_PER_FAULT_DEFAULT = 2;
+		
+//	@Override
+//	public List<? extends FaultSection> build(RupSetFaultModel faultModel) throws IOException {
+//		return build(faultModel, MIN_SUB_SECTS_PER_FAULT_DEFAULT, DOWN_DIP_FRACT_DEFAULT, MAX_LEN_DEFAULT);
+//	}
+//	
+//	@Override
+//	public List<? extends FaultSection> build(RupSetFaultModel faultModel, int minPerFault, double ddwFract,
+//			double fixedLen) throws IOException {
+//		Map<Integer, List<MinisectionSlipRecord>> minis = refDM.getMinisections(faultModel);
+//		
+//		// fetch full sections
+//		List<? extends FaultSection> fullSects = faultModel.getFaultSections();
+//
+//		// no subsections passed in, build them
+//		List<? extends FaultSection> subSects = SubSectionBuilder.buildSubSects(
+//				fullSects, minPerFault, ddwFract, fixedLen);
+//
+//		return buildDeformationModel(faultModel, minis, fullSects, subSects);
+//	}
+//
+//	@Override
+//	public List<? extends FaultSection> buildForSubsects(
+//			RupSetFaultModel faultModel, List<? extends FaultSection> subSects) throws IOException {
+//		Map<Integer, List<MinisectionSlipRecord>> minis = refDM.getMinisections(faultModel);
+//		
+//		// fetch full sections
+//		List<? extends FaultSection> fullSects = faultModel.getFaultSections();
+//		
+//		return buildDeformationModel(faultModel, minis, fullSects, subSects);
+//	}
 	
 	@Override
-	public List<? extends FaultSection> build(RupSetFaultModel faultModel) throws IOException {
-		return build(faultModel, MIN_SUB_SECTS_PER_FAULT_DEFAULT, DOWN_DIP_FRACT_DEFAULT, MAX_LEN_DEFAULT);
-	}
-	
-	@Override
-	public List<? extends FaultSection> build(RupSetFaultModel faultModel, int minPerFault, double ddwFract,
-			double fixedLen) throws IOException {
-		Map<Integer, List<MinisectionSlipRecord>> minis = refDM.getMinisections(faultModel);
-		
-		// fetch full sections
-		List<? extends FaultSection> fullSects = faultModel.getFaultSections();
-
-		// no subsections passed in, build them
-		List<? extends FaultSection> subSects = SubSectionBuilder.buildSubSects(
-				fullSects, minPerFault, ddwFract, fixedLen);
-
-		return buildDeformationModel(faultModel, minis, fullSects, subSects);
-	}
-
-	@Override
-	public List<? extends FaultSection> buildForSubsects(
-			RupSetFaultModel faultModel, List<? extends FaultSection> subSects) throws IOException {
-		Map<Integer, List<MinisectionSlipRecord>> minis = refDM.getMinisections(faultModel);
-		
-		// fetch full sections
-		List<? extends FaultSection> fullSects = faultModel.getFaultSections();
-		
-		return buildDeformationModel(faultModel, minis, fullSects, subSects);
-	}
-	
-	private List<? extends FaultSection> buildDeformationModel(RupSetFaultModel faultModel,
-			Map<Integer, List<MinisectionSlipRecord>> dmRecords, List<? extends FaultSection> fullSects,
+	public List<? extends FaultSection> apply(RupSetFaultModel faultModel,
+			LogicTreeBranch<? extends LogicTreeNode> branch, List<? extends FaultSection> fullSects,
 			List<? extends FaultSection> subSects) throws IOException {
+		Map<Integer, List<MinisectionSlipRecord>> minis = refDM.getMinisections(faultModel);
+		
 		// minisection mappings
 		MinisectionMappings mappings = new MinisectionMappings(fullSects, subSects);
 		
-		List<? extends FaultSection> origSects = refDM.build(faultModel);
+		List<? extends FaultSection> origSects = refDM.apply(faultModel, branch, fullSects, subSects);
 		Preconditions.checkState(origSects.size() == subSects.size());
 		
 		System.out.println("Building modified deformation model with "+subSects.size()+" sub-sections: "+name);
@@ -219,11 +219,12 @@ public enum DevinModDeformationModels implements RupSetDeformationModel {
 		return refDM.applyCreepModel(mappings,
 				refDM.applyStdDevDefaults(faultModel, subSects));
 	}
-	
+
+
 	public static void main(String[] args) throws IOException {
 		NSHM23_FaultModels fm = NSHM23_FaultModels.WUS_FM_v3;
 		for (DevinModDeformationModels dm : DevinModDeformationModels.values()) {
-			dm.build(fm);
+			dm.build(fm, null);
 		}
 	}
 

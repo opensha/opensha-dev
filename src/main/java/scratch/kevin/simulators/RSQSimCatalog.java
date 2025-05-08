@@ -48,6 +48,7 @@ import org.opensha.refFaultParamDb.vo.FaultSectionPrefData;
 import org.opensha.sha.earthquake.faultSysSolution.FaultSystemSolution;
 import org.opensha.sha.earthquake.faultSysSolution.RupSetDeformationModel;
 import org.opensha.sha.earthquake.faultSysSolution.RupSetFaultModel;
+import org.opensha.sha.earthquake.faultSysSolution.RuptureSets;
 import org.opensha.sha.earthquake.faultSysSolution.modules.NamedFaults;
 import org.opensha.sha.earthquake.param.BPTAveragingTypeOptions;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_DeformationModels;
@@ -1765,7 +1766,7 @@ public class RSQSimCatalog implements XMLSaveable {
 	public synchronized List<? extends FaultSection> getSubSects() throws IOException {
 		if (subSects == null) {
 			if (getDeformationModel() != null && getFaultModel() != null) {
-				subSects = getDeformationModel().build(getFaultModel());
+				subSects = getDeformationModel().build(getFaultModel(), RuptureSets.getDefaultSubSectModel(getFaultModel()), null);
 			} else {
 				FaultSystemSolution compSol = getComparisonSolution();
 				Preconditions.checkNotNull(compSol,

@@ -395,7 +395,7 @@ public class PureScratch {
 //		RupSetDeformationModel[] dms = DeformationModels.values();
 //		int parentID = 117;
 		
-		RupSetFaultModel[] fms = { NSHM23_FaultModels.WUS_FM_v2 };
+		NSHM23_FaultModels[] fms = { NSHM23_FaultModels.WUS_FM_v2 };
 		RupSetDeformationModel[] dms = NSHM23_DeformationModels.values();
 		int parentID = 333;
 		
@@ -407,7 +407,7 @@ public class PureScratch {
 		double totSumArea = 0d;
 		double totSumWidthArea = 0d;
 		
-		for (RupSetFaultModel fm : fms) {
+		for (NSHM23_FaultModels fm : fms) {
 			for (RupSetDeformationModel dm : dms) {
 				if (dm.getNodeWeight(null) == 0d)
 					continue;
@@ -1401,8 +1401,8 @@ public class PureScratch {
 			if (state.contains((GeoJSONFaultSection)sect))
 				stateSects.add(sect);
 		System.out.println("Retained "+stateSects.size()+"/"+allSects.size()+" sects");
-		List<? extends FaultSection> subSects = dm.buildForSubsects(fm, SubSectionBuilder.buildSubSects(stateSects));
-		GeoJSONFaultReader.writeFaultSections(new File("/tmp/ut_sub_sects.geojson"), subSects);
+//		List<? extends FaultSection> subSects = dm.buildForSubsects(fm, SubSectionBuilder.buildSubSects(stateSects));
+//		GeoJSONFaultReader.writeFaultSections(new File("/tmp/ut_sub_sects.geojson"), subSects);
 	}
 	
 	private static void test286() throws IOException {

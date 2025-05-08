@@ -49,13 +49,13 @@ public class BranchSlipRateCOVPlots {
 		NSHM23_FaultModels fm = NSHM23_FaultModels.WUS_FM_v3;
 		NSHM23_DeformationModels.HARDCODED_FRACTIONAL_STD_DEV = Double.NaN;
 		NSHM23_DeformationModels.HARDCODED_FRACTIONAL_STD_DEV_UPPER_BOUND = Double.NaN;
-		List<? extends FaultSection> avgSubSects = NSHM23_DeformationModels.AVERAGE.build(fm);
+		List<? extends FaultSection> avgSubSects = NSHM23_DeformationModels.AVERAGE.build(fm, null);
 		List<List<? extends FaultSection>> subSectsList = new ArrayList<>();
 		List<Double> dmWeights = new ArrayList<>();
 		for (NSHM23_DeformationModels dm : NSHM23_DeformationModels.values()) {
 			double weight = dm.getNodeWeight(null);
 			if (weight > 0d) {
-				subSectsList.add(dm.build(fm));
+				subSectsList.add(dm.build(fm, null));
 				dmWeights.add(weight);
 			}
 		}

@@ -65,7 +65,7 @@ public class MomentRateCompNSHM18 {
 		
 		// NSHM18 outside of CA
 		NSHM18_DeformationModels dm18 = GEO_ONLY ? NSHM18_DeformationModels.GEOL : NSHM18_DeformationModels.BRANCH_AVERAGED;
-		List<? extends FaultSection> nshm18sectsNoCA = dm18.build(NSHM18_FaultModels.NSHM18_WUS_NoCA);
+		List<? extends FaultSection> nshm18sectsNoCA = dm18.build(NSHM18_FaultModels.NSHM18_WUS_NoCA, null, null);
 		addFaultMoRates(nshm18, cgr, nshm18sectsNoCA, 1d);
 		
 		// UCERF3
@@ -76,7 +76,7 @@ public class MomentRateCompNSHM18 {
 			if (fmWeight == 0d)
 				continue;
 			
-			List<? extends FaultSection> fullDM = u3DM.build(u3fm);
+			List<? extends FaultSection> fullDM = u3DM.build(u3fm, null, null);
 			
 			List<FaultSection> modDM = new ArrayList<>();
 			for (FaultSection sect : fullDM) {
@@ -94,7 +94,7 @@ public class MomentRateCompNSHM18 {
 		GriddedGeoDataSet nshm23 = new GriddedGeoDataSet(gridReg, false);
 		
 		NSHM23_DeformationModels dm23 = GEO_ONLY ? NSHM23_DeformationModels.GEOLOGIC : NSHM23_DeformationModels.AVERAGE;
-		List<? extends FaultSection> nshm23sects = dm23.build(NSHM23_FaultModels.WUS_FM_v2);
+		List<? extends FaultSection> nshm23sects = dm23.build(NSHM23_FaultModels.WUS_FM_v2, null);
 		
 		addFaultMoRates(nshm23, cgr, nshm23sects, 1d);
 		
@@ -356,7 +356,7 @@ public class MomentRateCompNSHM18 {
 
 		// NSHM18 outside of CA
 		NSHM18_DeformationModels dm18 = GEO_ONLY ? NSHM18_DeformationModels.GEOL : NSHM18_DeformationModels.BRANCH_AVERAGED;
-		List<? extends FaultSection> nshm18sectsNoCA = dm18.build(NSHM18_FaultModels.NSHM18_WUS_NoCA);
+		List<? extends FaultSection> nshm18sectsNoCA = dm18.build(NSHM18_FaultModels.NSHM18_WUS_NoCA, null, null);
 		addFaultMoRates(nshm18, cgr, nshm18sectsNoCA, 1d);
 
 		// UCERF3
@@ -368,7 +368,7 @@ public class MomentRateCompNSHM18 {
 			if (fmWeight == 0d)
 				continue;
 
-			List<? extends FaultSection> fullDM = u3DM.build(u3fm);
+			List<? extends FaultSection> fullDM = u3DM.build(u3fm, null, null);
 
 			List<FaultSection> modDM = new ArrayList<>();
 			for (FaultSection sect : fullDM) {
@@ -390,7 +390,7 @@ public class MomentRateCompNSHM18 {
 		GriddedGeoDataSet nshm23 = new GriddedGeoDataSet(gridReg, false);
 		
 		NSHM23_DeformationModels dm23 = GEO_ONLY ? NSHM23_DeformationModels.GEOLOGIC : NSHM23_DeformationModels.AVERAGE;
-		List<? extends FaultSection> nshm23sects = dm23.build(NSHM23_FaultModels.WUS_FM_v2);
+		List<? extends FaultSection> nshm23sects = dm23.build(NSHM23_FaultModels.WUS_FM_v2, null);
 		
 		addFaultMoRates(nshm23, cgr, nshm23sects, 1d);
 		
