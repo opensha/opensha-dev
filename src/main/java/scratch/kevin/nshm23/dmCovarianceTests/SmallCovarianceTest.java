@@ -52,10 +52,15 @@ public class SmallCovarianceTest {
 			sigmas[i] = 10;
 		}
 		
-		Double conditionalFirstSlip = 20d; 
+//		Double conditionalFirstSlip = 2d;
+//		Double conditionalFirstSlip = 20d;
+		Double conditionalFirstSlip = 30d;
+//		Double conditionalFirstSlip = null;
 		
-		int numSamples = 100;
-		int samplePrintMod = 1;
+//		int numSamples = 100;
+//		int samplePrintMod = 1;
+		int numSamples = 10000;
+		int samplePrintMod = 1000;
 		
 		double[][] corrs = new double[N][N];
 		for (int i=0; i<N; i++)
@@ -129,7 +134,7 @@ public class SmallCovarianceTest {
 				// now convert back to real values
 				double[] sample = new double[N];
 				for (int i=0; i<N; i++)
-					sample[i] = Math.max(0d, means[i] + sigmas[i]*zScores.getEntry(i, 0));
+					sample[i] = slip(means[i], sigmas[i], zScores.getEntry(i, 0));
 				
 				samples.add(sample);
 				
@@ -146,6 +151,15 @@ public class SmallCovarianceTest {
 			
 			// convert that physical value to the latent z-score
 			double a = (conditionalFirstSlip - means[0]) / sigmas[0];   // z = (x-μ)/σ
+			
+			System.out.println("Mean z-scores:");
+			double[] meanZ = cond.getMeanZ(a);
+			printArray(meanZ);
+			System.out.println("Mean slips:");
+			double[] meanSlips = new double[N];
+			for (int i=0; i<N; i++)
+				meanSlips[i] = slip(means[i], sigmas[i], meanZ[i]);
+			printArray(meanSlips);
 
 			// ------------------------------------------------------------------
 			// Monte-Carlo loop
@@ -165,7 +179,7 @@ public class SmallCovarianceTest {
 			    // 2) map latent normals -> physical normals
 			    double[] sample = new double[N];
 			    for (int i = 0; i < N; i++)
-			        sample[i] = Math.max(0, means[i] + sigmas[i] * z[i]);   // x = μ + σ z
+			        sample[i] = slip(means[i], sigmas[i], z[i]);   // x = μ + σ z
 
 			    // (optional) make absolutely sure:
 			    sample[0] = conditionalFirstSlip;
@@ -213,6 +227,10 @@ public class SmallCovarianceTest {
 		
 		gw.setVisible(true);
 		gw.setDefaultCloseOperation(GraphWindow.EXIT_ON_CLOSE);
+	}
+	
+	private static double slip(double mean, double sigma, double z) {
+		return Math.max(0, mean + sigma * z);
 	}
 	
 	private static PlotSpec buildHistPlot(HistogramFunction hist, Color color) {
@@ -282,6 +300,17 @@ public class SmallCovarianceTest {
 			out[0] = a;
 			for (int i = 0; i < m; i++) out[i + 1] = z2.getEntry(i);
 			return out;
+		}
+		
+		public double[] getMeanZ(double a) {
+			int m = r21.getDimension();
+			// r21 is exactly the vector of ρ_{j1} in ConditionalNormalSampler
+			RealVector condMeanZ = r21.mapMultiply(a);          // ⟨ρ_{j1}·a⟩
+			double[] ret = new double[m+1];
+			ret[0] = a;
+			for (int i=0; i<m; i++)
+				ret[i+1] = condMeanZ.getEntry(i);
+			return ret;
 		}
 	}
 
