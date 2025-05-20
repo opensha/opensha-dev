@@ -65,7 +65,7 @@ import static scratch.kevin.prvi25.figures.PRVI_Paths.*;
 
 public class SlipRateFigures {
 	
-	static Region CRUSTAL_FAULT_MAP_REG = new Region(new Location(16.4, -70.2), new Location(20.2, -61.7));
+	public static Region CRUSTAL_FAULT_MAP_REG = new Region(new Location(16.4, -70.2), new Location(20.2, -61.7));
 
 	public static void main(String[] args) throws IOException {
 		File crustalDMOutputDir = new File(FIGURES_DIR, "crustal_dm");

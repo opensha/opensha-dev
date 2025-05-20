@@ -73,7 +73,9 @@ public class LogicTreeFigureWriter extends JPanel {
 		trees.add(crustalGriddedTree);
 		prefixes.add("crustal_gridded");
 		
-		LogicTree<LogicTreeNode> subFaultTree = LogicTree.read(new File(SUBDUCTION_DIR, "logic_tree.json"));
+		// TODO switch back to reading it
+//		LogicTree<LogicTreeNode> subFaultTree = LogicTree.read(new File(SUBDUCTION_DIR, "logic_tree.json"));
+		LogicTree<LogicTreeNode> subFaultTree = LogicTree.buildExhaustive(PRVI25_LogicTreeBranch.levelsSubduction, true);
 		trees.add(subFaultTree);
 		prefixes.add("subduction_inversion");
 		LogicTree<?> subGridTree = new PRVI25_InvConfigFactory().getGridSourceTree(subFaultTree);

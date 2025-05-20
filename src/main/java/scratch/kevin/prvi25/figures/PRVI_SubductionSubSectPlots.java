@@ -29,6 +29,7 @@ import org.opensha.sha.earthquake.faultSysSolution.FaultSystemRupSet;
 import org.opensha.sha.earthquake.faultSysSolution.util.FaultSysTools;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.PRVI25_InvConfigFactory;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_LogicTreeBranch;
+import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_SubductionCouplingModels;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_SubductionDeformationModels;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_SubductionFaultModels;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_SubductionScalingRelationships;
@@ -67,7 +68,7 @@ public class PRVI_SubductionSubSectPlots {
 		
 		CPT magCPT = GMT_CPT_Files.SEQUENTIAL_BATLOW_UNIFORM.instance().rescale(7.5d, 9d);
 		CPT minMagCPT = GMT_CPT_Files.SEQUENTIAL_BATLOW_UNIFORM.instance().rescale(7.5d, 8.400001d);
-		CPT slipCPT = GMT_CPT_Files.SEQUENTIAL_BATLOW_UNIFORM.instance().rescale(0d, 4d);
+		CPT slipCPT = GMT_CPT_Files.SEQUENTIAL_BATLOW_UNIFORM.instance().rescale(0d, 8d);
 		CPT slipUncertCPT = GMT_CPT_Files.SEQUENTIAL_BATLOW_UNIFORM.instance().rescale(0d, 2d);
 		CPT rakeCPT = GMT_CPT_Files.SEQUENTIAL_NAVIA_UNIFORM.instance().rescale(0d, 90d);
 		
@@ -80,7 +81,6 @@ public class PRVI_SubductionSubSectPlots {
 			
 			String fmName = fm.getShortName()+" Fault Model";
 			
-			branch = branch.copy();
 			branch.setValue(fm);
 			branch.requireValue(PRVI25_SubductionDeformationModels.class).build(fm);
 			FaultSystemRupSet rupSet = factory.buildRuptureSet(branch, FaultSysTools.defaultNumThreads());
@@ -176,47 +176,56 @@ public class PRVI_SubductionSubSectPlots {
 			mapMaker.clearAnnotations();
 			
 			for (PRVI25_SubductionDeformationModels dm : PRVI25_SubductionDeformationModels.values()) {
+				branch.setValue(dm);
 				if (dm.getNodeWeight(branch) == 0d)
 					continue;
-				String dmName = dm.getName();
-				sects = dm.build(fm);
 				
-				mapMaker.setFaultSections(sects);
-				List<Double> slips = new ArrayList<>(sects.size());
-				List<Double> slipUncerts = new ArrayList<>(sects.size());
-				List<Double> rakes = new ArrayList<>(sects.size());
-				for (FaultSection sect : sects) {
-					slips.add(sect.getOrigAveSlipRate());
-					slipUncerts.add(sect.getOrigSlipRateStdDev());
-					rakes.add(sect.getAveRake());
+				for (PRVI25_SubductionCouplingModels coupling : PRVI25_SubductionCouplingModels.values()) {
+					branch.setValue(coupling);
+					if (coupling.getNodeWeight(branch) == 0d)
+						continue;
+					
+					String dmName = dm.getName()+", "+coupling.getShortName()+" Coupling";
+					String dmPrefix = fm.getFilePrefix()+"_"+dm.getFilePrefix()+"_"+coupling.getFilePrefix();
+					sects = dm.build(fm, branch);
+					
+					mapMaker.setFaultSections(sects);
+					List<Double> slips = new ArrayList<>(sects.size());
+					List<Double> slipUncerts = new ArrayList<>(sects.size());
+					List<Double> rakes = new ArrayList<>(sects.size());
+					for (FaultSection sect : sects) {
+						slips.add(sect.getOrigAveSlipRate());
+						slipUncerts.add(sect.getOrigSlipRateStdDev());
+						rakes.add(sect.getAveRake());
+					}
+					
+//					mapMaker.plotSectScalars(slipUncerts, slipUncertCPT, dm.getShortName()+" Slip Rate Uncertainty (mm/yr)");
+//					mapMaker.plot(outputDir, "subduction_slip_uncert_"+fm.getFilePrefix()+"_"+dm.getFilePrefix(), fmName+", "+dmName);
+					
+					// draw rake lines
+					int rakeMod = 3;
+					List<LocationList> rakeArrows = new ArrayList<>();
+					for (FaultSection sect : sects)
+						if (sect.getSectionId() % rakeMod == 0)
+							rakeArrows.addAll(buildRakeArrows(sect, slipCPT.getMaxValue()));
+					mapMaker.plotArrows(rakeArrows, 20d, Colors.tab_red.darker(), 2f);
+					mapMaker.setFillArrowheads(true, Color.WHITE, 0.5f);
+//					mapMaker.plotLines(rakeArrows, Color.BLACK, 2f);
+					
+					mapMaker.plotSectScalars(slips, slipCPT, dm.getShortName()+" Slip Rate (mm/yr)");
+					mapMaker.plot(outputDir, "subduction_slip_"+dmPrefix, fmName+", "+dmName);
+					
+					mapMaker.plotSectScalars(slips, slipCPT, null);
+					mapMaker.plot(outputDir, "subduction_slip_"+dmPrefix+"_no_cpt", fmName+", "+dmName);
+					
+					mapMaker.plotSectScalars(rakes, rakeCPT, dm.getShortName()+" Rake");
+					String prefix = "subduction_rake_"+fm.getFilePrefix()+"_"+dm.getFilePrefix();;
+					System.out.println("Plotting "+prefix);
+					mapMaker.plot(outputDir, prefix, fmName+", "+dmName);
+					
+					mapMaker.clearLines();
+					mapMaker.clearArrows();
 				}
-				
-//				mapMaker.plotSectScalars(slipUncerts, slipUncertCPT, dm.getShortName()+" Slip Rate Uncertainty (mm/yr)");
-//				mapMaker.plot(outputDir, "subduction_slip_uncert_"+fm.getFilePrefix()+"_"+dm.getFilePrefix(), fmName+", "+dmName);
-				
-				// draw rake lines
-				int rakeMod = 3;
-				List<LocationList> rakeArrows = new ArrayList<>();
-				for (FaultSection sect : sects)
-					if (sect.getSectionId() % rakeMod == 0)
-						rakeArrows.addAll(buildRakeArrows(sect, 5d));
-				mapMaker.plotArrows(rakeArrows, 20d, Colors.tab_red.darker(), 2f);
-				mapMaker.setFillArrowheads(true, Color.WHITE, 0.5f);
-//				mapMaker.plotLines(rakeArrows, Color.BLACK, 2f);
-				
-				mapMaker.plotSectScalars(slips, slipCPT, dm.getShortName()+" Slip Rate (mm/yr)");
-				mapMaker.plot(outputDir, "subduction_slip_"+fm.getFilePrefix()+"_"+dm.getFilePrefix(), fmName+", "+dmName);
-				
-				mapMaker.plotSectScalars(slips, slipCPT, null);
-				mapMaker.plot(outputDir, "subduction_slip_"+fm.getFilePrefix()+"_"+dm.getFilePrefix()+"_no_cpt", fmName+", "+dmName);
-				
-				mapMaker.plotSectScalars(rakes, rakeCPT, dm.getShortName()+" Rake");
-				String prefix = "subduction_rake_"+fm.getFilePrefix()+"_"+dm.getFilePrefix();;
-				System.out.println("Plotting "+prefix);
-				mapMaker.plot(outputDir, prefix, fmName+", "+dmName);
-				
-				mapMaker.clearLines();
-				mapMaker.clearArrows();
 			}
 		}
 	}

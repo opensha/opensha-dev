@@ -6,6 +6,8 @@ import java.awt.geom.Point2D;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 
 import org.opensha.commons.data.CSVFile;
 import org.opensha.commons.data.function.XY_DataSet;
@@ -24,14 +26,40 @@ import scratch.kevin.latex.LaTeXUtils;
 public class COV_StatsTexWriter {
 
 	public static void main(String[] args) throws IOException {
+		List<File> inputDirs = new ArrayList<>();
+		List<String> names = new ArrayList<>();
+		List<String> texPrefixes = new ArrayList<>();
+		List<Double> gridSpacings = new ArrayList<>();
+		
 		File outputDir = new File(FIGURES_DIR, "logic_tree_hazard");
-		Preconditions.checkState(outputDir.exists());
 		
-		File gmmDir = new File(outputDir, "gmm_csvs");
-		Preconditions.checkState(gmmDir.exists());
+		inputDirs.add(outputDir);
+		names.add("ERF");
+		texPrefixes.add("");
+		gridSpacings.add(0.1);
 		
-		File combDir = new File(outputDir, "erf_plus_gmm_csvs");
-		Preconditions.checkState(combDir.exists());
+		inputDirs.add(new File(outputDir, "gmm_csvs"));
+		names.add("GMM");
+		texPrefixes.add("GMM");
+		gridSpacings.add(0.025);
+		
+		inputDirs.add(new File(outputDir, "erf_plus_gmm_csvs"));
+		names.add("ERF+GMM");
+		texPrefixes.add("Comb");
+		gridSpacings.add(0.025);
+		
+		inputDirs.add(new File("/tmp/cov_test/new_model_test_full"));
+		names.add("New test");
+		texPrefixes.add("Test");
+		gridSpacings.add(0.1);
+		
+		inputDirs.add(new File("/tmp/cov_test/mue_car_corr"));
+		names.add("New test correlated Mue&Car");
+		texPrefixes.add("Test");
+		gridSpacings.add(0.1);
+		
+		for (File dir : inputDirs)
+			Preconditions.checkState(dir.exists());
 		
 		FileWriter fw = new FileWriter(new File(outputDir, "cov_stats.tex"));
 		
@@ -61,25 +89,12 @@ public class COV_StatsTexWriter {
 			} else {
 				throw new IllegalStateException();
 			}
-			for (int i=0; i<3; i++) {
-				String myTexPrefix = texPrefix;
-				CSVFile<String> csv;
-				double gridSpacing;
-				if (i == 0) {
-					System.out.println("ERF");
-					csv = CSVFile.readFile(new File(outputDir, csvName), true);
-					gridSpacing = 0.1;
-				} else if (i == 1) {
-					System.out.println("GMM");
-					csv = CSVFile.readFile(new File(gmmDir, csvName), true);
-					gridSpacing = 0.025;
-					myTexPrefix = "GMM"+texPrefix;
-				} else {
-					System.out.println("ERF+GMM");
-					csv = CSVFile.readFile(new File(combDir, csvName), true);
-					gridSpacing = 0.025;
-					myTexPrefix = "Comb"+texPrefix;
-				}
+			for (int i=0; i<inputDirs.size(); i++) {
+				File inputDir = inputDirs.get(i);
+				String myTexPrefix = texPrefixes.get(i)+texPrefix;
+				System.out.println(names.get(i));
+				CSVFile<String> csv = CSVFile.readFile(new File(inputDir, csvName), true);
+				double gridSpacing = gridSpacings.get(i);
 				
 				MinMaxAveTracker overallTrack = new MinMaxAveTracker();
 				MinMaxAveTracker insideTrack = new MinMaxAveTracker();

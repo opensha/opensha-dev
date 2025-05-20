@@ -119,8 +119,8 @@ public class HardcodedInversionFactoryRunner {
 //		dirName += "-nshm23-full_sys-prev_weights";
 //		NSHM23_PaleoDataLoader.INCLUDE_U3_PALEO_SLIP = false;
 //		dirName += "-no_paleo_slip";
-		NSHM23_InvConfigFactory factory = new NSHM23_InvConfigFactory();
-		dirName += "-nshm23";
+//		NSHM23_InvConfigFactory factory = new NSHM23_InvConfigFactory();
+//		dirName += "-nshm23";
 //		NSHM23_InvConfigFactory factory = new NSHM23_InvConfigFactory.PaleoSlipInequality();
 //		dirName += "-nshm23-paleo_slip_ineq";
 //		NSHM23_InvConfigFactory factory = new NSHM23_InvConfigFactory.ForceNewPaleo();
@@ -130,33 +130,34 @@ public class HardcodedInversionFactoryRunner {
 //		NSHM23_InvConfigFactory factory = new DefModSamplingEnabledInvConfig.ConnDistB0p5MidSegCorrCapSigma();
 //		dirName += "-nshm23-dm_sample_cap_sigma";
 		
-//		PRVI25_InvConfigFactory factory = new PRVI25_InvConfigFactory();
-//		dirName += "-prvi25";
-////		PRVI25_InvConfigFactory factory = new PRVI25_InvConfigFactory.LimitCrustalBelowObserved_0p9();
-////		dirName += "-prvi25-limit_below_obs";
-////		PRVI25_InvConfigFactory.SUB_SECT_DDW_FRACT = 0.25; dirName += "-quarter_len_sub_sects";
-//		
+		PRVI25_InvConfigFactory factory = new PRVI25_InvConfigFactory();
+		dirName += "-prvi25";
+//		PRVI25_InvConfigFactory factory = new PRVI25_InvConfigFactory.LimitCrustalBelowObserved_0p9();
+//		dirName += "-prvi25-limit_below_obs";
+//		PRVI25_InvConfigFactory.SUB_SECT_DDW_FRACT = 0.25; dirName += "-quarter_len_sub_sects";
+		
 		factory.setCacheDir(new File("/home/kevin/OpenSHA/nshm23/rup_sets/cache"));
-//		
+		
 		boolean writeRS = true;
-//		
-////		LogicTreeBranch<U3LogicTreeBranchNode<?>> branch = U3LogicTreeBranch.DEFAULT;
-////		LogicTreeBranch<LogicTreeNode> branch = NSHM18_LogicTreeBranch.DEFAULT; dirName += "-2018_inputs";
-////		LogicTreeBranch<LogicTreeNode> branch = NSHM23_U3_HybridLogicTreeBranch.DEFAULT; dirName += "-u3";
-		LogicTreeBranch<LogicTreeNode> branch = NSHM23_LogicTreeBranch.DEFAULT_ON_FAULT;
-//		LogicTreeBranch<LogicTreeNode> branch = PRVI25_LogicTreeBranch.DEFAULT_CRUSTAL_ON_FAULT;
-//		branch = branch.copy();
-//
-////		branch.setValue(NSHM23_SegmentationModels.NONE);
-////		branch.setValue(SupraSeisBValues.B_0p0);
-////		branch.setValue(NSHM23_SegmentationModels.CLASSIC);
+		
+//		LogicTreeBranch<U3LogicTreeBranchNode<?>> branch = U3LogicTreeBranch.DEFAULT;
+//		LogicTreeBranch<LogicTreeNode> branch = NSHM18_LogicTreeBranch.DEFAULT; dirName += "-2018_inputs";
+//		LogicTreeBranch<LogicTreeNode> branch = NSHM23_U3_HybridLogicTreeBranch.DEFAULT; dirName += "-u3";
+//		LogicTreeBranch<LogicTreeNode> branch = NSHM23_LogicTreeBranch.DEFAULT_ON_FAULT;
+		LogicTreeBranch<LogicTreeNode> branch = PRVI25_LogicTreeBranch.DEFAULT_CRUSTAL_ON_FAULT;
+		branch = branch.copy();
+
+//		branch.setValue(NSHM23_SegmentationModels.NONE);
+//		branch.setValue(SupraSeisBValues.B_0p0);
+//		branch.setValue(NSHM23_SegmentationModels.CLASSIC);
+		branch.setValue(NSHM23_SegmentationModels.LOW);
 //		branch.setValue(NSHM23_SegmentationModels.AVERAGE);
-//		branch.setValue(SupraSeisBValues.AVERAGE);
-//		branch.setValue(NSHM23_ScalingRelationships.AVERAGE);
-//		branch.setValue(PRVI25_CrustalFaultModels.PRVI_CRUSTAL_FM_V1p2);
-//		branch.setValue(PRVI25_CrustalDeformationModels.GEOLOGIC_DIST_AVG);
-//		
-////		branch.setValue(NSHM23_SegmentationModels.CLASSIC);
+		branch.setValue(SupraSeisBValues.AVERAGE);
+		branch.setValue(NSHM23_ScalingRelationships.AVERAGE);
+		branch.setValue(PRVI25_CrustalFaultModels.PRVI_CRUSTAL_FM_V1p2);
+		branch.setValue(PRVI25_CrustalDeformationModels.GEOLOGIC_DIST_AVG);
+		
+//		branch.setValue(NSHM23_SegmentationModels.CLASSIC);
 		
 		// seg/b sampling
 //		List<LogicTreeLevel<? extends LogicTreeNode>> levels = NSHM23_LogicTreeBranch.levelsOnFault;
