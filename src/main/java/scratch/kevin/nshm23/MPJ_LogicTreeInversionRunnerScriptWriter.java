@@ -663,7 +663,9 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 		double avgNumRups = 10000;
 		gmpes = new AttenRelRef[] { AttenRelRef.USGS_PRVI_INTERFACE, AttenRelRef.USGS_PRVI_SLAB };
 		
-		forceHazardReg = new GriddedRegion(PRVI25_RegionLoader.loadPRVI_Tight(), 0.05, GriddedRegion.ANCHOR_0_0);
+//		forceHazardReg = new GriddedRegion(PRVI25_RegionLoader.loadPRVI_Tight(), 0.05, GriddedRegion.ANCHOR_0_0);
+//		forceHazardReg = new GriddedRegion(PRVI25_RegionLoader.loadPRVI_MapExtents(), 0.05, GriddedRegion.ANCHOR_0_0);
+		forceHazardReg = new GriddedRegion(PRVI25_RegionLoader.loadPRVI_MapExtents(), 0.025, GriddedRegion.ANCHOR_0_0);
 		sigmaTrunc = 3d;
 		supersample = false;
 		
@@ -673,6 +675,9 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 //		dirName += "-proxyGriddedTests";
 		
 		Class<? extends InversionConfigurationFactory> factoryClass = PRVI25_InvConfigFactory.class;
+		
+//		Class<? extends InversionConfigurationFactory> factoryClass = PRVI25_InvConfigFactory.MueAsCrustal.class;
+//		dirName += "-mue_as_crustal";
 		
 //		Class<? extends InversionConfigurationFactory> factoryClass = PRVI25_InvConfigFactory.GriddedUseM1Bounds.class;
 //		dirName += "-grid_bounds_m1";

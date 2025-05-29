@@ -379,9 +379,11 @@ public class GriddedRateDistributionSolutionWriter {
 												};
 												
 												GridSourceList carInterfaceList = PRVI25_GridSourceBuilder.buildInterfaceGridSourceList(
-														subLargeSol, branchForInterface, PRVI25_SeismicityRegions.CAR_INTERFACE, carMFDBuilderFunc);
+														subLargeSol, branchForInterface, PRVI25_SeismicityRegions.CAR_INTERFACE,
+														scale.getMagAreaRelationship(), carMFDBuilderFunc);
 												GridSourceList mueInterfaceList = PRVI25_GridSourceBuilder.buildInterfaceGridSourceList(
-														subLargeSol, branchForInterface, PRVI25_SeismicityRegions.MUE_INTERFACE, mueMFDBuilderFunc);
+														subLargeSol, branchForInterface, PRVI25_SeismicityRegions.MUE_INTERFACE,
+														scale.getMagAreaRelationship(), mueMFDBuilderFunc);
 												
 												GridSourceList combInterfaceList = GridSourceList.combine(carInterfaceList, mueInterfaceList);
 												

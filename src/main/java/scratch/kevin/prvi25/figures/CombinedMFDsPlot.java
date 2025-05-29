@@ -265,8 +265,8 @@ public class CombinedMFDsPlot {
 				
 				if (useRateModelUncert) {
 					InputStream is = SeismicityRateFileLoader.class.getResourceAsStream(
-//							"/data/erf/prvi25/seismicity/rates/directrates_2025_05_08/rateunc-Union-Full-v3.csv");
-							"/data/erf/prvi25/seismicity/rates/directrates_2025_05_08/rateunc-mix-Union-Full-v3.csv");
+							"/data/erf/prvi25/seismicity/rates/directrates_2025_05_08/rateunc-Union-Full-v3.csv");
+//							"/data/erf/prvi25/seismicity/rates/directrates_2025_05_08/rateunc-mix-Union-Full-v3.csv");
 					CSVFile<String> unionRates = CSVFile.readStream(is, false);
 					List<Exact> uncertBranches = SeismicityRateFileLoader.loadExactBranches(unionRates);
 					

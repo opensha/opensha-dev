@@ -72,7 +72,7 @@ public class BranchAveragedHazardScriptWriter {
 		supersample = true;
 		sigmaTrunc = 3d;
 		
-		String baseDirName = "2025_01_17-prvi25_crustal_subduction_combined_branches";
+		String baseDirName = "2025_05_21-prvi25_crustal_subduction_combined_branches";
 		String suffix = "ba_only";
 		String solFileName = "combined_branch_averaged_solution.zip";
 		
@@ -104,8 +104,8 @@ public class BranchAveragedHazardScriptWriter {
 ////		String suffix = "ba_only-both_fms";
 ////		String solFileName = "results_PRVI_SUB_FMs_combined_branch_averaged_gridded.zip";
 		
-//		vs30 = 760d; suffix += "-vs760";
-		vs30 = 260d; suffix += "-vs260";
+		vs30 = 760d; suffix += "-vs760";
+//		vs30 = 260d; suffix += "-vs260";
 		
 		/*
 		 * RSQSim

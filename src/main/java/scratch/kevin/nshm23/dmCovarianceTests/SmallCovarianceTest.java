@@ -53,8 +53,8 @@ public class SmallCovarianceTest {
 		}
 		
 //		Double conditionalFirstSlip = 2d;
-//		Double conditionalFirstSlip = 20d;
-		Double conditionalFirstSlip = 30d;
+		Double conditionalFirstSlip = 20d;
+//		Double conditionalFirstSlip = 30d;
 //		Double conditionalFirstSlip = null;
 		
 //		int numSamples = 100;

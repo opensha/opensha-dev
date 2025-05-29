@@ -158,12 +158,12 @@ public class LogicTreeLineIntegralCalc {
 	
 	public static PlotSpec writePlot(File outputDir, String prefix, List<DiscretizedFunc> branchResults,
 			List<Double> branchWeights, VectorComponent component) throws IOException {
-		return writePlot(outputDir, prefix, branchResults, branchWeights, component, "Average", null, null);
+		return writePlot(outputDir, prefix, branchResults, branchWeights, component, "Average", null, null, null);
 	}
 	
 	public static PlotSpec writePlot(File outputDir, String prefix, List<DiscretizedFunc> branchResults,
 			List<Double> branchWeights, VectorComponent component, String meanName, List<DiscretizedFunc> extraFuncs,
-			List<PlotCurveCharacterstics> extraChars) throws IOException {
+			List<PlotCurveCharacterstics> extraChars, Range yRange) throws IOException {
 		int numLocs = branchResults.get(0).size();
 		List<LightFixedXFunc> normCDFs = new ArrayList<>(numLocs);
 		DiscretizedFunc mean = new ArbitrarilyDiscretizedFunc();
@@ -250,7 +250,8 @@ public class LogicTreeLineIntegralCalc {
 //		plot.setLegendInset(RectangleAnchor.TOP_LEFT);
 		plot.setLegendVisible(true);
 		
-		Range yRange = FaultSystemLineIntegralCalculator.getPlotYRange(plot);
+		if (yRange == null)
+			yRange = FaultSystemLineIntegralCalculator.getPlotYRange(plot);
 		
 		HeadlessGraphPanel gp = PlotUtils.initHeadless();
 		

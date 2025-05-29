@@ -30,9 +30,12 @@ public class CombinedLogicTreeLineIntegralsPlot {
 	public static void main(String[] args) throws IOException {
 //		File crustalLIDir = new File(CRUSTAL_DIR, "line_integrals");
 //		File subLIDir = new File(SUBDUCTION_DIR, "line_integrals");
-		File crustalLIDir = new File(new File(INV_DIR, "2025_05_09-prvi25_crustal_branches-dmSample10x"), "line_integrals");
-		File subLIDir = new File(new File(INV_DIR, "2025_05_09-prvi25_subduction_branches"), "line_integrals");
-		File outputDir = new File(FIGURES_DIR, "logic_tree_line_integrals");
+//		File crustalLIDir = new File(new File(INV_DIR, "2025_05_09-prvi25_crustal_branches-dmSample10x"), "line_integrals");
+//		File subLIDir = new File(new File(INV_DIR, "2025_05_09-prvi25_subduction_branches"), "line_integrals");
+//		File outputDir = new File(FIGURES_DIR, "logic_tree_line_integrals");
+		File crustalLIDir = new File(new File(INV_DIR, "2025_01_17-prvi25_crustal_branches-dmSample10x"), "line_integrals");
+		File subLIDir = new File(new File(INV_DIR, "2025_01_17-prvi25_subduction_branches"), "line_integrals");
+		File outputDir = new File(FIGURES_DIR, "logic_tree_line_integrals_old");
 		Preconditions.checkState(outputDir.exists() || outputDir.mkdir());
 		
 		List<DiscretizedFunc> crustalPerpFuncs = new ArrayList<>();
@@ -107,6 +110,7 @@ public class CombinedLogicTreeLineIntegralsPlot {
 			List<DiscretizedFunc> parallelFuncs;
 			List<DiscretizedFunc> fullFuncs;
 			List<Double> weights;
+			Range fixedYRange;
 			switch (i) {
 			case 0:
 				prefix = "crustal";
@@ -114,6 +118,7 @@ public class CombinedLogicTreeLineIntegralsPlot {
 				parallelFuncs = crustalParallelFuncs;
 				fullFuncs = crustalFullFuncs;
 				weights = crustalWeights;
+				fixedYRange = new Range(0d, 20d);
 				break;
 			case 1:
 				prefix = "subduction";
@@ -121,6 +126,7 @@ public class CombinedLogicTreeLineIntegralsPlot {
 				parallelFuncs = subParallelFuncs;
 				fullFuncs = subFullFuncs;
 				weights = subWeights;
+				fixedYRange = new Range(0d, 10d);
 				break;
 			case 2:
 				prefix = "combined";
@@ -128,6 +134,7 @@ public class CombinedLogicTreeLineIntegralsPlot {
 				parallelFuncs = combParallelFuncs;
 				fullFuncs = combFullFuncs;
 				weights = combWeights;
+				fixedYRange = new Range(0d, 20d);
 				break;
 
 			default:
@@ -166,7 +173,7 @@ public class CombinedLogicTreeLineIntegralsPlot {
 					extraChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 2f, Colors.tab_orange));
 				}
 				PlotSpec plot = LogicTreeLineIntegralCalc.writePlot(outputDir, myPrefix, funcs, weights, comp,
-						meanName, extraFuncs, extraChars);
+						meanName, extraFuncs, extraChars, comp == VectorComponent.FULL_HORIZONTAL ? fixedYRange : null);
 				plot.setLegendVisible(plots.isEmpty());
 				if (comp == VectorComponent.FULL_HORIZONTAL)
 					plot.setYAxisLabel("|Full Horizontal| (mm/yr)");
