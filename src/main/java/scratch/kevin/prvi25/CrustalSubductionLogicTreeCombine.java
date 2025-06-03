@@ -19,10 +19,13 @@ import org.opensha.commons.logicTree.LogicTreeLevel;
 import org.opensha.commons.logicTree.LogicTreeLevel.FileBackedLevel;
 import org.opensha.commons.logicTree.LogicTreeNode;
 import org.opensha.commons.logicTree.LogicTreeNode.FileBackedNode;
+import org.opensha.commons.logicTree.treeCombiner.AbstractLogicTreeCombiner;
 import org.opensha.commons.util.modules.ModuleContainer;
-import org.opensha.sha.earthquake.faultSysSolution.hazard.AbstractLogicTreeHazardCombiner;
 import org.opensha.sha.earthquake.faultSysSolution.hazard.mpj.MPJ_LogicTreeHazardCalc;
 import org.opensha.sha.earthquake.faultSysSolution.modules.SolutionLogicTree;
+import org.opensha.sha.earthquake.faultSysSolution.treeCombiners.HazardMapCombinationProcessor;
+import org.opensha.sha.earthquake.faultSysSolution.treeCombiners.SiteHazardCurveCombinationProcessor;
+import org.opensha.sha.earthquake.faultSysSolution.treeCombiners.SolutionLogicTreeCombinationProcessor;
 import org.opensha.sha.earthquake.faultSysSolution.util.FaultSysTools;
 import org.opensha.sha.earthquake.param.IncludeBackgroundOption;
 import org.opensha.sha.imr.logicTree.ScalarIMR_ParamsLogicTreeNode;
@@ -30,7 +33,7 @@ import org.opensha.sha.imr.logicTree.ScalarIMRsLogicTreeNode;
 
 import com.google.common.base.Preconditions;
 
-public class CrustalSubductionLogicTreeCombine extends AbstractLogicTreeHazardCombiner {
+public class CrustalSubductionLogicTreeCombine extends AbstractLogicTreeCombiner {
 	
 	private static final boolean REVERSE = false;
 	private static final IncludeBackgroundOption GRID_SEIS_DEFAULT = IncludeBackgroundOption.EXCLUDE;
@@ -152,29 +155,35 @@ public class CrustalSubductionLogicTreeCombine extends AbstractLogicTreeHazardCo
 		else
 			combiner = new CrustalSubductionLogicTreeCombine(crustalLT, subductionLT, averageAcrossLevels);
 		
-		if (cmd.hasOption("disable-preload"))
-			combiner.setPreloadInnerCurves(false);
-		
 		if (!cmd.hasOption("disable-write-results") && !averageEither) {
 			File resultsOutputFile = new File(outputDir, resultsFileName);
 			Preconditions.checkNotNull(crustalSLT);
 			Preconditions.checkNotNull(subductionSLT);
+			boolean serializeGridded = false; // TODO option?
 			if (REVERSE)
-				combiner.setWriteSLTs(subductionSLT, crustalSLT, resultsOutputFile);
+				combiner.addProcessor(new SolutionLogicTreeCombinationProcessor(subductionSLT, crustalSLT,
+						resultsOutputFile, true, true, serializeGridded));
 			else
-				combiner.setWriteSLTs(crustalSLT, subductionSLT, resultsOutputFile);
+				combiner.addProcessor(new SolutionLogicTreeCombinationProcessor(crustalSLT, subductionSLT,
+						resultsOutputFile, true, true, serializeGridded));
 		}
 		
 		File crustalHazardDir = new File(crustalDir, hazardDirName);
 		File subductionHazardDir = new File(subductionDir, hazardDirName);
 		if (!cmd.hasOption("no-maps") && crustalHazardDir.exists() && subductionHazardDir.exists()) {
 			System.out.println("Will combine hazard maps");
+			HazardMapCombinationProcessor processor;
 			if (REVERSE)
-				combiner.setCombineHazardMaps(subductionHazardDir, bgOp,
+				processor = new HazardMapCombinationProcessor(subductionHazardDir, bgOp,
 						crustalHazardDir, bgOp, new File(outputDir, outputHazardFileName), gridReg);
 			else
-				combiner.setCombineHazardMaps(crustalHazardDir, bgOp,
+				processor = new HazardMapCombinationProcessor(crustalHazardDir, bgOp,
 						subductionHazardDir, bgOp, new File(outputDir, outputHazardFileName), gridReg);
+			
+			if (cmd.hasOption("disable-preload"))
+				processor.setPreloadInnerCurves(false);
+			
+			combiner.addProcessor(processor);
 		}
 		
 		String siteHazardFileName;
@@ -195,9 +204,9 @@ public class CrustalSubductionLogicTreeCombine extends AbstractLogicTreeHazardCo
 			System.out.println("Will combine site hazard curves");
 			File sitesOutputFile = new File(outputDir, siteHazardFileName);
 			if (REVERSE)
-				combiner.setCombineHazardCurves(subductionSiteFile, crustalSiteFile, sitesOutputFile);
+				combiner.addProcessor(new SiteHazardCurveCombinationProcessor(subductionSiteFile, crustalSiteFile, sitesOutputFile));
 			else
-				combiner.setCombineHazardCurves(crustalSiteFile, subductionSiteFile, sitesOutputFile);
+				combiner.addProcessor(new SiteHazardCurveCombinationProcessor(crustalSiteFile, subductionSiteFile, sitesOutputFile));
 		}
 		
 		long treeSize = (long)crustalLT.size()*(long)subductionLT.size();
@@ -227,7 +236,7 @@ public class CrustalSubductionLogicTreeCombine extends AbstractLogicTreeHazardCo
 		}
 		
 		try {
-			combiner.build();
+			combiner.processCombinations();
 		} catch (Exception e) {
 			e.printStackTrace();
 			System.exit(1);
@@ -331,22 +340,6 @@ public class CrustalSubductionLogicTreeCombine extends AbstractLogicTreeHazardCo
 			remapTree(tree, levelRemaps, nodeRemaps, "Crustal", "Crust");
 		else
 			remapTree(tree, levelRemaps, nodeRemaps, "Subduction", "Sub");
-	}
-
-	@Override
-	protected boolean doesOuterSupplySols() {
-		return true;
-	}
-
-	@Override
-	protected boolean doesInnerSupplySols() {
-		return true;
-	}
-
-	@Override
-	protected boolean isSerializeGridded() {
-		// TODO
-		return false;
 	}
 
 }

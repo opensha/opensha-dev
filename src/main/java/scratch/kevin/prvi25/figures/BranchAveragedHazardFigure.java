@@ -30,16 +30,16 @@ import com.google.common.base.Preconditions;
 public class BranchAveragedHazardFigure {
 
 	public static void main(String[] args) throws IOException {
-		File baseDir = new File(INV_DIR, COMBINED_DIR.getName()+"-ba_only-wider_region-vs760");
+		File baseDir = new File(INV_DIR, COMBINED_DIR.getName()+"-ba_only-vs760");
 		File outputDir = new File(FIGURES_DIR, "hazard_map_ba");
 		Preconditions.checkState(outputDir.exists() || outputDir.mkdir());
 		
-		File mapResourcesFile = new File(baseDir, "results/hazard_0.02deg_grid_seis_INCLUDE/map_1.0s_TEN_IN_50.txt");
-		Region reg = PRVI25_RegionLoader.loadPRVI_IntermediateModelMapExtents();
-		GriddedRegion gridReg = new GriddedRegion(reg, 0.02, GriddedRegion.ANCHOR_0_0);
+		File mapResourcesFile = new File(baseDir, "results/hazard_0.01deg_grid_seis_INCLUDE/map_1.0s_TEN_IN_50.txt");
+		Region reg = PRVI25_RegionLoader.loadPRVI_MapExtents();
+		GriddedRegion gridReg = new GriddedRegion(reg, 0.01, GriddedRegion.ANCHOR_0_0);
 		
-		CPT cpt = GMT_CPT_Files.RAINBOW_UNIFORM.instance().rescale(-1.5, 0);
-		cpt.setPreferredTickInterval(0.25);
+		CPT cpt = GMT_CPT_Files.RAINBOW_UNIFORM.instance().rescale(-1, 0);
+		cpt.setPreferredTickInterval(0.2);
 		
 		GeographicMapMaker mapMaker = new GeographicMapMaker(reg);
 		

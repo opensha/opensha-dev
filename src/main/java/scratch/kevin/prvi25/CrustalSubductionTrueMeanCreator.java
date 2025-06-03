@@ -12,14 +12,14 @@ import org.opensha.commons.logicTree.LogicTreeBranch;
 import org.opensha.commons.logicTree.LogicTreeLevel;
 import org.opensha.commons.logicTree.LogicTreeNode;
 import org.opensha.sha.earthquake.faultSysSolution.FaultSystemSolution;
-import org.opensha.sha.earthquake.faultSysSolution.hazard.AbstractLogicTreeHazardCombiner;
-import org.opensha.sha.earthquake.faultSysSolution.hazard.AbstractLogicTreeHazardCombiner.CombinedRupSetMappings;
 import org.opensha.sha.earthquake.faultSysSolution.modules.FaultGridAssociations;
 import org.opensha.sha.earthquake.faultSysSolution.modules.GridSourceList;
 import org.opensha.sha.earthquake.faultSysSolution.modules.GridSourceProvider;
 import org.opensha.sha.earthquake.faultSysSolution.modules.MFDGridSourceProvider;
 import org.opensha.sha.earthquake.faultSysSolution.modules.ProxyFaultSectionInstances;
 import org.opensha.sha.earthquake.faultSysSolution.modules.RupSetTectonicRegimes;
+import org.opensha.sha.earthquake.faultSysSolution.treeCombiners.SolutionLogicTreeCombinationProcessor;
+import org.opensha.sha.earthquake.faultSysSolution.treeCombiners.SolutionLogicTreeCombinationProcessor.CombinedRupSetMappings;
 import org.opensha.sha.earthquake.faultSysSolution.util.SolModuleStripper;
 import org.opensha.sha.earthquake.faultSysSolution.util.TrueMeanSolutionCreator;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.gridded.NSHM23_SingleRegionGridSourceProvider;
@@ -123,7 +123,7 @@ public class CrustalSubductionTrueMeanCreator {
 			FaultSystemSolution subductionSol = subductionBASols.get(branch.requireValue(PRVI25_SubductionFaultModels.class));
 			Preconditions.checkState(subductionSol.getRupSet().hasModule(RupSetTectonicRegimes.class), "Subduction solution doesn't have TRTs");
 			
-			FaultSystemSolution combined = AbstractLogicTreeHazardCombiner.combineSols(crustalSol, subductionSol, true);
+			FaultSystemSolution combined = SolutionLogicTreeCombinationProcessor.combineSols(crustalSol, subductionSol, true);
 			Preconditions.checkState(combined.getRupSet().hasModule(RupSetTectonicRegimes.class), "Combined solution doesn't have TRTs");
 			if (gridded) {
 				GridSourceList crustalGridded = crustalSol.requireModule(GridSourceList.class);

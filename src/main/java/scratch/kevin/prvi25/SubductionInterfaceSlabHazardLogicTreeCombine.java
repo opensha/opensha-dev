@@ -19,9 +19,11 @@ import org.opensha.commons.logicTree.LogicTreeLevel;
 import org.opensha.commons.logicTree.LogicTreeLevel.FileBackedLevel;
 import org.opensha.commons.logicTree.LogicTreeNode;
 import org.opensha.commons.logicTree.LogicTreeNode.FileBackedNode;
+import org.opensha.commons.logicTree.treeCombiner.AbstractLogicTreeCombiner;
 import org.opensha.commons.util.modules.ModuleContainer;
-import org.opensha.sha.earthquake.faultSysSolution.hazard.AbstractLogicTreeHazardCombiner;
 import org.opensha.sha.earthquake.faultSysSolution.hazard.mpj.MPJ_LogicTreeHazardCalc;
+import org.opensha.sha.earthquake.faultSysSolution.treeCombiners.HazardMapCombinationProcessor;
+import org.opensha.sha.earthquake.faultSysSolution.treeCombiners.SiteHazardCurveCombinationProcessor;
 import org.opensha.sha.earthquake.faultSysSolution.util.FaultSysTools;
 import org.opensha.sha.earthquake.param.IncludeBackgroundOption;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_SubductionCaribbeanSeismicityRate;
@@ -31,7 +33,7 @@ import org.opensha.sha.imr.logicTree.ScalarIMRsLogicTreeNode;
 
 import com.google.common.base.Preconditions;
 
-public class SubductionInterfaceSlabHazardLogicTreeCombine extends AbstractLogicTreeHazardCombiner {
+public class SubductionInterfaceSlabHazardLogicTreeCombine extends AbstractLogicTreeCombiner {
 
 	public static void main(String[] args) throws IOException {
 		CommandLine cmd = FaultSysTools.parseOptions(createOptions(), args, SubductionInterfaceSlabHazardLogicTreeCombine.class);
@@ -53,13 +55,16 @@ public class SubductionInterfaceSlabHazardLogicTreeCombine extends AbstractLogic
 		SubductionInterfaceSlabHazardLogicTreeCombine combiner = new SubductionInterfaceSlabHazardLogicTreeCombine(
 				interfaceTree, slabTree);
 		
-		if (cmd.hasOption("disable-preload"))
-			combiner.setPreloadInnerCurves(false);
-		
 		if (!cmd.hasOption("no-maps") && interfaceHazardMapDir.exists()) {
 			System.out.println("Will combine hazard maps");
-			combiner.setCombineHazardMaps(interfaceHazardMapDir, IncludeBackgroundOption.INCLUDE, slabHazardMapDir,
+			HazardMapCombinationProcessor processor = new HazardMapCombinationProcessor(
+					interfaceHazardMapDir, IncludeBackgroundOption.INCLUDE, slabHazardMapDir,
 					IncludeBackgroundOption.ONLY, outputDir, gridReg);
+			
+			if (cmd.hasOption("disable-preload"))
+				processor.setPreloadInnerCurves(false);
+			
+			combiner.addProcessor(processor);
 		}
 		
 		File interfaceHazardSitesFile = new File(hazardDir, "results_full_gridded_sites_interface.zip");
@@ -68,7 +73,7 @@ public class SubductionInterfaceSlabHazardLogicTreeCombine extends AbstractLogic
 		if (!cmd.hasOption("no-curves") && interfaceHazardSitesFile.exists()) {
 			System.out.println("Will combine hazard sites");
 			File sitesOutputFile = new File(hazardDir, "results_full_gridded_sites");
-			combiner.setCombineHazardCurves(interfaceHazardSitesFile, slabHazardSitesFile, sitesOutputFile);
+			combiner.addProcessor(new SiteHazardCurveCombinationProcessor(interfaceHazardSitesFile, slabHazardSitesFile, sitesOutputFile));
 		}
 		
 		System.out.println();
@@ -93,7 +98,7 @@ public class SubductionInterfaceSlabHazardLogicTreeCombine extends AbstractLogic
 		combiner.getCombTree().write(new File(hazardDir, "logic_tree_full_gridded.json"));
 		
 		try {
-			combiner.build();
+			combiner.processCombinations();
 		} catch (Exception e) {
 			e.printStackTrace();
 			System.exit(1);
@@ -172,21 +177,6 @@ public class SubductionInterfaceSlabHazardLogicTreeCombine extends AbstractLogic
 	protected void remapInnerTree(LogicTree<?> tree, Map<LogicTreeLevel<?>, LogicTreeLevel<?>> levelRemaps,
 			Map<LogicTreeNode, LogicTreeNode> nodeRemaps) {
 		remapTree(tree, levelRemaps, nodeRemaps, "Intraslab", "");
-	}
-
-	@Override
-	protected boolean doesOuterSupplySols() {
-		return false;
-	}
-
-	@Override
-	protected boolean doesInnerSupplySols() {
-		return false;
-	}
-
-	@Override
-	protected boolean isSerializeGridded() {
-		return false;
 	}
 	
 	private static List<LogicTreeLevel<?>> getCommonLevels(LogicTree<?> innerTree) {
