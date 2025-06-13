@@ -24,6 +24,7 @@ public class FaultParticipationPlots {
 		CPT cpt = GMT_CPT_Files.RAINBOW_UNIFORM.instance().rescale(-5, -1);
 		cpt.setBelowMinColor(cpt.getMinColor());
 		cpt.setNanColor(Color.GRAY);
+		cpt.setLog10(true);
 		
 		double[] minMags = { 0, 6, 6.7, 7, 7.5, 7.8 };
 		
@@ -46,14 +47,14 @@ public class FaultParticipationPlots {
 				prefix = "supra_seis";
 			}
 			prefix = "paric_"+prefix;
-			label = "Log10 "+label+" Participation Rate (/yr)";
+			label = label+" Participation Rate (/yr)";
 			
 			double[] rates = sol.calcParticRateForAllSects(minMag, Double.POSITIVE_INFINITY);
 			for (int i=0; i<rates.length; i++) {
 				if (rates[i] == 0d)
 					rates[i] = Double.NaN;
-				else
-					rates[i] = Math.log10(rates[i]);
+//				else
+//					rates[i] = Math.log10(rates[i]);
 			}
 			
 			mapMaker.plotSectScalars(rates, cpt, label);

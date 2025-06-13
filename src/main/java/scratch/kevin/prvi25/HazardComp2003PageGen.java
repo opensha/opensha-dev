@@ -1,7 +1,5 @@
 package scratch.kevin.prvi25;
 
-import static scratch.kevin.prvi25.figures.PRVI_Paths.FIGURES_DIR;
-
 import java.awt.Color;
 import java.io.File;
 import java.io.FileWriter;
@@ -48,7 +46,7 @@ public class HazardComp2003PageGen {
 			CRUSTAL_FAULTS("Crustal Fault-Only", "HazardChangeCrustalFault"),
 			CRUSTAL_GRIDDED("Crustal Gridded-Only", "HazardChangeCrustalGridded"),
 			INTERFACE("Interface-Only", "HazardChangeInterface"),
-			SLAB("Slab-Only", "HazardChangeSlab");
+			SLAB("Intraslab-Only", "HazardChangeSlab");
 		
 		private String label;
 		private String texPrefix;
@@ -267,7 +265,7 @@ public class HazardComp2003PageGen {
 				curves25 = full25;
 				curves03 = withSlab03;
 				description = "Subduction intraslab-only comparison, crustal and interface sources constant (using those from "+name25+").";
-				mapLabelAdd = "Slab, ";
+				mapLabelAdd = "Intraslab, ";
 				break;
 
 			default:

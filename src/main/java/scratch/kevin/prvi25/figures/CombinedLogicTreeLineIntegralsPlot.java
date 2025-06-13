@@ -30,12 +30,12 @@ public class CombinedLogicTreeLineIntegralsPlot {
 	public static void main(String[] args) throws IOException {
 //		File crustalLIDir = new File(CRUSTAL_DIR, "line_integrals");
 //		File subLIDir = new File(SUBDUCTION_DIR, "line_integrals");
-//		File crustalLIDir = new File(new File(INV_DIR, "2025_05_09-prvi25_crustal_branches-dmSample10x"), "line_integrals");
-//		File subLIDir = new File(new File(INV_DIR, "2025_05_09-prvi25_subduction_branches"), "line_integrals");
-//		File outputDir = new File(FIGURES_DIR, "logic_tree_line_integrals");
-		File crustalLIDir = new File(new File(INV_DIR, "2025_01_17-prvi25_crustal_branches-dmSample10x"), "line_integrals");
-		File subLIDir = new File(new File(INV_DIR, "2025_01_17-prvi25_subduction_branches"), "line_integrals");
-		File outputDir = new File(FIGURES_DIR, "logic_tree_line_integrals_old");
+		File crustalLIDir = new File(new File(INV_DIR, "2025_05_09-prvi25_crustal_branches-dmSample10x"), "line_integrals");
+		File subLIDir = new File(new File(INV_DIR, "2025_05_09-prvi25_subduction_branches"), "line_integrals");
+		File outputDir = new File(FIGURES_DIR, "logic_tree_line_integrals");
+//		File crustalLIDir = new File(new File(INV_DIR, "2025_01_17-prvi25_crustal_branches-dmSample10x"), "line_integrals");
+//		File subLIDir = new File(new File(INV_DIR, "2025_01_17-prvi25_subduction_branches"), "line_integrals");
+//		File outputDir = new File(FIGURES_DIR, "logic_tree_line_integrals_old");
 		Preconditions.checkState(outputDir.exists() || outputDir.mkdir());
 		
 		List<DiscretizedFunc> crustalPerpFuncs = new ArrayList<>();
@@ -169,7 +169,7 @@ public class CombinedLogicTreeLineIntegralsPlot {
 					 extraChars = new ArrayList<>();
 					extraFuncs.get(0).setName("Crustal");
 					extraChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 2f, Colors.tab_blue));
-					extraFuncs.get(1).setName("Subduction");
+					extraFuncs.get(1).setName("Subduction interface");
 					extraChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 2f, Colors.tab_orange));
 				}
 				PlotSpec plot = LogicTreeLineIntegralCalc.writePlot(outputDir, myPrefix, funcs, weights, comp,

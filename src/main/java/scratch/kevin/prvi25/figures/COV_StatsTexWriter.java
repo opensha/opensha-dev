@@ -48,15 +48,15 @@ public class COV_StatsTexWriter {
 		texPrefixes.add("Comb");
 		gridSpacings.add(0.025);
 		
-		inputDirs.add(new File("/tmp/cov_test/new_model_test_full"));
-		names.add("New test");
-		texPrefixes.add("Test");
-		gridSpacings.add(0.1);
+//		inputDirs.add(new File("/tmp/cov_test/new_model_test_full"));
+//		names.add("New test");
+//		texPrefixes.add("Test");
+//		gridSpacings.add(0.1);
 		
-		inputDirs.add(new File("/tmp/cov_test/mue_car_corr"));
-		names.add("New test correlated Mue&Car");
-		texPrefixes.add("Test");
-		gridSpacings.add(0.1);
+//		inputDirs.add(new File("/tmp/cov_test/mue_car_corr"));
+//		names.add("New test correlated Mue&Car");
+//		texPrefixes.add("Test");
+//		gridSpacings.add(0.1);
 		
 		for (File dir : inputDirs)
 			Preconditions.checkState(dir.exists());

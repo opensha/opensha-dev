@@ -323,8 +323,6 @@ public class GridCubeRatePlot {
 		}, true); // sum them
 		List<Double> totCellRates = new ArrayList<>();
 		List<Double> m7CellRates = new ArrayList<>();
-		totalNuclXYZ.log10();
-		m7NuclXYZ.log10();
 		for (int cell : plotCells) {
 			IncrementalMagFreqDist cellMFD = gridProv.getMFD(cell);
 			totCellRates.add(cellMFD.calcSumOfY_Vals());
@@ -333,33 +331,31 @@ public class GridCubeRatePlot {
 		System.out.println("Cell total nucl rates: "+totCellRates);
 		System.out.println("Cell M>7 nucl rates: "+m7CellRates);
 		for (int i=0; i<totCellRates.size(); i++) {
-			totCellRates.set(i, Math.log10(totCellRates.get(i)));
-			m7CellRates.set(i, Math.log10(m7CellRates.get(i)));
+			totCellRates.set(i, totCellRates.get(i));
+			m7CellRates.set(i, m7CellRates.get(i));
 		}
 		
 		CPT nuclRateCPT = GMT_CPT_Files.SEQUENTIAL_BATLOW_UNIFORM.instance().rescale(-7, -2d);
-		nuclRateCPT.setPreferredTickInterval(0.5);
+		nuclRateCPT.setLog10(true);
 		Function<Double, String> rateFormat = new Function<Double, String>() {
 			
-			private DecimalFormat eDF = new DecimalFormat("0.000E0");
+			private DecimalFormat eDF = new DecimalFormat("0.00E0");
 			
 			@Override
-			public String apply(Double t) {
-				// back to linear
-				double linear = Math.pow(10, t);
-				return eDF.format(linear).replace("E", "e");
+			public String apply(Double value) {
+				return eDF.format(value).replace("E", "e");
 			}
 		};
 		
 		XYZPlotSpec cellRatePlot = buildPlot(totalNuclXYZ, cellXRanges, totCellRates, rateFormat,
-				sectXY, polyXY, nuclRateCPT, "Log10 Gridded M>5 Nucleation Rate", " ");
+				sectXY, polyXY, nuclRateCPT, "Gridded M>5 Nucleation Rate", " ");
 		
 		gp.drawGraphPanel(cellRatePlot, false, false, xRange, yRange);
 		
 		PlotUtils.writePlots(outputDir, "cube_nucl_rate_tot", gp, width, false, true, true, false);
 		
 		XYZPlotSpec cellRateM7Plot = buildPlot(m7NuclXYZ, cellXRanges, m7CellRates, rateFormat,
-				sectXY, polyXY, nuclRateCPT, "Log10 Gridded M>7 Nucleation Rate", " ");
+				sectXY, polyXY, nuclRateCPT, "Gridded M>7 Nucleation Rate", " ");
 		
 		gp.drawGraphPanel(cellRateM7Plot, false, false, xRange, yRange);
 		

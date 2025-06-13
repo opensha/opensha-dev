@@ -72,6 +72,7 @@ public class MultiTectonicParticipationMap {
 		cpt.setBelowMinColor(cpt.getMinColor());
 		cpt.setNanColor(Color.GRAY);
 		cpt.setPreferredTickInterval(0.5);
+		cpt.setLog10(true);
 		
 		GridSourceList subSmallGridded = null;
 		GridSourceList subLargeGridded = null;
@@ -264,11 +265,6 @@ public class MultiTectonicParticipationMap {
 					if (rates.get(r) == 0d)
 						rates.set(r, Double.NaN);
 			
-			// convert to log10
-			for (List<Double> rates : combSectRates)
-				for (int r=0; r<rates.size(); r++)
-					rates.set(r, Math.log10(rates.get(r)));
-			
 			Region gridMapReg = PRVI25_RegionLoader.loadPRVI_ModelBroad();
 			Region faultMapReg = new Region(new Location(16.3, gridMapReg.getMinLon()), new Location(20.4, gridMapReg.getMaxLon()));
 			GeographicMapMaker mapMaker = new GeographicMapMaker(faultMapReg);
@@ -305,12 +301,15 @@ public class MultiTectonicParticipationMap {
 				}
 			}
 			
+			System.out.println("CPT\n"+cpt);
+			System.out.println("Raw range: ["+cpt.getMinValueRaw()+", "+cpt.getMaxValueRaw()+"]");
+			System.out.println("Actual range: ["+cpt.getMinValue()+", "+cpt.getMaxValue()+"]");
 			// write generic cpt only first
 			PlotUtils.writeScaleLegendOnly(outputDir, "participation_cpt",
-					GeographicMapMaker.buildCPTLegend(cpt, "Log10 Participation Rate (/yr)"),
+					GeographicMapMaker.buildCPTLegend(cpt, "Participation Rate (/yr)"),
 					mapMaker.getDefaultPlotWidth(), true, true);
 			PlotUtils.writeScaleLegendOnly(outputDir, "nucleation_cpt",
-					GeographicMapMaker.buildCPTLegend(cpt, "Log10 Nucleation Rate (/yr)"),
+					GeographicMapMaker.buildCPTLegend(cpt, "Nucleation Rate (/yr)"),
 					mapMaker.getDefaultPlotWidth(), true, true);
 			
 			DecimalFormat oDF = new DecimalFormat("0.##");
@@ -320,7 +319,7 @@ public class MultiTectonicParticipationMap {
 			}
 			
 			for (int m=0; m<minMags.length; m++) {
-				String label = "Log10 ";
+				String label = "";
 				String prefix = subOnly ? "sub_partic_" : "multi_tect_partic_";
 				String noLegendTitle;
 				if (minMags[m] > 0d) {
@@ -453,10 +452,8 @@ public class MultiTectonicParticipationMap {
 							if (xyzs[m].get(l) == 0d)
 								xyzs[m].set(l, Double.NaN);
 
-						xyzs[m].log10();
-
 						String noLegendTitle = "Gridded";
-						String label = "Log10 ";
+						String label = "";
 						String prefix = "gridded_";
 						label += "M>"+oDF.format(gridMinMags[m]);
 						prefix += "m"+(float)gridMinMags[m];

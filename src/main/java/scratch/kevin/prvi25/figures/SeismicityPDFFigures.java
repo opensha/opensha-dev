@@ -109,7 +109,7 @@ class SeismicityPDFFigures {
 		crustalERF.getTimeSpan().setDuration(1d);
 		crustalERF.updateForecast();
 		
-//		plotPrevNucleationRates(crustalOutputDir, "crustal_2003_m5", crustalERF, 5d, TectonicRegionType.ACTIVE_SHALLOW, fullGrid, "2003 Crustal Gridded");
+		plotPrevNucleationRates(crustalOutputDir, "crustal_2003_m5", crustalERF, 5d, TectonicRegionType.ACTIVE_SHALLOW, fullGrid, "2003 Crustal Gridded", null);
 	}
 	
 	private static EvenlyDiscretizedFunc refMFD = FaultSysTools.initEmptyMFD(PRVI25_GridSourceBuilder.OVERALL_MMIN, 7.95);
@@ -138,16 +138,18 @@ class SeismicityPDFFigures {
 					mfd = PRVI25_CrustalSeismicityRate.PREFFERRED.build(refMFD, refMFD.getMaxX());
 					break;
 				case CAR_INTERFACE:
-					mfd = PRVI25_SubductionCaribbeanSeismicityRate.PREFFERRED.build(refMFD, refMFD.getMaxX(), false);
+					mfd = PRVI25_SubductionCaribbeanSeismicityRate.PREFFERRED.build(refMFD, refMFD.getMaxX(), Double.NaN, false);
 					break;
 				case CAR_INTRASLAB:
-					mfd = PRVI25_SubductionCaribbeanSeismicityRate.PREFFERRED.build(refMFD, refMFD.getMaxX(), true);
+					mfd = PRVI25_SubductionCaribbeanSeismicityRate.PREFFERRED.build(refMFD,
+							PRVI25_GridSourceBuilder.SLAB_MMAX, PRVI25_GridSourceBuilder.SLAB_M_CORNER, true);
 					break;
 				case MUE_INTERFACE:
-					mfd = PRVI25_SubductionMuertosSeismicityRate.PREFFERRED.build(refMFD, refMFD.getMaxX(), false);
+					mfd = PRVI25_SubductionMuertosSeismicityRate.PREFFERRED.build(refMFD, refMFD.getMaxX(), Double.NaN, false);
 					break;
 				case MUE_INTRASLAB:
-					mfd = PRVI25_SubductionMuertosSeismicityRate.PREFFERRED.build(refMFD, refMFD.getMaxX(), true);
+					mfd = PRVI25_SubductionMuertosSeismicityRate.PREFFERRED.build(refMFD,
+							PRVI25_GridSourceBuilder.SLAB_MMAX, PRVI25_GridSourceBuilder.SLAB_M_CORNER, true);
 					break;
 
 				default:
@@ -181,12 +183,12 @@ class SeismicityPDFFigures {
 		String label;
 		if (magForRate > 0d) {
 			cpt = GMT_CPT_Files.SEQUENTIAL_BATLOW_UNIFORM.instance().rescale(-7, -2);
-			xyz.log10();
-			label = "Log10 "+name+" M>"+oDF.format(magForRate)+" Nucleation Rate";
+			cpt.setLog10(true);
+			label = name+" M>"+oDF.format(magForRate)+" Nucleation Rate";
 		} else {
 			cpt = GMT_CPT_Files.SEQUENTIAL_LAJOLLA_UNIFORM.instance().rescale(-7d, -2d);
-			xyz.log10();
-			label = "Log10 "+name+" Fractional Rate";
+			cpt.setLog10(true);
+			label = name+" Fractional Rate";
 		}
 		cpt.setNanColor(new Color(255, 255, 255));
 		
@@ -217,9 +219,9 @@ class SeismicityPDFFigures {
 		for (int i=0; i<xyz.size(); i++)
 			if (!everSets.get(i))
 				xyz.set(i, Double.NaN);
-		xyz.log10();
 		CPT cpt = GMT_CPT_Files.SEQUENTIAL_BATLOW_UNIFORM.instance().rescale(-7, -2);
-		String label = "Log10 "+name+" M>"+oDF.format(minMag)+" Nucleation Rate";
+		cpt.setLog10(true);
+		String label = name+" M>"+oDF.format(minMag)+" Nucleation Rate";
 		cpt.setNanColor(new Color(255, 255, 255));
 		
 		GeographicMapMaker mapMaker = new GeographicMapMaker(gridReg);
@@ -287,9 +289,9 @@ class SeismicityPDFFigures {
 		for (int i=0; i<xyz.size(); i++)
 			if (xyz.get(i) == 0d)
 				xyz.set(i, Double.NaN);
-		xyz.log10();
 		CPT cpt = GMT_CPT_Files.SEQUENTIAL_BATLOW_UNIFORM.instance().rescale(-7, -2);
-		String label = "Log10 "+name+" M>"+oDF.format(minMag)+" Nucleation Rate";
+		String label = name+" M>"+oDF.format(minMag)+" Nucleation Rate";
+		cpt.setLog10(true);
 		cpt.setNanColor(new Color(255, 255, 255));
 		
 		GeographicMapMaker mapMaker = new GeographicMapMaker(gridReg);

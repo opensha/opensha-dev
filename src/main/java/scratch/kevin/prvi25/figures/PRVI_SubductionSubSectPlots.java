@@ -68,9 +68,11 @@ public class PRVI_SubductionSubSectPlots {
 		
 		CPT magCPT = GMT_CPT_Files.SEQUENTIAL_BATLOW_UNIFORM.instance().rescale(7.5d, 9d);
 		CPT minMagCPT = GMT_CPT_Files.SEQUENTIAL_BATLOW_UNIFORM.instance().rescale(7.5d, 8.400001d);
-		CPT slipCPT = GMT_CPT_Files.SEQUENTIAL_BATLOW_UNIFORM.instance().rescale(0d, 8d);
+		CPT slipCPT = GMT_CPT_Files.SEQUENTIAL_BATLOW_UNIFORM.instance().rescale(0d, 6d);
 		CPT slipUncertCPT = GMT_CPT_Files.SEQUENTIAL_BATLOW_UNIFORM.instance().rescale(0d, 2d);
 		CPT rakeCPT = GMT_CPT_Files.SEQUENTIAL_NAVIA_UNIFORM.instance().rescale(0d, 90d);
+		
+		double maxSlip = 0d;
 		
 		PlotUtils.writeScaleLegendOnly(outputDir, "slip_cpt",
 				GeographicMapMaker.buildCPTLegend(slipCPT, "Slip Deficit Rate (mm/yr)"),
@@ -185,7 +187,7 @@ public class PRVI_SubductionSubSectPlots {
 					if (coupling.getNodeWeight(branch) == 0d)
 						continue;
 					
-					String dmName = dm.getName()+", "+coupling.getShortName()+" Coupling";
+					String dmName = dm.getShortName()+", "+coupling.getShortName()+" Coupling";
 					String dmPrefix = fm.getFilePrefix()+"_"+dm.getFilePrefix()+"_"+coupling.getFilePrefix();
 					sects = dm.build(fm, branch);
 					
@@ -197,6 +199,7 @@ public class PRVI_SubductionSubSectPlots {
 						slips.add(sect.getOrigAveSlipRate());
 						slipUncerts.add(sect.getOrigSlipRateStdDev());
 						rakes.add(sect.getAveRake());
+						maxSlip = Math.max(maxSlip, slips.get(slips.size()-1));
 					}
 					
 //					mapMaker.plotSectScalars(slipUncerts, slipUncertCPT, dm.getShortName()+" Slip Rate Uncertainty (mm/yr)");
@@ -228,6 +231,8 @@ public class PRVI_SubductionSubSectPlots {
 				}
 			}
 		}
+		
+		System.out.println("DONE; max slip was "+(float)maxSlip);
 	}
 	
 	private static Region getRupRegion(FaultSystemRupSet rupSet, int rupIndex) {

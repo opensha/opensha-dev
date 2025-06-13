@@ -109,7 +109,7 @@ public class SlipRateFigures {
 		for (boolean target : new boolean[] {false,true}) {
 			String prefix = target ? "crustal_target_slip_rates" : "crustal_original_slip_rates";
 			List<? extends FaultSection> subSects = target ? targetSubSects : origSubSects;
-			List<Double> slipRates = getDMSlipRates(subSects, false);
+			List<Double> slipRates = getDMSlipRates(subSects);
 			System.out.println("Max crustal is "+slipRates.stream().mapToDouble(D->D).max().getAsDouble());
 			
 			String label = (target ? "Target " : "")+"slip rate (mm/yr)";
@@ -120,12 +120,11 @@ public class SlipRateFigures {
 			PlotSpec linearPlot = mapMaker.buildPlot(" ");
 			mapMaker.setCPTLocation(RectangleEdge.BOTTOM);
 			
-			CPT logSlipCPT = GMT_CPT_Files.SEQUENTIAL_LAJOLLA_UNIFORM.instance().rescale(-1, 1);
-//			slipCPT.setPreferredTickInterval(2d);
+//			CPT logSlipCPT = GMT_CPT_Files.SEQUENTIAL_LAJOLLA_UNIFORM.instance().rescale(-1, 1);
+			CPT logSlipCPT = GMT_CPT_Files.SEQUENTIAL_BATLOW_UNIFORM.instance().rescale(-1, 1);
+			logSlipCPT.setLog10(true);
 			
-			List<Double> logSlipRates = getDMSlipRates(subSects, true);
-			
-			mapMaker.plotSectScalars(logSlipRates, logSlipCPT, "Log10 "+label);
+			mapMaker.plotSectScalars(slipRates, logSlipCPT, label);
 			
 			mapMaker.plot(dmOutputDir, prefix+"_log", " ");
 			PlotSpec logPlot = mapMaker.buildPlot(" ");
@@ -566,13 +565,11 @@ public class SlipRateFigures {
 		return baCreator.build();
 	}
 	
-	private static List<Double> getDMSlipRates(List<? extends FaultSection> subSects, boolean log) {
+	private static List<Double> getDMSlipRates(List<? extends FaultSection> subSects) {
 		List<Double> slipRates = new ArrayList<>();
 		
 		for (FaultSection sect : subSects) {
 			double slip = sect.getReducedAveSlipRate();
-			if (log)
-				slip = Math.log10(slip);
 			slipRates.add(slip);
 		}
 		
