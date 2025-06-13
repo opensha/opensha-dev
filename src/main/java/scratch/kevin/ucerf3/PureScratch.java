@@ -176,14 +176,19 @@ import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_Single
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.random.BranchSamplingManager;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.util.NSHM23_RegionLoader;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.gridded.PRVI25_GridSourceBuilder;
+import org.opensha.sha.earthquake.rupForecastImpl.prvi25.gridded.SeismicityRateFileLoader.RateType;
+import org.opensha.sha.earthquake.rupForecastImpl.prvi25.gridded.SeismicityRateModel;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_CrustalDeformationModels;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_CrustalFaultModels;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_CrustalGMMs;
+import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_CrustalSeismicityRate;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_DeclusteringAlgorithms;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_LogicTreeBranch;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_SeisSmoothingAlgorithms;
+import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_SubductionCaribbeanSeismicityRate;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_SubductionDeformationModels;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_SubductionFaultModels;
+import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_SubductionMuertosSeismicityRate;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.util.PRVI25_RegionLoader;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.util.PRVI25_RegionLoader.PRVI25_SeismicityRegions;
 import org.opensha.sha.faultSurface.FaultSection;
@@ -3221,13 +3226,50 @@ public class PureScratch {
 		System.out.println("All good");
 	}
 	
+	private static void test343() throws IOException {
+		List<String> labels = new ArrayList<>();
+		List<SeismicityRateModel> rateModels = new ArrayList<>();
+		
+		labels.add("Crustal");
+		rateModels.add(PRVI25_CrustalSeismicityRate.loadRateModel(RateType.M1_TO_MMAX));
+		
+		labels.add("CAR Interface");
+		rateModels.add(PRVI25_SubductionCaribbeanSeismicityRate.loadRateModel(RateType.M1_TO_MMAX, false));
+		
+		labels.add("CAR Intraslab");
+		rateModels.add(PRVI25_SubductionCaribbeanSeismicityRate.loadRateModel(RateType.M1_TO_MMAX, true));
+		
+		labels.add("MUE Interface");
+		rateModels.add(PRVI25_SubductionMuertosSeismicityRate.loadRateModel(RateType.M1_TO_MMAX, false));
+		
+		labels.add("MUE Intraslab");
+		rateModels.add(PRVI25_SubductionMuertosSeismicityRate.loadRateModel(RateType.M1_TO_MMAX, true));
+		
+		DecimalFormat pDF = new DecimalFormat("0.00%");
+		for (int i=0; i<labels.size(); i++) {
+			System.out.println(labels.get(i));
+			SeismicityRateModel model = rateModels.get(i);
+			double pref = model.getMeanRecord().rateAboveM1;
+			double lower = model.getLowerRecord().rateAboveM1;
+			double upper = model.getUpperRecord().rateAboveM1;
+			double avg = 0.74*pref + 0.13*lower + 0.13*upper;
+			
+			System.out.println("\tPref:\t"+(float)pref);
+			double fDiff = (avg-pref)/pref;
+			String pDiffStr = pDF.format(fDiff);
+			if (fDiff > 0)
+				pDiffStr = "+"+pDiffStr;
+			System.out.println("\tAverage:\t"+(float)avg+"\t("+pDiffStr+")");
+		}
+	}
+	
 	/**
 	 * @param args
 	 * @throws Exception 
 	 */
 	public static void main(String[] args) throws Exception {
 		try {
-			test342();
+			test343();
 		} catch (Throwable t) {
 			t.printStackTrace();
 			System.exit(1);

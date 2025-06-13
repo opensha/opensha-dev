@@ -41,11 +41,13 @@ import org.opensha.sha.earthquake.PointSource.PoissonPointSource;
 import org.opensha.sha.earthquake.PointSource.PoissonPointSourceData;
 import org.opensha.sha.earthquake.ProbEqkRupture;
 import org.opensha.sha.earthquake.ProbEqkSource;
+import org.opensha.sha.earthquake.faultSysSolution.FaultSystemRupSet;
 import org.opensha.sha.earthquake.faultSysSolution.FaultSystemSolution;
 import org.opensha.sha.earthquake.faultSysSolution.erf.BaseFaultSystemSolutionERF;
 import org.opensha.sha.earthquake.faultSysSolution.modules.GridSourceProvider;
 import org.opensha.sha.earthquake.param.BackgroundRupType;
 import org.opensha.sha.earthquake.param.UseRupMFDsParam;
+import org.opensha.sha.earthquake.rupForecastImpl.nshm23.util.NSHM23_RegionLoader.LocalRegions;
 import org.opensha.sha.earthquake.util.GridCellSuperSamplingPoissonPointSourceData;
 import org.opensha.sha.earthquake.util.GridCellSupersamplingSettings;
 import org.opensha.sha.earthquake.util.GriddedSeismicitySettings;
@@ -130,7 +132,7 @@ public class BayAreaRegionalGroundMotionCalc {
 		for (Parameter<?> param : gmm.getPropagationEffectParams())
 			System.out.println("\t"+param.getName()+":\t"+param.getValue());
 		
-		Region reg = new CaliforniaRegions.CYBERSHAKE_BAY_AREA_MAP_REGION();
+		Region reg = LocalRegions.CONUS_SF_BAY.load();
 		GriddedRegion gridReg = new GriddedRegion(reg, 0.02, GriddedRegion.ANCHOR_0_0);
 		System.out.println("Region has "+gridReg.getNodeCount()+" nodes");
 		
@@ -192,9 +194,13 @@ public class BayAreaRegionalGroundMotionCalc {
 		CSVFile<String> eventDetailsCSV = new CSVFile<>(true);
 		eventDetailsCSV.addLine("Event ID", "Original Source ID", "Original Rupture ID",
 				"Magnitude", "Annual Rate", "Rake", "Dip", "Length (km)", "Down-Dip Width (km)", "Upper Depth (km)",
-				"FSS Index", "Grid Node Index", "Gridded Rupture Latitude", "Gridded Rupture Longitude", "Gridded Rupture Strike");
-		
+				"FSS Index", "Grid Node Index", "Gridded Rupture Latitude", "Gridded Rupture Longitude", "Gridded Rupture Strike",
+				"Fraction in Region");
+
+		FaultSystemRupSet rupSet = erf.getSolution().getRupSet();
+		double[] fssRupFracts = rupSet.getFractRupsInsideRegion(reg, false);
 		List<ProbEqkRupture> keptEvents = new ArrayList<>();
+		List<Double> keptFractsInReg = new ArrayList<>();
 		int keptFault = 0;
 		int keptGridded = 0;
 		int numSupersampled = 0;
@@ -234,6 +240,7 @@ public class BayAreaRegionalGroundMotionCalc {
 			}
 			List<ProbEqkRupture> rups = source.getRuptureList();
 			List<Location> griddedLocs = null;
+			List<Double> fracts = new ArrayList<>(rups.size());
 			if (gridded) {
 				griddedLocs = new ArrayList<>(rups.size());
 				PoissonPointSource pointSource = (PoissonPointSource)source;
@@ -246,6 +253,7 @@ public class BayAreaRegionalGroundMotionCalc {
 						double newLat   = center.lat + (relocateRand.nextDouble() - 0.5)*cellGridSpacing;
 						double newLon   = center.lon + (relocateRand.nextDouble() - 0.5)*cellGridSpacing;
 						Location newLoc = new Location(newLat, newLon);
+						fracts.add(reg.contains(newLoc) ? 1d : 0d);
 						griddedLocs.add(newLoc);
 						LocationVector vector = LocationUtils.vector(center, newLoc);
 						surface = surface.getMoved(vector);
@@ -256,16 +264,20 @@ public class BayAreaRegionalGroundMotionCalc {
 						numRelocated++;
 					}
 				} else {
-					for (int i=0; i<rups.size(); i++)
+					boolean inside = reg.contains(center);
+					for (int i=0; i<rups.size(); i++) {
 						griddedLocs.add(center);
+						fracts.add(inside ? 1d : 0d);
+					}
 				}
+			} else {
+				int fssIndex = erf.getFltSysRupIndexForSource(s);
+				for (int r=0; r<rups.size(); r++)
+					fracts.add(fssRupFracts[fssIndex]);
 			}
 			for (int r=0; r<rups.size(); r++) {
 				ProbEqkRupture rup = rups.get(r);
 				List<String> line = new ArrayList<>(eventDetailsCSV.getNumCols());
-//				eventDetailsCSV.addLine("Event ID", "Original Source ID", "Original Rupture ID",
-//						"Magnitude", "Annual Rate", "Rake", "Dip", "Length (km)", "Down-Dip Width (km)", "Upper Depth (km)",
-//						"FSS Index", "Grid Node Index", "Gridded Rupture Latitude", "Gridded Rupture Longitude", "Gridded Rupture Strike");
 				line.add(keptEvents.size()+"");
 				line.add(s+"");
 				line.add(r+"");
@@ -294,8 +306,11 @@ public class BayAreaRegionalGroundMotionCalc {
 					line.add("");
 					line.add("");
 				}
+				double fract = fracts.get(r);
+				line.add((float)fract+"");
 				eventDetailsCSV.addLine(line);
 				keptEvents.add(rup);
+				keptFractsInReg.add(fract);
 			}
 			if (gridded)
 				keptGridded += rups.size();
@@ -303,11 +318,12 @@ public class BayAreaRegionalGroundMotionCalc {
 				keptFault += rups.size();
 		}
 		eventDetailsCSV.writeToFile(new File(outputDir, "event_details.csv"));
-		System.exit(0);
+//		System.exit(0);
 		if (regionalSupersampling != null)
 			System.out.println("Supersampled "+numSupersampled+"/"+(erf.getNumSources()-erf.getNumFaultSystemSources())+" gridded sources");
 		if (relocateRand != null)
 			System.out.println("Relocated "+numRelocated+" gridded ruptures");
+		Preconditions.checkState(keptEvents.size() == keptFractsInReg.size());
 		erf = null; // don't use me!
 		System.out.println("Kept "+keptEvents.size()+" events");
 		System.out.println("Kept "+keptFault+" fault events");
@@ -318,12 +334,18 @@ public class BayAreaRegionalGroundMotionCalc {
 		List<List<Integer>> eventIDBundles = new ArrayList<>();
 		List<Integer> curIDBundle = null;
 		CSVFile<String> eventsCSV = new CSVFile<>(true);
-		eventsCSV.addLine("Event ID", "Magnitude", "Annual Rate", "tau");
+		eventsCSV.addLine("Event ID", "Magnitude", "Annual Rate", "Annual Nucleation Rate", "tau");
+		double sumRate = 0d;
+		double sumNuclRate = 0d;
 		for (int n=0; n<keptEvents.size(); n++) {
 			ProbEqkRupture rup = keptEvents.get(n);
 			gmm.setEqkRupture(rup);
 			ScalarGroundMotion gm = gmm.getGroundMotion();
-			eventsCSV.addLine(n+"", (float)rup.getMag()+"", rup.getMeanAnnualRate(1d)+"", (float)gm.tau()+"");
+			double rate = rup.getMeanAnnualRate(1d);
+			double nuclRate = rate * keptFractsInReg.get(n);
+			sumRate += rate;
+			sumNuclRate += nuclRate;
+			eventsCSV.addLine(n+"", (float)rup.getMag()+"", rate+"", nuclRate+"", (float)gm.tau()+"");
 			
 			if (curBundle == null) {
 				curBundle = new ArrayList<>();
@@ -342,6 +364,9 @@ public class BayAreaRegionalGroundMotionCalc {
 //		System.out.println("Will keep "+eventsToKeep.cardinality()+"/"+totNumRups
 //				+" ("+pDF.format((double)eventsToKeep.cardinality()/(double)totNumRups)+")");
 		System.out.println("Will do "+eventBundles.size()+" bundles");
+		System.out.println("Total rate:\t"+(float)sumRate);
+		System.out.println("Nucleation rate:\t"+(float)sumNuclRate+" ("+pDF.format(sumNuclRate/sumRate)+")");
+//		System.exit(0);
 		
 		ExecutorService exec = Executors.newFixedThreadPool(calcThreads);
 		
