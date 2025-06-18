@@ -16,8 +16,10 @@ import java.util.Set;
 
 import org.opensha.commons.data.CSVFile;
 import org.opensha.commons.data.Site;
+import org.opensha.commons.geo.GriddedRegion;
 import org.opensha.commons.geo.Location;
 import org.opensha.commons.geo.Region;
+import org.opensha.commons.geo.json.Feature;
 import org.opensha.commons.hpc.JavaShellScriptWriter;
 import org.opensha.commons.hpc.mpj.FastMPJShellScriptWriter;
 import org.opensha.commons.hpc.mpj.MPJExpressShellScriptWriter;
@@ -117,9 +119,16 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 		boolean strictSeg = false;
 		double segTransMaxDist = 3d;
 		boolean hazardGridded = false;
+		boolean nodeBAskipSectBySect = true;
 		boolean forceRequiredNonzeroWeight = false;
 		Double forceHazardGridSpacing = null;
+		GriddedRegion forceHazardReg = null;
 		long randSeed = 12345678l;
+		
+		Double vs30 = null;
+		Double sigmaTrunc = null;
+		boolean supersample = false;
+		double[] periods = null;
 		
 		File remoteMainDir = new File("/project/scec_608/kmilner/nshm23/batch_inversions");
 		int remoteTotalThreads = 20;
@@ -627,11 +636,11 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 		 * PRVI25 logic tree
 		 * TODO (this is a just a marker to find this part quickly, not an actual todo)
 		 */
-		List<LogicTreeLevel<? extends LogicTreeNode>> levels = PRVI25_LogicTreeBranch.levelsOnFault;
-		dirName += "-prvi25_crustal_branches";
-		double avgNumRups = 50000;
-		gmpes = new AttenRelRef[] { AttenRelRef.USGS_PRVI_ACTIVE };
-		
+//		List<LogicTreeLevel<? extends LogicTreeNode>> levels = PRVI25_LogicTreeBranch.levelsOnFault;
+//		dirName += "-prvi25_crustal_branches";
+//		double avgNumRups = 50000;
+//		gmpes = new AttenRelRef[] { AttenRelRef.USGS_PRVI_ACTIVE };
+//		
 //		// random DM sampling
 //		levels = new ArrayList<>(levels);
 //		int origNumLevels = levels.size();
@@ -649,10 +658,16 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 //		if (samplingBranchCountMultiplier > 1)
 //			dirName += samplingBranchCountMultiplier+"x";
 		
-//		List<LogicTreeLevel<? extends LogicTreeNode>> levels = PRVI25_LogicTreeBranch.levelsSubduction;
-//		dirName += "-prvi25_subduction_branches";
-//		double avgNumRups = 10000;
-//		gmpes = new AttenRelRef[] { AttenRelRef.USGS_PRVI_INTERFACE, AttenRelRef.USGS_PRVI_SLAB };
+		List<LogicTreeLevel<? extends LogicTreeNode>> levels = PRVI25_LogicTreeBranch.levelsSubduction;
+		dirName += "-prvi25_subduction_branches";
+		double avgNumRups = 10000;
+		gmpes = new AttenRelRef[] { AttenRelRef.USGS_PRVI_INTERFACE, AttenRelRef.USGS_PRVI_SLAB };
+		
+//		forceHazardReg = new GriddedRegion(PRVI25_RegionLoader.loadPRVI_Tight(), 0.05, GriddedRegion.ANCHOR_0_0);
+//		forceHazardReg = new GriddedRegion(PRVI25_RegionLoader.loadPRVI_MapExtents(), 0.05, GriddedRegion.ANCHOR_0_0);
+		forceHazardReg = new GriddedRegion(PRVI25_RegionLoader.loadPRVI_MapExtents(), 0.025, GriddedRegion.ANCHOR_0_0);
+		sigmaTrunc = 3d;
+		supersample = false;
 		
 //		levels = new ArrayList<>(levels);
 //		levels.add(NSHM23_LogicTreeBranch.SUB_SECT_CONSTR);
@@ -660,6 +675,9 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 //		dirName += "-proxyGriddedTests";
 		
 		Class<? extends InversionConfigurationFactory> factoryClass = PRVI25_InvConfigFactory.class;
+		
+//		Class<? extends InversionConfigurationFactory> factoryClass = PRVI25_InvConfigFactory.MueAsCrustal.class;
+//		dirName += "-mue_as_crustal";
 		
 //		Class<? extends InversionConfigurationFactory> factoryClass = PRVI25_InvConfigFactory.GriddedUseM1Bounds.class;
 //		dirName += "-grid_bounds_m1";
@@ -693,6 +711,7 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 		}
 		
 		forceHazardGridSpacing = 0.1;
+		nodeBAskipSectBySect = false;
 		
 		forceRequiredNonzeroWeight = true;
 		LogicTreeNode[] required = {
@@ -705,7 +724,7 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 //				RupturePlausibilityModels.COULOMB_5km,
 				
 				// DEFORMATION MODELS
-				PRVI25_CrustalDeformationModels.GEOLOGIC,
+//				PRVI25_CrustalDeformationModels.GEOLOGIC,
 //				PRVI25_CrustalDeformationModels.GEOLOGIC_DIST_AVG,
 				
 				// SCALING RELATIONSHIPS
@@ -975,7 +994,7 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 		mins = Integer.min(mins, 60*24*7 - 1);
 		pbsWrite.writeScript(new File(localDir, "batch_inversion.slurm"), script, mins, nodes, remoteTotalThreads, queue);
 		
-		List<File> baFiles = AbstractAsyncLogicTreeWriter.getBranchAverageSolutionFiles(new File("results"), logicTree);
+		Map<String, File> baFiles = AbstractAsyncLogicTreeWriter.getBranchAverageSolutionFileMap(new File("results"), logicTree);
 		
 		// now write hazard script
 		argz = "--input-file "+resultsPath+".zip";
@@ -987,23 +1006,49 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 			argz += " --gridded-seis INCLUDE";
 //			argz += " --max-distance 200";
 		}
-		// figure out if CA or full WUS
-		// also use coarse if logic tree is enormous
-		double gridSpacing = logicTree.size() > 1000 ? 0.2 : 0.1;
-		for (LogicTreeLevel<? extends LogicTreeNode> level : levels) {
-			if (NSHM23_FaultModels.class.isAssignableFrom(level.getType()))
-				// WUS, use coarser spacing
-				gridSpacing = 0.2;
-			if (NSHM23_SingleStates.class.isAssignableFrom(level.getType()))
-				// but it's actually a single state, nevermind
-				gridSpacing = 0.1;
+		String hazardRegionArg;
+		if (forceHazardReg != null) {
+			System.out.println("Using custom gridded region for hazard, spacing="
+					+(float)forceHazardReg.getSpacing()+", "+forceHazardReg.getNodeCount()+" sites");
+			File regionFile = new File(localDir, "gridded_region.geojson");
+			Feature.write(forceHazardReg.toFeature(), regionFile);
+			hazardRegionArg = " --region "+dirPath+"/"+regionFile.getName();
+		} else {
+			// figure out if CA or full WUS
+			// also use coarse if logic tree is enormous
+			double gridSpacing = logicTree.size() > 1000 ? 0.2 : 0.1;
+			for (LogicTreeLevel<? extends LogicTreeNode> level : levels) {
+				if (NSHM23_FaultModels.class.isAssignableFrom(level.getType()))
+					// WUS, use coarser spacing
+					gridSpacing = 0.2;
+				if (NSHM23_SingleStates.class.isAssignableFrom(level.getType()))
+					// but it's actually a single state, nevermind
+					gridSpacing = 0.1;
+			}
+			if (forceHazardGridSpacing != null && forceHazardGridSpacing != gridSpacing) {
+				System.out.println("Using hardcoded grid spacing of "+forceHazardGridSpacing.floatValue()
+					+" (would have otherwise used "+(float)gridSpacing+")");
+				gridSpacing = forceHazardGridSpacing;
+			}
+			hazardRegionArg = " --grid-spacing "+(float)gridSpacing;
 		}
-		if (forceHazardGridSpacing != null && forceHazardGridSpacing != gridSpacing) {
-			System.out.println("Using hardcoded grid spacing of "+forceHazardGridSpacing.floatValue()
-				+" (would have otherwise used "+(float)gridSpacing+")");
-			gridSpacing = forceHazardGridSpacing;
+		argz += hazardRegionArg;
+		String extraHazardArgs = "";
+		if (periods != null) {
+			extraHazardArgs += " --periods ";
+			for (int p=0; p<periods.length; p++) {
+				if (p > 0)
+					extraHazardArgs += ",";
+				extraHazardArgs += (float)periods[p];
+			}
 		}
-		argz += " --grid-spacing "+(float)gridSpacing;
+		if (vs30 != null)
+			extraHazardArgs += " --vs30 "+vs30.floatValue();
+		if (supersample)
+			extraHazardArgs += " --supersample-quick";
+		if (sigmaTrunc != null)
+			extraHazardArgs += " --gmm-sigma-trunc-one-sided "+sigmaTrunc.floatValue();
+		argz += extraHazardArgs;
 		argz += " "+MPJTaskCalculator.argumentBuilder().exactDispatch(1).threads(remoteTotalThreads).build();
 		script = mpjWrite.buildScript(MPJ_LogicTreeHazardCalc.class.getName(), argz);
 		
@@ -1059,7 +1104,7 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 			String griddedBAName = null;
 			if (baFiles != null && baFiles.size() == 1)
 				// just one BA solution file, use that for gridded
-				griddedBAName = baFiles.get(0).getName().replace(".zip", "")+"_gridded.zip"; 
+				griddedBAName = baFiles.values().iterator().next().getName().replace(".zip", "")+"_gridded.zip"; 
 			
 			// true mean job
 			argz = resultsPath+".zip true_mean_solution.zip";
@@ -1123,13 +1168,16 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 					argz += " --gridded-seis ONLY";
 					jobFile = new File(localDir, "batch_hazard_gridded_only.slurm");
 				}
-				argz += " --grid-spacing "+(float)gridSpacing;
+				argz += hazardRegionArg;
+				argz += extraHazardArgs;
 //				argz += " --max-distance 200";
 				if (gmpes != null)
 					for (AttenRelRef gmpe : gmpes)
 						argz += " --gmpe "+gmpe.name();
-				// use fault-only hazard as source for region
-				argz += " --region "+resultsPath+"_hazard.zip";
+				if (forceHazardReg != null) {
+				// 	use fault-only hazard as source for region
+					argz += " --region "+resultsPath+"_hazard.zip";
+				}
 				if (logicTree.size() > 400 && i == 1)
 					argz += " "+MPJTaskCalculator.argumentBuilder().maxDispatch(100).threads(remoteTotalThreads).build();
 				else
@@ -1193,6 +1241,7 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 				argz += " --sites-file "+dirPath+"/"+localSitesFile.getName();
 				argz += " "+MPJTaskCalculator.argumentBuilder().exactDispatch(1).threads(remoteTotalThreads).build();
 				argz += " --gridded-seis EXCLUDE";
+				argz += extraHazardArgs;
 				if (gmpes != null)
 					for (AttenRelRef gmpe : gmpes)
 						argz += " --gmpe "+gmpe.name();
@@ -1205,6 +1254,7 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 					argz += " --output-dir "+resultsPath+"_hazard_sites_full_gridded";
 					argz += " --sites-file "+dirPath+"/"+localSitesFile.getName();
 					argz += " --gridded-seis INCLUDE";
+					argz += extraHazardArgs;
 					argz += " "+MPJTaskCalculator.argumentBuilder().minDispatch(2).maxDispatch(10).threads(remoteTotalThreads).build();
 					script = mpjWrite.buildScript(MPJ_SiteLogicTreeHazardCurveCalc.class.getName(), argz);
 					pbsWrite.writeScript(new File(localDir, "batch_hazard_sites_full_gridded.slurm"), script, mins, nodes, remoteTotalThreads, queue);
@@ -1213,64 +1263,104 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 		}
 		
 		// write node branch averaged script
-		argz = "--input-file "+resultsPath;
-		argz += " --logic-tree "+ltPath;
-		argz += " --output-dir "+dirPath+"/node_branch_averaged";
-		argz += " --threads "+Integer.min(8, remoteTotalThreads);
-		argz += " --async-threads "+nodeBAAsyncThreads;
-		// see if we have a single BA file to use as a comparison
-		if (baFiles != null && baFiles.size() == 1)
-			argz += " --branch-averaged-file "+dirPath+"/"+baFiles.get(0).getName();
-		script = javaWrite.buildScript(LogicTreeBranchAverageWriter.class.getName(), argz);
+		Map<String, List<LogicTreeBranch<?>>> baPrefixes = AbstractAsyncLogicTreeWriter.getBranchAveragePrefixes(logicTree);
+		List<String> baLTPaths = new ArrayList<>();
+		List<String> baJobSuffixes = new ArrayList<>();
+		List<String> baOutDirs = new ArrayList<>();
+		if (baPrefixes.size() > 1) {
+			// need to write them out piecewise
+			for (String baPrefix : baPrefixes.keySet()) {
+				List<LogicTreeBranch<LogicTreeNode>> plainBranches = new ArrayList<>();
+				for (LogicTreeBranch<?> branch : baPrefixes.get(baPrefix)) {
+					LogicTreeBranch<LogicTreeNode> plainBranch = new LogicTreeBranch<>(levels);
+					for (int i=0; i<branch.size(); i++)
+						plainBranch.setValue(i, branch.getValue(i));
+					plainBranch.setOrigBranchWeight(branch.getOrigBranchWeight());
+					plainBranches.add(plainBranch);
+				}
+				LogicTree<?> subLT = LogicTree.fromExisting(levels, plainBranches);
+				File subLogicTreeFile = new File(localDir, "sub_logic_tree_"+baPrefix+".json");
+				subLT.write(subLogicTreeFile);
+				String subLTPath = dirPath+"/"+subLogicTreeFile.getName();
+				baLTPaths.add(subLTPath);
+				baOutDirs.add(dirPath+"/node_branch_averaged_"+baPrefix);
+				baJobSuffixes.add("_"+baPrefix);
+			}
+		} else {
+			// can do the full tree
+			baLTPaths.add(ltPath);
+			baOutDirs.add(dirPath+"/node_branch_averaged");
+			baJobSuffixes.add("");
+		}
 		
-		pbsWrite.writeScript(new File(localDir, "full_node_ba.slurm"), script, mins, 1, remoteTotalThreads, queue);
-		
-//		// write out individual node BA scripts (useful if the tree is enormous
-//		File baIndvLocalDir = new File(localDir, "indv_node_ba_scripts");
-//		Preconditions.checkArgument(baIndvLocalDir.exists() || baIndvLocalDir.mkdir());
-//		for (int l=0; l<levels.size(); l++) {
-//			LogicTreeNode first = null;
-//			boolean same = true;
-//			for (LogicTreeBranch<?> branch : logicTree) {
-//				LogicTreeNode node = branch.getValue(l);
-//				if (first == null) {
-//					first = node;
-//				} else {
-//					if (!first.equals(node)) {
-//						same = false;
-//						break;
+		for (int n=0; n<baLTPaths.size(); n++) {
+			File baFile;
+			if (baFiles == null)
+				baFile = null;
+			else if (baFiles.size() == 1)
+				baFile = baFiles.values().iterator().next();
+			else
+				baFile = baFiles.get(baJobSuffixes.get(n));
+			argz = "--input-file "+resultsPath;
+			argz += " --logic-tree "+baLTPaths.get(n);
+			argz += " --output-dir "+baOutDirs.get(n);
+			argz += " --threads "+Integer.min(8, remoteTotalThreads);
+			argz += " --async-threads "+nodeBAAsyncThreads;
+			// see if we have a single BA file to use as a comparison
+			if (baFile != null)
+				argz += " --branch-averaged-file "+dirPath+"/"+baFile.getName();
+			script = javaWrite.buildScript(LogicTreeBranchAverageWriter.class.getName(), argz);
+			
+			pbsWrite.writeScript(new File(localDir, "full_node_ba"+baJobSuffixes.get(n)+".slurm"), script, mins, 1, remoteTotalThreads, queue);
+			
+//			// write out individual node BA scripts (useful if the tree is enormous
+//			File baIndvLocalDir = new File(localDir, "indv_node_ba_scripts");
+//			Preconditions.checkArgument(baIndvLocalDir.exists() || baIndvLocalDir.mkdir());
+//			for (int l=0; l<levels.size(); l++) {
+//				LogicTreeNode first = null;
+//				boolean same = true;
+//				for (LogicTreeBranch<?> branch : logicTree) {
+//					LogicTreeNode node = branch.getValue(l);
+//					if (first == null) {
+//						first = node;
+//					} else {
+//						if (!first.equals(node)) {
+//							same = false;
+//							break;
+//						}
 //					}
 //				}
+//				if (!same) {
+//					// we have variations for this level
+//					LogicTreeLevel<? extends LogicTreeNode> level = levels.get(l);
+//					String levelArgs = argz+" --level-class "+level.getType().getName();
+//					script = javaWrite.buildScript(LogicTreeBranchAverageWriter.class.getName(), levelArgs);
+//					
+//					String scriptName = "node_ba_"+ClassUtils.getClassNameWithoutPackage(level.getType()).replace("$", "_")+".slurm";
+//					pbsWrite.writeScript(new File(baIndvLocalDir, scriptName), script, mins, 1, remoteTotalThreads, queue);
+//				}
 //			}
-//			if (!same) {
-//				// we have variations for this level
-//				LogicTreeLevel<? extends LogicTreeNode> level = levels.get(l);
-//				String levelArgs = argz+" --level-class "+level.getType().getName();
-//				script = javaWrite.buildScript(LogicTreeBranchAverageWriter.class.getName(), levelArgs);
-//				
-//				String scriptName = "node_ba_"+ClassUtils.getClassNameWithoutPackage(level.getType()).replace("$", "_")+".slurm";
-//				pbsWrite.writeScript(new File(baIndvLocalDir, scriptName), script, mins, 1, remoteTotalThreads, queue);
-//			}
-//		}
-		
-		if (logicTree.size() > 20) {
-			// write out parallel version
-			int totNum = MPJ_LogicTreeBranchAverageBuilder.buildCombinations(logicTree, 1).size();
-			Preconditions.checkState(totNum > 1);
-			int myNodes = Integer.min(nodes, totNum);
 			
-			argz = "--input-dir "+resultsPath;
-			argz += " --logic-tree "+ltPath;
-			argz += " --output-dir "+dirPath+"/node_branch_averaged";
-			if (totNum > 5)
-				argz += " --skip-sect-by-sect";
-			argz += " --plot-level "+PlotLevel.REVIEW.name();
-			argz += " --depth 1";
-			if (baFiles != null && baFiles.size() == 1)
-				argz += " --compare-to "+dirPath+"/"+baFiles.get(0).getName();
-			argz += " "+MPJTaskCalculator.argumentBuilder().exactDispatch(1).threads(remoteTotalThreads).build();
-			script = mpjWrite.buildScript(MPJ_LogicTreeBranchAverageBuilder.class.getName(), argz);
-			pbsWrite.writeScript(new File(localDir, "batch_node_ba.slurm"), script, mins, myNodes, remoteTotalThreads, queue);
+			if (logicTree.size() > 20) {
+				// write out parallel version
+				int totNum = MPJ_LogicTreeBranchAverageBuilder.buildCombinations(logicTree, 1).size();
+				Preconditions.checkState(totNum > 1);
+				int myNodes = Integer.min(nodes, totNum);
+				
+				argz = "--input-dir "+resultsPath;
+				argz += " --logic-tree "+baLTPaths.get(n);
+				argz += " --output-dir "+baOutDirs.get(n);
+				if (nodeBAskipSectBySect)
+					argz += " --skip-sect-by-sect";
+				argz += " --plot-level "+PlotLevel.REVIEW.name();
+				argz += " --depth 1";
+				if (baFile != null)
+					argz += " --compare-to "+dirPath+"/"+baFile.getName();
+				argz += " "+MPJTaskCalculator.argumentBuilder().exactDispatch(1).threads(remoteTotalThreads).build();
+				script = mpjWrite.buildScript(MPJ_LogicTreeBranchAverageBuilder.class.getName(), argz);
+				pbsWrite.writeScript(new File(localDir, "batch_node_ba"+baJobSuffixes.get(n)+".slurm"),
+						script, mins, myNodes, remoteTotalThreads, queue);
+			}
 		}
 		
 		if (strictSeg) {

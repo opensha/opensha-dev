@@ -573,7 +573,7 @@ public class MethodsAndIngredientsHazChangeFigures {
 		for (double x=0.01; x<1d; x+=0.01) {
 			double mappedX = maskRange + (fullRange-maskRange)*x;
 			
-			float prevX = ret.getMaxValue();
+			double prevX = ret.getMaxValue();
 			Color prevColor = ret.getMaxColor();
 			
 			ret.add(new CPTVal(prevX, prevColor, (float)mappedX, cpt.getColor((float)x)));

@@ -352,7 +352,7 @@ public abstract class SectionCovarianceSampler {
 		return samples;
 	}
 	
-	private void print1D(Matrix mat, int wrap) {
+	void print1D(Matrix mat, int wrap) {
 		Preconditions.checkState(mat.getColumnDimension() == 1);
 		int num = mat.getRowDimension();
 		DecimalFormat df = new DecimalFormat("0.00");
@@ -370,7 +370,7 @@ public abstract class SectionCovarianceSampler {
 		System.out.println(line);
 	}
 	
-	private void print1DStats(Matrix mat) {
+	void print1DStats(Matrix mat) {
 		Preconditions.checkState(mat.getColumnDimension() == 1);
 		MinMaxAveTracker track = new MinMaxAveTracker();
 		int numZero = 0;
@@ -390,14 +390,14 @@ public abstract class SectionCovarianceSampler {
 		System.out.println("\tNon-finite:\t"+numNonFinite);
 	}
 	
-	private Matrix randomGaussian(int num, RandomGenerator rng) {
+	Matrix randomGaussian(int num, RandomGenerator rng) {
 		Matrix X = new Matrix(num, 1);
 		for (int i=0; i<num; i++)
 			X.set(i, 0, rng.nextGaussian());
 		return X;
 	}
 	
-	private CholeskyDecomposition decompose(Matrix B) {
+	CholeskyDecomposition decompose(Matrix B) {
 		CholeskyDecomposition chol = new CholeskyDecomposition(B);
 		if (!chol.isSPD()) {
 			System.out.println("Matrix is not positive definite, will try to iteratively find nearPD solution");
@@ -445,7 +445,15 @@ public abstract class SectionCovarianceSampler {
 		return chol;
 	}
 	
-	private void printMatrixStats(Matrix matrix) {
+	void printMatrix(Matrix matrix) {
+		for (int row=0; row<matrix.getRowDimension(); row++) {
+			for (int col=0; col<matrix.getColumnDimension(); col++)
+				System.out.print((float)matrix.get(row, col)+"\t");
+			System.out.println();
+		}
+	}
+	
+	void printMatrixStats(Matrix matrix) {
 		int numZeros = 0;
 		int num1s = 0;
 		int numDiag1s = 0;

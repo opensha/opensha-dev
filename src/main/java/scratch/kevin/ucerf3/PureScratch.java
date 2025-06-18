@@ -181,14 +181,19 @@ import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_Single
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.random.BranchSamplingManager;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.util.NSHM23_RegionLoader;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.gridded.PRVI25_GridSourceBuilder;
+import org.opensha.sha.earthquake.rupForecastImpl.prvi25.gridded.SeismicityRateFileLoader.RateType;
+import org.opensha.sha.earthquake.rupForecastImpl.prvi25.gridded.SeismicityRateModel;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_CrustalDeformationModels;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_CrustalFaultModels;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_CrustalGMMs;
+import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_CrustalSeismicityRate;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_DeclusteringAlgorithms;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_LogicTreeBranch;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_SeisSmoothingAlgorithms;
+import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_SubductionCaribbeanSeismicityRate;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_SubductionDeformationModels;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_SubductionFaultModels;
+import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_SubductionMuertosSeismicityRate;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.util.PRVI25_RegionLoader;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.util.PRVI25_RegionLoader.PRVI25_SeismicityRegions;
 import org.opensha.sha.earthquake.util.GridCellSupersamplingSettings;
@@ -404,7 +409,7 @@ public class PureScratch {
 //		RupSetDeformationModel[] dms = DeformationModels.values();
 //		int parentID = 117;
 		
-		RupSetFaultModel[] fms = { NSHM23_FaultModels.WUS_FM_v2 };
+		NSHM23_FaultModels[] fms = { NSHM23_FaultModels.WUS_FM_v2 };
 		RupSetDeformationModel[] dms = NSHM23_DeformationModels.values();
 		int parentID = 333;
 		
@@ -416,7 +421,7 @@ public class PureScratch {
 		double totSumArea = 0d;
 		double totSumWidthArea = 0d;
 		
-		for (RupSetFaultModel fm : fms) {
+		for (NSHM23_FaultModels fm : fms) {
 			for (RupSetDeformationModel dm : dms) {
 				if (dm.getNodeWeight(null) == 0d)
 					continue;
@@ -1410,8 +1415,8 @@ public class PureScratch {
 			if (state.contains((GeoJSONFaultSection)sect))
 				stateSects.add(sect);
 		System.out.println("Retained "+stateSects.size()+"/"+allSects.size()+" sects");
-		List<? extends FaultSection> subSects = dm.buildForSubsects(fm, SubSectionBuilder.buildSubSects(stateSects));
-		GeoJSONFaultReader.writeFaultSections(new File("/tmp/ut_sub_sects.geojson"), subSects);
+//		List<? extends FaultSection> subSects = dm.buildForSubsects(fm, SubSectionBuilder.buildSubSects(stateSects));
+//		GeoJSONFaultReader.writeFaultSections(new File("/tmp/ut_sub_sects.geojson"), subSects);
 	}
 	
 	private static void test286() throws IOException {
@@ -3231,6 +3236,43 @@ public class PureScratch {
 	}
 	
 	private static void test343() throws IOException {
+		List<String> labels = new ArrayList<>();
+		List<SeismicityRateModel> rateModels = new ArrayList<>();
+		
+		labels.add("Crustal");
+		rateModels.add(PRVI25_CrustalSeismicityRate.loadRateModel(RateType.M1_TO_MMAX));
+		
+		labels.add("CAR Interface");
+		rateModels.add(PRVI25_SubductionCaribbeanSeismicityRate.loadRateModel(RateType.M1_TO_MMAX, false));
+		
+		labels.add("CAR Intraslab");
+		rateModels.add(PRVI25_SubductionCaribbeanSeismicityRate.loadRateModel(RateType.M1_TO_MMAX, true));
+		
+		labels.add("MUE Interface");
+		rateModels.add(PRVI25_SubductionMuertosSeismicityRate.loadRateModel(RateType.M1_TO_MMAX, false));
+		
+		labels.add("MUE Intraslab");
+		rateModels.add(PRVI25_SubductionMuertosSeismicityRate.loadRateModel(RateType.M1_TO_MMAX, true));
+		
+		DecimalFormat pDF = new DecimalFormat("0.00%");
+		for (int i=0; i<labels.size(); i++) {
+			System.out.println(labels.get(i));
+			SeismicityRateModel model = rateModels.get(i);
+			double pref = model.getMeanRecord().rateAboveM1;
+			double lower = model.getLowerRecord().rateAboveM1;
+			double upper = model.getUpperRecord().rateAboveM1;
+			double avg = 0.74*pref + 0.13*lower + 0.13*upper;
+			
+			System.out.println("\tPref:\t"+(float)pref);
+			double fDiff = (avg-pref)/pref;
+			String pDiffStr = pDF.format(fDiff);
+			if (fDiff > 0)
+				pDiffStr = "+"+pDiffStr;
+			System.out.println("\tAverage:\t"+(float)avg+"\t("+pDiffStr+")");
+		}
+	}
+	
+	private static void test343b() throws IOException {
 		WC1994_MagLengthRelationship wc = new WC1994_MagLengthRelationship();
 		for (Point2D pt : FaultSysTools.initEmptyMFD(5.01, 8.01)) {
 			System.out.println((float)pt.getX()+":\t"+wc.getMedianLength(pt.getX())+" km");

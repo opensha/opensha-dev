@@ -18,12 +18,14 @@ import org.jfree.chart.ui.RectangleAnchor;
 import org.jfree.chart.ui.RectangleEdge;
 import org.jfree.chart.ui.TextAnchor;
 import org.jfree.data.Range;
+import org.opensha.commons.calc.FaultMomentCalc;
 import org.opensha.commons.data.CSVFile;
 import org.opensha.commons.data.function.ArbDiscrEmpiricalDistFunc;
 import org.opensha.commons.data.function.DefaultXY_DataSet;
 import org.opensha.commons.data.function.DiscretizedFunc;
 import org.opensha.commons.data.function.XY_DataSet;
 import org.opensha.commons.data.uncertainty.UncertainBoundedDiscretizedFunc;
+import org.opensha.commons.eq.MagUtils;
 import org.opensha.commons.geo.Location;
 import org.opensha.commons.geo.LocationList;
 import org.opensha.commons.geo.LocationUtils;
@@ -42,6 +44,12 @@ import org.opensha.commons.util.FaultUtils;
 import org.opensha.commons.util.cpt.CPT;
 import org.opensha.refFaultParamDb.vo.FaultSectionConnectionList;
 import org.opensha.sha.earthquake.faultSysSolution.FaultSystemRupSet;
+import org.opensha.sha.earthquake.faultSysSolution.FaultSystemSolution;
+import org.opensha.sha.earthquake.faultSysSolution.modules.AveSlipModule;
+import org.opensha.sha.earthquake.faultSysSolution.modules.GridSourceList;
+import org.opensha.sha.earthquake.faultSysSolution.modules.GridSourceList.GriddedRupture;
+import org.opensha.sha.earthquake.faultSysSolution.modules.SlipAlongRuptureModel;
+import org.opensha.sha.earthquake.faultSysSolution.modules.SolutionSlipRates;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_CrustalDeformationModels;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_CrustalFaultModels;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_SubductionDeformationModels;
@@ -49,8 +57,10 @@ import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_Subduc
 import org.opensha.sha.faultSurface.FaultSection;
 import org.opensha.sha.faultSurface.FaultTrace;
 import org.opensha.sha.faultSurface.RuptureSurface;
+import org.opensha.sha.util.TectonicRegionType;
 
 import com.google.common.base.Preconditions;
+import com.google.common.primitives.Doubles;
 import com.itextpdf.text.pdf.parser.Line;
 
 import mpi.MaxFloat;
@@ -221,6 +231,50 @@ public class FaultSystemLineIntegralCalculator {
 	
 	public LineIntegralResult calcLineIntegral(Location startLoc, Location endLoc) {
 		if (D) System.out.println("Calculating line intergral from "+startLoc+" to "+endLoc);
+		return calcLineIntegral(startLoc, endLoc, slipRates);
+	}
+	
+	public LineIntegralResult calcSolutionLineIntegral(FaultSystemSolution sol, Location startLoc, Location endLoc,
+			boolean includeSubSeis) {
+		FaultSystemRupSet rupSet = sol.getRupSet();
+		Preconditions.checkState(rupSet.areSectionsEquivalentTo(sects),
+				"Rupture set attached to passed in solution is not equivalent to our section list");
+		if (D) System.out.println("Calculating solution line intergral from "+startLoc+" to "+endLoc);
+		SolutionSlipRates solSlips = sol.getModule(SolutionSlipRates.class);
+		if (solSlips == null)
+			solSlips = SolutionSlipRates.calc(sol, rupSet.requireModule(AveSlipModule.class),
+					rupSet.requireModule(SlipAlongRuptureModel.class));
+		List<Double> slipRates = new ArrayList<>();
+		for (int s=0; s<sects.size(); s++)
+			slipRates.add(solSlips.get(s) * 1e3); // m/yr -> mm/yr
+		if (includeSubSeis && sol.getGridSourceProvider() != null) {
+			GridSourceList gridList = sol.requireModule(GridSourceList.class);
+			double[] subSeisMoment = new double[sects.size()];
+			for (int l=0; l<gridList.getNumLocations(); l++) {
+				for (TectonicRegionType trt : gridList.getTectonicRegionTypes()) {
+					for (GriddedRupture rup : gridList.getRuptures(trt, l)) {
+						if (rup.associatedSections != null) {
+							double moRate = MagUtils.magToMoment(rup.properties.magnitude)*rup.rate;
+							for (int i=0; i<rup.associatedSections.length; i++)
+								subSeisMoment[i] += moRate * rup.associatedSectionFracts[i];
+						}
+					}
+				}
+			}
+			
+			slipRates = new ArrayList<>(slipRates);
+			for (int s=0; s<subSeisMoment.length; s++) {
+				if (subSeisMoment[s] > 0d) {
+					// convert moment rate to slip rate
+					double slip = FaultMomentCalc.getSlip(rupSet.getAreaForSection(s), subSeisMoment[s]);
+					slipRates.set(s, slipRates.get(s) + slip * 1e3); // m/yr -> mm/yr
+				}
+			}
+		}
+		return calcLineIntegral(startLoc, endLoc, slipRates);
+	}
+	
+	private LineIntegralResult calcLineIntegral(Location startLoc, Location endLoc, List<Double> slipRates) {
 		if (D) System.out.println("\tfinding intersecting sections");
 		double[] intersections = findSectIntersections(startLoc, endLoc);
 		List<Integer> intersectingIndexes = new ArrayList<>();
@@ -630,22 +684,25 @@ public class FaultSystemLineIntegralCalculator {
 	public static Range getPlotYRange(PlotSpec plot) {
 		double maxY = 0d;
 		double minY = Double.POSITIVE_INFINITY;
+		double scalar = 1.2;
 		for (DiscretizedFunc func : plot.getPlotFunctionsOnly()) {
 			maxY = Math.max(maxY, func.getMaxY());
 			minY = Math.min(minY, func.getMinY());
 			if (func instanceof UncertainBoundedDiscretizedFunc) {
+				// reduce the scalar if we have range funcs
+				scalar = 1.1;
 				maxY = Math.max(maxY, ((UncertainBoundedDiscretizedFunc)func).getUpperMaxY());
 				minY = Math.min(minY, ((UncertainBoundedDiscretizedFunc)func).getLowerMinY());
 			}
 		}
 		if (minY < 0 && maxY == 0d)
 			// all below 0
-			return new Range(Math.min(minY*1.2, minY - 3), 2);
+			return new Range(Math.min(minY*scalar, minY - 3), 2);
 		if (minY < 0)
 			// below and above
-			return new Range(Math.min(minY*1.2, minY - 3), Math.max(maxY*1.2, maxY + 3));
+			return new Range(Math.min(minY*scalar, minY - 3), Math.max(maxY*scalar, maxY + 3));
 		// all above
-		return new Range(0, Math.max(maxY*1.2, maxY + 3));
+		return new Range(0, Math.max(maxY*scalar, maxY + 3));
 	}
 	
 	public DiscretizedFunc buildIntegralFunction(boolean byLatitude, List<LineIntegralResult> integrals, VectorComponent component) {

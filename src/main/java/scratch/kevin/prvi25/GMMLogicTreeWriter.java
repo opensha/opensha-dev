@@ -22,8 +22,8 @@ import org.opensha.commons.logicTree.LogicTreeLevel;
 import org.opensha.commons.logicTree.LogicTreeLevel.FileBackedLevel;
 import org.opensha.commons.logicTree.LogicTreeNode;
 import org.opensha.commons.logicTree.LogicTreeNode.FileBackedNode;
+import org.opensha.commons.logicTree.treeCombiner.AbstractLogicTreeCombiner;
 import org.opensha.sha.earthquake.faultSysSolution.FaultSystemSolution;
-import org.opensha.sha.earthquake.faultSysSolution.hazard.AbstractLogicTreeHazardCombiner;
 import org.opensha.sha.earthquake.faultSysSolution.hazard.mpj.MPJ_LogicTreeHazardCalc;
 import org.opensha.sha.earthquake.faultSysSolution.hazard.mpj.MPJ_SiteLogicTreeHazardCurveCalc;
 import org.opensha.sha.earthquake.faultSysSolution.modules.SolutionLogicTree;
@@ -184,7 +184,7 @@ public class GMMLogicTreeWriter {
 			System.out.println("Pairwise sampling with pairwise="+gmmSamplesPerERF+" branches");
 			if (erfSamples <= 0)
 				erfSamples = erfTree.size();
-			logicTree = AbstractLogicTreeHazardCombiner.pairwiseSampleLogicTrees(erfTree, gmmTree, erfSamples, gmmSamplesPerERF);
+			logicTree = AbstractLogicTreeCombiner.pairwiseSampleLogicTrees(erfTree, gmmTree, erfSamples, gmmSamplesPerERF);
 		} else {
 			List<LogicTreeLevel<? extends LogicTreeNode>> combLevels = new ArrayList<>();
 			combLevels.addAll(erfTree.getLevels());

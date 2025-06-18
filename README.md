@@ -2,7 +2,7 @@
 
 Development sandbox for OpenSHA project
 
-This project depends on the main [opensha repository](https://github.com/opensha/opensha), and is intended for exporatory and test code. Once you have checked out the `opensha` project, follow the following steps to set up this project:
+This project depends on the main [opensha repository](https://github.com/opensha/opensha), and is intended for exploratory and test code. Once you have checked out the `opensha` project, follow the following steps to set up this project:
 
 ### Cloning in a terminal
 

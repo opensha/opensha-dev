@@ -30,20 +30,23 @@ import com.google.common.base.Preconditions;
 public class BranchAveragedHazardFigure {
 
 	public static void main(String[] args) throws IOException {
-		File baseDir = new File(INV_DIR, COMBINED_DIR.getName()+"-ba_only-wider_region-vs760");
+		File baseDir = new File(INV_DIR, COMBINED_DIR.getName()+"-ba_only-vs760");
 		File outputDir = new File(FIGURES_DIR, "hazard_map_ba");
 		Preconditions.checkState(outputDir.exists() || outputDir.mkdir());
 		
-		File mapResourcesFile = new File(baseDir, "results/hazard_0.02deg_grid_seis_INCLUDE/map_1.0s_TEN_IN_50.txt");
-		Region reg = PRVI25_RegionLoader.loadPRVI_IntermediateModelMapExtents();
-		GriddedRegion gridReg = new GriddedRegion(reg, 0.02, GriddedRegion.ANCHOR_0_0);
+		File mapResourcesFile = new File(baseDir, "results/hazard_0.01deg_grid_seis_INCLUDE/map_1.0s_TEN_IN_50.txt");
+		Region reg = PRVI25_RegionLoader.loadPRVI_MapExtents();
+		GriddedRegion gridReg = new GriddedRegion(reg, 0.01, GriddedRegion.ANCHOR_0_0);
 		
-		CPT cpt = GMT_CPT_Files.RAINBOW_UNIFORM.instance().rescale(-1.5, 0);
-		cpt.setPreferredTickInterval(0.25);
+		CPT cpt = GMT_CPT_Files.RAINBOW_UNIFORM.instance()
+//				.rescale(-1, Math.log10(0.5001));
+				.rescale(Math.log10(0.05), Math.log10(0.5));
+//				.rescale(-1, 0);
+		cpt.setLog10(true);
 		
 		GeographicMapMaker mapMaker = new GeographicMapMaker(reg);
 		
-		String label = "Log10 1s SA (g), 2% in 50 years";
+		String label = "1s SA (g), 2% in 50 years";
 		
 		GriddedGeoDataSet xyz = new GriddedGeoDataSet(gridReg, false);
 		BufferedReader bRead = new BufferedReader(new FileReader(mapResourcesFile));
@@ -65,8 +68,6 @@ public class BranchAveragedHazardFigure {
 		Preconditions.checkState(index == gridReg.getNodeCount());
 		bRead.close();
 		
-		xyz.log10();
-		
 		mapMaker.plotXYZData(xyz, cpt, label);
 		
 		mapMaker.plot(outputDir, "hazard_map", " ");
@@ -84,10 +85,14 @@ public class BranchAveragedHazardFigure {
 		mapMaker.addAnnotation(ann);
 		arrows.add(LocationList.of(sjAnnLoc, sjLoc));
 		
-		Location stcLoc = new Location(17.67, -64.92);
-		Location stcAnnLoc = new Location(stcLoc.lat-0.25, stcLoc.lon-0.15);
+//		Location stcLoc = new Location(17.67, -64.92);
+//		Location stcAnnLoc = new Location(stcLoc.lat-0.25, stcLoc.lon-0.15);
+//		ann = new XYTextAnnotation("St. Croix", stcAnnLoc.getLongitude()-0.1, stcAnnLoc.getLatitude());
+//		ann.setTextAnchor(TextAnchor.TOP_CENTER);
+		Location stcLoc = new Location(17.8, -64.92);
+		Location stcAnnLoc = new Location(stcLoc.lat+0.15, stcLoc.lon-0.15);
 		ann = new XYTextAnnotation("St. Croix", stcAnnLoc.getLongitude()-0.1, stcAnnLoc.getLatitude());
-		ann.setTextAnchor(TextAnchor.TOP_CENTER);
+		ann.setTextAnchor(TextAnchor.BOTTOM_CENTER);
 		ann.setFont(font);
 		mapMaker.addAnnotation(ann);
 		arrows.add(LocationList.of(stcAnnLoc, stcLoc));

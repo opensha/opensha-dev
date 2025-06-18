@@ -298,8 +298,8 @@ public class ZScoreHistPlot {
 					clone.setName(sourceHist.getName());
 					
 					// this will stagger it
-					float cptVal = i % 2 == 0 ? (float)i*0.5f :
-						(float)(i-1)*0.5f+colorCPT.getMaxValue()*0.5f + (sourceHistList.size() % 2 == 0 ? 0.5f : 1f);
+					double cptVal = i % 2 == 0 ? i*0.5 :
+						(i-1d)*0.5+colorCPT.getMaxValue()*0.5 + (sourceHistList.size() % 2 == 0 ? 0.5d : 1d);
 //					System.out.println(i+" => "+cptVal);
 					
 					funcs.add(clone);

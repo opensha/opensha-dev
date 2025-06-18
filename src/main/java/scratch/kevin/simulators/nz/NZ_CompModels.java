@@ -7,8 +7,11 @@ import java.io.InputStreamReader;
 import java.util.List;
 
 import org.opensha.commons.logicTree.LogicTreeBranch;
+import org.opensha.commons.logicTree.LogicTreeNode;
+import org.opensha.commons.util.ExceptionUtils;
 import org.opensha.sha.earthquake.faultSysSolution.RupSetDeformationModel;
 import org.opensha.sha.earthquake.faultSysSolution.RupSetFaultModel;
+import org.opensha.sha.earthquake.faultSysSolution.RupSetSubsectioningModel;
 import org.opensha.sha.earthquake.faultSysSolution.ruptures.util.GeoJSONFaultReader;
 import org.opensha.sha.faultSurface.FaultSection;
 import org.opensha.sha.faultSurface.GeoJSONFaultSection;
@@ -54,7 +57,7 @@ public class NZ_CompModels {
 		
 	}
 	
-	public static enum NZ_CompDefModel implements RupSetDeformationModel {
+	public static enum NZ_CompDefModel implements RupSetDeformationModel, RupSetSubsectioningModel {
 		MODEL_2023;
 		
 		private List<GeoJSONFaultSection> subSects = null;
@@ -83,9 +86,10 @@ public class NZ_CompModels {
 		public boolean isApplicableTo(RupSetFaultModel faultModel) {
 			return faultModel instanceof NZ_CompFaultModel;
 		}
-
+		
 		@Override
-		public synchronized List<? extends FaultSection> build(RupSetFaultModel faultModel) throws IOException {
+		public synchronized List<? extends FaultSection> build(RupSetFaultModel faultModel, RupSetSubsectioningModel subSectionModel,
+				LogicTreeBranch<? extends LogicTreeNode> branch) throws IOException {
 			Preconditions.checkState(faultModel == NZ_CompFaultModel.MODEL_2023);
 			if (subSects == null) {
 				InputStream is = NZ_CompModels.class.getResourceAsStream(SUB_SECTS_PATH);
@@ -96,24 +100,32 @@ public class NZ_CompModels {
 		}
 
 		@Override
-		public List<? extends FaultSection> build(RupSetFaultModel faultModel, int minPerFault, double ddwFract,
-				double fixedLen) throws IOException {
-			Preconditions.checkState(minPerFault == 2, "minPerFault must be 2 for this NZ Test");
-			Preconditions.checkState(ddwFract == 0.5, "ddwFract must be 0.5 for this NZ Test");
-			Preconditions.checkState(!(fixedLen > 0d), "fixedLen must be NaN for this NZ Test");
-			return build(faultModel);
+		public List<? extends FaultSection> apply(RupSetFaultModel faultModel,
+				LogicTreeBranch<? extends LogicTreeNode> branch, List<? extends FaultSection> subSects) throws IOException {
+			throw new UnsupportedOperationException("Not supported, NZ must build the subsections");
 		}
 
 		@Override
-		public List<? extends FaultSection> buildForSubsects(RupSetFaultModel faultModel,
+		public List<? extends FaultSection> apply(RupSetFaultModel faultModel,
+				LogicTreeBranch<? extends LogicTreeNode> branch, List<? extends FaultSection> fullSects,
 				List<? extends FaultSection> subSects) throws IOException {
 			throw new UnsupportedOperationException("Not supported, NZ must build the subsections");
+		}
+
+		@Override
+		public List<? extends FaultSection> buildSubSects(RupSetFaultModel faultModel,
+				List<? extends FaultSection> fullSections) {
+			try {
+				return build(faultModel, this, null);
+			} catch (IOException e) {
+				throw ExceptionUtils.asRuntimeException(e);
+			}
 		}
 		
 	}
 	
 	public static void main(String[] args) throws IOException {
-		List<? extends FaultSection> subSects = NZ_CompDefModel.MODEL_2023.build(NZ_CompFaultModel.MODEL_2023);
+		List<? extends FaultSection> subSects = NZ_CompDefModel.MODEL_2023.build(NZ_CompFaultModel.MODEL_2023, null, null);
 		for (FaultSection sect : subSects)
 			System.out.println(sect.getSectionId()+". "+sect.getSectionName());
 	}

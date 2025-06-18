@@ -22,7 +22,11 @@ public class HazardZipLogicTreeSegModelRename {
 		ArchiveOutput.ApacheZipFileOutput output = new ArchiveOutput.ApacheZipFileOutput(outputFile);
 		
 		for (String entry : input.getEntries()) {
-			if (entry.equals(AbstractLogicTreeModule.LOGIC_TREE_FILE_NAME) || entry.equals(AbstractLogicTreeModule.LOGIC_TREE_MAPPINGS_FILE_NAME)) {
+			String entryName = entry;
+			if (entryName.contains("/"))
+				entryName = entryName.substring(entryName.lastIndexOf("/")+1);
+			if (entryName.equals(AbstractLogicTreeModule.LOGIC_TREE_FILE_NAME)
+					|| entryName.equals(AbstractLogicTreeModule.LOGIC_TREE_MAPPINGS_FILE_NAME)) {
 				System.out.println("Translating "+entry);
 				InputStream is = input.getInputStream(entry);
 				BufferedReader bRead = new BufferedReader(new InputStreamReader(is));

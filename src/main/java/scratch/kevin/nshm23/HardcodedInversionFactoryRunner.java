@@ -15,6 +15,7 @@ import org.opensha.commons.util.modules.OpenSHA_Module;
 import org.opensha.sha.earthquake.faultSysSolution.FaultSystemRupSet;
 import org.opensha.sha.earthquake.faultSysSolution.FaultSystemSolution;
 import org.opensha.sha.earthquake.faultSysSolution.RupSetFaultModel;
+import org.opensha.sha.earthquake.faultSysSolution.inversion.GridSourceProviderFactory;
 import org.opensha.sha.earthquake.faultSysSolution.inversion.InversionConfiguration;
 import org.opensha.sha.earthquake.faultSysSolution.inversion.InversionConfigurationFactory;
 import org.opensha.sha.earthquake.faultSysSolution.inversion.Inversions;
@@ -24,6 +25,7 @@ import org.opensha.sha.earthquake.faultSysSolution.inversion.constraints.impl.Pa
 import org.opensha.sha.earthquake.faultSysSolution.inversion.constraints.impl.ParkfieldInversionConstraint;
 import org.opensha.sha.earthquake.faultSysSolution.inversion.constraints.impl.SectionTotalRateConstraint;
 import org.opensha.sha.earthquake.faultSysSolution.inversion.constraints.impl.SlipRateInversionConstraint;
+import org.opensha.sha.earthquake.faultSysSolution.modules.GridSourceProvider;
 import org.opensha.sha.earthquake.faultSysSolution.modules.InversionTargetMFDs;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.NSHM23_InvConfigFactory;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.data.NSHM23_PaleoDataLoader;
@@ -70,6 +72,7 @@ public class HardcodedInversionFactoryRunner {
 		File parentDir = new File("/home/kevin/markdown/inversions");
 		
 		int threads = 16;
+		boolean writeGridProv = false;
 
 		String dirName = new SimpleDateFormat("yyyy_MM_dd").format(new Date());
 
@@ -130,8 +133,10 @@ public class HardcodedInversionFactoryRunner {
 //		NSHM23_InvConfigFactory factory = new DefModSamplingEnabledInvConfig.ConnDistB0p5MidSegCorrCapSigma();
 //		dirName += "-nshm23-dm_sample_cap_sigma";
 		
-		PRVI25_InvConfigFactory factory = new PRVI25_InvConfigFactory();
-		dirName += "-prvi25";
+//		PRVI25_InvConfigFactory factory = new PRVI25_InvConfigFactory();
+//		dirName += "-prvi25";
+		PRVI25_InvConfigFactory factory = new PRVI25_InvConfigFactory.MueAsCrustal();
+		dirName += "-prvi25-mue_as_crustal";
 //		PRVI25_InvConfigFactory factory = new PRVI25_InvConfigFactory.LimitCrustalBelowObserved_0p9();
 //		dirName += "-prvi25-limit_below_obs";
 //		PRVI25_InvConfigFactory.SUB_SECT_DDW_FRACT = 0.25; dirName += "-quarter_len_sub_sects";
@@ -144,17 +149,32 @@ public class HardcodedInversionFactoryRunner {
 //		LogicTreeBranch<LogicTreeNode> branch = NSHM18_LogicTreeBranch.DEFAULT; dirName += "-2018_inputs";
 //		LogicTreeBranch<LogicTreeNode> branch = NSHM23_U3_HybridLogicTreeBranch.DEFAULT; dirName += "-u3";
 //		LogicTreeBranch<LogicTreeNode> branch = NSHM23_LogicTreeBranch.DEFAULT_ON_FAULT;
-		LogicTreeBranch<LogicTreeNode> branch = PRVI25_LogicTreeBranch.DEFAULT_CRUSTAL_ON_FAULT;
-		branch = branch.copy();
+//		LogicTreeBranch<LogicTreeNode> branch = PRVI25_LogicTreeBranch.DEFAULT_CRUSTAL_ON_FAULT;
+//		branch = branch.copy();
+
+		LogicTreeBranch<LogicTreeNode> branch = new LogicTreeBranch<>(PRVI25_LogicTreeBranch.levelsCrustalCombined);
+		for (LogicTreeNode node : PRVI25_LogicTreeBranch.DEFAULT_CRUSTAL_ON_FAULT)
+			branch.setValue(node);
+		for (LogicTreeNode node : PRVI25_LogicTreeBranch.DEFAULT_CRUSTAL_GRIDDED)
+			branch.setValue(node);
+		writeGridProv = true;
+
+//		LogicTreeBranch<LogicTreeNode> branch = new LogicTreeBranch<>(PRVI25_LogicTreeBranch.levelsSubductionCombined);
+//		for (LogicTreeNode node : PRVI25_LogicTreeBranch.DEFAULT_SUBDUCTION_INTERFACE)
+//			branch.setValue(node);
+//		for (LogicTreeNode node : PRVI25_LogicTreeBranch.DEFAULT_SUBDUCTION_GRIDDED)
+//			branch.setValue(node);
+//		writeGridProv = true;
 
 //		branch.setValue(NSHM23_SegmentationModels.NONE);
 //		branch.setValue(SupraSeisBValues.B_0p0);
 //		branch.setValue(NSHM23_SegmentationModels.CLASSIC);
-		branch.setValue(NSHM23_SegmentationModels.AVERAGE);
+//		branch.setValue(NSHM23_SegmentationModels.LOW);
+//		branch.setValue(NSHM23_SegmentationModels.AVERAGE);
 //		branch.setValue(SupraSeisBValues.AVERAGE);
-		branch.setValue(NSHM23_ScalingRelationships.AVERAGE);
-		branch.setValue(PRVI25_CrustalFaultModels.PRVI_CRUSTAL_FM_V1p2);
-		branch.setValue(PRVI25_CrustalDeformationModels.GEOLOGIC_DIST_AVG);
+//		branch.setValue(NSHM23_ScalingRelationships.AVERAGE);
+//		branch.setValue(PRVI25_CrustalFaultModels.PRVI_CRUSTAL_FM_V1p2);
+//		branch.setValue(PRVI25_CrustalDeformationModels.GEOLOGIC_DIST_AVG);
 		
 //		branch.setValue(NSHM23_SegmentationModels.CLASSIC);
 		
@@ -358,6 +378,14 @@ public class HardcodedInversionFactoryRunner {
 		}
 		
 		Preconditions.checkState(outputDir.exists() || outputDir.mkdir());
+		
+		if (writeGridProv) {
+			System.out.println("Building GridSourceProvider");
+			Preconditions.checkState(factory instanceof GridSourceProviderFactory);
+			GridSourceProvider gridProv = ((GridSourceProviderFactory)factory).buildGridSourceProvider(solution, branch);
+			Preconditions.checkNotNull(gridProv);
+			solution.setGridSourceProvider(gridProv);
+		}
 		
 		solution.write(new File(outputDir, "solution.zip"));
 		

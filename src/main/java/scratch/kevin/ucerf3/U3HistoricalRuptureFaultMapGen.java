@@ -24,7 +24,7 @@ public class U3HistoricalRuptureFaultMapGen {
 
 	public static void main(String[] args) throws IOException {
 		FaultModels fm = FaultModels.FM3_1;
-		List<? extends FaultSection> subSects = fm.getDefaultDeformationModel().build(fm);
+		List<? extends FaultSection> subSects = fm.getDefaultDeformationModel().build(fm, null, null);
 		LastEventData.populateSubSects(subSects, LastEventData.load());
 		
 		Region relm = new CaliforniaRegions.RELM_TESTING();

@@ -12,10 +12,13 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import org.apache.commons.math3.util.Precision;
 import org.jfree.data.Range;
 import org.opensha.commons.data.function.DiscretizedFunc;
 import org.opensha.commons.data.function.EvenlyDiscretizedFunc;
 import org.opensha.commons.data.uncertainty.UncertainBoundedIncrMagFreqDist;
+import org.opensha.commons.data.xyz.GriddedGeoDataSet;
+import org.opensha.commons.geo.GriddedRegion;
 import org.opensha.commons.geo.Region;
 import org.opensha.commons.gui.plot.HeadlessGraphPanel;
 import org.opensha.commons.gui.plot.PlotCurveCharacterstics;
@@ -28,7 +31,9 @@ import org.opensha.sha.earthquake.faultSysSolution.FaultSystemRupSet;
 import org.opensha.sha.earthquake.faultSysSolution.FaultSystemSolution;
 import org.opensha.sha.earthquake.faultSysSolution.modules.BranchRegionalMFDs;
 import org.opensha.sha.earthquake.faultSysSolution.modules.BranchRegionalMFDs.MFDType;
+import org.opensha.sha.earthquake.faultSysSolution.modules.GridSourceList.GriddedRupture;
 import org.opensha.sha.earthquake.faultSysSolution.modules.BranchSectNuclMFDs;
+import org.opensha.sha.earthquake.faultSysSolution.modules.GridSourceList;
 import org.opensha.sha.earthquake.faultSysSolution.modules.RegionsOfInterest;
 import org.opensha.sha.earthquake.faultSysSolution.util.FaultSectionUtils;
 import org.opensha.sha.earthquake.faultSysSolution.util.FaultSysTools;
@@ -176,15 +181,17 @@ public class IndividualMFDPlots {
 				IncrementalMagFreqDist gridded;
 				UncertainBoundedIncrMagFreqDist[] griddedDists;
 				if (trt == TectonicRegionType.ACTIVE_SHALLOW || trt == TectonicRegionType.SUBDUCTION_INTERFACE) {
-					gridded = CombinedMFDsPlot.calcGriddedMFD(reg, trt, sol, refMFD);
+					gridded = calcGriddedMFD(reg, trt, sol, refMFD);
 					griddedDists = getRegionalMFDFractiles(sol, MFDType.GRID_ONLY, reg, extrema);
 				} else {
 					// regions overlap, need to redo it
 					Preconditions.checkState(r == 0, "Need to do bounds right if we decide to use a slab subset region");
 					if (seisReg == PRVI25_SeismicityRegions.CAR_INTRASLAB)
-						gridded = PRVI25_SubductionCaribbeanSeismicityRate.AVERAGE.build(refMFD, PRVI25_GridSourceBuilder.SLAB_MMAX, true);
+						gridded = PRVI25_SubductionCaribbeanSeismicityRate.AVERAGE.build(refMFD,
+								PRVI25_GridSourceBuilder.SLAB_MMAX, PRVI25_GridSourceBuilder.SLAB_M_CORNER, true);
 					else
-						gridded = PRVI25_SubductionMuertosSeismicityRate.AVERAGE.build(refMFD, PRVI25_GridSourceBuilder.SLAB_MMAX, true);
+						gridded = PRVI25_SubductionMuertosSeismicityRate.AVERAGE.build(refMFD,
+								PRVI25_GridSourceBuilder.SLAB_MMAX, PRVI25_GridSourceBuilder.SLAB_M_CORNER, true);
 					griddedDists = new UncertainBoundedIncrMagFreqDist[] { siesModel.getBounded(refMFD, PRVI25_GridSourceBuilder.SLAB_MMAX) };
 				}
 
@@ -199,7 +206,7 @@ public class IndividualMFDPlots {
 						IncrementalMagFreqDist slab03 = loadSlab03(refMFD);
 						UncertainBoundedIncrMagFreqDist carDist = siesModel.getBounded(refMFD, PRVI25_GridSourceBuilder.SLAB_MMAX);
 						UncertainBoundedIncrMagFreqDist mueDist = PRVI25_SubductionMuertosSeismicityRate.loadRateModel(true)
-								.getBounded(refMFD, PRVI25_GridSourceBuilder.SLAB_MMAX);
+								.getBounded(refMFD, PRVI25_GridSourceBuilder.SLAB_MMAX, PRVI25_GridSourceBuilder.SLAB_M_CORNER);
 						plotMultiSlab(subductionOutputDir, "subduction_mfds_slab_combined", new Range(5d, 8d),
 								carDist,
 								mueDist,
@@ -209,7 +216,8 @@ public class IndividualMFDPlots {
 								LaTeXUtils.numberExpFormatSigFigs(prevM5, 2), false)+"\n");
 						texFW.write(LaTeXUtils.defineValueCommand("SubSlabPrevModelMFDMFiveRI",
 								LaTeXUtils.numberExpFormatFixedDecimal(1d/prevM5, 1), false)+"\n");
-						IncrementalMagFreqDist mueGridded = PRVI25_SubductionMuertosSeismicityRate.AVERAGE.build(refMFD, PRVI25_GridSourceBuilder.SLAB_MMAX, true);
+						IncrementalMagFreqDist mueGridded = PRVI25_SubductionMuertosSeismicityRate.AVERAGE.build(
+								refMFD, PRVI25_GridSourceBuilder.SLAB_MMAX, PRVI25_GridSourceBuilder.SLAB_M_CORNER, true);
 						double sumSlabRate = gridded.getCumRate(gridded.getClosestXIndex(5.01)) + mueGridded.getCumRate(mueGridded.getClosestXIndex(5.01));
 						texFW.write(LaTeXUtils.defineValueCommand("SubSlabCombModelMFDMFiveRate",
 								LaTeXUtils.numberExpFormatSigFigs(sumSlabRate, 2), false)+"\n");
@@ -730,6 +738,21 @@ public class IndividualMFDPlots {
 			ret.set(ret.getClosestXIndex(pt.getX()), pt.getY());
 		for (Point2D pt : mfd2)
 			ret.add(ret.getClosestXIndex(pt.getX()), pt.getY());
+		return ret;
+	}
+	
+	static IncrementalMagFreqDist calcGriddedMFD(Region region, TectonicRegionType trt,
+			FaultSystemSolution sol, EvenlyDiscretizedFunc refMFD) throws IOException {
+		GriddedRegion gridReg = new GriddedRegion(region, 0.1, GriddedRegion.ANCHOR_0_0);
+		GridSourceList gridProv = sol.requireModule(GridSourceList.class);
+		SummedMagFreqDist ret = new SummedMagFreqDist(refMFD.getMinX(), refMFD.getMaxX(), refMFD.size());
+		for (int i=0; i<gridProv.getNumLocations(); i++) {
+			int regIndex = gridReg.indexForLocation(gridProv.getLocation(i));
+			if (regIndex >= 0) {
+				IncrementalMagFreqDist mfd = gridProv.getMFD(trt, i);
+				ret.addIncrementalMagFreqDist(mfd);
+			}
+		}
 		return ret;
 	}
 
