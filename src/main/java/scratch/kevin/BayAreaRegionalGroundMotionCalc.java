@@ -231,7 +231,7 @@ public class BayAreaRegionalGroundMotionCalc {
 				PoissonPointSourceData sampledData = samplingData.getForDistance(minDist);
 				if (sampledData != data) {
 					source = new PoissonPointSource(center, source.getTectonicRegionType(),
-							pointSource.getDuration(), sampledData, pointSource.getDistCorrs());
+							pointSource.getDuration(), sampledData, pointSource.getDistCorrs(), 5d);
 					numSupersampled++;
 //					System.out.println("Supersampling with minDist="+(float)minDist);
 //				} else if (minDist < 50d){
