@@ -119,18 +119,12 @@ public class NshmSurface implements CacheEnabledSurface {
 	@Override
 	public SurfaceDistances calcDistances(Location location) {
 		Distance distance = delegate.distanceTo(NshmUtil.fromOpenShaLocation(location));
-		return new SurfaceDistances(distance.rRup, distance.rJB, distance.rRup);
+		return new SurfaceDistances.Precomputed(location, distance.rRup, distance.rJB, distance.rRup, distance.rX);
 	}
 
 	@Override
 	public double calcQuickDistance(Location location) {
 		return LocationUtils.horzDistanceFast(centroid(), location);
-	}
-
-	@Override
-	public double calcDistanceX(Location location) {
-		Distance distance = delegate.distanceTo(NshmUtil.fromOpenShaLocation(location));
-		return distance.rX;
 	}
 
 	@Override
