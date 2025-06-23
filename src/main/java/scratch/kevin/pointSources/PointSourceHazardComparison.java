@@ -130,7 +130,7 @@ public class PointSourceHazardComparison {
 			@Override
 			public ProbEqkSource buildSource(Location centerLoc, IncrementalMagFreqDist mfd,
 					double aveRake, double aveDip, boolean isSupersample, Random r) {
-				return new PointSourceNshm(centerLoc, mfd, 1d, mechWtMapForRake(aveRake), getDistCorrs(), 6d);
+				return new PointSourceNshm(centerLoc, mfd, 1d, mechWtMapForRake(aveRake), getDistCorr(), 6d);
 			}
 		},
 		APROX_SUPERSAMPLE_POINT_SOURCE_NSHM("Approx. Supersampled PointSourceNshm", false, PointSourceDistanceCorrections.NONE) { // none is fine here, it's baked in
@@ -183,14 +183,14 @@ public class PointSourceHazardComparison {
 			@Override
 			public ProbEqkSource buildSource(Location centerLoc, IncrementalMagFreqDist mfd, double aveRake,
 					double aveDip, boolean isSupersample, Random r) {
-				return buildPointSource(centerLoc, null, mfd, aveRake, aveDip, r, getDistCorrs());
+				return buildPointSource(centerLoc, null, mfd, aveRake, aveDip, r, getDistCorr());
 			}
 		},
 		SIMPLE_APPROX_FINITE_POINT_NSHMP_CORR("Simple Approx. Finite, NSHMP08 Dist. Corr.", true, PointSourceDistanceCorrections.NSHM_2008) {
 			@Override
 			public ProbEqkSource buildSource(Location centerLoc, IncrementalMagFreqDist mfd, double aveRake,
 					double aveDip, boolean isSupersample, Random r) {
-				return buildPointSource(centerLoc, null, mfd, aveRake, aveDip, r, getDistCorrs());
+				return buildPointSource(centerLoc, null, mfd, aveRake, aveDip, r, getDistCorr());
 			}
 		},
 		SINGLE_QUAD_TRACE_CENTERED("Single Quad Surface, Trace Centered", true, PointSourceDistanceCorrections.NONE) {
@@ -337,7 +337,7 @@ public class PointSourceHazardComparison {
 						.data(GridSourceList.buildPointSourceData(centerLoc, buildGriddedRupListNSHM(centerLoc, mfd, aveRake, aveDip),
 								null, gridSettings))
 						.duration(1d)
-						.distCorrs(getDistCorrs(), 5d)
+						.distCorr(getDistCorr(), 5d)
 						.build();
 			}
 		},
@@ -350,7 +350,7 @@ public class PointSourceHazardComparison {
 						.surfaceBuilder(PointSourceNshm.SURF_BUILDER_DEFAULT)
 						.forMFDAndFocalMech(mfd, new FocalMechanism(Double.NaN, aveDip, aveRake))
 						.duration(1d)
-						.distCorrs(getDistCorrs(), 5d)
+						.distCorr(getDistCorr(), 5d)
 						.build();
 			}
 		},
@@ -366,7 +366,7 @@ public class PointSourceHazardComparison {
 						.data(GridSourceList.buildPointSourceData(centerLoc, buildGriddedRupListNSHM(centerLoc, mfd, aveRake, aveDip),
 								null, gridSettings))
 						.duration(1d)
-						.distCorrs(getDistCorrs(), 5d)
+						.distCorr(getDistCorr(), 5d)
 						.build();
 			}
 		},
@@ -379,7 +379,7 @@ public class PointSourceHazardComparison {
 						.surfaceBuilder(PointSourceNshm.SURF_BUILDER_DEFAULT)
 						.forMFDAndFocalMech(mfd, new FocalMechanism(Double.NaN, aveDip, aveRake))
 						.duration(1d)
-						.distCorrs(getDistCorrs(), 5d)
+						.distCorr(getDistCorr(), 5d)
 						.build();
 			}
 		},
@@ -392,7 +392,7 @@ public class PointSourceHazardComparison {
 						.surfaceBuilder(PointSourceNshm.SURF_BUILDER_DEFAULT)
 						.forMFDAndFocalMech(mfd, new FocalMechanism(Double.NaN, aveDip, aveRake))
 						.duration(1d)
-						.distCorrs(isSupersample ? FIVE_POINT_RJB_DIST.getDistCorrs() : getDistCorrs(), 5d)
+						.distCorr(isSupersample ? FIVE_POINT_RJB_DIST.getDistCorr() : getDistCorr(), 5d)
 						.build();
 			}
 		},
@@ -405,7 +405,7 @@ public class PointSourceHazardComparison {
 						.surfaceBuilder(PointSourceNshm.SURF_BUILDER_DEFAULT)
 						.forMFDAndFocalMech(mfd, new FocalMechanism(Double.NaN, aveDip, aveRake))
 						.duration(1d)
-						.distCorrs(isSupersample ? FIVE_POINT_RJB_DIST_ALONG.getDistCorrs() : getDistCorrs(), 5d)
+						.distCorr(isSupersample ? FIVE_POINT_RJB_DIST_ALONG.getDistCorr() : getDistCorr(), 5d)
 						.build();
 			}
 		},
@@ -418,28 +418,28 @@ public class PointSourceHazardComparison {
 						.surfaceBuilder(PointSourceNshm.SURF_BUILDER_DEFAULT)
 						.forMFDAndFocalMech(mfd, new FocalMechanism(Double.NaN, aveDip, aveRake))
 						.duration(1d)
-						.distCorrs(isSupersample ? TWENTY_POINT_RJB_DIST.getDistCorrs() : getDistCorrs(), 5d)
+						.distCorr(isSupersample ? TWENTY_POINT_RJB_DIST.getDistCorr() : getDistCorr(), 5d)
 						.build();
 			}
 		};
 		
 		private String label;
 		private boolean stochastic;
-		private WeightedList<? extends PointSourceDistanceCorrection> distCorrs;
+		private PointSourceDistanceCorrection distCorr;
 
 		private PointSourceType(String label, boolean stochastic, PointSourceDistanceCorrections distCorrType) {
 			this(label, stochastic, distCorrType.get());
 		}
 
-		private PointSourceType(String label, boolean stochastic, WeightedList<? extends PointSourceDistanceCorrection> distCorrs) {
+		private PointSourceType(String label, boolean stochastic, PointSourceDistanceCorrection distCorr) {
 			this.label = label;
 			this.stochastic = stochastic;
 //			Preconditions.checkNotNull(distCorrs);
-			this.distCorrs = distCorrs;
+			this.distCorr = distCorr;
 		}
 		
-		public WeightedList<? extends PointSourceDistanceCorrection> getDistCorrs() {
-			return distCorrs;
+		public PointSourceDistanceCorrection getDistCorr() {
+			return distCorr;
 		}
 		
 		public abstract ProbEqkSource buildSource(Location centerLoc, IncrementalMagFreqDist mfd,
@@ -532,7 +532,7 @@ public class PointSourceHazardComparison {
 	}
 	
 	private static ProbEqkSource buildPointSource(Location centerLoc, Region cell, IncrementalMagFreqDist mfd,
-			double aveRake, double aveDip, Random r, WeightedList<? extends PointSourceDistanceCorrection> distCorrs) {
+			double aveRake, double aveDip, Random r, PointSourceDistanceCorrection distCorr) {
 		PointSurfaceBuilder builder = new PointSurfaceBuilder(centerLoc);
 		builder.dip(aveDip);
 		builder.random(r);
@@ -541,8 +541,6 @@ public class PointSourceHazardComparison {
 		int expectedSize = mfd.size();
 		if (aveDip != 90d)
 			expectedSize *= 2;
-		if (distCorrs != null)
-			expectedSize *= distCorrs.size();
 		List<ProbEqkRupture> rups = new ArrayList<>(expectedSize);
 		for (int i=0; i<mfd.size(); i++) {
 			double mag = mfd.getX(i);

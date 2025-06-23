@@ -3223,13 +3223,11 @@ public class PureScratch {
 				double rJB = surf.getDistanceJB(site.getLocation());
 				double rRup = surf.getDistanceRup(site.getLocation());
 				double zTor = surf.getAveRupTopDepth();
-				Preconditions.checkState((float)rJB == (float)siteDist, "rJB=%s but siteDist=%s; type=%s; distCorr=%s",
-						(float)rJB, (float)siteDist, surf.getClass().getName(),
-						surf instanceof PointSurface ? ((PointSurface)surf).getDistanceCorrection() : null);
+				Preconditions.checkState((float)rJB == (float)siteDist, "rJB=%s but siteDist=%s; type=%s",
+						(float)rJB, (float)siteDist, surf.getClass().getName());
 				double calcRup = Math.sqrt(rJB*rJB + zTor*zTor);
-				Preconditions.checkState((float)rRup == (float)calcRup, "rRup=%s, expected sqrt(%s^2 + %s^2)=%s; type=%s; distCorr=%s",
-						(float)rRup, (float)rJB, (float)zTor, (float)calcRup, surf.getClass().getName(),
-						surf instanceof PointSurface ? ((PointSurface)surf).getDistanceCorrection() : null);
+				Preconditions.checkState((float)rRup == (float)calcRup, "rRup=%s, expected sqrt(%s^2 + %s^2)=%s; type=%s",
+						(float)rRup, (float)rJB, (float)zTor, (float)calcRup, surf.getClass().getName());
 			}
 		}
 		System.out.println("All good");
@@ -3286,7 +3284,7 @@ public class PureScratch {
 		GriddedSeismicitySettings settings = erf.getGriddedSeismicitySettings();
 		
 		settings = settings.forSurfaceType(BackgroundRupType.FINITE)
-				.forDistanceCorrections(PointSourceDistanceCorrections.NONE)
+				.forDistanceCorrection(PointSourceDistanceCorrections.NONE.get())
 				.forPointSourceMagCutoff(5d)
 				.forFiniteRuptureSettings(GriddedFiniteRuptureSettings.DEFAULT_CROSSHAIR.forNumSurfaces(numFinite))
 				.forSupersamplingSettings(null);
@@ -3395,8 +3393,8 @@ public class PureScratch {
 		settings = settings
 				.forSurfaceType(BackgroundRupType.FINITE)
 //				.forSurfaceType(BackgroundRupType.POINT)
-//				.forDistanceCorrections(PointSourceDistanceCorrections.NONE)
-				.forDistanceCorrections(PointSourceDistanceCorrections.FIVE_POINT_RJB_DIST)
+//				.forDistanceCorrection(PointSourceDistanceCorrections.NONE.get())
+				.forDistanceCorrection(PointSourceDistanceCorrections.FIVE_POINT_RJB_DIST.get())
 				.forPointSourceMagCutoff(5d)
 				.forFiniteRuptureSettings(GriddedFiniteRuptureSettings.DEFAULT_CROSSHAIR.forNumSurfaces(numFinite))
 //				.forSupersamplingSettings(null);
@@ -3458,8 +3456,8 @@ public class PureScratch {
 		settings = settings
 //				.forSurfaceType(BackgroundRupType.FINITE)
 				.forSurfaceType(BackgroundRupType.POINT)
-//				.forDistanceCorrections(PointSourceDistanceCorrections.NONE)
-				.forDistanceCorrections(PointSourceDistanceCorrections.FIVE_POINT_RJB_DIST)
+//				.forDistanceCorrection(PointSourceDistanceCorrections.NONE.get())
+				.forDistanceCorrection(PointSourceDistanceCorrections.FIVE_POINT_RJB_DIST.get())
 				.forPointSourceMagCutoff(5d)
 				.forFiniteRuptureSettings(GriddedFiniteRuptureSettings.DEFAULT_CROSSHAIR.forNumSurfaces(numFinite))
 //				.forSupersamplingSettings(null);

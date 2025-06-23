@@ -45,10 +45,10 @@ public class GriddedHazardBenchmark {
 ////		settings = settings.forSupersamplingSettings(null);
 		
 		settings = settings.forSurfaceType(BackgroundRupType.POINT);
-//		settings = settings.forDistanceCorrections(PointSourceDistanceCorrections.NONE);
-//		settings = settings.forDistanceCorrections(PointSourceDistanceCorrections.MEDIAN_RJB);
-		settings = settings.forDistanceCorrections(PointSourceDistanceCorrections.FIVE_POINT_RJB_DIST);
-//		settings = settings.forDistanceCorrections(PointSourceDistanceCorrections.SUPERSAMPLING_0p1_FIVE_POINT_RJB_DIST);
+//		settings = settings.forDistanceCorrection(PointSourceDistanceCorrections.NONE.get());
+//		settings = settings.forDistanceCorrection(PointSourceDistanceCorrections.MEDIAN_RJB.get());
+		settings = settings.forDistanceCorrection(PointSourceDistanceCorrections.FIVE_POINT_RJB_DIST.get());
+//		settings = settings.forDistanceCorrection(PointSourceDistanceCorrections.SUPERSAMPLING_0p1_FIVE_POINT_RJB_DIST.get());
 		settings = settings.forPointSourceMagCutoff(5d);
 		settings = settings.forSupersamplingSettings(GridCellSupersamplingSettings.DEFAULT);
 //		settings = settings.forSupersamplingSettings(null);

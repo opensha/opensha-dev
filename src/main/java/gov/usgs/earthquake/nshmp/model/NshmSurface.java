@@ -48,15 +48,23 @@ public class NshmSurface implements CacheEnabledSurface {
   // @formatter:off
   @Override public double getAveDip() { return delegate.dip(); }
   @Override public double getAveWidth() { return delegate.width(); }
+  @Override public double getAveHorizontalWidth() { return delegate.width()*Math.cos(Math.toRadians(delegate.dip())); }
   @Override public double getArea() { return delegate.area(); }
 
 
-  @Override public double getAveRupTopDepth() {
-    if (delegate instanceof DefaultGriddedSurface) {
-      return ((DefaultGriddedSurface) delegate).get(0, 0).depth;
-    }
-    return delegate.depth();
-  }
+	@Override public double getAveRupTopDepth() {
+		if (delegate instanceof DefaultGriddedSurface) {
+			return ((DefaultGriddedSurface) delegate).get(0, 0).depth;
+		}
+		return delegate.depth();
+	}
+	
+  	@Override public double getAveRupBottomDepth() {
+  		if (delegate instanceof DefaultGriddedSurface) {
+  			return ((DefaultGriddedSurface) delegate).get(((DefaultGriddedSurface) delegate).getNumRows()-1, 0).depth;
+  		}
+  		return delegate.depth() + delegate.width()*Math.sin(Math.toRadians(delegate.dip()));
+  	}
 
 	@Override
 	public synchronized double getDistanceRup(Location location) {

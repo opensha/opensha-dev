@@ -24,6 +24,7 @@ import org.opensha.commons.data.region.CaliforniaRegions;
 import org.opensha.commons.data.uncertainty.UncertainArbDiscFunc;
 import org.opensha.commons.geo.GriddedRegion;
 import org.opensha.commons.geo.Location;
+import org.opensha.commons.geo.LocationUtils;
 import org.opensha.commons.gui.plot.PlotCurveCharacterstics;
 import org.opensha.commons.gui.plot.PlotLineType;
 import org.opensha.commons.param.Parameter;
@@ -44,6 +45,7 @@ import org.opensha.sha.earthquake.param.IncludeBackgroundParam;
 import org.opensha.sha.earthquake.param.ProbabilityModelOptions;
 import org.opensha.sha.earthquake.param.ProbabilityModelParam;
 import org.opensha.sha.faultSurface.PointSurface;
+import org.opensha.sha.faultSurface.cache.SurfaceDistances;
 import org.opensha.sha.faultSurface.utils.PointSourceDistanceCorrection;
 import org.opensha.sha.faultSurface.utils.PointSourceDistanceCorrections;
 import org.opensha.sha.imr.AttenRelRef;
@@ -53,6 +55,7 @@ import org.opensha.sha.imr.param.IntensityMeasureParams.SA_Param;
 import org.opensha.sha.imr.param.OtherParams.SigmaTruncLevelParam;
 import org.opensha.sha.imr.param.OtherParams.SigmaTruncTypeParam;
 import org.opensha.sha.magdist.IncrementalMagFreqDist;
+import org.opensha.sha.util.TectonicRegionType;
 
 import com.google.common.base.Preconditions;
 import com.google.common.math.Quantiles;
@@ -1189,12 +1192,15 @@ public class U3ETAS_SimulationAnalysis {
 		
 		HazardCurveCalculator calc = getHazardCurveCalculator();
 		
-		WeightedList<? extends PointSourceDistanceCorrection> distCorrs = PointSourceDistanceCorrections.NSHM_2013.get();
+		PointSourceDistanceCorrection distCorr = PointSourceDistanceCorrections.NSHM_2013.get();
 		
 		ArrayList<EqkRupture> eqkRupList = new ArrayList<EqkRupture>();
 		for(ObsEqkRupture rup: obsQkList) {
-			if (rup.getRuptureSurface() instanceof PointSurface)
-				((PointSurface)rup.getRuptureSurface()).setDistanceCorrection(distCorrs.sample(), rup);
+			if (rup.getRuptureSurface() instanceof PointSurface && distCorr != null) {
+				double horzDist = LocationUtils.horzDistanceFast(location, rup.getHypocenterLocation());
+				rup.setRuptureSurface(distCorr.getCorrectedSurfaces(location, (PointSurface)rup.getRuptureSurface(),
+						TectonicRegionType.ACTIVE_SHALLOW, rup.getMag(), horzDist).sample());
+			}
 			eqkRupList.add(rup);
 		}
 		
@@ -1250,12 +1256,15 @@ public class U3ETAS_SimulationAnalysis {
 		
 		HazardCurveCalculator calc = getHazardCurveCalculator();
 		
-		WeightedList<? extends PointSourceDistanceCorrection> distCorr = PointSourceDistanceCorrections.NSHM_2013.get();
+		PointSourceDistanceCorrection distCorr = PointSourceDistanceCorrections.NSHM_2013.get();
 		
 		ArrayList<EqkRupture> eqkRupList = new ArrayList<EqkRupture>();
 		for(ObsEqkRupture rup: obsQkList) {
-			if (rup.getRuptureSurface() instanceof PointSurface)
-				((PointSurface)rup.getRuptureSurface()).setDistanceCorrection(distCorr.sample(), rup);
+			if (distCorr != null && rup.getRuptureSurface() instanceof PointSurface) {
+				double horzDist = LocationUtils.horzDistanceFast(location, rup.getHypocenterLocation());
+				rup.setRuptureSurface(distCorr.getCorrectedSurfaces(location, (PointSurface)rup.getRuptureSurface(),
+						TectonicRegionType.ACTIVE_SHALLOW, rup.getMag(), horzDist).sample());
+			}
 			eqkRupList.add(rup);
 		}
 		
@@ -1294,12 +1303,15 @@ public class U3ETAS_SimulationAnalysis {
 		
 		HazardCurveCalculator calc = getHazardCurveCalculator();
 		
-		WeightedList<? extends PointSourceDistanceCorrection> distCorr = PointSourceDistanceCorrections.NSHM_2013.get();
+		PointSourceDistanceCorrection distCorr = PointSourceDistanceCorrections.NSHM_2013.get();
 		
 		ArrayList<EqkRupture> eqkRupList = new ArrayList<EqkRupture>();
 		for(ObsEqkRupture rup: obsQkList) {
-			if (rup.getRuptureSurface() instanceof PointSurface)
-				((PointSurface)rup.getRuptureSurface()).setDistanceCorrection(distCorr.sample(), rup);
+			if (distCorr != null && rup.getRuptureSurface() instanceof PointSurface) {
+				double horzDist = LocationUtils.horzDistanceFast(location, rup.getHypocenterLocation());
+				rup.setRuptureSurface(distCorr.getCorrectedSurfaces(location, (PointSurface)rup.getRuptureSurface(),
+						TectonicRegionType.ACTIVE_SHALLOW, rup.getMag(), horzDist).sample());
+			}
 			eqkRupList.add(rup);
 		}
 		

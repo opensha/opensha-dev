@@ -64,7 +64,7 @@ public class GriddedHazardSingleSiteComparison {
 //		PointSourceDistanceCorrections corrType = PointSourceDistanceCorrections.MEDIAN_RJB;
 //		GridCellSupersamplingSettings ssSettings = GridCellSupersamplingSettings.DEFAULT;
 		GridCellSupersamplingSettings ssSettings = null;
-//		PointSourceDistanceCorrections compCorrType = null;
+//		PointSourceDistanceCorrections compCorrType = PointSourceDistanceCorrections.NONE;
 		PointSourceDistanceCorrections compCorrType = PointSourceDistanceCorrections.FIVE_POINT_RJB_DIST;
 		GridCellSupersamplingSettings compSSSettings = GridCellSupersamplingSettings.DEFAULT.forApplyToFinite(true);
 //		GridCellSupersamplingSettings compSSSettings = new GridCellSupersamplingSettings(0.5, 40d, 100d, 0, true);
@@ -84,16 +84,16 @@ public class GriddedHazardSingleSiteComparison {
 		GriddedSeismicitySettings settings = erf.getGriddedSeismicitySettings();
 		
 		settings = settings.forSurfaceType(BackgroundRupType.POINT)
-				.forDistanceCorrections(corrType)
+				.forDistanceCorrection(corrType.get())
 				.forMinimumMagnitude(5d).forPointSourceMagCutoff(5d)
 				.forSupersamplingSettings(ssSettings);
 		
 		GriddedSeismicitySettings compSettings;
 		if (compCorrType == null)
-			compSettings = settings.forSurfaceType(BackgroundRupType.FINITE).forDistanceCorrections(PointSourceDistanceCorrections.NONE)
+			compSettings = settings.forSurfaceType(BackgroundRupType.FINITE).forDistanceCorrection(PointSourceDistanceCorrections.NONE.get())
 					.forFiniteRuptureSettings(GriddedFiniteRuptureSettings.DEFAULT_CROSSHAIR.forNumSurfaces(numFinite));
 		else
-			compSettings = settings.forSurfaceType(BackgroundRupType.POINT).forDistanceCorrections(compCorrType);
+			compSettings = settings.forSurfaceType(BackgroundRupType.POINT).forDistanceCorrection(compCorrType.get());
 		compSettings = compSettings.forSupersamplingSettings(compSSSettings);
 		
 //		ScalarIMR gmm = new NSHMP_GMM_Wrapper.Single(Gmm.COMBINED_ACTIVE_CRUST_2023);
