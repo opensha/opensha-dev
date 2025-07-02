@@ -77,7 +77,8 @@ public class BranchAveragedHazardScriptWriter {
 //		String solFileName = "combined_branch_averaged_solution.zip";
 		
 		String baseDirName = "2025_05_21-prvi25_crustal_subduction_combined_branches";
-		String suffix = "ba_only-slab_mc_7p4";
+//		String suffix = "ba_only-slab_mc_7p4";
+		String suffix = "ba_only-slab_mmax_7p5";
 		String solFileName = "combined_branch_averaged_solution.zip";
 		gridSpacing = 0.02;
 		

@@ -13,6 +13,7 @@ import java.util.List;
 import java.util.StringTokenizer;
 
 import org.jfree.chart.annotations.XYTextAnnotation;
+import org.jfree.chart.ui.RectangleEdge;
 import org.jfree.chart.ui.TextAnchor;
 import org.opensha.commons.data.xyz.GriddedGeoDataSet;
 import org.opensha.commons.geo.GriddedRegion;
@@ -43,6 +44,7 @@ public class BranchAveragedHazardFigure {
 				.rescale(Math.log10(0.05), Math.log10(0.5));
 //				.rescale(-1, 0);
 		cpt.setLog10(true);
+//		cpt = cpt.asDiscrete(30, true);
 		
 		GeographicMapMaker mapMaker = new GeographicMapMaker(reg);
 		
@@ -67,6 +69,16 @@ public class BranchAveragedHazardFigure {
 		}
 		Preconditions.checkState(index == gridReg.getNodeCount());
 		bRead.close();
+		
+		if (!cpt.isLog10()) {
+			// not using log10 CPT plotting, need to make it log10 on our own
+			label = "Log10 "+label;
+			xyz.log10();
+		}
+		
+//		mapMaker.setCPTLocation(RectangleEdge.TOP);
+//		mapMaker.setCPTLocation(RectangleEdge.LEFT);
+//		mapMaker.setCPTLocation(RectangleEdge.RIGHT);
 		
 		mapMaker.plotXYZData(xyz, cpt, label);
 		

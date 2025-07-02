@@ -28,7 +28,15 @@ import com.google.common.base.Preconditions;
 public class SlabMagCornerTests {
 
 	public static void main(String[] args) throws IOException {
-		File outputDir = new File(INV_DIR, COMBINED_DIR.getName()+"-ba_only-slab_mc_7p4-vs760");
+//		PRVI25_GridSourceBuilder.SLAB_MMAX = 7.95d;
+//		PRVI25_GridSourceBuilder.SLAB_M_CORNER = 7.4d;
+//		File outputDir = new File(INV_DIR, COMBINED_DIR.getName()+"-ba_only-slab_mc_7p4-vs760");
+//		PRVI25_GridSourceBuilder.SLAB_MMAX = 7.35d;
+//		PRVI25_GridSourceBuilder.SLAB_M_CORNER = Double.NaN;
+//		File outputDir = new File(INV_DIR, COMBINED_DIR.getName()+"-ba_only-slab_mmax_7p4-vs760");
+		PRVI25_GridSourceBuilder.SLAB_MMAX = 7.45d;
+		PRVI25_GridSourceBuilder.SLAB_M_CORNER = Double.NaN;
+		File outputDir = new File(INV_DIR, COMBINED_DIR.getName()+"-ba_only-slab_mmax_7p5-vs760");
 		Preconditions.checkState(outputDir.exists() || outputDir.mkdir());
 		
 		FaultSystemSolution origSol = FaultSystemSolution.load(COMBINED_SOL);
@@ -53,7 +61,6 @@ public class SlabMagCornerTests {
 		System.out.println("Built "+gridTree.size()+" branches");
 		
 		List<CompletableFuture<GridSourceList>> futures = new ArrayList<>();
-		PRVI25_GridSourceBuilder.SLAB_M_CORNER = 7.2d;
 		for (LogicTreeBranch<?> branch : gridTree) {
 			futures.add(CompletableFuture.supplyAsync(new Supplier<GridSourceList>() {
 
