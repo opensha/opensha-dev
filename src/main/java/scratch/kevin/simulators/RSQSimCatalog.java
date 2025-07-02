@@ -802,7 +802,22 @@ public class RSQSimCatalog implements XMLSaveable {
 				FaultModels.FM3_1, DeformationModels.GEOLOGIC),
 		BRUCE_5935("rundir5935", "Bruce 5935", "Bruce Shaw", cal(2024, 9, 12),
 				"CA, delta=1.0km, sigma0=100, bdeep=.013 bshallow=.003,  alpha=0.25, hload=hst=3, dynamic tcausalFactor=.75",
-				FaultModels.FM3_1, DeformationModels.GEOLOGIC);
+				FaultModels.FM3_1, DeformationModels.GEOLOGIC),
+		BRUCE_5891("rundir5891", "Bruce 5891", "Bruce Shaw", cal(2025, 6, 24),
+				"WUS_stressRate, delta=2.0km, sigma0=100, b=.008, alpha=0.25",
+				NSHM23_FaultModels.WUS_FM_v3, NSHM23_DeformationModels.AVERAGE),
+		BRUCE_5891_SKIP_100K("rundir5891_skip100k", "Bruce 5891 (Skip 100kyr)", "Bruce Shaw", cal(2025, 6, 24),
+				"WUS_stressRate, delta=2.0km, sigma0=100, b=.008, alpha=0.25; Skip 100kyr",
+				NSHM23_FaultModels.WUS_FM_v3, NSHM23_DeformationModels.AVERAGE),
+		BRUCE_5891_SKIP_200K("rundir5891_skip200k", "Bruce 5891 (Skip 200kyr)", "Bruce Shaw", cal(2025, 6, 24),
+				"WUS_stressRate, delta=2.0km, sigma0=100, b=.008, alpha=0.25; Skip 200kyr",
+				NSHM23_FaultModels.WUS_FM_v3, NSHM23_DeformationModels.AVERAGE),
+		BRUCE_6261("rundir6261", "Bruce 6261", "Bruce Shaw", cal(2025, 6, 26),
+				"WUS_stressRate, delta=2.0km, sigma0=100, b=.008, alpha=0",
+				NSHM23_FaultModels.WUS_FM_v3, NSHM23_DeformationModels.AVERAGE),
+		BRUCE_6261_SKIP_200K("rundir6261_skip200k", "Bruce 6261 (Skip 200kyr)", "Bruce Shaw", cal(2025, 6, 26),
+				"WUS_stressRate, delta=2.0km, sigma0=100, b=.008, alpha=0; Skip 200kyr",
+				NSHM23_FaultModels.WUS_FM_v3, NSHM23_DeformationModels.AVERAGE);
 		
 		private String dirName;
 		private RSQSimCatalog catalog;
@@ -1618,16 +1633,7 @@ public class RSQSimCatalog implements XMLSaveable {
 			File resourcesDir = new File(dir, "resources");
 			Preconditions.checkState(resourcesDir.exists() || resourcesDir.mkdir());
 			lines.add("");
-			int skipYears;
-			double duration = getDurationYears();
-			if (duration > 20000)
-				skipYears = 5000;
-			else if (duration > 10000)
-				skipYears = 3000;
-			else if (duration > 1000)
-				skipYears = 1000;
-			else
-				skipYears = 0;
+			int skipYears = getDefaultSkipYears();
 			lines.addAll(writeStandardDiagnosticPlots(resourcesDir, skipYears, plotMinMag, replot, topLink, standardPlots));
 		}
 		
@@ -1649,6 +1655,18 @@ public class RSQSimCatalog implements XMLSaveable {
 		
 		// write metadata
 		XMLUtils.writeObjectToXMLAsRoot(this, new File(dir, "catalog.xml"));
+	}
+	
+	public int getDefaultSkipYears() throws IOException {
+		double duration = getDurationYears();
+		if (duration > 20000)
+			return 5000;
+		else if (duration > 10000)
+			return 3000;
+		else if (duration > 1000)
+			return 1000;
+		else
+			return 0;
 	}
 	
 	private String checkMoveFilter(File subDir, FilterMethod filter) throws IOException {
@@ -3460,7 +3478,7 @@ public class RSQSimCatalog implements XMLSaveable {
 		Arrays.sort(cats, new CatEnumDateComparator());
 		// new catalogs
 //		GregorianCalendar minDate = cal(2021, 10, 1);
-		GregorianCalendar minDate = cal(2024, 8, 1);
+		GregorianCalendar minDate = cal(2025, 6, 25);
 		for (Catalogs cat : cats) {
 		// specific catalog
 //		GregorianCalendar minDate = cal(2000, 1, 1);
