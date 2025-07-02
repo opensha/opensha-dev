@@ -1,5 +1,6 @@
 package scratch.kevin;
 
+import java.awt.geom.Point2D;
 import java.io.File;
 import java.io.IOException;
 import java.io.OutputStream;
@@ -7,19 +8,26 @@ import java.io.StringWriter;
 import java.text.DecimalFormat;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.BitSet;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
+import org.jfree.data.Range;
 import org.opensha.commons.data.CSVFile;
 import org.opensha.commons.data.Site;
+import org.opensha.commons.data.function.ArbitrarilyDiscretizedFunc;
+import org.opensha.commons.data.function.DiscretizedFunc;
+import org.opensha.commons.data.function.EvenlyDiscretizedFunc;
+import org.opensha.commons.data.function.LightFixedXFunc;
 import org.opensha.commons.data.region.CaliforniaRegions;
 import org.opensha.commons.data.siteData.impl.ThompsonVs30_2022;
 import org.opensha.commons.data.xyz.GriddedGeoDataSet;
@@ -28,6 +36,11 @@ import org.opensha.commons.geo.Location;
 import org.opensha.commons.geo.LocationUtils;
 import org.opensha.commons.geo.LocationVector;
 import org.opensha.commons.geo.Region;
+import org.opensha.commons.gui.plot.HeadlessGraphPanel;
+import org.opensha.commons.gui.plot.PlotCurveCharacterstics;
+import org.opensha.commons.gui.plot.PlotLineType;
+import org.opensha.commons.gui.plot.PlotSpec;
+import org.opensha.commons.gui.plot.PlotUtils;
 import org.opensha.commons.param.Parameter;
 import org.opensha.commons.param.impl.WarningDoubleParameter;
 import org.opensha.commons.util.ExceptionUtils;
@@ -45,20 +58,28 @@ import org.opensha.sha.earthquake.faultSysSolution.FaultSystemRupSet;
 import org.opensha.sha.earthquake.faultSysSolution.FaultSystemSolution;
 import org.opensha.sha.earthquake.faultSysSolution.erf.BaseFaultSystemSolutionERF;
 import org.opensha.sha.earthquake.faultSysSolution.modules.GridSourceProvider;
+import org.opensha.sha.earthquake.observedEarthquake.ObsEqkRupList;
+import org.opensha.sha.earthquake.observedEarthquake.ObsEqkRupture;
+import org.opensha.sha.earthquake.observedEarthquake.parsers.UCERF3_CatalogParser;
 import org.opensha.sha.earthquake.param.BackgroundRupType;
 import org.opensha.sha.earthquake.param.UseRupMFDsParam;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.util.NSHM23_RegionLoader.LocalRegions;
 import org.opensha.sha.earthquake.util.GridCellSuperSamplingPoissonPointSourceData;
 import org.opensha.sha.earthquake.util.GridCellSupersamplingSettings;
 import org.opensha.sha.earthquake.util.GriddedSeismicitySettings;
+import org.opensha.sha.faultSurface.ApproxEvenlyGriddedSurface;
 import org.opensha.sha.faultSurface.CompoundSurface;
+import org.opensha.sha.faultSurface.FaultTrace;
+import org.opensha.sha.faultSurface.GriddedSurfaceImpl;
 import org.opensha.sha.faultSurface.PointSurface;
 import org.opensha.sha.faultSurface.RuptureSurface;
 import org.opensha.sha.faultSurface.cache.CustomCacheWrappedSurface;
+import org.opensha.sha.gcim.ui.infoTools.IMT_Info;
 import org.opensha.sha.imr.AttenRelRef;
 import org.opensha.sha.imr.ScalarIMR;
 import org.opensha.sha.imr.attenRelImpl.ngaw2.NGAW2_WrapperFullParam;
 import org.opensha.sha.imr.attenRelImpl.ngaw2.ScalarGroundMotion;
+import org.opensha.sha.imr.attenRelImpl.nshmp.NSHMP_GMM_Wrapper;
 import org.opensha.sha.imr.param.IntensityMeasureParams.PGA_Param;
 import org.opensha.sha.imr.param.IntensityMeasureParams.PGV_Param;
 import org.opensha.sha.imr.param.IntensityMeasureParams.SA_Param;
@@ -67,16 +88,46 @@ import org.opensha.sha.imr.param.SiteParams.Vs30_Param;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Stopwatch;
 
+import net.mahdilamb.colormap.Colors;
+import scratch.UCERF3.erf.ETAS.association.JeanneFileLoader;
 import scratch.kevin.prvi25.figures.MapSourceTypeDisagg;
 
 public class BayAreaRegionalGroundMotionCalc {
 
 	public static void main(String[] args) throws IOException {
+		File mainOutputDir = new File("/home/kevin/OpenSHA/minson_2025_bay_area_gms");
+		
 		AttenRelRef gmmRef = AttenRelRef.BSSA_2014;
+		AttenRelRef empGMMRef = gmmRef;
+//		empGMMRef = AttenRelRef.WRAPPED_BSSA_2014;
 		double period = 0d;
 		String perSuffix = "pga";
+		String perLabel = "PGA (g)";
+//		DiscretizedFunc xVals = new IMT_Info().getDefaultHazardCurve(PGA_Param.NAME);
+//		DiscretizedFunc xVals = new EvenlyDiscretizedFunc(0.1, 1d, 10);
+//		DiscretizedFunc xVals = new EvenlyDiscretizedFunc(0.0, 1d, 11);
+		DiscretizedFunc xVals = new EvenlyDiscretizedFunc(0.0, 1d, 101);
 //		double period = -1d;
 //		String perSuffix = "pgv";
+		
+		File outputDir = new File(mainOutputDir, "nshm23_model");
+		File catalogFile = null;
+		double catYears = Double.NaN;
+		double catalogDefaultRake = Double.NaN;
+		double gridMinMag = 3.5d;
+		double[] epiMinMags = {3.5d, 4d};
+		boolean doMapCalc = false;
+		
+//		File outputDir = new File(mainOutputDir, "nshm23_catalog");
+//		File catalogFile = new File(mainOutputDir, "nshm23_cat_M4_1967.csv");
+//		double catYears = 2023-1967; // ends at start of 2023
+//		double catalogDefaultRake = Double.NaN;
+////		double catalogDefaultRake = 0;
+//		double gridMinMag = Double.NaN;
+//		double[] epiMinMags = {4d};
+//		boolean doMapCalc = true;
+		
+		Preconditions.checkState(outputDir.exists() || outputDir.mkdir());
 
 		int calcThreads = 16;
 		int zipThreads = 16;
@@ -84,45 +135,8 @@ public class BayAreaRegionalGroundMotionCalc {
 		NGAW2_WrapperFullParam gmm = (NGAW2_WrapperFullParam)gmmRef.get();
 		setPeriod(gmm, period);
 		
-		BaseFaultSystemSolutionERF erf = new BaseFaultSystemSolutionERF();
-		erf.setSolution(FaultSystemSolution.load(new File("/home/kevin/OpenSHA/nshm23/batch_inversions/2024_02_02-nshm23_branches-WUS_FM_v3/"
-//				+ "results_WUS_FM_v3_branch_averaged_gridded_simplified.zip")));
-				+ "results_WUS_FM_v3_branch_averaged_gridded.zip")));
-		double cellGridSpacing = 0.1;
-		
-//		erf.setParameter(IncludeBackgroundParam.NAME, IncludeBackgroundOption.ONLY);
-		erf.setParameter(UseRupMFDsParam.NAME, false);
-		erf.setCacheGridSources(true);
-		
-//		GridCellSupersamplingSettings regionalSupersampling = GridCellSupersamplingSettings.QUICK;
-		GridCellSupersamplingSettings regionalSupersampling = null;
-//		Random relocateRand = null;
-		Random relocateRand = new Random(123456);
-		GriddedSeismicitySettings gridSettings = erf.getGriddedSeismicitySettings();
-		gridSettings = gridSettings.forSupersamplingSettings(null);
-		gridSettings = gridSettings.forSurfaceType(BackgroundRupType.FINITE);
-		gridSettings = gridSettings.forPointSourceMagCutoff(5d);
-		gridSettings = gridSettings.forMinimumMagnitude(3.5d);
-		System.out.println("Gridded seismicity settings:\n"+gridSettings);
-		erf.setGriddedSeismicitySettings(gridSettings);
-		erf.getTimeSpan().setDuration(1d);
-		
-		if (regionalSupersampling != null && gridSettings.surfaceType != BackgroundRupType.POINT) {
-			regionalSupersampling = new GridCellSupersamplingSettings(regionalSupersampling.targetSpacingKM,
-					regionalSupersampling.fullDist, regionalSupersampling.borderDist, regionalSupersampling.cornerDist, true);
-		}
-		
-		erf.updateForecast();
-		
-		System.out.println("Duration: "+erf.getTimeSpan().getDuration());
-		System.out.println("ERF has "+erf.getTotNumRupsFromFaultSystem()+" fault ruptures");
-		System.out.println("ERF has "+(erf.getTotNumRups()-erf.getTotNumRupsFromFaultSystem())+" gridded ruptures");
-		
 		DecimalFormat pDF = new DecimalFormat("0.0%");
-		
-		FixedDistanceCutoffFilter filter = new FixedDistanceCutoffFilter(300d);
-		
-		File outputDir = new File("/home/kevin/OpenSHA/minson_2025_bay_area_gms");
+		DecimalFormat oDF = new DecimalFormat("0.##");
 		
 		System.out.println(gmm.getShortName()+" default params (used for phi):");
 		System.out.println("ERF:");
@@ -131,6 +145,8 @@ public class BayAreaRegionalGroundMotionCalc {
 		System.out.println("Propogation:");
 		for (Parameter<?> param : gmm.getPropagationEffectParams())
 			System.out.println("\t"+param.getName()+":\t"+param.getValue());
+		
+		FixedDistanceCutoffFilter filter = new FixedDistanceCutoffFilter(300d);
 		
 		Region reg = LocalRegions.CONUS_SF_BAY.load();
 		GriddedRegion gridReg = new GriddedRegion(reg, 0.02, GriddedRegion.ANCHOR_0_0);
@@ -143,7 +159,7 @@ public class BayAreaRegionalGroundMotionCalc {
 		GriddedGeoDataSet landMask = MapSourceTypeDisagg.buildLandMask(gridReg);
 		
 //		ThompsonVs30_2020 vs30model = new ThompsonVs30_2020();
-		ThompsonVs30_2022 vs30model = new ThompsonVs30_2022(new File(outputDir, "California_vs30_Wills15_hybrid.flt").getAbsolutePath());
+		ThompsonVs30_2022 vs30model = new ThompsonVs30_2022(new File(mainOutputDir, "California_vs30_Wills15_hybrid.flt").getAbsolutePath());
 		
 		ArrayList<Double> vsValues = vs30model.getValues(gridReg.getNodeList());
 		
@@ -152,6 +168,7 @@ public class BayAreaRegionalGroundMotionCalc {
 		int numLandOnly = 0;
 		
 		List<Site> sites = new ArrayList<>();
+		List<Site> sitesAtNodes = new ArrayList<>();
 		
 		for (int i=0; i<gridReg.getNodeCount(); i++) {
 			Double vs30 = vsValues.get(i);
@@ -168,12 +185,17 @@ public class BayAreaRegionalGroundMotionCalc {
 					site.addParameter(siteParam);
 				}
 				sites.add(site);
-			} else if (vsValid) {
-				numVs30only++;
-			} else if (onLand) {
-				numLandOnly++;
+				sitesAtNodes.add(site);
+			} else {
+				sitesAtNodes.add(null);
+				if (vsValid) {
+					numVs30only++;
+				} else if (onLand) {
+					numLandOnly++;
+				}
 			}
 		}
+		Preconditions.checkState(sitesAtNodes.size() == gridReg.getNodeCount());
 		
 		System.out.println("Have both: "+numWithBoth+" ("+pDF.format((double)numWithBoth/(double)gridReg.getNodeCount())+")");
 		System.out.println("Have Vs30 only: "+numVs30only);
@@ -190,144 +212,235 @@ public class BayAreaRegionalGroundMotionCalc {
 		}
 		sitesCSV.writeToFile(new File(outputDir, "sites_and_phi_"+perSuffix+".csv"));
 		
+		List<ProbEqkRupture> keptEvents;
+		List<Double> keptFractsInReg;
+		if (catalogFile == null) {
+			BaseFaultSystemSolutionERF erf = new BaseFaultSystemSolutionERF();
+			erf.setSolution(FaultSystemSolution.load(new File("/home/kevin/OpenSHA/nshm23/batch_inversions/2024_02_02-nshm23_branches-WUS_FM_v3/"
+//					+ "results_WUS_FM_v3_branch_averaged_gridded_simplified.zip")));
+					+ "results_WUS_FM_v3_branch_averaged_gridded.zip")));
+			double cellGridSpacing = 0.1;
+			
+//			erf.setParameter(IncludeBackgroundParam.NAME, IncludeBackgroundOption.ONLY);
+			erf.setParameter(UseRupMFDsParam.NAME, false);
+			erf.setCacheGridSources(true);
+			
+//			GridCellSupersamplingSettings regionalSupersampling = GridCellSupersamplingSettings.QUICK;
+			GridCellSupersamplingSettings regionalSupersampling = null;
+//			Random relocateRand = null;
+			Random relocateRand = new Random(123456);
+			GriddedSeismicitySettings gridSettings = erf.getGriddedSeismicitySettings();
+			gridSettings = gridSettings.forSupersamplingSettings(null);
+			gridSettings = gridSettings.forSurfaceType(BackgroundRupType.FINITE);
+			gridSettings = gridSettings.forPointSourceMagCutoff(5d);
+			gridSettings = gridSettings.forMinimumMagnitude(gridMinMag);
+			System.out.println("Gridded seismicity settings:\n"+gridSettings);
+			erf.setGriddedSeismicitySettings(gridSettings);
+			erf.getTimeSpan().setDuration(1d);
+			
+			if (regionalSupersampling != null && gridSettings.surfaceType != BackgroundRupType.POINT) {
+				regionalSupersampling = new GridCellSupersamplingSettings(regionalSupersampling.targetSpacingKM,
+						regionalSupersampling.fullDist, regionalSupersampling.borderDist, regionalSupersampling.cornerDist, true);
+			}
+			
+			erf.updateForecast();
+			
+			System.out.println("Duration: "+erf.getTimeSpan().getDuration());
+			System.out.println("ERF has "+erf.getTotNumRupsFromFaultSystem()+" fault ruptures");
+			System.out.println("ERF has "+(erf.getTotNumRups()-erf.getTotNumRupsFromFaultSystem())+" gridded ruptures");
 
-		CSVFile<String> eventDetailsCSV = new CSVFile<>(true);
-		eventDetailsCSV.addLine("Event ID", "Original Source ID", "Original Rupture ID",
-				"Magnitude", "Annual Rate", "Rake", "Dip", "Length (km)", "Down-Dip Width (km)", "Upper Depth (km)",
-				"FSS Index", "Grid Node Index", "Gridded Rupture Latitude", "Gridded Rupture Longitude", "Gridded Rupture Strike",
-				"Fraction in Region");
+			CSVFile<String> eventDetailsCSV = new CSVFile<>(true);
+			eventDetailsCSV.addLine("Event ID", "Original Source ID", "Original Rupture ID",
+					"Magnitude", "Annual Rate", "Rake", "Dip", "Length (km)", "Down-Dip Width (km)", "Upper Depth (km)",
+					"FSS Index", "Grid Node Index", "Gridded Rupture Latitude", "Gridded Rupture Longitude", "Gridded Rupture Strike",
+					"Fraction in Region");
 
-		FaultSystemRupSet rupSet = erf.getSolution().getRupSet();
-		double[] fssRupFracts = rupSet.getFractRupsInsideRegion(reg, false);
-		List<ProbEqkRupture> keptEvents = new ArrayList<>();
-		List<Double> keptFractsInReg = new ArrayList<>();
-		int keptFault = 0;
-		int keptGridded = 0;
-		int numSupersampled = 0;
-		int numRelocated = 0;
-		GridSourceProvider gridSources = erf.getGridSourceProvider();
-		for (int s=0; s<erf.getNumSources(); s++) {
-			ProbEqkSource source = erf.getSource(s);
-			boolean keepSource = false;
-			double minDist = Double.POSITIVE_INFINITY;
-			for (Site filterSite : filterSites) {
-				double dist = source.getMinDistance(filterSite);
-				minDist = Math.min(dist, minDist);
-				if (!filter.canSkipSource(source, filterSite, dist))
-					keepSource = true;
-			}
-			if (!keepSource)
-				continue;
-			boolean gridded = source instanceof PointSource;
-			if (regionalSupersampling != null && gridded) {
-				PoissonPointSource pointSource = (PoissonPointSource)source;
-				PoissonPointSourceData data = pointSource.getData();
-				Location center = pointSource.getLocation();
-				double halfSpacing = cellGridSpacing*0.5;
-				Region gridCell = new Region(new Location(center.lat-halfSpacing, center.lon-halfSpacing),
-						new Location(center.lat+halfSpacing, center.lon+halfSpacing));
-				GridCellSuperSamplingPoissonPointSourceData samplingData =
-						new GridCellSuperSamplingPoissonPointSourceData(data, center, gridCell, regionalSupersampling);
-				PoissonPointSourceData sampledData = samplingData.getForDistance(minDist);
-				if (sampledData != data) {
-					source = new PoissonPointSource(center, source.getTectonicRegionType(),
-							pointSource.getDuration(), sampledData, pointSource.getDistCorrs());
-					numSupersampled++;
-//					System.out.println("Supersampling with minDist="+(float)minDist);
-//				} else if (minDist < 50d){
-//					System.out.println("Skipping supersampling with minDist="+(float)minDist+", loc="+center);
+			FaultSystemRupSet rupSet = erf.getSolution().getRupSet();
+			double[] fssRupFracts = rupSet.getFractRupsInsideRegion(reg, false);
+			keptEvents = new ArrayList<>();
+			keptFractsInReg = new ArrayList<>();
+			int keptFault = 0;
+			int keptGridded = 0;
+			int numSupersampled = 0;
+			int numRelocated = 0;
+			GridSourceProvider gridSources = erf.getGridSourceProvider();
+			for (int s=0; s<erf.getNumSources(); s++) {
+				ProbEqkSource source = erf.getSource(s);
+				boolean keepSource = false;
+				double minDist = Double.POSITIVE_INFINITY;
+				for (Site filterSite : filterSites) {
+					double dist = source.getMinDistance(filterSite);
+					minDist = Math.min(dist, minDist);
+					if (!filter.canSkipSource(source, filterSite, dist))
+						keepSource = true;
 				}
-			}
-			List<ProbEqkRupture> rups = source.getRuptureList();
-			List<Location> griddedLocs = null;
-			List<Double> fracts = new ArrayList<>(rups.size());
-			if (gridded) {
-				griddedLocs = new ArrayList<>(rups.size());
-				PoissonPointSource pointSource = (PoissonPointSource)source;
-				Location center = pointSource.getLocation();
-				if (relocateRand != null) {
-					// randomly relocate within the grid cell
-					for (int i=0; i<rups.size(); i++) {
-						ProbEqkRupture origRup = rups.get(i);
-						RuptureSurface surface = origRup.getRuptureSurface();
-						double newLat   = center.lat + (relocateRand.nextDouble() - 0.5)*cellGridSpacing;
-						double newLon   = center.lon + (relocateRand.nextDouble() - 0.5)*cellGridSpacing;
-						Location newLoc = new Location(newLat, newLon);
-						fracts.add(reg.contains(newLoc) ? 1d : 0d);
-						griddedLocs.add(newLoc);
-						LocationVector vector = LocationUtils.vector(center, newLoc);
-						surface = surface.getMoved(vector);
-						Location hypo = origRup.getHypocenterLocation();
-						if (hypo != null)
-							hypo = LocationUtils.location(hypo, vector);
-						rups.set(i, new ProbEqkRupture(origRup.getMag(), origRup.getAveRake(), origRup.getProbability(), surface, hypo));
-						numRelocated++;
-					}
-				} else {
-					boolean inside = reg.contains(center);
-					for (int i=0; i<rups.size(); i++) {
-						griddedLocs.add(center);
-						fracts.add(inside ? 1d : 0d);
+				if (!keepSource)
+					continue;
+				boolean gridded = source instanceof PointSource;
+				if (regionalSupersampling != null && gridded) {
+					PoissonPointSource pointSource = (PoissonPointSource)source;
+					PoissonPointSourceData data = pointSource.getData();
+					Location center = pointSource.getLocation();
+					double halfSpacing = cellGridSpacing*0.5;
+					Region gridCell = new Region(new Location(center.lat-halfSpacing, center.lon-halfSpacing),
+							new Location(center.lat+halfSpacing, center.lon+halfSpacing));
+					GridCellSuperSamplingPoissonPointSourceData samplingData =
+							new GridCellSuperSamplingPoissonPointSourceData(data, center, gridCell, regionalSupersampling);
+					PoissonPointSourceData sampledData = samplingData.getForDistance(minDist);
+					if (sampledData != data) {
+						source = new PoissonPointSource(center, source.getTectonicRegionType(),
+								pointSource.getDuration(), sampledData, pointSource.getDistCorrs());
+						numSupersampled++;
+//						System.out.println("Supersampling with minDist="+(float)minDist);
+//					} else if (minDist < 50d){
+//						System.out.println("Skipping supersampling with minDist="+(float)minDist+", loc="+center);
 					}
 				}
-			} else {
-				int fssIndex = erf.getFltSysRupIndexForSource(s);
-				for (int r=0; r<rups.size(); r++)
-					fracts.add(fssRupFracts[fssIndex]);
-			}
-			for (int r=0; r<rups.size(); r++) {
-				ProbEqkRupture rup = rups.get(r);
-				List<String> line = new ArrayList<>(eventDetailsCSV.getNumCols());
-				line.add(keptEvents.size()+"");
-				line.add(s+"");
-				line.add(r+"");
-				line.add((float)rup.getMag()+"");
-				line.add((float)rup.getMeanAnnualRate(1d)+"");
-				line.add((float)rup.getAveRake()+"");
-				RuptureSurface surf = rup.getRuptureSurface();
-				line.add((float)surf.getAveDip()+"");
-				line.add((float)surf.getAveLength()+"");
-				line.add((float)surf.getAveWidth()+"");
-				line.add((float)surf.getAveRupTopDepth()+"");
+				List<ProbEqkRupture> rups = source.getRuptureList();
+				List<Location> griddedLocs = null;
+				List<Double> fracts = new ArrayList<>(rups.size());
 				if (gridded) {
-					line.add("-1");
-					line.add(gridSources.getLocationIndex(((PoissonPointSource)source).getLocation())+"");
-					Location loc = griddedLocs.get(r);
-					line.add((float)loc.lat+"");
-					line.add((float)loc.lon+"");
-					if (surf instanceof PointSurface)
-						line.add("NaN");
-					else
-						line.add((float)surf.getAveStrike()+"");
+					griddedLocs = new ArrayList<>(rups.size());
+					PoissonPointSource pointSource = (PoissonPointSource)source;
+					Location center = pointSource.getLocation();
+					if (relocateRand != null) {
+						// randomly relocate within the grid cell
+						for (int i=0; i<rups.size(); i++) {
+							ProbEqkRupture origRup = rups.get(i);
+							RuptureSurface surface = origRup.getRuptureSurface();
+							double newLat   = center.lat + (relocateRand.nextDouble() - 0.5)*cellGridSpacing;
+							double newLon   = center.lon + (relocateRand.nextDouble() - 0.5)*cellGridSpacing;
+							Location newLoc = new Location(newLat, newLon);
+							fracts.add(reg.contains(newLoc) ? 1d : 0d);
+							griddedLocs.add(newLoc);
+							LocationVector vector = LocationUtils.vector(center, newLoc);
+							surface = surface.getMoved(vector);
+							Location hypo = origRup.getHypocenterLocation();
+							Preconditions.checkNotNull(hypo);
+							hypo = LocationUtils.location(hypo, vector);
+							rups.set(i, new ProbEqkRupture(origRup.getMag(), origRup.getAveRake(), origRup.getProbability(), surface, hypo));
+							numRelocated++;
+						}
+					} else {
+						boolean inside = reg.contains(center);
+						for (int i=0; i<rups.size(); i++) {
+							griddedLocs.add(center);
+							fracts.add(inside ? 1d : 0d);
+						}
+					}
 				} else {
-					line.add(erf.getFltSysRupIndexForSource(s)+"");
-					line.add("-1");
-					line.add("");
-					line.add("");
-					line.add("");
+					int fssIndex = erf.getFltSysRupIndexForSource(s);
+					for (int r=0; r<rups.size(); r++)
+						fracts.add(fssRupFracts[fssIndex]);
 				}
-				double fract = fracts.get(r);
-				line.add((float)fract+"");
-				eventDetailsCSV.addLine(line);
-				keptEvents.add(rup);
-				keptFractsInReg.add(fract);
+				for (int r=0; r<rups.size(); r++) {
+					ProbEqkRupture rup = rups.get(r);
+					List<String> line = new ArrayList<>(eventDetailsCSV.getNumCols());
+					line.add(keptEvents.size()+"");
+					line.add(s+"");
+					line.add(r+"");
+					line.add((float)rup.getMag()+"");
+					line.add((float)rup.getMeanAnnualRate(1d)+"");
+					line.add((float)rup.getAveRake()+"");
+					RuptureSurface surf = rup.getRuptureSurface();
+					line.add((float)surf.getAveDip()+"");
+					line.add((float)surf.getAveLength()+"");
+					line.add((float)surf.getAveWidth()+"");
+					line.add((float)surf.getAveRupTopDepth()+"");
+					if (gridded) {
+						line.add("-1");
+						line.add(gridSources.getLocationIndex(((PoissonPointSource)source).getLocation())+"");
+						Location loc = griddedLocs.get(r);
+						line.add((float)loc.lat+"");
+						line.add((float)loc.lon+"");
+						if (surf instanceof PointSurface)
+							line.add("NaN");
+						else
+							line.add((float)surf.getAveStrike()+"");
+					} else {
+						line.add(erf.getFltSysRupIndexForSource(s)+"");
+						line.add("-1");
+						line.add("");
+						line.add("");
+						line.add("");
+					}
+					double fract = fracts.get(r);
+					line.add((float)fract+"");
+					eventDetailsCSV.addLine(line);
+					keptEvents.add(rup);
+					keptFractsInReg.add(fract);
+				}
+				if (gridded)
+					keptGridded += rups.size();
+				else
+					keptFault += rups.size();
 			}
-			if (gridded)
-				keptGridded += rups.size();
-			else
-				keptFault += rups.size();
+			eventDetailsCSV.writeToFile(new File(outputDir, "event_details.csv"));
+//			System.exit(0);
+			if (regionalSupersampling != null)
+				System.out.println("Supersampled "+numSupersampled+"/"+(erf.getNumSources()-erf.getNumFaultSystemSources())+" gridded sources");
+			if (relocateRand != null)
+				System.out.println("Relocated "+numRelocated+" gridded ruptures");
+			Preconditions.checkState(keptEvents.size() == keptFractsInReg.size());
+			
+			System.out.println("Kept "+keptEvents.size()+" events");
+			System.out.println("Kept "+keptFault+" fault events");
+			System.out.println("Kept "+keptGridded+" grid events");
+		} else {
+			keptEvents = new ArrayList<>();
+			keptFractsInReg = new ArrayList<>();
+			
+			double rateEach = 1d/catYears;
+			double probEach = 1d - Math.exp(-rateEach);
+			CSVFile<String> catalog = CSVFile.readFile(catalogFile, true);
+			for (int row=1; row<catalog.getNumRows(); row++) {
+				double lat = catalog.getDouble(row, 1);
+				double lon = catalog.getDouble(row, 2);
+				double depth = catalog.getDouble(row, 3);
+				double mag = catalog.getDouble(row, 4);
+				double rake = catalogDefaultRake;
+				Location loc = new Location(lat, lon, depth);
+				Preconditions.checkState(reg.contains(loc));
+				if (mag >= 5d)
+					System.out.println("M"+(float)mag+" at "+catalog.get(row, 0));
+				keptFractsInReg.add(1d);
+				RuptureSurface surf;
+				if ((float)mag == 6.89f) {
+					System.out.println("Attaching Loma Prieta finite surface");
+					File finiteDir = new File("/home/kevin/workspace/opensha/src/main/resources/data/erf/ucerf3/EarthquakeCatalog");
+					File finiteFile = new File(finiteDir, "UCERF3_finite.dat");
+					ObsEqkRupList inputRups = UCERF3_CatalogParser.loadCatalog(new File(finiteDir, "ofr2013-1165_EarthquakeCat.txt"));
+					
+					List<ObsEqkRupture> finiteRups = JeanneFileLoader.loadFiniteRups(finiteFile, inputRups);
+					surf = null;
+					for (ObsEqkRupture rup : finiteRups) {
+						if ((float)rup.getMag() == (float)mag && LocationUtils.horzDistanceFast(loc, rup.getHypocenterLocation()) < 1d) {
+							surf = rup.getRuptureSurface();
+							System.out.println("Found it! Surface type: "+surf.getClass().getName()+", mag: "+(float)rup.getMag()+", id: "+rup.getEventId()+", rake: "+rup.getAveRake());
+							if (Double.isFinite(rup.getAveRake()))
+								rake = rup.getAveRake();
+							if (surf instanceof GriddedSurfaceImpl) {
+								// convert to approx
+								GriddedSurfaceImpl origSurf = (GriddedSurfaceImpl)surf;
+								FaultTrace upper = origSurf.getEvenlyDiscritizedUpperEdge();
+								FaultTrace lower = origSurf.getEvenlyDiscritizedLowerEdge();
+								surf = new ApproxEvenlyGriddedSurface(upper, lower, 1d);
+								System.out.println("\tTranslated to an ApproxEvenlyGriddedSurface");
+								System.out.println("\tDip is "+surf.getAveDip());
+							}
+						}
+					}
+					Preconditions.checkNotNull(surf, "Didn't find it");
+				} else {
+//					surf = new PointSurface(lat, lon, depth);
+					surf = new PointSurface(lat, lon, 0d);
+					((PointSurface)surf).setAveDip(90d);
+				}
+				ProbEqkRupture rup = new ProbEqkRupture(mag, rake, probEach, surf, loc);
+				keptEvents.add(rup);
+			}
 		}
-		eventDetailsCSV.writeToFile(new File(outputDir, "event_details.csv"));
-//		System.exit(0);
-		if (regionalSupersampling != null)
-			System.out.println("Supersampled "+numSupersampled+"/"+(erf.getNumSources()-erf.getNumFaultSystemSources())+" gridded sources");
-		if (relocateRand != null)
-			System.out.println("Relocated "+numRelocated+" gridded ruptures");
-		Preconditions.checkState(keptEvents.size() == keptFractsInReg.size());
-		erf = null; // don't use me!
-		System.out.println("Kept "+keptEvents.size()+" events");
-		System.out.println("Kept "+keptFault+" fault events");
-		System.out.println("Kept "+keptGridded+" grid events");
+		
 		int bundleSize = 1000;
 		List<List<ProbEqkRupture>> eventBundles = new ArrayList<>();
 		List<ProbEqkRupture> curBundle = null;
@@ -368,7 +481,162 @@ public class BayAreaRegionalGroundMotionCalc {
 		System.out.println("Nucleation rate:\t"+(float)sumNuclRate+" ("+pDF.format(sumNuclRate/sumRate)+")");
 //		System.exit(0);
 		
+		// write out epicenter curves
+		DiscretizedFunc[] epiMedianExceeds = new DiscretizedFunc[epiMinMags.length];
+		DiscretizedFunc[] epiExceeds = new DiscretizedFunc[epiMinMags.length];
+		for (int m=0; m<epiMinMags.length; m++) {
+			epiMedianExceeds[m] = xVals.deepClone();
+			epiMedianExceeds[m].scale(0d);
+			epiExceeds[m] = xVals.deepClone();
+			epiExceeds[m].scale(0d);
+		}			
+		
 		ExecutorService exec = Executors.newFixedThreadPool(calcThreads);
+		ArrayDeque<Future<EpiCalcCallable>> epiFutures = new ArrayDeque<>(calcThreads);
+		
+		int numWithHypos = 0;
+		double epiSumRate = 0d;
+		Map<RuptureSurface, BitSet> subSectInRegionBitSets = new HashMap<>();
+		Map<RuptureSurface, Integer> subSectLocsInRegion = new HashMap<>();
+		System.out.println("Doing epicentral IM calculations");
+		for (ProbEqkRupture rup : keptEvents) {
+			Location hypo = rup.getHypocenterLocation();
+			double rate = rup.getMeanAnnualRate(1d);
+			if (rate == 0d)
+				continue;
+			List<Site> epiSites = new ArrayList<>();
+			double ratePerEpi;
+			if (hypo == null) {
+				RuptureSurface fullSurf = rup.getRuptureSurface();
+				BitSet hypoBitSet = new BitSet(sitesAtNodes.size());
+				List<? extends RuptureSurface> surfsToCheck;
+				if (fullSurf instanceof CompoundSurface) {
+					surfsToCheck = ((CompoundSurface)fullSurf).getSurfaceList();
+				} else {
+					surfsToCheck = List.of(fullSurf);
+				}
+				int totSurfLocs = 0;
+				int mappedSurfLocs = 0;
+				for (RuptureSurface surf : surfsToCheck) {
+					BitSet subSurfBitSet = subSectInRegionBitSets.get(surf);
+					if (subSurfBitSet != null) {
+						// already cached
+						hypoBitSet.or(subSurfBitSet);
+						mappedSurfLocs += subSectLocsInRegion.get(surf);
+						totSurfLocs += surf.getEvenlyDiscretizedNumLocs();
+					} else {
+						subSurfBitSet = new BitSet(sitesAtNodes.size());
+						int myNumLocs = 0;
+						int myMappedLocs = 0;
+						for (Location loc : surf.getEvenlyDiscritizedListOfLocsOnSurface()) {
+							myNumLocs++;
+							int gridIndex = gridReg.indexForLocation(loc);
+							if (gridIndex >= 0 && sitesAtNodes.get(gridIndex) != null) {
+								myMappedLocs++;
+								subSurfBitSet.set(gridIndex);
+								hypoBitSet.set(gridIndex);
+							}
+						}
+						totSurfLocs += myNumLocs;
+						mappedSurfLocs += myMappedLocs;
+						if (surfsToCheck.size() > 1) {
+							subSectInRegionBitSets.put(surf, subSurfBitSet);
+							subSectLocsInRegion.put(surf, myMappedLocs);
+						}
+					}
+				}
+				Preconditions.checkState(totSurfLocs > 0);
+				Preconditions.checkState(mappedSurfLocs <= totSurfLocs);
+				if (hypoBitSet.cardinality() == 0) {
+					// no overlap with region
+					continue;
+				} else {
+					double nuclRate = rate * (double)mappedSurfLocs/(double)totSurfLocs;
+					ratePerEpi = nuclRate / (double)hypoBitSet.cardinality();
+					for (int i=0; i<sitesAtNodes.size(); i++)
+						if (hypoBitSet.get(i))
+							epiSites.add(sitesAtNodes.get(i));
+				}
+			} else {
+				numWithHypos++;
+				int gridIndex = gridReg.indexForLocation(hypo);
+				if (gridIndex < 0)
+					continue;
+				Site site = sitesAtNodes.get(gridIndex);
+				if (site == null)
+					// offshore
+					continue;
+				site = (Site)site.clone();
+				site.setLocation(new Location(hypo.lat, hypo.lon));
+				epiSites.add(site);
+				ratePerEpi = rate;
+			}
+			Preconditions.checkState((float)(ratePerEpi*epiSites.size()) <= (float)rate);
+			Preconditions.checkState(ratePerEpi > 0d);
+			epiSumRate += ratePerEpi*epiSites.size();
+			
+			EpiCalcCallable calc;
+			if (epiFutures.size() == calcThreads) {
+				// wait on a previous future
+				try {
+					calc = epiFutures.pop().get();
+				} catch (InterruptedException | ExecutionException e) {
+					throw ExceptionUtils.asRuntimeException(e);
+				}
+				for (int m=0; m<epiMinMags.length; m++) {
+					if ((float)calc.event.getMag() >= (float)epiMinMags[m]) {
+						for (int i=0; i<xVals.size(); i++) {
+							epiMedianExceeds[m].set(i, epiMedianExceeds[m].getY(i) + calc.epiMedianExceeds.getY(i));
+							epiExceeds[m].set(i, epiExceeds[m].getY(i) + calc.epiExceeds.getY(i));
+						}
+					}
+				}
+			} else {
+				calc = new EpiCalcCallable(empGMMRef, period, xVals);
+			}
+			calc.setEvent(rup, epiSites, ratePerEpi);
+			epiFutures.addLast(exec.submit(calc));
+		}
+		while (!epiFutures.isEmpty()) {
+			EpiCalcCallable calc;
+			try {
+				calc = epiFutures.pop().get();
+			} catch (InterruptedException | ExecutionException e) {
+				throw ExceptionUtils.asRuntimeException(e);
+			}
+			for (int m=0; m<epiMinMags.length; m++) {
+				if ((float)calc.event.getMag() >= (float)epiMinMags[m]) {
+					for (int i=0; i<xVals.size(); i++) {
+						epiMedianExceeds[m].set(i, epiMedianExceeds[m].getY(i) + calc.epiMedianExceeds.getY(i));
+						epiExceeds[m].set(i, epiExceeds[m].getY(i) + calc.epiExceeds.getY(i));
+					}
+				}
+			}
+		}
+		System.out.println(numWithHypos+"/"+keptEvents.size()+" events had hypos");
+		System.out.println("Epi on land rate:\t"+(float)epiSumRate+" ("+pDF.format(epiSumRate/sumNuclRate)
+				+" of nucl, "+pDF.format(epiSumRate/sumRate)+" of total)");
+		Preconditions.checkState(numWithHypos > 0);
+		for (int m=0; m<epiMinMags.length; m++) {
+			CSVFile<String> epiFuncsCSV = new CSVFile<>(true);
+			epiFuncsCSV.addLine(perLabel, "Epicentral Median Exceedance Rate (1/yr)", "Epicentral Full Exceedance Rate (1/yr)");
+			for (int i=0; i<xVals.size(); i++)
+				epiFuncsCSV.addLine((float)xVals.getX(i)+"", (float)epiMedianExceeds[m].getY(i)+"", (float)epiExceeds[m].getY(i)+"");
+			String epiPrefix = perSuffix+"_epicentral_exceedances_m"+oDF.format(epiMinMags[m]);
+			epiFuncsCSV.writeToFile(new File(outputDir, epiPrefix+".csv"));
+			epiMedianExceeds[m].setName("Epicenter Median Exceedances");
+			epiExceeds[m].setName("Epicenter Exceedances");
+			PlotSpec epiPlot = new PlotSpec(List.of(epiMedianExceeds[m], epiExceeds[m]),
+					List.of(new PlotCurveCharacterstics(PlotLineType.SOLID, 3f, Colors.tab_blue),
+							new PlotCurveCharacterstics(PlotLineType.SOLID, 3f, Colors.tab_orange)),
+					" ", perLabel, "Annual Exceedance Rate (1/yr)");
+			epiPlot.setLegendVisible(true);
+			HeadlessGraphPanel gp = PlotUtils.initHeadless();
+			gp.drawGraphPanel(epiPlot, false, true, new Range(0d, 1d), new Range(1e-3, 1e1));
+			PlotUtils.writePlots(outputDir, epiPrefix, gp, 800, 750, true, true, false);
+		}
+		if (!doMapCalc)
+			System.exit(0);
 		
 		List<CalcCallable> calls = new ArrayList<>();
 		for (int i=0; i<calcThreads; i++)
@@ -599,6 +867,98 @@ public class BayAreaRegionalGroundMotionCalc {
 			super();
 			this.siteIndex = siteIndex;
 			this.muValues = muValues;
+		}
+	}
+	
+	private static class EpiCalcCallable implements Callable<EpiCalcCallable> {
+		private ScalarIMR gmm;
+		private double[] xValsArray;
+		private DiscretizedFunc logExceedFunc;
+		private Map<RuptureSurface, CustomCacheWrappedSurface> wrappedMap;
+		
+		// inputs for each batch
+		private ProbEqkRupture event;
+		private List<Site> sites;
+		private double ratePerEpi;
+		
+		// outputs
+		private DiscretizedFunc epiMedianExceeds;
+		private DiscretizedFunc epiExceeds;
+		
+		public EpiCalcCallable(AttenRelRef gmmRef, double period, DiscretizedFunc xVals) {
+			gmm = gmmRef.get();
+			setPeriod(gmm, period);
+			xValsArray = new double[xVals.size()];
+			double[] logXValsArray = new double[xVals.size()];
+			for (int i=0; i<xVals.size(); i++) {
+				xValsArray[i] = xVals.getX(i);
+				logXValsArray[i] = Math.log(xValsArray[i]);
+			}
+			logExceedFunc = new LightFixedXFunc(logXValsArray, new double[xValsArray.length]);
+			this.wrappedMap = new HashMap<>();
+		}
+		
+		public void setEvent(ProbEqkRupture event, List<Site> sites, double ratePerEpi) {
+			epiMedianExceeds = null;
+			epiExceeds = null;
+			this.event = event;
+			this.sites = sites;
+			this.ratePerEpi = ratePerEpi;
+		}
+
+		@Override
+		public EpiCalcCallable call() throws Exception {
+			Preconditions.checkNotNull(event);
+			Preconditions.checkNotNull(sites);
+			
+			RuptureSurface surf = event.getRuptureSurface();
+			if (surf instanceof CompoundSurface) {
+				RuptureSurface wrappedSurf = DistCachedERFWrapper.getWrappedSurface(wrappedMap, surf);
+				event = new DistCacheWrapperRupture(event, wrappedSurf);
+			}
+			
+			epiMedianExceeds = new LightFixedXFunc(xValsArray, new double[xValsArray.length]);
+			epiExceeds = new LightFixedXFunc(xValsArray, new double[xValsArray.length]);
+			
+			gmm.setEqkRupture(event);
+			for (Site site : sites) {
+				gmm.setSite(site);
+				double mean = gmm.getMean();
+				gmm.getExceedProbabilities(logExceedFunc);
+//				if (site.getLocation().getLatitude() == 37.27 && site.getLocation().lon == -121.67 && event.getMag() == 4.3) {
+				if (site.getLocation().getLatitude() == 37.04 && site.getLocation().lon == -121.78 && event.getMag() == 4.7) {
+//				if (false) {
+					System.out.println("DEBUG!!!");
+					System.out.println("\tGM:\tmu="+(float)mean+" ln(g) = "+(float)Math.exp(mean)+" (g), sigma="+(float)gmm.getStdDev());
+					if (gmm instanceof NSHMP_GMM_Wrapper) {
+						NSHMP_GMM_Wrapper wrappedGMM = (NSHMP_GMM_Wrapper)gmm;
+						System.out.println("GM logic tree: "+wrappedGMM.getGroundMotionTree());
+						System.out.println("GM input: "+wrappedGMM.getCurrentGmmInput());
+					}
+					System.out.println(gmm.getShortName()+" params:");
+					System.out.println("ERF:");
+					for (Parameter<?> param : gmm.getEqkRuptureParams())
+						System.out.println("\t"+param.getName()+":\t"+param.getValue());
+					System.out.println("Propogation:");
+					for (Parameter<?> param : gmm.getPropagationEffectParams())
+						System.out.println("\t"+param.getName()+":\t"+param.getValue());
+					System.out.println("Other:");
+					for (Parameter<?> param : gmm.getOtherParams())
+						System.out.println("\t"+param.getName()+":\t"+param.getValue());
+					System.out.println("Site:");
+					for (Parameter<?> param : gmm.getSiteParams())
+						System.out.println("\t"+param.getName()+":\t"+param.getValue());
+					System.out.println("\tLocation:\t"+gmm.getSite().getLocation());
+					System.out.println("Intensity measure:\t"+gmm.getIntensityMeasure().getName());
+				}
+				for (int i=0; i<logExceedFunc.size(); i++) {
+					if (mean >= logExceedFunc.getX(i))
+						epiMedianExceeds.set(i, epiMedianExceeds.getY(i) + ratePerEpi);
+					epiExceeds.set(i, epiExceeds.getY(i) + ratePerEpi*logExceedFunc.getY(i));
+				}
+			}
+			sites = null;
+			return this;
 		}
 	}
 
