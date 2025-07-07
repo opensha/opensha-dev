@@ -46,7 +46,11 @@ import org.opensha.commons.param.impl.WarningDoubleParameter;
 import org.opensha.commons.util.ExceptionUtils;
 import org.opensha.commons.util.io.archive.ArchiveOutput;
 import org.opensha.commons.util.io.archive.ArchiveOutput.ParallelZipFileOutput;
+import org.opensha.sha.calc.HazardCurveCalculator;
 import org.opensha.sha.calc.params.filters.FixedDistanceCutoffFilter;
+import org.opensha.sha.calc.params.filters.SourceFilterManager;
+import org.opensha.sha.calc.params.filters.SourceFilters;
+import org.opensha.sha.earthquake.AbstractERF;
 import org.opensha.sha.earthquake.DistCachedERFWrapper;
 import org.opensha.sha.earthquake.DistCachedERFWrapper.DistCacheWrapperRupture;
 import org.opensha.sha.earthquake.PointSource;
@@ -83,6 +87,8 @@ import org.opensha.sha.imr.attenRelImpl.nshmp.NSHMP_GMM_Wrapper;
 import org.opensha.sha.imr.param.IntensityMeasureParams.PGA_Param;
 import org.opensha.sha.imr.param.IntensityMeasureParams.PGV_Param;
 import org.opensha.sha.imr.param.IntensityMeasureParams.SA_Param;
+import org.opensha.sha.imr.param.SiteParams.DepthTo1pt0kmPerSecParam;
+import org.opensha.sha.imr.param.SiteParams.DepthTo2pt5kmPerSecParam;
 import org.opensha.sha.imr.param.SiteParams.Vs30_Param;
 
 import com.google.common.base.Preconditions;
@@ -100,6 +106,7 @@ public class BayAreaRegionalGroundMotionCalc {
 		AttenRelRef gmmRef = AttenRelRef.BSSA_2014;
 		AttenRelRef empGMMRef = gmmRef;
 //		empGMMRef = AttenRelRef.WRAPPED_BSSA_2014;
+		AttenRelRef hazMapGMMRef = AttenRelRef.USGS_NSHM23_ACTIVE_SF;
 		double period = 0d;
 		String perSuffix = "pga";
 		String perLabel = "PGA (g)";
@@ -116,7 +123,8 @@ public class BayAreaRegionalGroundMotionCalc {
 		double catalogDefaultRake = Double.NaN;
 		double gridMinMag = 3.5d;
 		double[] epiMinMags = {3.5d, 4d};
-		boolean doMapCalc = false;
+		boolean doEventMapCalc = false;
+		boolean doHazardMapCalc = true;
 		
 //		File outputDir = new File(mainOutputDir, "nshm23_catalog");
 //		File catalogFile = new File(mainOutputDir, "nshm23_cat_M4_1967.csv");
@@ -125,12 +133,13 @@ public class BayAreaRegionalGroundMotionCalc {
 ////		double catalogDefaultRake = 0;
 //		double gridMinMag = Double.NaN;
 //		double[] epiMinMags = {4d};
-//		boolean doMapCalc = true;
+//		boolean doEventMapCalc = true;
+//		boolean doHazardMapCalc = false;
 		
 		Preconditions.checkState(outputDir.exists() || outputDir.mkdir());
 
-		int calcThreads = 16;
-		int zipThreads = 16;
+		int calcThreads = 30;
+		int zipThreads = 8;
 		
 		NGAW2_WrapperFullParam gmm = (NGAW2_WrapperFullParam)gmmRef.get();
 		setPeriod(gmm, period);
@@ -146,7 +155,9 @@ public class BayAreaRegionalGroundMotionCalc {
 		for (Parameter<?> param : gmm.getPropagationEffectParams())
 			System.out.println("\t"+param.getName()+":\t"+param.getValue());
 		
-		FixedDistanceCutoffFilter filter = new FixedDistanceCutoffFilter(300d);
+		SourceFilterManager filters = new SourceFilterManager(SourceFilters.FIXED_DIST_CUTOFF);
+		FixedDistanceCutoffFilter filter = filters.getFilterInstance(FixedDistanceCutoffFilter.class);
+		filter.setMaxDistance(300d);
 		
 		Region reg = LocalRegions.CONUS_SF_BAY.load();
 		GriddedRegion gridReg = new GriddedRegion(reg, 0.02, GriddedRegion.ANCHOR_0_0);
@@ -201,6 +212,29 @@ public class BayAreaRegionalGroundMotionCalc {
 		System.out.println("Have Vs30 only: "+numVs30only);
 		System.out.println("Have land only: "+numLandOnly);
 		
+		List<Site> basinSites = new ArrayList<>();
+		GriddedGeoDataSet[] basins = loadBasinDepths(new File(mainOutputDir, "bay-area.csv"));
+		int numNoBasins = 0;
+		for (Site site : sites) {
+			site = (Site) site.clone(); // this also clones params, e.g., basin
+			Location loc = site.getLocation();
+			int locIndex = basins[0].indexOf(loc);
+			if (locIndex < 0) {
+				numNoBasins++;;
+			} else {
+				double z1 = basins[0].get(locIndex);
+				double z25 = basins[1].get(locIndex);
+				if (Double.isNaN(z1)) {
+					numNoBasins++;
+				} else {
+					site.getParameter(DepthTo1pt0kmPerSecParam.NAME).setValue(z1);
+					site.getParameter(DepthTo2pt5kmPerSecParam.NAME).setValue(z25);
+				}
+			}
+			basinSites.add(site);
+		}
+		System.out.println(numNoBasins+"/"+basinSites.size()+" sites were missing basin depth data");
+		
 		CSVFile<String> sitesCSV = new CSVFile<>(true);
 		sitesCSV.addLine("Site index", "Latitude", "Longitude", "Vs30 (m/s)", "phi at r=0");
 		for (int i=0; i<sites.size(); i++) {
@@ -214,6 +248,7 @@ public class BayAreaRegionalGroundMotionCalc {
 		
 		List<ProbEqkRupture> keptEvents;
 		List<Double> keptFractsInReg;
+		AbstractERF hazardMapERF = null;
 		if (catalogFile == null) {
 			BaseFaultSystemSolutionERF erf = new BaseFaultSystemSolutionERF();
 			erf.setSolution(FaultSystemSolution.load(new File("/home/kevin/OpenSHA/nshm23/batch_inversions/2024_02_02-nshm23_branches-WUS_FM_v3/"
@@ -229,12 +264,13 @@ public class BayAreaRegionalGroundMotionCalc {
 			GridCellSupersamplingSettings regionalSupersampling = null;
 //			Random relocateRand = null;
 			Random relocateRand = new Random(123456);
+			GriddedSeismicitySettings origGridSettings = erf.getGriddedSeismicitySettings();
 			GriddedSeismicitySettings gridSettings = erf.getGriddedSeismicitySettings();
 			gridSettings = gridSettings.forSupersamplingSettings(null);
 			gridSettings = gridSettings.forSurfaceType(BackgroundRupType.FINITE);
 			gridSettings = gridSettings.forPointSourceMagCutoff(5d);
 			gridSettings = gridSettings.forMinimumMagnitude(gridMinMag);
-			System.out.println("Gridded seismicity settings:\n"+gridSettings);
+			System.out.println("Gridded seismicity settings:\t"+gridSettings);
 			erf.setGriddedSeismicitySettings(gridSettings);
 			erf.getTimeSpan().setDuration(1d);
 			
@@ -386,6 +422,12 @@ public class BayAreaRegionalGroundMotionCalc {
 			System.out.println("Kept "+keptEvents.size()+" events");
 			System.out.println("Kept "+keptFault+" fault events");
 			System.out.println("Kept "+keptGridded+" grid events");
+			
+			// now set up ERF for standard NSHM23
+			System.out.println("NSHM23 gridded seismicity settings:\t"+origGridSettings);
+			erf.setGriddedSeismicitySettings(origGridSettings);
+			erf.updateForecast();
+			hazardMapERF = erf;
 		} else {
 			keptEvents = new ArrayList<>();
 			keptFractsInReg = new ArrayList<>();
@@ -635,116 +677,207 @@ public class BayAreaRegionalGroundMotionCalc {
 			gp.drawGraphPanel(epiPlot, false, true, new Range(0d, 1d), new Range(1e-3, 1e1));
 			PlotUtils.writePlots(outputDir, epiPrefix, gp, 800, 750, true, true, false);
 		}
-		if (!doMapCalc)
-			System.exit(0);
 		
-		List<CalcCallable> calls = new ArrayList<>();
-		for (int i=0; i<calcThreads; i++)
-			calls.add(new CalcCallable(gmmRef, period, sites));
-		
-		CompletableFuture<Void> writeFuture = null;
-		
-		File outZipFile = new File(outputDir, "event_mu_maps_"+perSuffix+".zip");
-		ParallelZipFileOutput outData =
-//				new ArchiveOutput.AsynchronousZipFileOutput(outZipFile);
-				new ArchiveOutput.ParallelZipFileOutput(outZipFile, zipThreads);
-		
-		outData.setTrackBlockingTimes(true);
-		
-		Stopwatch totalWatch = Stopwatch.createStarted();
-		Stopwatch calcWatch = Stopwatch.createUnstarted();
-		Stopwatch mapWatch = Stopwatch.createUnstarted();
-		Stopwatch ioWatch = Stopwatch.createUnstarted();
-		
-		double millisToMinutes = 1d/(1000d*60d);
-		
-		for (int b=0; b<eventBundles.size(); b++) {
-			List<ProbEqkRupture> bundle = eventBundles.get(b);
-			List<Integer> idBundle = eventIDBundles.get(b);
-			Preconditions.checkState(idBundle.size() == bundle.size());
-			List<Future<List<SiteResult>>> futures = new ArrayList<>(calcThreads);
+		if (doHazardMapCalc) {
+			Preconditions.checkNotNull(hazardMapERF, "ERF is null");
+			ArrayDeque<Future<MapCalcCallable>> mapFutures = new ArrayDeque<>(calcThreads);
 			
-//			if (b == 10)
-//				break;
+			System.out.println("Calculating hazard maps for "+basinSites.size()+" sites");
 			
-			calcWatch.start();
-			ArrayDeque<Integer> sitesDeque = new ArrayDeque<>(sites.size());
-			for (int i=0; i<sites.size(); i++)
-				sitesDeque.add(i);
+			List<DiscretizedFunc> siteCurves = new ArrayList<>();
 			
-			for (CalcCallable call : calls) {
-				call.setEvents(bundle, sitesDeque);
-				futures.add(exec.submit(call));
+			for (Site site : basinSites) {
+				MapCalcCallable calc;
+				if (mapFutures.size() == calcThreads) {
+					// wait on a previous future
+					try {
+						calc = mapFutures.pop().get();
+					} catch (InterruptedException | ExecutionException e) {
+						throw ExceptionUtils.asRuntimeException(e);
+					}
+					siteCurves.add(calc.getCurve());
+					System.out.print(".");
+					if (siteCurves.size() % 100 == 0)
+						System.out.println(" "+siteCurves.size());
+				} else {
+					calc = new MapCalcCallable(hazMapGMMRef, period, xVals, hazardMapERF, filters);
+				}
+				calc.setSite(site);
+				mapFutures.addLast(exec.submit(calc));
 			}
-			
-			SiteResult[] combResults = new SiteResult[sites.size()];
-			for (Future<List<SiteResult>> future : futures) {
+			while (!mapFutures.isEmpty()) {
+				MapCalcCallable calc;
 				try {
-					for (SiteResult result : future.get())
-						combResults[result.siteIndex] = result;
-				} catch (Exception e) {
+					calc = mapFutures.pop().get();
+				} catch (InterruptedException | ExecutionException e) {
 					throw ExceptionUtils.asRuntimeException(e);
 				}
+				siteCurves.add(calc.getCurve());
+				System.out.print(".");
+				if (siteCurves.size() % 100 == 0)
+					System.out.println(" "+siteCurves.size());
 			}
-			calcWatch.stop();
-			
-			mapWatch.start();
-			List<Future<byte[]>> mapFutures = new ArrayList<>(bundle.size());
-			for (int e=0; e<bundle.size(); e++) {
-				int index = e;
-				mapFutures.add(exec.submit(new Callable<byte[]>() {
-
-					@Override
-					public byte[] call() throws Exception {
-						int size = Integer.max(1000, sites.size()*10);
-						StringWriter stringWriter = new StringWriter(size);
-						for (int s=0; s<combResults.length; s++) {
-							Preconditions.checkNotNull(combResults[s]);
-							stringWriter.write((float)combResults[s].muValues[index]+"\n");
-						}
-						stringWriter.flush();
-						return stringWriter.toString().getBytes();
-					}
-				}));
+			System.out.println(" "+siteCurves.size());
+			Preconditions.checkState(siteCurves.size() == basinSites.size());
+			List<String> header = new ArrayList<>();
+			header.addAll(List.of("Index", "Latitude", "Longitude", "Vs30 (m/s)", "Z1.0 (m)", "Z2.5 (km)"));
+			for (Point2D pt : xVals)
+				header.add((float)pt.getX()+"");
+			CSVFile<String> mapCSV = new CSVFile<>(true);
+			mapCSV.addLine(header);
+			for (int s=0; s<basinSites.size(); s++) {
+				Site site = basinSites.get(s);
+				List<String> line = new ArrayList<>(header.size());
+				line.add(s+"");
+				line.add((float)site.getLocation().lat+"");
+				line.add((float)site.getLocation().lon+"");
+				line.add(site.getParameter(Double.class, Vs30_Param.NAME).getValue().floatValue()+"");
+				Double z1 = site.getParameter(Double.class, DepthTo1pt0kmPerSecParam.NAME).getValue();
+				Double z25 = site.getParameter(Double.class, DepthTo2pt5kmPerSecParam.NAME).getValue();
+				if (z1 == null)
+					line.add("NaN");
+				else
+					line.add(z1.floatValue()+"");
+				if (z25 == null)
+					line.add("NaN");
+				else
+					line.add(z25.floatValue()+"");
+				DiscretizedFunc curve = siteCurves.get(s);
+				for (Point2D pt : curve)
+					line.add(pt.getY()+"");
+				mapCSV.addLine(line);
 			}
+			mapCSV.writeToFile(new File(outputDir, "site_hazard_curves.csv"));
+			System.out.println("DONE with site curves");
+		}
+		
+		if (doEventMapCalc) {
+			List<CalcCallable> calls = new ArrayList<>();
+			for (int i=0; i<calcThreads; i++)
+				calls.add(new CalcCallable(gmmRef, period, sites));
 			
-			List<byte[]> mapBuffers = new ArrayList<>(bundle.size());
-			for (Future<byte[]> future : mapFutures) {
-				try {
-                    mapBuffers.add(future.get());
-                } catch (Exception e) {
-                    throw ExceptionUtils.asRuntimeException(e);
-                }
-			}
+			CompletableFuture<Void> writeFuture = null;
 			
-			mapWatch.stop();
+			File outZipFile = new File(outputDir, "event_mu_maps_"+perSuffix+".zip");
+			ParallelZipFileOutput outData =
+//					new ArchiveOutput.AsynchronousZipFileOutput(outZipFile);
+					new ArchiveOutput.ParallelZipFileOutput(outZipFile, zipThreads);
 			
-			ioWatch.start();
-			if (writeFuture != null)
-				writeFuture.join();
+			outData.setTrackBlockingTimes(true);
 			
-			writeFuture = CompletableFuture.runAsync(new Runnable() {
+			Stopwatch totalWatch = Stopwatch.createStarted();
+			Stopwatch calcWatch = Stopwatch.createUnstarted();
+			Stopwatch mapWatch = Stopwatch.createUnstarted();
+			Stopwatch ioWatch = Stopwatch.createUnstarted();
+			
+			double millisToMinutes = 1d/(1000d*60d);
+			
+			for (int b=0; b<eventBundles.size(); b++) {
+				List<ProbEqkRupture> bundle = eventBundles.get(b);
+				List<Integer> idBundle = eventIDBundles.get(b);
+				Preconditions.checkState(idBundle.size() == bundle.size());
+				List<Future<List<SiteResult>>> futures = new ArrayList<>(calcThreads);
 				
-				@Override
-				public void run() {
+//				if (b == 10)
+//					break;
+				
+				calcWatch.start();
+				ArrayDeque<Integer> sitesDeque = new ArrayDeque<>(sites.size());
+				for (int i=0; i<sites.size(); i++)
+					sitesDeque.add(i);
+				
+				for (CalcCallable call : calls) {
+					call.setEvents(bundle, sitesDeque);
+					futures.add(exec.submit(call));
+				}
+				
+				SiteResult[] combResults = new SiteResult[sites.size()];
+				for (Future<List<SiteResult>> future : futures) {
 					try {
-						for (int e=0; e<bundle.size(); e++) {
-							int eventID = idBundle.get(e);
-
-							outData.putNextEntry(eventID+".txt");
-							
-							OutputStream stream = outData.getOutputStream();
-							stream.write(mapBuffers.get(e));
-							stream.flush();
-							
-							outData.closeEntry();
-						}
-					} catch (IOException e1) {
-						throw ExceptionUtils.asRuntimeException(e1);
+						for (SiteResult result : future.get())
+							combResults[result.siteIndex] = result;
+					} catch (Exception e) {
+						throw ExceptionUtils.asRuntimeException(e);
 					}
 				}
-			});
+				calcWatch.stop();
+				
+				mapWatch.start();
+				List<Future<byte[]>> mapFutures = new ArrayList<>(bundle.size());
+				for (int e=0; e<bundle.size(); e++) {
+					int index = e;
+					mapFutures.add(exec.submit(new Callable<byte[]>() {
+
+						@Override
+						public byte[] call() throws Exception {
+							int size = Integer.max(1000, sites.size()*10);
+							StringWriter stringWriter = new StringWriter(size);
+							for (int s=0; s<combResults.length; s++) {
+								Preconditions.checkNotNull(combResults[s]);
+								stringWriter.write((float)combResults[s].muValues[index]+"\n");
+							}
+							stringWriter.flush();
+							return stringWriter.toString().getBytes();
+						}
+					}));
+				}
+				
+				List<byte[]> mapBuffers = new ArrayList<>(bundle.size());
+				for (Future<byte[]> future : mapFutures) {
+					try {
+	                    mapBuffers.add(future.get());
+	                } catch (Exception e) {
+	                    throw ExceptionUtils.asRuntimeException(e);
+	                }
+				}
+				
+				mapWatch.stop();
+				
+				ioWatch.start();
+				if (writeFuture != null)
+					writeFuture.join();
+				
+				writeFuture = CompletableFuture.runAsync(new Runnable() {
+					
+					@Override
+					public void run() {
+						try {
+							for (int e=0; e<bundle.size(); e++) {
+								int eventID = idBundle.get(e);
+
+								outData.putNextEntry(eventID+".txt");
+								
+								OutputStream stream = outData.getOutputStream();
+								stream.write(mapBuffers.get(e));
+								stream.flush();
+								
+								outData.closeEntry();
+							}
+						} catch (IOException e1) {
+							throw ExceptionUtils.asRuntimeException(e1);
+						}
+					}
+				});
+				
+				ioWatch.stop();
+				
+				double totalMins = totalWatch.elapsed(TimeUnit.MILLISECONDS)*millisToMinutes;
+				double calcMins = calcWatch.elapsed(TimeUnit.MILLISECONDS)*millisToMinutes;
+				double mapMins = mapWatch.elapsed(TimeUnit.MILLISECONDS)*millisToMinutes;
+				double ioMins = ioWatch.elapsed(TimeUnit.MILLISECONDS)*millisToMinutes;
+				
+				System.out.println("Done with bundle "+b+"/"+eventBundles.size()+" ("+pDF.format((double)b/(double)eventBundles.size())+")"
+						+" in "+(float)totalMins+" m; "
+						+pDF.format(calcMins/totalMins)+" calculating; "
+						+pDF.format(mapMins/totalMins)+" building maps; "
+						+pDF.format(ioMins/totalMins)+" blocking I/O");
+				System.out.println("\t"+outData.getBlockingTimeStats());
+			}
 			
+			ioWatch.start();
+			writeFuture.join();
+			
+			outData.close();
 			ioWatch.stop();
 			
 			double totalMins = totalWatch.elapsed(TimeUnit.MILLISECONDS)*millisToMinutes;
@@ -752,29 +885,11 @@ public class BayAreaRegionalGroundMotionCalc {
 			double mapMins = mapWatch.elapsed(TimeUnit.MILLISECONDS)*millisToMinutes;
 			double ioMins = ioWatch.elapsed(TimeUnit.MILLISECONDS)*millisToMinutes;
 			
-			System.out.println("Done with bundle "+b+"/"+eventBundles.size()+" ("+pDF.format((double)b/(double)eventBundles.size())+")"
-					+" in "+(float)totalMins+" m; "
+			System.out.println("DONE in "+(float)totalMins+" m; "
 					+pDF.format(calcMins/totalMins)+" calculating; "
 					+pDF.format(mapMins/totalMins)+" building maps; "
 					+pDF.format(ioMins/totalMins)+" blocking I/O");
-			System.out.println("\t"+outData.getBlockingTimeStats());
 		}
-		
-		ioWatch.start();
-		writeFuture.join();
-		
-		outData.close();
-		ioWatch.stop();
-		
-		double totalMins = totalWatch.elapsed(TimeUnit.MILLISECONDS)*millisToMinutes;
-		double calcMins = calcWatch.elapsed(TimeUnit.MILLISECONDS)*millisToMinutes;
-		double mapMins = mapWatch.elapsed(TimeUnit.MILLISECONDS)*millisToMinutes;
-		double ioMins = ioWatch.elapsed(TimeUnit.MILLISECONDS)*millisToMinutes;
-		
-		System.out.println("DONE in "+(float)totalMins+" m; "
-				+pDF.format(calcMins/totalMins)+" calculating; "
-				+pDF.format(mapMins/totalMins)+" building maps; "
-				+pDF.format(ioMins/totalMins)+" blocking I/O");
 		
 		exec.shutdown();
 	}
@@ -960,6 +1075,99 @@ public class BayAreaRegionalGroundMotionCalc {
 			sites = null;
 			return this;
 		}
+	}
+	
+	private static class MapCalcCallable implements Callable<MapCalcCallable> {
+		private ScalarIMR gmm;
+		private double[] xValsArray;
+		private DiscretizedFunc logExceedFunc;
+		private DistCachedERFWrapper erf;
+		private HazardCurveCalculator calc;
+		
+		// inputs for each batch
+		private Site site;
+		
+		// outputs
+		private DiscretizedFunc curve;
+		
+		public MapCalcCallable(AttenRelRef gmmRef, double period, DiscretizedFunc xVals, AbstractERF erf, SourceFilterManager filters) {
+			gmm = gmmRef.get();
+			setPeriod(gmm, period);
+			xValsArray = new double[xVals.size()];
+			double[] logXValsArray = new double[xVals.size()];
+			for (int i=0; i<xVals.size(); i++) {
+				xValsArray[i] = xVals.getX(i);
+				logXValsArray[i] = Math.log(xValsArray[i]);
+			}
+			logExceedFunc = new LightFixedXFunc(logXValsArray, new double[xValsArray.length]);
+			calc = new HazardCurveCalculator(filters);
+			this.erf = new DistCachedERFWrapper(erf);
+		}
+		
+		public void setSite(Site site) {
+			this.site = site;
+		}
+
+		@Override
+		public synchronized MapCalcCallable call() throws Exception {
+			Preconditions.checkState(curve == null);
+			Preconditions.checkNotNull(site);
+			
+			calc.getHazardCurve(logExceedFunc, site, gmm, erf);
+			curve = new LightFixedXFunc(xValsArray, new double[xValsArray.length]);
+			for (int i=0; i<xValsArray.length; i++)
+				curve.set(i, logExceedFunc.getY(i));
+			
+			site = null;
+			return this;
+		}
+		
+		public DiscretizedFunc getCurve() {
+			DiscretizedFunc curve = this.curve;
+			Preconditions.checkNotNull(curve);
+			this.curve = null;
+			return curve;
+		}
+	}
+	
+	private static GriddedGeoDataSet[] loadBasinDepths(File file) throws IOException {
+		CSVFile<String> csv = CSVFile.readFile(file, true);
+		double minLat = Double.POSITIVE_INFINITY;
+		double maxLat = Double.NEGATIVE_INFINITY;
+		double minLon = Double.POSITIVE_INFINITY;
+		double maxLon = Double.NEGATIVE_INFINITY;
+		List<Location> locs = new ArrayList<>(csv.getNumRows()-1);
+		List<Double> z1s = new ArrayList<>(csv.getNumRows()-1);
+		List<Double> z25s = new ArrayList<>(csv.getNumRows()-1);
+		for (int row=1; row<csv.getNumRows(); row++) {
+			Location loc = new Location(csv.getDouble(row, 1), csv.getDouble(row, 0));
+			minLat = Math.min(minLat, loc.lat);
+			maxLat = Math.max(maxLat, loc.lat);
+			minLon = Math.min(minLon, loc.lon);
+			maxLon = Math.max(maxLon, loc.lon);
+			locs.add(loc);
+			z1s.add(csv.getDouble(row, 2)*1000d); // km -> m
+			z25s.add(csv.getDouble(row, 3)); // km -> m
+		}
+		System.out.println("Basin depth region: "+minLat+"/"+minLon+" to "+maxLat+"/"+maxLon);
+		Region reg = new Region(new Location(minLat-0.0001, minLon-0.0001), new Location(maxLat+0.0001, maxLon+0.0001));
+		GriddedRegion gridReg = new GriddedRegion(reg, 0.01, locs.get(0));
+		System.out.println("File has "+locs.size()+" locs, grid reg would have "+gridReg.getNodeCount());
+		GriddedGeoDataSet[] ret = {
+				new GriddedGeoDataSet(gridReg),
+				new GriddedGeoDataSet(gridReg)
+		};
+		// init to NaN for no data
+		for (GriddedGeoDataSet xyz : ret)
+			for (int i=0; i<gridReg.getNodeCount(); i++)
+				xyz.set(i, Double.NaN);
+		for (int l=0; l<locs.size(); l++) {
+			int ind = gridReg.indexForLocation(locs.get(l));
+			Preconditions.checkState(ind >= 0);
+			ret[0].set(ind, z1s.get(l));
+			ret[1].set(ind, z25s.get(l));
+		}
+		return ret;
 	}
 
 }
