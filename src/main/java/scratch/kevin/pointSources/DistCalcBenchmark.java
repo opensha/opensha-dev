@@ -28,8 +28,7 @@ import com.google.common.base.Stopwatch;
 class DistCalcBenchmark {
 	
 	private enum SurfType {
-		PT_SURF_FOOTWALL("Point Surface (footwall)"),
-		PT_SURF_HANGING_WALL("Point Surface (hanging wall)"),
+		PT_SURF("Point Surface"),
 		FINITE_QUAD("Finite Quad Surface"),
 		FINITE_RECT("Finite Rect Surface"),
 		FINITE_GRIDDED("Finite Gridded Surface");
@@ -42,12 +41,8 @@ class DistCalcBenchmark {
 		
 		public RuptureSurface buildSurface(PointSurfaceBuilder builder) {
 			switch (this) {
-			case PT_SURF_FOOTWALL:
-				builder.footwall(true);
-				return builder.buildFiniteApproxPointSurface();
-			case PT_SURF_HANGING_WALL:
-				builder.footwall(false);
-				return builder.buildFiniteApproxPointSurface();
+			case PT_SURF:
+				return builder.buildPointSurface();
 			case FINITE_GRIDDED:
 				return builder.buildGriddedSurface();
 			case FINITE_QUAD:

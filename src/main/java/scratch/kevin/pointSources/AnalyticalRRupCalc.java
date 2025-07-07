@@ -6,7 +6,6 @@ import org.opensha.commons.data.function.EvenlyDiscretizedFunc;
 import org.opensha.commons.data.function.HistogramFunction;
 import org.opensha.commons.geo.Location;
 import org.opensha.commons.geo.LocationUtils;
-import org.opensha.sha.faultSurface.FiniteApproxPointSurface;
 import org.opensha.sha.faultSurface.QuadSurface;
 import org.opensha.sha.faultSurface.utils.PointSurfaceBuilder;
 
@@ -73,9 +72,9 @@ public class AnalyticalRRupCalc {
 			double maxRrup = StatUtils.max(rRups);
 			double avgRrup = StatUtils.mean(rRups);
 			System.out.println("\tQuad Rrup mean="+(float)avgRrup+", range=["+(float)minRrup+", "+(float)maxRrup+")");
-			double fwRrup = FiniteApproxPointSurface.getCorrDistRup(rJB, zTop, zBot, dipRad, length, horzWidth, true);
-			double hwRrup = FiniteApproxPointSurface.getCorrDistRup(rJB, zTop, zBot, dipRad, length, horzWidth, false);
-			System.out.println("\tfw="+(float)fwRrup+"\thw="+(float)hwRrup);
+//			double fwRrup = FiniteApproxPointSurface.getCorrDistRup(rJB, zTop, zBot, dipRad, length, horzWidth, true);
+//			double hwRrup = FiniteApproxPointSurface.getCorrDistRup(rJB, zTop, zBot, dipRad, length, horzWidth, false);
+//			System.out.println("\tfw="+(float)fwRrup+"\thw="+(float)hwRrup);
 		}
 		
 //		for (double rEpi=0d; rEpi<101d; rEpi += 10d) {

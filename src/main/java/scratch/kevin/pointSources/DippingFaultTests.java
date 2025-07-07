@@ -36,14 +36,18 @@ import org.opensha.sha.earthquake.rupForecastImpl.PointSourceNshm;
 import org.opensha.sha.earthquake.util.GriddedFiniteRuptureSettings;
 import org.opensha.sha.earthquake.util.GriddedSeismicitySettings;
 import org.opensha.sha.faultSurface.PointSurface;
+import org.opensha.sha.faultSurface.PointSurface.DistanceCorrected;
 import org.opensha.sha.faultSurface.RuptureSurface;
+import org.opensha.sha.faultSurface.utils.PointSourceDistanceCorrection;
 import org.opensha.sha.faultSurface.utils.PointSourceDistanceCorrections;
 import org.opensha.sha.faultSurface.utils.PointSurfaceBuilder;
+import org.opensha.sha.faultSurface.utils.RjbDistributionDistanceCorrection;
 import org.opensha.sha.imr.AttenRelRef;
 import org.opensha.sha.imr.ScalarIMR;
 import org.opensha.sha.imr.param.IntensityMeasureParams.PGA_Param;
 import org.opensha.sha.imr.param.IntensityMeasureParams.SA_Param;
 import org.opensha.sha.util.FocalMech;
+import org.opensha.sha.util.TectonicRegionType;
 
 import com.google.common.base.Preconditions;
 
@@ -55,19 +59,30 @@ public class DippingFaultTests {
 		double mag = 6.55;
 		FocalMech mech = FocalMech.REVERSE;
 		double[] dists = {0d, 1d, 3d, 5d, 10, 15d, 20d, 24d, 50d};
+//		double[] dists = {5d};
 //		double[] dists = {15d};
+//		double[] dists = {50d};
 		double[] periods = {0d, 0.2, 1d, 5d};
 		
-		Boolean[] forceHWs = {null, false, true};
+		double testJB = 41;
+		
+		boolean printPointRrups = dists.length == 1;
+		
+//		Boolean[] forceHWs = {null, false, true};
+//		Boolean[] forceHWs = {true};
+		Boolean[] forceHWs = {null};
 		
 		Location loc = new Location(0d, 0d);
 		
 		AttenRelRef gmmRef = AttenRelRef.USGS_NSHM23_ACTIVE;
+		TectonicRegionType trt = TectonicRegionType.ACTIVE_SHALLOW;
 		
-		PointSourceDistanceCorrections distCorr = PointSourceDistanceCorrections.TWENTY_POINT_RJB_DIST;
-		
+		PointSourceDistanceCorrection distCorr = PointSourceDistanceCorrections.FIVE_POINT_RJB_DIST_ALONG.get();
 		boolean randDD = true;
 		boolean randDAS = true;
+		
+//		PointSourceDistanceCorrection distCorr = PointSourceDistanceCorrections.FIVE_POINT_RJB_DIST.get();
+////		PointSourceDistanceCorrection distCorr = PointSourceDistanceCorrections.TWENTY_POINT_RJB_DIST.get();
 //		boolean randDD = false;
 //		boolean randDAS = false;
 		
@@ -101,21 +116,19 @@ public class DippingFaultTests {
 			double widthDD = PointSourceNshm.SURF_BUILDER_DEFAULT.calcWidth(mag, zTop, dipRad);
 			double length = PointSourceNshm.SURF_BUILDER_DEFAULT.calcLength(mag);
 			builder.upperDepthWidthAndDip(zTop, widthDD, dip);
-			builder.fractionalDAS(0.5).fractionalHypocentralDepth(00.5d);
+			builder.fractionalDAS(0.5).fractionalHypocentralDepth(0.5d);
 			builder.length(length);
-			if (forceHW != null)
-				builder.footwall(!forceHW);
 			
 			DecimalFormat oDF = new DecimalFormat("0.##");
 			DecimalFormat pDF = new DecimalFormat("0.#%");
 			
-			WeightedList<? extends RuptureSurface> pointSurfs = builder.build(BackgroundRupType.POINT, distCorr, null);
-			WeightedList<? extends RuptureSurface> finiteSurfs = builder.build(BackgroundRupType.FINITE, null, finiteSettings);
+			PointSurface pointSurf = builder.buildPointSurface();
+			WeightedList<? extends RuptureSurface> finiteSurfs = builder.build(BackgroundRupType.FINITE, finiteSettings);
 			
 			System.out.println("Fault dimensions: length= "+oDF.format(length)+", zTop="+oDF.format(zTop)+", dip="+oDF.format(dip)
 					+", ddw="+oDF.format(widthDD)+", horzWidth="+oDF.format(widthDD*Math.cos(dipRad)));
 			
-			System.out.println("Built "+pointSurfs.size()+" point surfaces and "+finiteSurfs.size()+" finite surfaces");
+			System.out.println("Built 1 point surfaces and "+finiteSurfs.size()+" finite surfaces");
 			
 			ScalarIMR gmm = gmmRef.get();
 			gmm.setIntensityMeasure(PGA_Param.NAME);
@@ -135,6 +148,7 @@ public class DippingFaultTests {
 				site.addParameterList(gmm.getSiteParams());
 				gmm.setSite(site);
 				
+				WeightedList<DistanceCorrected> myPointSurfs = pointSurf.getForDistanceCorrection(siteLoc, distCorr, trt, mag);
 				WeightedList<? extends RuptureSurface> myFiniteSurfs;
 				if (forceHW == null) {
 					myFiniteSurfs = finiteSurfs;
@@ -154,6 +168,22 @@ public class DippingFaultTests {
 								+" matching finite surfaces ("+pDF.format((double)matchingFiniteSurfs.size()/(double)finiteSurfs.size())+")");
 					}
 					myFiniteSurfs = matchingFiniteSurfs;
+					
+					WeightedList<DistanceCorrected> matchingPointSurfs = new WeightedList<>();
+					for (WeightedValue<DistanceCorrected> surfVal : myPointSurfs) {
+						boolean surfHW = surfVal.value.getDistanceX(siteLoc) >= 0d;
+						if (surfHW == forceHW.booleanValue())
+							matchingPointSurfs.add(surfVal.value, surfVal.weight);
+					}
+					if (matchingPointSurfs.isEmpty()) {
+						System.out.println("ForceHW="+forceHW+" but no point surfaces match at rEpi="+oDF.format(dist)+", skipping\n");
+						continue;
+					} else {
+						matchingPointSurfs.normalize();
+						System.out.println("ForceHW="+forceHW+", found "+matchingPointSurfs.size()
+								+" matching point surfaces ("+pDF.format((double)matchingPointSurfs.size()/(double)myPointSurfs.size())+")");
+					}
+					myPointSurfs = matchingPointSurfs;
 				}
 				
 				List<XY_DataSet> rJBFuncs = new ArrayList<>();
@@ -172,17 +202,18 @@ public class DippingFaultTests {
 				double maxDist = 0d;
 				double histMax = 0d;
 				
-				String hwAnnAdd = null;
+				String hwAnnAdd = ", HW:";
 				
 				for (boolean finite : new boolean[] { true, false }) {
-					WeightedList<? extends RuptureSurface> surfs = finite ? myFiniteSurfs : pointSurfs;
+					WeightedList<? extends RuptureSurface> surfs = finite ? myFiniteSurfs : myPointSurfs;
 					String type = finite ? "finite" : "point";
 
-					System.out.println("Calculating " + type + " surface for distance " + oDF.format(dist) + " km");
+					System.out.println("Calculating " + type + " surface for rEpi=" + oDF.format(dist) + " km");
 					
 					EvenlyDiscretizedFunc rJBHist = new EvenlyDiscretizedFunc(distFunc.getMinX(), distFunc.size(), distFunc.getDelta());
 					EvenlyDiscretizedFunc rRupHist = new EvenlyDiscretizedFunc(distFunc.getMinX(), distFunc.size(), distFunc.getDelta());
-					DefaultXY_DataSet rRupVsJB = new DefaultXY_DataSet();
+					DefaultXY_DataSet rRupVsJB_hw = new DefaultXY_DataSet();
+					DefaultXY_DataSet rRupVsJB_fw = new DefaultXY_DataSet();
 					
 					MinMaxAveTracker rJBtrack = new MinMaxAveTracker();
 					MinMaxAveTracker rRuptrack = new MinMaxAveTracker();
@@ -197,6 +228,12 @@ public class DippingFaultTests {
 					for (int p=0; p<periods.length; p++)
 						exceedFuncs[p] = new EvenlyDiscretizedFunc(logIMfunc.getMinX(), logIMfunc.size(), logIMfunc.getDelta());
 					
+					Preconditions.checkState(surfs.isNormalized());
+					
+					double closestTestJBDiff = Double.POSITIVE_INFINITY;
+					double closestTestJB = Double.NaN;
+					double closestRupToTestJB = Double.NaN;
+					
 					for (WeightedValue<? extends RuptureSurface> weightedSurf : surfs) {
 						RuptureSurface surf = weightedSurf.value;
 						double weight = weightedSurf.weight;
@@ -207,7 +244,22 @@ public class DippingFaultTests {
 						double rRup = surf.getDistanceRup(siteLoc);
 						boolean hw = surf.getDistanceX(siteLoc) >= 0d;
 						
-						rRupVsJB.set(rJB, rRup);
+						if (finite && hw && Double.isFinite(testJB)) {
+							double diff = Math.abs(testJB - rJB);
+							if (diff < closestTestJBDiff) {
+								closestTestJB = rJB;
+								closestTestJBDiff = diff;
+								closestRupToTestJB = rRup;
+							}
+						}
+						
+						if (!finite && printPointRrups && hw)
+							System.out.println("\tEstimated hanging-wall rRup="+(float)rRup+" for rJB="+(float)rJB);
+						
+						if (hw)
+							rRupVsJB_hw.set(rJB, rRup);
+						else
+							rRupVsJB_fw.set(rJB, rRup);
 						
 						minDist = Math.min(minDist, Math.min(rJB, rRup));
 						maxDist = Math.max(maxDist, Math.max(rJB, rRup));
@@ -255,8 +307,21 @@ public class DippingFaultTests {
 					System.out.println("\trRup weighted avg:\t"+(float)rRupAvg);
 					System.out.println("\tFract HW:\t"+(float)fractHW);
 					
+					if (finite && Double.isFinite(testJB) && closestTestJBDiff < 1) {
+						System.out.println("Found a close finite FW case to rJB="+(float)testJB);
+						System.out.println("\tcloseJB="+(float)closestTestJB);
+						System.out.println("\trRup="+(float)closestRupToTestJB);
+						System.out.println("Doing pt src equiv");
+						double ptRrup = RjbDistributionDistanceCorrection.getCorrDistRup(closestTestJB, dist, zTop,
+								pointSurf.getAveRupBottomDepth(), dipRad, length, pointSurf.getAveHorizontalWidth(), false);
+						System.out.println("\tPt rRup="+(float)ptRrup);
+					}
+					
 					if (finite)
-						hwAnnAdd = ", "+pDF.format(fractHW)+" HW";
+						hwAnnAdd += " F=";
+					else
+						hwAnnAdd += " Pt=";
+					hwAnnAdd += pDF.format(fractHW);
 					
 					if (Double.isFinite(curFirstHWStrike))
 						hwRanges.add(new Range(curFirstHWStrike, curLastHWStrike));
@@ -278,6 +343,8 @@ public class DippingFaultTests {
 					Color histColor;
 					Color lineColor;
 					PlotSymbol scatterSymbol;
+					Color scatterColorFW;
+					Color scatterColorHW;
 					PlotLineType gmLineType;
 					String name;
 					if (finite) {
@@ -285,6 +352,8 @@ public class DippingFaultTests {
 //						histColor = Colors.tab_lightorange;
 						lineColor = Colors.tab_orange;
 						histColor = new Color(lineColor.getRed(), lineColor.getGreen(), lineColor.getBlue(), 127);
+						scatterColorHW = Colors.tab_orange;
+						scatterColorFW = Colors.tab_lightorange;
 						scatterSymbol = PlotSymbol.BOLD_CROSS;
 						gmLineType = PlotLineType.SOLID;
 					} else {
@@ -292,6 +361,8 @@ public class DippingFaultTests {
 //						histColor = Colors.tab_lightblue;
 						lineColor = Colors.tab_blue;
 						histColor = new Color(lineColor.getRed(), lineColor.getGreen(), lineColor.getBlue(), 127);
+						scatterColorHW = Colors.tab_blue;
+						scatterColorFW = Colors.tab_lightblue;
 						scatterSymbol = PlotSymbol.BOLD_X;
 						gmLineType = PlotLineType.SHORT_DASHED;
 					}
@@ -299,7 +370,12 @@ public class DippingFaultTests {
 					rRupHist.setName(name+" Distribution");
 					meanRjbLine.setName(name+" Mean");
 					meanRrupLine.setName(name+" Mean");
-					rRupVsJB.setName(name);
+					rRupVsJB_fw.setName(name+" (FW)");
+					rRupVsJB_hw.setName(name+" (HW)");
+					if (!finite) {
+						rRupVsJB_fw.setName(rRupVsJB_fw.size()+" "+rRupVsJB_fw.getName());
+						rRupVsJB_hw.setName(rRupVsJB_hw.size()+" "+rRupVsJB_hw.getName());
+					}
 					exceedFuncs[0].setName(name);
 					
 					rJBFuncs.add(rJBHist);
@@ -312,8 +388,14 @@ public class DippingFaultTests {
 					rRupFuncs.add(meanRrupLine);
 					rRupChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 3f, lineColor));
 					
-					rRupVsJBFuncs.add(rRupVsJB);
-					rRupVsJBChars.add(new PlotCurveCharacterstics(scatterSymbol, 5f, lineColor));
+					if (forceHW == null || !forceHW) {
+						rRupVsJBFuncs.add(rRupVsJB_fw);
+						rRupVsJBChars.add(new PlotCurveCharacterstics(scatterSymbol, 5f, scatterColorFW));
+					}
+					if (forceHW == null || forceHW) {
+						rRupVsJBFuncs.add(rRupVsJB_hw);
+						rRupVsJBChars.add(new PlotCurveCharacterstics(scatterSymbol, 5f, scatterColorHW));
+					}
 					
 					for (int p=0; p<periods.length; p++)
 						gmDistFuncs.get(p).add(exceedFuncs[p]);
@@ -329,7 +411,7 @@ public class DippingFaultTests {
 				
 				PlotSpec rJBplot = new PlotSpec(rJBFuncs, rJBChars, null, "Distance (km)", "Fraction");
 				rJBplot.setLegendVisible(true);
-				XYTextAnnotation rJBAnn = new XYTextAnnotation("Rjb"+hwAnnAdd,
+				XYTextAnnotation rJBAnn = new XYTextAnnotation("rJB"+hwAnnAdd,
 						plotDistRange.getLowerBound()+0.9*plotDistRange.getLength(), 0.8*plotHistYRange.getUpperBound());
 				rJBAnn.setFont(annFont);
 				rJBAnn.setTextAnchor(TextAnchor.TOP_RIGHT);
@@ -337,7 +419,7 @@ public class DippingFaultTests {
 				
 				PlotSpec rRupPlot = new PlotSpec(rRupFuncs, rRupChars, null, "Distance (km)", "Fraction");
 				rRupPlot.setLegendVisible(false);
-				XYTextAnnotation rRupAnn = new XYTextAnnotation("Rrup"+hwAnnAdd, rJBAnn.getX(), rJBAnn.getY());
+				XYTextAnnotation rRupAnn = new XYTextAnnotation("rRup"+hwAnnAdd, rJBAnn.getX(), rJBAnn.getY());
 				rRupAnn.setFont(annFont);
 				rRupAnn.setTextAnchor(TextAnchor.TOP_RIGHT);
 				rRupPlot.addPlotAnnotation(rRupAnn);

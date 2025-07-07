@@ -79,7 +79,6 @@ import org.opensha.sha.earthquake.rupForecastImpl.PointToFiniteSource;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.gridded.NSHM23_AbstractGridSourceProvider;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.gridded.NSHM23_SingleRegionGridSourceProvider.NSHM23_WUS_FiniteRuptureConverter;
 import org.opensha.sha.earthquake.util.GriddedSeismicitySettings;
-import org.opensha.sha.faultSurface.FiniteApproxPointSurface;
 import org.opensha.sha.faultSurface.PointSurface;
 import org.opensha.sha.faultSurface.QuadSurface;
 import org.opensha.sha.faultSurface.RectangularSurface;
@@ -108,9 +107,6 @@ import net.mahdilamb.colormap.Colors;
 
 import com.google.common.collect.ImmutableMap.Builder;
 
-import scratch.kevin.pointSources.InvCDF_RJBCorrPointSurface.RJBCorrInvPDFs;
-import scratch.kevin.pointSources.TableBackedDistCorrPointSurface.DistanceCorrTables;
-
 public class PointSourceHazardComparison {
 	
 	enum PointSourceType {
@@ -131,24 +127,6 @@ public class PointSourceHazardComparison {
 			public ProbEqkSource buildSource(Location centerLoc, IncrementalMagFreqDist mfd,
 					double aveRake, double aveDip, boolean isSupersample, Random r) {
 				return new PointSourceNshm(centerLoc, mfd, 1d, mechWtMapForRake(aveRake), getDistCorr(), 6d);
-			}
-		},
-		APROX_SUPERSAMPLE_POINT_SOURCE_NSHM("Approx. Supersampled PointSourceNshm", false, PointSourceDistanceCorrections.NONE) { // none is fine here, it's baked in
-			@Override
-			public ProbEqkSource buildSource(Location centerLoc, IncrementalMagFreqDist mfd,
-					double aveRake, double aveDip, boolean isSupersample, Random r) {
-				ProbEqkSource source = POINT_SOURCE_NSHM.buildSource(centerLoc, mfd, aveRake, aveDip, isSupersample, r);
-				if (!isSupersample) {
-					// not externally supersampled, approximate it here
-					List<ProbEqkRupture> modRups = new ArrayList<>();
-					for (ProbEqkRupture rup : source) {
-						FiniteApproxPointSurface ptSurf = (FiniteApproxPointSurface)rup.getRuptureSurface();
-						rup.setRuptureSurface(new SupersampledApproxPointSurfaceNshm(ptSurf, rup.getMag(), 0.1, SUPERSAMPLE_SPACING));
-						modRups.add(rup);
-					}
-					source = new RupListSource(modRups, source);
-				}
-				return source;
 			}
 		},
 		POINT_TO_FINITE("PointToFiniteSource", true, PointSourceDistanceCorrections.NONE) {
@@ -179,20 +157,20 @@ public class PointSourceHazardComparison {
 				return new RupListSource(rups, source0);
 			}
 		},
-		SIMPLE_APPROX_FINITE_POINT_NO_CORR("Simple Approx. Finite, No Dist. Corr.", true, PointSourceDistanceCorrections.NONE) {
-			@Override
-			public ProbEqkSource buildSource(Location centerLoc, IncrementalMagFreqDist mfd, double aveRake,
-					double aveDip, boolean isSupersample, Random r) {
-				return buildPointSource(centerLoc, null, mfd, aveRake, aveDip, r, getDistCorr());
-			}
-		},
-		SIMPLE_APPROX_FINITE_POINT_NSHMP_CORR("Simple Approx. Finite, NSHMP08 Dist. Corr.", true, PointSourceDistanceCorrections.NSHM_2008) {
-			@Override
-			public ProbEqkSource buildSource(Location centerLoc, IncrementalMagFreqDist mfd, double aveRake,
-					double aveDip, boolean isSupersample, Random r) {
-				return buildPointSource(centerLoc, null, mfd, aveRake, aveDip, r, getDistCorr());
-			}
-		},
+//		SIMPLE_APPROX_FINITE_POINT_NO_CORR("Simple Approx. Finite, No Dist. Corr.", true, PointSourceDistanceCorrections.NONE) {
+//			@Override
+//			public ProbEqkSource buildSource(Location centerLoc, IncrementalMagFreqDist mfd, double aveRake,
+//					double aveDip, boolean isSupersample, Random r) {
+//				return buildPointSource(centerLoc, null, mfd, aveRake, aveDip, r, getDistCorr());
+//			}
+//		},
+//		SIMPLE_APPROX_FINITE_POINT_NSHMP_CORR("Simple Approx. Finite, NSHMP08 Dist. Corr.", true, PointSourceDistanceCorrections.NSHM_2008) {
+//			@Override
+//			public ProbEqkSource buildSource(Location centerLoc, IncrementalMagFreqDist mfd, double aveRake,
+//					double aveDip, boolean isSupersample, Random r) {
+//				return buildPointSource(centerLoc, null, mfd, aveRake, aveDip, r, getDistCorr());
+//			}
+//		},
 		SINGLE_QUAD_TRACE_CENTERED("Single Quad Surface, Trace Centered", true, PointSourceDistanceCorrections.NONE) {
 			@Override
 			public ProbEqkSource buildSource(Location centerLoc, IncrementalMagFreqDist mfd, double aveRake,
@@ -290,41 +268,41 @@ public class PointSourceHazardComparison {
 				return buildQuadSource(builder, mfd, aveRake, aveDip, isSupersample ? 2 : 8);
 			}
 		},
-		TABLE_FINITE_APPROX_POINT_SOURCE("Table-Based Finite Approx", false, PointSourceDistanceCorrections.NONE) {
-			@Override
-			public ProbEqkSource buildSource(Location centerLoc, IncrementalMagFreqDist mfd, double aveRake,
-					double aveDip, boolean isSupersample, Random r) {
-				return buildTableBackedSource(centerLoc, mfd, aveRake, aveDip, false, r);
-			}
-		},
-		TABLE_FINITE_APPROX_POINT_SOURCE_SUPERSAMPLE("Table-Based Finite Supersample Approx", false, PointSourceDistanceCorrections.NONE) {
-			@Override
-			public ProbEqkSource buildSource(Location centerLoc, IncrementalMagFreqDist mfd, double aveRake,
-					double aveDip, boolean isSupersample, Random r) {
-				return buildTableBackedSource(centerLoc, mfd, aveRake, aveDip, isSupersample ? false : true, r);
-			}
-		},
-		HAZ_EQUIV_APPROX_POINT_SOURCE("Hazard Equivalent Finite Approx", false, PointSourceDistanceCorrections.NONE) {
-			@Override
-			public ProbEqkSource buildSource(Location centerLoc, IncrementalMagFreqDist mfd, double aveRake,
-					double aveDip, boolean isSupersample, Random r) {
-				return buildHazEquivSource(centerLoc, mfd, aveRake, aveDip, this);
-			}
-		},
-		CDF_BASED_RJB_CORR_APPROX_POINT_SOURCE("RJB Distribution Approx Finite Point Source", false, PointSourceDistanceCorrections.NONE) {
-			@Override
-			public ProbEqkSource buildSource(Location centerLoc, IncrementalMagFreqDist mfd, double aveRake,
-					double aveDip, boolean isSupersample, Random r) {
-				return buildRJBCorrSource(centerLoc, mfd, aveRake, aveDip, OCT_QUAD, 5);
-			}
-		},
-		CDF_BASED_RJB_CORR_APPROX_SUPERSAMPLED_POINT_SOURCE("RJB Distribution Approx Supersampled Finite Point Source", false, PointSourceDistanceCorrections.NONE) {
-			@Override
-			public ProbEqkSource buildSource(Location centerLoc, IncrementalMagFreqDist mfd, double aveRake,
-					double aveDip, boolean isSupersample, Random r) {
-				return buildRJBCorrSource(centerLoc, mfd, aveRake, aveDip, isSupersample ? OCT_QUAD : OCT_QUAD_RAND_CELL, 5);
-			}
-		},
+//		TABLE_FINITE_APPROX_POINT_SOURCE("Table-Based Finite Approx", false, PointSourceDistanceCorrections.NONE) {
+//			@Override
+//			public ProbEqkSource buildSource(Location centerLoc, IncrementalMagFreqDist mfd, double aveRake,
+//					double aveDip, boolean isSupersample, Random r) {
+//				return buildTableBackedSource(centerLoc, mfd, aveRake, aveDip, false, r);
+//			}
+//		},
+//		TABLE_FINITE_APPROX_POINT_SOURCE_SUPERSAMPLE("Table-Based Finite Supersample Approx", false, PointSourceDistanceCorrections.NONE) {
+//			@Override
+//			public ProbEqkSource buildSource(Location centerLoc, IncrementalMagFreqDist mfd, double aveRake,
+//					double aveDip, boolean isSupersample, Random r) {
+//				return buildTableBackedSource(centerLoc, mfd, aveRake, aveDip, isSupersample ? false : true, r);
+//			}
+//		},
+//		HAZ_EQUIV_APPROX_POINT_SOURCE("Hazard Equivalent Finite Approx", false, PointSourceDistanceCorrections.NONE) {
+//			@Override
+//			public ProbEqkSource buildSource(Location centerLoc, IncrementalMagFreqDist mfd, double aveRake,
+//					double aveDip, boolean isSupersample, Random r) {
+//				return buildHazEquivSource(centerLoc, mfd, aveRake, aveDip, this);
+//			}
+//		},
+//		CDF_BASED_RJB_CORR_APPROX_POINT_SOURCE("RJB Distribution Approx Finite Point Source", false, PointSourceDistanceCorrections.NONE) {
+//			@Override
+//			public ProbEqkSource buildSource(Location centerLoc, IncrementalMagFreqDist mfd, double aveRake,
+//					double aveDip, boolean isSupersample, Random r) {
+//				return buildRJBCorrSource(centerLoc, mfd, aveRake, aveDip, OCT_QUAD, 5);
+//			}
+//		},
+//		CDF_BASED_RJB_CORR_APPROX_SUPERSAMPLED_POINT_SOURCE("RJB Distribution Approx Supersampled Finite Point Source", false, PointSourceDistanceCorrections.NONE) {
+//			@Override
+//			public ProbEqkSource buildSource(Location centerLoc, IncrementalMagFreqDist mfd, double aveRake,
+//					double aveDip, boolean isSupersample, Random r) {
+//				return buildRJBCorrSource(centerLoc, mfd, aveRake, aveDip, isSupersample ? OCT_QUAD : OCT_QUAD_RAND_CELL, 5);
+//			}
+//		},
 		FIVE_POINT_RJB_DIST("5-pt RJB Distribution", false, PointSourceDistanceCorrections.FIVE_POINT_RJB_DIST) {
 			@Override
 			public ProbEqkSource buildSource(Location centerLoc, IncrementalMagFreqDist mfd, double aveRake,
@@ -531,225 +509,227 @@ public class PointSourceHazardComparison {
 		return new RupListSource(rups, null);
 	}
 	
-	private static ProbEqkSource buildPointSource(Location centerLoc, Region cell, IncrementalMagFreqDist mfd,
-			double aveRake, double aveDip, Random r, PointSourceDistanceCorrection distCorr) {
-		PointSurfaceBuilder builder = new PointSurfaceBuilder(centerLoc);
-		builder.dip(aveDip);
-		builder.random(r);
-		builder.sampleFromCell(cell);
-		double dipRad = Math.toRadians(aveDip);
-		int expectedSize = mfd.size();
-		if (aveDip != 90d)
-			expectedSize *= 2;
-		List<ProbEqkRupture> rups = new ArrayList<>(expectedSize);
-		for (int i=0; i<mfd.size(); i++) {
-			double mag = mfd.getX(i);
-			double depth = (float)mag < 6.5f ? 5d : 1d;
-			double length = WC94.getMedianLength(mag);
-			double aspectWidth = length / 1.5;
-			double ddWidth = (14.0 - depth) / Math.sin(dipRad);
-			ddWidth = Math.min(aspectWidth, ddWidth);
-			double lower = depth + ddWidth * Math.sin(dipRad);
-
-			builder.length(length);
-			builder.upperDepth(depth).lowerDepth(lower);
-			
-			double totRate = mfd.getY(i);
-			WeightedList<FiniteApproxPointSurface> surfs = builder.buildFiniteApproxPointSurfaces(distCorrs);
-			
-			for (WeightedValue<FiniteApproxPointSurface> surfWeight : surfs) {
-				double myRate = totRate*surfWeight.weight;
-				double myProb = 1-Math.exp(-myRate);
-				ProbEqkRupture rup = new ProbEqkRupture(mag, aveRake, myProb, surfWeight.value, null);
-				rups.add(rup);
-			}
-		}
-		return new RupListSource(rups, null);
-	}
+//	private static ProbEqkSource buildPointSource(Location centerLoc, Region cell, IncrementalMagFreqDist mfd,
+//			double aveRake, double aveDip, Random r, PointSourceDistanceCorrection distCorr) {
+//		PointSurfaceBuilder builder = new PointSurfaceBuilder(centerLoc);
+//		builder.dip(aveDip);
+//		builder.random(r);
+//		builder.sampleFromCell(cell);
+//		double dipRad = Math.toRadians(aveDip);
+//		int expectedSize = mfd.size();
+//		if (aveDip != 90d)
+//			expectedSize *= 2;
+//		List<ProbEqkRupture> rups = new ArrayList<>(expectedSize);
+//		for (int i=0; i<mfd.size(); i++) {
+//			double mag = mfd.getX(i);
+//			double depth = (float)mag < 6.5f ? 5d : 1d;
+//			double length = WC94.getMedianLength(mag);
+//			double aspectWidth = length / 1.5;
+//			double ddWidth = (14.0 - depth) / Math.sin(dipRad);
+//			ddWidth = Math.min(aspectWidth, ddWidth);
+//			double lower = depth + ddWidth * Math.sin(dipRad);
+//
+//			builder.length(length);
+//			builder.upperDepth(depth).lowerDepth(lower);
+//			
+//			double totRate = mfd.getY(i);
+//			
+//			RuptureSurface surf = builder.buildPointSurface();
+//			WeightedList<FiniteApproxPointSurface> surfs = builder.buildFiniteApproxPointSurfaces(distCorrs);
+//			
+//			for (WeightedValue<FiniteApproxPointSurface> surfWeight : surfs) {
+//				double myRate = totRate*surfWeight.weight;
+//				double myProb = 1-Math.exp(-myRate);
+//				ProbEqkRupture rup = new ProbEqkRupture(mag, aveRake, myProb, surfWeight.value, null);
+//				rups.add(rup);
+//			}
+//		}
+//		return new RupListSource(rups, null);
+//	}
 	
 	private static File REF_MAIN_DIR = new File("/home/kevin/markdown/nshm23-misc/point_source_corr");
 	
-	private static DistanceCorrTables vertCenteredTables = null;
-	private static DistanceCorrTables vertSupersampleTables = null;
-	private static DistanceCorrTables dippingCenteredTables = null;
-	private static DistanceCorrTables dippingSupersampleTables = null;
-	private static File refTablesDir = new File(REF_MAIN_DIR, "OCT_QUAD/resources/");
-	
-	public static ProbEqkSource buildTableBackedSource(Location centerLoc, IncrementalMagFreqDist mfd, double aveRake,
-			double aveDip, boolean isSupersample, Random r) {
-		DistanceCorrTables distCorr = getLoadTables(aveDip, isSupersample);
-		
-		double dipRad = Math.toRadians(aveDip);
-		List<ProbEqkRupture> rups = new ArrayList<>();
-		ProbEqkSource source0 = null;
-		for (int i=0; i<mfd.size(); i++) {
-			double mag = mfd.getX(i);
-			double depth = (float)mag <= 6.5f ? 5d : 1d;
-			double length = WC94.getMedianLength(mag);
-			double aspectWidth = length / 1.5;
-			double ddWidth = (14.0 - depth) / Math.sin(dipRad);
-			ddWidth = Math.min(aspectWidth, ddWidth);
-			double lower = depth + ddWidth * Math.sin(dipRad);
-
-			TableBackedDistCorrPointSurface surf = new TableBackedDistCorrPointSurface(
-					distCorr, centerLoc, aveDip, depth, lower, length, mag, r);
-			double prob = 1-Math.exp(-mfd.getY(i));
-			rups.add(new ProbEqkRupture(mag, aveRake, prob, surf, null));
-		}
-		return new RupListSource(rups, source0);
-	}
-	
-	private static synchronized DistanceCorrTables getLoadTables(double aveDip, boolean isSupersample) {
-		try {
-			if (aveDip == 90d) {
-				if (isSupersample) {
-					if (vertSupersampleTables == null)
-						vertSupersampleTables = TableBackedDistCorrPointSurface.loadCorrTables(refTablesDir, "STRIKE_SLIP_supersampled");
-					return vertSupersampleTables;
-				} else {
-					if (vertCenteredTables == null)
-						vertCenteredTables = TableBackedDistCorrPointSurface.loadCorrTables(refTablesDir, "STRIKE_SLIP_centered");
-					return vertCenteredTables;
-				}
-			} else {
-				if (isSupersample) {
-					if (dippingSupersampleTables == null)
-						dippingSupersampleTables = TableBackedDistCorrPointSurface.loadCorrTables(refTablesDir, "REVERSE_supersampled");
-					return dippingSupersampleTables;
-				} else {
-					if (dippingCenteredTables == null)
-						dippingCenteredTables = TableBackedDistCorrPointSurface.loadCorrTables(refTablesDir, "REVERSE_centered");
-					return dippingCenteredTables;
-				}
-			}
-		} catch (IOException e) {
-			throw ExceptionUtils.asRuntimeException(e);
-		}
-	}
-
-	private static Table<PointSourceType, Double, EvenlyDiscrXYZ_DataSet> refHazEquivRJBs = HashBasedTable.create();
-	private static Map<PointSourceType, File> refHazEquivDirs = new EnumMap<>(PointSourceType.class);
-	static {
-		refHazEquivDirs.put(PointSourceType.HAZ_EQUIV_APPROX_POINT_SOURCE,
-				new File(REF_MAIN_DIR, "SIMPLE_APPROX_FINITE_POINT_NO_CORR_vs_OCT_QUAD/hazard_equiv_rJBs"));
-	}
-	
-	public static ProbEqkSource buildHazEquivSource(Location centerLoc, IncrementalMagFreqDist mfd, double aveRake,
-			double aveDip, PointSourceType type) {
-		EvenlyDiscrXYZ_DataSet distCorr = getHazEquivRJBTable(type, aveDip);
-		
-		double dipRad = Math.toRadians(aveDip);
-		List<ProbEqkRupture> rups = new ArrayList<>();
-		ProbEqkSource source0 = null;
-		for (int i=0; i<mfd.size(); i++) {
-			double mag = mfd.getX(i);
-			double depth = (float)mag <= 6.5f ? 5d : 1d;
-			double length = WC94.getMedianLength(mag);
-			double aspectWidth = length / 1.5;
-			double ddWidth = (14.0 - depth) / Math.sin(dipRad);
-			ddWidth = Math.min(aspectWidth, ddWidth);
-			double lower = depth + ddWidth * Math.sin(dipRad);
-			
-			if (aveDip < 90d) {
-				// one for each footwall boolean
-				for (boolean footwall : new boolean[] {false,true}) {
-					HazardEquivalentRJBCorrPointSurface surf = new HazardEquivalentRJBCorrPointSurface(
-							distCorr, centerLoc, aveDip, depth, lower, length, mag, footwall);
-					double prob = 1-Math.exp(-mfd.getY(i)*0.5);
-					rups.add(new ProbEqkRupture(mag, aveRake, prob, surf, null));
-				}
-			} else {
-				HazardEquivalentRJBCorrPointSurface surf = new HazardEquivalentRJBCorrPointSurface(
-						distCorr, centerLoc, aveDip, depth, lower, length, mag, true);
-				double prob = 1-Math.exp(-mfd.getY(i));
-				rups.add(new ProbEqkRupture(mag, aveRake, prob, surf, null));
-			}
-		}
-		return new RupListSource(rups, source0);
-	}
-	
-	private static synchronized EvenlyDiscrXYZ_DataSet getHazEquivRJBTable(PointSourceType type, double aveDip) {
-		File refDir = refHazEquivDirs.get(type);
-		Preconditions.checkNotNull(refDir, "no refDir for type %s", type);
-		Preconditions.checkState(refDir.exists(), "Doesn't exist: %s", refDir.getAbsolutePath());
-		EvenlyDiscrXYZ_DataSet ret = refHazEquivRJBs.get(type, aveDip);
-		if (ret != null)
-			return ret;
-		try {
-			if (aveDip == 90d)
-				ret = TableBackedDistCorrPointSurface.loadXYZ_CSV(new File(refDir, "STRIKE_SLIP_equiv_rJBs.csv"));
-			else
-				ret = TableBackedDistCorrPointSurface.loadXYZ_CSV(new File(refDir, "REVERSE_equiv_rJBs.csv"));
-		} catch (IOException e) {
-			throw ExceptionUtils.asRuntimeException(e);
-		}
-		refHazEquivRJBs.put(type, aveDip, ret);
-		return ret;
-	}
-	
-	private static Table<PointSourceType, Double, RJBCorrInvPDFs> refRJBCorrInvPDFs = HashBasedTable.create();
-	
-	public static ProbEqkSource buildRJBCorrSource(Location centerLoc, IncrementalMagFreqDist mfd, double aveRake,
-			double aveDip, PointSourceType type, int numProbs) {
-		RJBCorrInvPDFs corrTable = getRJBCorrTable(type, aveDip);
-		
-		DiscretizedFunc cdfProbs = InvCDF_RJBCorrPointSurface.getEvenlySpacedProbs(numProbs);
-//		DiscretizedFunc cdfProbs = InvCDF_RJBCorrPointSurface.getEvenlySpacedProbs(501);
-//		DiscretizedFunc cdfProbs = InvCDF_RJBCorrPointSurface.getSigmaSpacedProbs(5);
-		
-		boolean[] footwalls = aveDip == 90d ? new boolean[] {true} : new boolean[] {false,true};
-		
-		double dipRad = Math.toRadians(aveDip);
-		List<ProbEqkRupture> rups = new ArrayList<>();
-		ProbEqkSource source0 = null;
-		for (int i=0; i<mfd.size(); i++) {
-			double mag = mfd.getX(i);
-			double depth = (float)mag <= 6.5f ? 5d : 1d;
-			double length = WC94.getMedianLength(mag);
-			double aspectWidth = length / 1.5;
-			double ddWidth = (14.0 - depth) / Math.sin(dipRad);
-			ddWidth = Math.min(aspectWidth, ddWidth);
-			double lower = depth + ddWidth * Math.sin(dipRad);
-			
-			double totRate = mfd.getY(i);
-			for (Point2D cdfPt : cdfProbs) {
-				double cdfProb = cdfPt.getX();
-				double weight =  cdfPt.getY();
-				double rateEach = weight*totRate/(double)footwalls.length;
-				double probEach = 1-Math.exp(-rateEach);
-				for (boolean footwall : footwalls) {
-					InvCDF_RJBCorrPointSurface surf = new InvCDF_RJBCorrPointSurface(corrTable, centerLoc, aveDip,
-							depth, lower, footwall, length, mag, cdfProb);
-					rups.add(new ProbEqkRupture(mag, aveRake, probEach, surf, null));
-				}
-			}
-			
-		}
-		return new RupListSource(rups, source0);
-	}
-	
-	private static synchronized RJBCorrInvPDFs getRJBCorrTable(PointSourceType type, double aveDip) {
-		File refDir = new File(REF_MAIN_DIR, type.name()+"/rjb_dists");
-		Preconditions.checkNotNull(refDir, "no refDir for type %s", type);
-		Preconditions.checkState(refDir.exists(), "Doesn't exist: %s", refDir.getAbsolutePath());
-		RJBCorrInvPDFs ret = refRJBCorrInvPDFs.get(type, aveDip);
-		if (ret != null)
-			return ret;
-		try {
-			File csvFile;
-			if (aveDip == 90d)
-				csvFile = new File(refDir, "STRIKE_SLIP_rJB_cumDists.csv");
-			else
-				csvFile = new File(refDir, "REVERSE_rJB_cumDists.csv");
-			Preconditions.checkState(csvFile.exists());
-			CSVFile<String> csv = CSVFile.readFile(csvFile, true);
-			ret = new RJBCorrInvPDFs(csv);
-		} catch (IOException e) {
-			throw ExceptionUtils.asRuntimeException(e);
-		}
-		refRJBCorrInvPDFs.put(type, aveDip, ret);
-		return ret;
-	}
+//	private static DistanceCorrTables vertCenteredTables = null;
+//	private static DistanceCorrTables vertSupersampleTables = null;
+//	private static DistanceCorrTables dippingCenteredTables = null;
+//	private static DistanceCorrTables dippingSupersampleTables = null;
+//	private static File refTablesDir = new File(REF_MAIN_DIR, "OCT_QUAD/resources/");
+//	
+//	public static ProbEqkSource buildTableBackedSource(Location centerLoc, IncrementalMagFreqDist mfd, double aveRake,
+//			double aveDip, boolean isSupersample, Random r) {
+//		DistanceCorrTables distCorr = getLoadTables(aveDip, isSupersample);
+//		
+//		double dipRad = Math.toRadians(aveDip);
+//		List<ProbEqkRupture> rups = new ArrayList<>();
+//		ProbEqkSource source0 = null;
+//		for (int i=0; i<mfd.size(); i++) {
+//			double mag = mfd.getX(i);
+//			double depth = (float)mag <= 6.5f ? 5d : 1d;
+//			double length = WC94.getMedianLength(mag);
+//			double aspectWidth = length / 1.5;
+//			double ddWidth = (14.0 - depth) / Math.sin(dipRad);
+//			ddWidth = Math.min(aspectWidth, ddWidth);
+//			double lower = depth + ddWidth * Math.sin(dipRad);
+//
+//			TableBackedDistCorrPointSurface surf = new TableBackedDistCorrPointSurface(
+//					distCorr, centerLoc, aveDip, depth, lower, length, mag, r);
+//			double prob = 1-Math.exp(-mfd.getY(i));
+//			rups.add(new ProbEqkRupture(mag, aveRake, prob, surf, null));
+//		}
+//		return new RupListSource(rups, source0);
+//	}
+//	
+//	private static synchronized DistanceCorrTables getLoadTables(double aveDip, boolean isSupersample) {
+//		try {
+//			if (aveDip == 90d) {
+//				if (isSupersample) {
+//					if (vertSupersampleTables == null)
+//						vertSupersampleTables = TableBackedDistCorrPointSurface.loadCorrTables(refTablesDir, "STRIKE_SLIP_supersampled");
+//					return vertSupersampleTables;
+//				} else {
+//					if (vertCenteredTables == null)
+//						vertCenteredTables = TableBackedDistCorrPointSurface.loadCorrTables(refTablesDir, "STRIKE_SLIP_centered");
+//					return vertCenteredTables;
+//				}
+//			} else {
+//				if (isSupersample) {
+//					if (dippingSupersampleTables == null)
+//						dippingSupersampleTables = TableBackedDistCorrPointSurface.loadCorrTables(refTablesDir, "REVERSE_supersampled");
+//					return dippingSupersampleTables;
+//				} else {
+//					if (dippingCenteredTables == null)
+//						dippingCenteredTables = TableBackedDistCorrPointSurface.loadCorrTables(refTablesDir, "REVERSE_centered");
+//					return dippingCenteredTables;
+//				}
+//			}
+//		} catch (IOException e) {
+//			throw ExceptionUtils.asRuntimeException(e);
+//		}
+//	}
+//
+//	private static Table<PointSourceType, Double, EvenlyDiscrXYZ_DataSet> refHazEquivRJBs = HashBasedTable.create();
+//	private static Map<PointSourceType, File> refHazEquivDirs = new EnumMap<>(PointSourceType.class);
+//	static {
+//		refHazEquivDirs.put(PointSourceType.HAZ_EQUIV_APPROX_POINT_SOURCE,
+//				new File(REF_MAIN_DIR, "SIMPLE_APPROX_FINITE_POINT_NO_CORR_vs_OCT_QUAD/hazard_equiv_rJBs"));
+//	}
+//	
+//	public static ProbEqkSource buildHazEquivSource(Location centerLoc, IncrementalMagFreqDist mfd, double aveRake,
+//			double aveDip, PointSourceType type) {
+//		EvenlyDiscrXYZ_DataSet distCorr = getHazEquivRJBTable(type, aveDip);
+//		
+//		double dipRad = Math.toRadians(aveDip);
+//		List<ProbEqkRupture> rups = new ArrayList<>();
+//		ProbEqkSource source0 = null;
+//		for (int i=0; i<mfd.size(); i++) {
+//			double mag = mfd.getX(i);
+//			double depth = (float)mag <= 6.5f ? 5d : 1d;
+//			double length = WC94.getMedianLength(mag);
+//			double aspectWidth = length / 1.5;
+//			double ddWidth = (14.0 - depth) / Math.sin(dipRad);
+//			ddWidth = Math.min(aspectWidth, ddWidth);
+//			double lower = depth + ddWidth * Math.sin(dipRad);
+//			
+//			if (aveDip < 90d) {
+//				// one for each footwall boolean
+//				for (boolean footwall : new boolean[] {false,true}) {
+//					HazardEquivalentRJBCorrPointSurface surf = new HazardEquivalentRJBCorrPointSurface(
+//							distCorr, centerLoc, aveDip, depth, lower, length, mag, footwall);
+//					double prob = 1-Math.exp(-mfd.getY(i)*0.5);
+//					rups.add(new ProbEqkRupture(mag, aveRake, prob, surf, null));
+//				}
+//			} else {
+//				HazardEquivalentRJBCorrPointSurface surf = new HazardEquivalentRJBCorrPointSurface(
+//						distCorr, centerLoc, aveDip, depth, lower, length, mag, true);
+//				double prob = 1-Math.exp(-mfd.getY(i));
+//				rups.add(new ProbEqkRupture(mag, aveRake, prob, surf, null));
+//			}
+//		}
+//		return new RupListSource(rups, source0);
+//	}
+//	
+//	private static synchronized EvenlyDiscrXYZ_DataSet getHazEquivRJBTable(PointSourceType type, double aveDip) {
+//		File refDir = refHazEquivDirs.get(type);
+//		Preconditions.checkNotNull(refDir, "no refDir for type %s", type);
+//		Preconditions.checkState(refDir.exists(), "Doesn't exist: %s", refDir.getAbsolutePath());
+//		EvenlyDiscrXYZ_DataSet ret = refHazEquivRJBs.get(type, aveDip);
+//		if (ret != null)
+//			return ret;
+//		try {
+//			if (aveDip == 90d)
+//				ret = TableBackedDistCorrPointSurface.loadXYZ_CSV(new File(refDir, "STRIKE_SLIP_equiv_rJBs.csv"));
+//			else
+//				ret = TableBackedDistCorrPointSurface.loadXYZ_CSV(new File(refDir, "REVERSE_equiv_rJBs.csv"));
+//		} catch (IOException e) {
+//			throw ExceptionUtils.asRuntimeException(e);
+//		}
+//		refHazEquivRJBs.put(type, aveDip, ret);
+//		return ret;
+//	}
+//	
+//	private static Table<PointSourceType, Double, RJBCorrInvPDFs> refRJBCorrInvPDFs = HashBasedTable.create();
+//	
+//	public static ProbEqkSource buildRJBCorrSource(Location centerLoc, IncrementalMagFreqDist mfd, double aveRake,
+//			double aveDip, PointSourceType type, int numProbs) {
+//		RJBCorrInvPDFs corrTable = getRJBCorrTable(type, aveDip);
+//		
+//		DiscretizedFunc cdfProbs = InvCDF_RJBCorrPointSurface.getEvenlySpacedProbs(numProbs);
+////		DiscretizedFunc cdfProbs = InvCDF_RJBCorrPointSurface.getEvenlySpacedProbs(501);
+////		DiscretizedFunc cdfProbs = InvCDF_RJBCorrPointSurface.getSigmaSpacedProbs(5);
+//		
+//		boolean[] footwalls = aveDip == 90d ? new boolean[] {true} : new boolean[] {false,true};
+//		
+//		double dipRad = Math.toRadians(aveDip);
+//		List<ProbEqkRupture> rups = new ArrayList<>();
+//		ProbEqkSource source0 = null;
+//		for (int i=0; i<mfd.size(); i++) {
+//			double mag = mfd.getX(i);
+//			double depth = (float)mag <= 6.5f ? 5d : 1d;
+//			double length = WC94.getMedianLength(mag);
+//			double aspectWidth = length / 1.5;
+//			double ddWidth = (14.0 - depth) / Math.sin(dipRad);
+//			ddWidth = Math.min(aspectWidth, ddWidth);
+//			double lower = depth + ddWidth * Math.sin(dipRad);
+//			
+//			double totRate = mfd.getY(i);
+//			for (Point2D cdfPt : cdfProbs) {
+//				double cdfProb = cdfPt.getX();
+//				double weight =  cdfPt.getY();
+//				double rateEach = weight*totRate/(double)footwalls.length;
+//				double probEach = 1-Math.exp(-rateEach);
+//				for (boolean footwall : footwalls) {
+//					InvCDF_RJBCorrPointSurface surf = new InvCDF_RJBCorrPointSurface(corrTable, centerLoc, aveDip,
+//							depth, lower, footwall, length, mag, cdfProb);
+//					rups.add(new ProbEqkRupture(mag, aveRake, probEach, surf, null));
+//				}
+//			}
+//			
+//		}
+//		return new RupListSource(rups, source0);
+//	}
+//	
+//	private static synchronized RJBCorrInvPDFs getRJBCorrTable(PointSourceType type, double aveDip) {
+//		File refDir = new File(REF_MAIN_DIR, type.name()+"/rjb_dists");
+//		Preconditions.checkNotNull(refDir, "no refDir for type %s", type);
+//		Preconditions.checkState(refDir.exists(), "Doesn't exist: %s", refDir.getAbsolutePath());
+//		RJBCorrInvPDFs ret = refRJBCorrInvPDFs.get(type, aveDip);
+//		if (ret != null)
+//			return ret;
+//		try {
+//			File csvFile;
+//			if (aveDip == 90d)
+//				csvFile = new File(refDir, "STRIKE_SLIP_rJB_cumDists.csv");
+//			else
+//				csvFile = new File(refDir, "REVERSE_rJB_cumDists.csv");
+//			Preconditions.checkState(csvFile.exists());
+//			CSVFile<String> csv = CSVFile.readFile(csvFile, true);
+//			ret = new RJBCorrInvPDFs(csv);
+//		} catch (IOException e) {
+//			throw ExceptionUtils.asRuntimeException(e);
+//		}
+//		refRJBCorrInvPDFs.put(type, aveDip, ret);
+//		return ret;
+//	}
 	
 	private static class RupListSource extends ProbEqkSource {
 		
@@ -797,46 +777,46 @@ public class PointSourceHazardComparison {
 		
 	}
 	
-	private static class CorrOverrideProbEqkSource extends ProbEqkSource {
-		
-		private ProbEqkSource source;
-		private PointSourceDistanceCorrection distCorr;
-
-		public CorrOverrideProbEqkSource(ProbEqkSource source, WeightedList<PointSourceDistanceCorrection> distCorrs) {
-			this.source = source;
-			Preconditions.checkState(distCorrs.size() == 1);
-			this.distCorr = distCorrs.getValue(0);
-		}
-
-		@Override
-		public LocationList getAllSourceLocs() {
-			return source.getAllSourceLocs();
-		}
-
-		@Override
-		public RuptureSurface getSourceSurface() {
-			return source.getSourceSurface();
-		}
-
-		@Override
-		public double getMinDistance(Site site) {
-			return source.getMinDistance(site);
-		}
-
-		@Override
-		public int getNumRuptures() {
-			return source.getNumRuptures();
-		}
-
-		@Override
-		public ProbEqkRupture getRupture(int nRupture) {
-			ProbEqkRupture rup = source.getRupture(nRupture);
-			Preconditions.checkState(rup.getRuptureSurface() instanceof PointSurface);
-			((PointSurface)rup.getRuptureSurface()).setDistanceCorrection(distCorr, rup);
-			return rup;
-		}
-		
-	}
+//	private static class CorrOverrideProbEqkSource extends ProbEqkSource {
+//		
+//		private ProbEqkSource source;
+//		private PointSourceDistanceCorrection distCorr;
+//
+//		public CorrOverrideProbEqkSource(ProbEqkSource source, WeightedList<PointSourceDistanceCorrection> distCorrs) {
+//			this.source = source;
+//			Preconditions.checkState(distCorrs.size() == 1);
+//			this.distCorr = distCorrs.getValue(0);
+//		}
+//
+//		@Override
+//		public LocationList getAllSourceLocs() {
+//			return source.getAllSourceLocs();
+//		}
+//
+//		@Override
+//		public RuptureSurface getSourceSurface() {
+//			return source.getSourceSurface();
+//		}
+//
+//		@Override
+//		public double getMinDistance(Site site) {
+//			return source.getMinDistance(site);
+//		}
+//
+//		@Override
+//		public int getNumRuptures() {
+//			return source.getNumRuptures();
+//		}
+//
+//		@Override
+//		public ProbEqkRupture getRupture(int nRupture) {
+//			ProbEqkRupture rup = source.getRupture(nRupture);
+//			Preconditions.checkState(rup.getRuptureSurface() instanceof PointSurface);
+//			((PointSurface)rup.getRuptureSurface()).setDistanceCorrection(distCorr, rup);
+//			return rup;
+//		}
+//		
+//	}
 	
 	static class PointSourceCalcERF extends AbstractERF {
 		

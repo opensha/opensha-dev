@@ -256,7 +256,6 @@ import scratch.UCERF3.erf.ETAS.launcher.TriggerRupture;
 import scratch.UCERF3.erf.ETAS.launcher.TriggerRupture.EdgeFault;
 import scratch.UCERF3.griddedSeismicity.AbstractGridSourceProvider;
 import scratch.kevin.nshm23.dmCovarianceTests.RandomDefModSampleLevel;
-import scratch.kevin.pointSources.InvCDF_RJBCorrPointSurface;
 import scratch.kevin.prvi25.figures.PRVI_Paths;
 import scratch.kevin.simulators.RSQSimCatalog;
 import scratch.kevin.simulators.RSQSimCatalog.Catalogs;
@@ -1890,12 +1889,12 @@ public class PureScratch {
 			System.out.println("\tCDF1: "+(float)GaussianDistCalc.getCDF(i));
 			System.out.println("\tCDF2: "+(float)normDist.cumulativeProbability(i));
 		}
-		for (int i=1; i<6; i++) {
-			System.out.println("Sigmas="+i);
-			DiscretizedFunc func = InvCDF_RJBCorrPointSurface.getSigmaSpacedProbs(i);
-			for (Point2D pt : func)
-				System.out.println("\t"+(float)pt.getX()+": "+(float)pt.getY());
-		}
+//		for (int i=1; i<6; i++) {
+//			System.out.println("Sigmas="+i);
+//			DiscretizedFunc func = InvCDF_RJBCorrPointSurface.getSigmaSpacedProbs(i);
+//			for (Point2D pt : func)
+//				System.out.println("\t"+(float)pt.getX()+": "+(float)pt.getY());
+//		}
 	}
 	
 	private static void test301() throws IOException {

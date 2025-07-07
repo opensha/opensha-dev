@@ -183,32 +183,34 @@ public class TestCB_2008_UsesPrimitives_AttenRel extends AttenuationRelationship
 	@Override
 	public void setEqkRupture(EqkRupture eqkRupture)
 			throws InvalidRangeException {
-		this.eqkRupture = eqkRupture;
-		
-		mag = eqkRupture.getMag();
-		double rake = eqkRupture.getAveRake();
-		if (rake > 30 && rake < 150) {
-			f_rv = 1;
-			f_nm = 0;
-//			fltTypeParam.setValue(FLT_TYPE_REVERSE);
-		} else if (rake > -150 && rake < -30) {
-			f_rv = 0 ;
-			f_nm = 1;
-//			fltTypeParam.setValue(FLT_TYPE_NORMAL);
-		} else {
-			f_rv =0 ;
-			f_nm = 0;
-//			fltTypeParam.setValue(FLT_TYPE_STRIKE_SLIP);
-		}
+		super.setEqkRupture(eqkRupture);
+		if (eqkRupture != null) {
 
-		depthTop = eqkRupture.getRuptureSurface().getAveRupTopDepth();
-		dip = eqkRupture.getRuptureSurface().getAveDip();
-		
-		magParam.setValueIgnoreWarning(mag);
-		rupTopDepthParam.setValueIgnoreWarning(depthTop);
-		dipParam.setValueIgnoreWarning(dip);
-		
-		setPropagationEffectParams();
+			mag = eqkRupture.getMag();
+			double rake = eqkRupture.getAveRake();
+			if (rake > 30 && rake < 150) {
+				f_rv = 1;
+				f_nm = 0;
+				//			fltTypeParam.setValue(FLT_TYPE_REVERSE);
+			} else if (rake > -150 && rake < -30) {
+				f_rv = 0 ;
+				f_nm = 1;
+				//			fltTypeParam.setValue(FLT_TYPE_NORMAL);
+			} else {
+				f_rv =0 ;
+				f_nm = 0;
+				//			fltTypeParam.setValue(FLT_TYPE_STRIKE_SLIP);
+			}
+
+			depthTop = eqkRupture.getRuptureSurface().getAveRupTopDepth();
+			dip = eqkRupture.getRuptureSurface().getAveDip();
+
+			magParam.setValueIgnoreWarning(mag);
+			rupTopDepthParam.setValueIgnoreWarning(depthTop);
+			dipParam.setValueIgnoreWarning(dip);
+
+			setPropagationEffectParams();
+		}
 	}
 
 	@Override
