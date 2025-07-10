@@ -38,7 +38,7 @@ import org.opensha.sha.earthquake.rupForecastImpl.nshm23.erf.NSHM23_WUS_BranchAv
 import org.opensha.sha.earthquake.util.GridCellSupersamplingSettings;
 import org.opensha.sha.earthquake.util.GriddedFiniteRuptureSettings;
 import org.opensha.sha.earthquake.util.GriddedSeismicitySettings;
-import org.opensha.sha.faultSurface.utils.PointSourceDistanceCorrections;
+import org.opensha.sha.faultSurface.utils.ptSrcCorr.PointSourceDistanceCorrections;
 import org.opensha.sha.gui.infoTools.IMT_Info;
 import org.opensha.sha.imr.AttenRelRef;
 import org.opensha.sha.imr.ScalarIMR;
@@ -60,12 +60,12 @@ public class GriddedHazardSingleSiteComparison {
 //		PointSourceDistanceCorrections corrType = PointSourceDistanceCorrections.FIVE_POINT_RJB_DIST;
 //		PointSourceDistanceCorrections corrType = PointSourceDistanceCorrections.FIVE_POINT_RJB_DIST_ALONG;
 //		PointSourceDistanceCorrections corrType = PointSourceDistanceCorrections.SUPERSAMPLING_0p1_FIVE_POINT_RJB_DIST;
-		PointSourceDistanceCorrections corrType = PointSourceDistanceCorrections.SUPERSAMPLING_0p1_TWENTY_POINT_RJB_DIST;
-//		PointSourceDistanceCorrections corrType = PointSourceDistanceCorrections.MEDIAN_RJB;
+//		PointSourceDistanceCorrections corrType = PointSourceDistanceCorrections.SUPERSAMPLING_0p1_TWENTY_POINT_RJB_DIST;
+		PointSourceDistanceCorrections corrType = PointSourceDistanceCorrections.AVERAGE_SPINNING;
 //		GridCellSupersamplingSettings ssSettings = GridCellSupersamplingSettings.DEFAULT;
 		GridCellSupersamplingSettings ssSettings = null;
-//		PointSourceDistanceCorrections compCorrType = PointSourceDistanceCorrections.NONE;
-		PointSourceDistanceCorrections compCorrType = PointSourceDistanceCorrections.FIVE_POINT_RJB_DIST;
+		PointSourceDistanceCorrections compCorrType = PointSourceDistanceCorrections.NONE;
+//		PointSourceDistanceCorrections compCorrType = PointSourceDistanceCorrections.FIVE_POINT_RJB_DIST;
 		GridCellSupersamplingSettings compSSSettings = GridCellSupersamplingSettings.DEFAULT.forApplyToFinite(true);
 //		GridCellSupersamplingSettings compSSSettings = new GridCellSupersamplingSettings(0.5, 40d, 100d, 0, true);
 //		GridCellSupersamplingSettings compSSSettings = null;

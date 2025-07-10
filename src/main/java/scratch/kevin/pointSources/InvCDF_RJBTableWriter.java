@@ -74,7 +74,7 @@ public class InvCDF_RJBTableWriter {
 //		int numPerStochastic = 2000;
 //		PointSourceType sourceType = PointSourceType.OCT_QUAD_RAND_CELL;
 //		int numPerStochastic = 2000;
-		PointSourceType sourceType = PointSourceType.OCT_QUAD_RAND_DAS_DD_CELL;
+		PointSourceType sourceType = PointSourceType.OCT_FINITE_RAND_DAS_DD_CELL;
 		int numPerStochastic = 5000;
 		
 		File mainDir = new File("/data/kevin/markdown/nshm23-misc/point_source_corr/");

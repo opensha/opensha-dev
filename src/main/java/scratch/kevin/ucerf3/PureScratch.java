@@ -203,7 +203,7 @@ import org.opensha.sha.faultSurface.FaultSection;
 import org.opensha.sha.faultSurface.GeoJSONFaultSection;
 import org.opensha.sha.faultSurface.PointSurface;
 import org.opensha.sha.faultSurface.RuptureSurface;
-import org.opensha.sha.faultSurface.utils.PointSourceDistanceCorrections;
+import org.opensha.sha.faultSurface.utils.ptSrcCorr.PointSourceDistanceCorrections;
 import org.opensha.sha.gui.infoTools.IMT_Info;
 import org.opensha.sha.imr.AttenRelRef;
 import org.opensha.sha.imr.ScalarIMR;
@@ -3393,7 +3393,7 @@ public class PureScratch {
 				.forSurfaceType(BackgroundRupType.FINITE)
 //				.forSurfaceType(BackgroundRupType.POINT)
 //				.forDistanceCorrection(PointSourceDistanceCorrections.NONE.get())
-				.forDistanceCorrection(PointSourceDistanceCorrections.FIVE_POINT_RJB_DIST.get())
+//				.forDistanceCorrection(PointSourceDistanceCorrections.FIVE_POINT_RJB_DIST.get())
 				.forPointSourceMagCutoff(5d)
 				.forFiniteRuptureSettings(GriddedFiniteRuptureSettings.DEFAULT_CROSSHAIR.forNumSurfaces(numFinite))
 //				.forSupersamplingSettings(null);
@@ -3456,7 +3456,7 @@ public class PureScratch {
 //				.forSurfaceType(BackgroundRupType.FINITE)
 				.forSurfaceType(BackgroundRupType.POINT)
 //				.forDistanceCorrection(PointSourceDistanceCorrections.NONE.get())
-				.forDistanceCorrection(PointSourceDistanceCorrections.FIVE_POINT_RJB_DIST.get())
+//				.forDistanceCorrection(PointSourceDistanceCorrections.FIVE_POINT_RJB_DIST.get())
 				.forPointSourceMagCutoff(5d)
 				.forFiniteRuptureSettings(GriddedFiniteRuptureSettings.DEFAULT_CROSSHAIR.forNumSurfaces(numFinite))
 //				.forSupersamplingSettings(null);

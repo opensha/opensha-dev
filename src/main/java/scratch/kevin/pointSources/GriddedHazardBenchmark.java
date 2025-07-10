@@ -19,7 +19,7 @@ import org.opensha.sha.earthquake.rupForecastImpl.nshm23.erf.NSHM23_WUS_BranchAv
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.util.NSHM23_RegionLoader;
 import org.opensha.sha.earthquake.util.GridCellSupersamplingSettings;
 import org.opensha.sha.earthquake.util.GriddedSeismicitySettings;
-import org.opensha.sha.faultSurface.utils.PointSourceDistanceCorrections;
+import org.opensha.sha.faultSurface.utils.ptSrcCorr.PointSourceDistanceCorrections;
 import org.opensha.sha.gui.infoTools.IMT_Info;
 import org.opensha.sha.imr.AttenRelRef;
 import org.opensha.sha.imr.ScalarIMR;
@@ -47,7 +47,7 @@ public class GriddedHazardBenchmark {
 		settings = settings.forSurfaceType(BackgroundRupType.POINT);
 //		settings = settings.forDistanceCorrection(PointSourceDistanceCorrections.NONE.get());
 //		settings = settings.forDistanceCorrection(PointSourceDistanceCorrections.MEDIAN_RJB.get());
-		settings = settings.forDistanceCorrection(PointSourceDistanceCorrections.FIVE_POINT_RJB_DIST.get());
+		settings = settings.forDistanceCorrection(PointSourceDistanceCorrections.FIVE_POINT_SPINNING_DIST.get());
 //		settings = settings.forDistanceCorrection(PointSourceDistanceCorrections.SUPERSAMPLING_0p1_FIVE_POINT_RJB_DIST.get());
 		settings = settings.forPointSourceMagCutoff(5d);
 		settings = settings.forSupersamplingSettings(GridCellSupersamplingSettings.DEFAULT);
