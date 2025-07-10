@@ -31,7 +31,6 @@ public class QuadRectCompare {
 		
 		boolean doJB = true;
 		boolean doRup = true;
-		boolean doSeis = false;
 		boolean doX = true;
 
 		for (Location gridNode : gridLocs) {
@@ -79,17 +78,6 @@ public class QuadRectCompare {
 											Preconditions.checkState(
 													Precision.equals(rRupquad, rRuprect, quadRectPrecision),
 													"%s; RUPquad=%s, RUPrect=%s", str, rRupquad, rRuprect);
-										}
-										if (doSeis) {
-											double rSeisquad = quad.getDistanceSeis(siteLoc);
-											double rSeisrect = rect.getDistanceSeis(siteLoc);
-											double rSeisgrid = grid.getDistanceSeis(siteLoc);
-											Preconditions.checkState(
-													Precision.equals(rSeisquad, rSeisgrid, quadGridPrecision),
-													"%s; SEISquad=%s, SEISgrid=%s", str, rSeisquad, rSeisgrid);
-											Preconditions.checkState(
-													Precision.equals(rSeisquad, rSeisrect, quadRectPrecision),
-													"%s; SEISquad=%s, SEISrect=%s", str, rSeisquad, rSeisrect);
 										}
 										if (doX) {
 											double xQuad = quad.getDistanceX(siteLoc);

@@ -1064,6 +1064,8 @@ public class PointSourceHazardComparison {
 //		boolean doSupersample = false;
 //		boolean doHighRes = false;
 //		boolean doSupersample = false;
+//		boolean doHighResSupersample = doHighRes && doSupersample;
+		boolean doHighResSupersample = false;
 		boolean forceWriteIntermediate = true;
 		boolean writeTables = false;
 	
@@ -1716,7 +1718,11 @@ public class PointSourceHazardComparison {
 					mapMaker.plot(resourcesDir, gridPrefix+"_centered", grid.label+", Centered Sources");
 					mapMaker.clearAnnotations();
 					
-					if (doSupersample) {
+					boolean mySupersample = doSupersample;
+					if (grid == GridType.HIGH_RES && !doHighResSupersample)
+						mySupersample = false;
+					
+					if (mySupersample) {
 						System.out.println("Calculating "+props+" for primary, "+grid+", supersampled");
 						GriddedGeoDataSet supersampledXYZ = calcMapProps(supersampledERF, siteGrid, props);
 						addRangeAnns(mapMaker, supersampledXYZ, grid == GridType.COLOCATED ? gridCenterIndex : -1, true);
@@ -1734,7 +1740,7 @@ public class PointSourceHazardComparison {
 						mapMaker.plot(resourcesDir, gridPrefix+"_centered_comp", grid.label+", Centered Sources");
 						mapMaker.clearAnnotations();
 						
-						if (doSupersample) {
+						if (mySupersample) {
 							System.out.println("Calculating "+props+" for comparison, "+grid+", supersampled");
 							GriddedGeoDataSet compSupersampledXYZ = calcMapProps(compSupersampledERF, siteGrid, props);
 							addRangeAnns(mapMaker, compSupersampledXYZ, grid == GridType.COLOCATED ? gridCenterIndex : -1, true);
@@ -1749,11 +1755,11 @@ public class PointSourceHazardComparison {
 					if (compType != null) {
 						table.addColumn("![Map]("+resourcesDir.getName()+"/"+gridPrefix+"_centered_comp.png)");
 						table.finalizeLine();
-						if (doSupersample)
+						if (mySupersample)
 							table.initNewLine();
 					}
 					
-					if (doSupersample) {
+					if (mySupersample) {
 						table.addColumn("![Map]("+resourcesDir.getName()+"/"+gridPrefix+"_supersampled.png)");
 						
 						if (compType != null)
@@ -1793,6 +1799,10 @@ public class PointSourceHazardComparison {
 				for (GridType grid : siteGrids.keySet()) {
 					GriddedRegion siteGrid = siteGrids.get(grid);
 					
+					boolean mySupersample = doSupersample;
+					if (grid == GridType.HIGH_RES && !doHighResSupersample)
+						mySupersample = false;
+					
 					for (boolean comp : compBools) {
 						PointSourceCalcERF myCenterERF = comp ? compCenterERF : centerERF;
 						System.out.println("Calculating "+grid.label+", centered, "+mechLabel+", "+perLabels[p]+", comp="+comp);
@@ -1800,7 +1810,7 @@ public class PointSourceHazardComparison {
 								gmmDeque, calcDeque, period, xVals[p], logXVals[p], exec);
 						
 						List<DiscretizedFunc> supersampledCurves = null;
-						if (doSupersample) {
+						if (mySupersample) {
 							PointSourceCalcERF mySupersampledERF = comp ? compSupersampledERF : supersampledERF;
 							System.out.println("Calculating "+grid.label+", supersampled, "+mechLabel+", "+perLabels[p]+", comp="+comp);
 							supersampledCurves = calcCurves(siteGrid.getNodeList(), mySupersampledERF, gmmRef,
@@ -1808,21 +1818,21 @@ public class PointSourceHazardComparison {
 						}
 						
 						GriddedGeoDataSet[] myCenteredMaps = new GriddedGeoDataSet[rps.length];
-						GriddedGeoDataSet[] mySupersampledMaps = doSupersample ? new GriddedGeoDataSet[rps.length] : null;
+						GriddedGeoDataSet[] mySupersampledMaps = mySupersample ? new GriddedGeoDataSet[rps.length] : null;
 						
 						for (int r=0; r<rps.length; r++) {
 							myCenteredMaps[r] = curvesToMap(siteGrid, centeredCurves, rps[r]);
-							if (doSupersample)
+							if (mySupersample)
 								mySupersampledMaps[r] = curvesToMap(siteGrid, supersampledCurves, rps[r]);
 						}
 						
 						if (comp) {
 							compCenteredMaps.put(grid, myCenteredMaps);
-							if (doSupersample)
+							if (mySupersample)
 								compSupersampledMaps.put(grid, mySupersampledMaps);
 						} else {
 							centeredMaps.put(grid, myCenteredMaps);
-							if (doSupersample)
+							if (mySupersample)
 								supersampledMaps.put(grid, mySupersampledMaps);
 						}
 					}
@@ -1981,7 +1991,11 @@ public class PointSourceHazardComparison {
 						else
 							table.initNewLine();
 						
-						boolean[] superBools = doSupersample ? falseTrue : falseOnly;
+						boolean mySupersample = doSupersample;
+						if (grid == GridType.HIGH_RES && !doHighResSupersample)
+							mySupersample = false;
+						
+						boolean[] superBools = mySupersample ? falseTrue : falseOnly;
 						for (boolean supersampled : superBools) {
 							String mainPrefix = mapPrefix;
 							String title;
@@ -2024,7 +2038,7 @@ public class PointSourceHazardComparison {
 						}
 						
 						// now add centered vs supersampled
-						if (doSupersample) {
+						if (mySupersample) {
 							String title = "Centered vs Supersampled Source";
 							String diffPrefix = mapPrefix+"_centered_supersampled_pDiff";
 							

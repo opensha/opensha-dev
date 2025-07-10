@@ -332,11 +332,6 @@ public class RSQSimRotatedRuptureFakeERF extends AbstractERF {
 		}
 
 		@Override
-		public double getDistanceSeis(Location siteLoc) {
-			throw new UnsupportedOperationException("Not applicable");
-		}
-
-		@Override
 		public double getDistanceX(Location siteLoc) {
 			throw new UnsupportedOperationException("Not applicable");
 		}

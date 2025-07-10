@@ -89,14 +89,13 @@ public class NshmSurface implements CacheEnabledSurface {
 		}
 		return distance.rX;
 	}
-
+	
 	@Override
-	public synchronized double getDistanceSeis(Location location) {
-		// distanceSeis isn't used by any modern GMM so we're just returning rRup
+	public synchronized SurfaceDistances getDistances(Location location) {
 		if (location != this.location) {
 			setDistances(location);
 		}
-		return distance.rRup;
+		return new SurfaceDistances.Precomputed(location, distance.rRup, distance.rJB, distance.rX);
 	}
 
 	private void setDistances(Location location) {
@@ -127,7 +126,7 @@ public class NshmSurface implements CacheEnabledSurface {
 	@Override
 	public SurfaceDistances calcDistances(Location location) {
 		Distance distance = delegate.distanceTo(NshmUtil.fromOpenShaLocation(location));
-		return new SurfaceDistances.Precomputed(location, distance.rRup, distance.rJB, distance.rRup, distance.rX);
+		return new SurfaceDistances.Precomputed(location, distance.rRup, distance.rJB, distance.rX);
 	}
 
 	@Override
