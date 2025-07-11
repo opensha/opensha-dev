@@ -68,7 +68,9 @@ import org.opensha.sha.earthquake.ProbEqkRupture;
 import org.opensha.sha.earthquake.ProbEqkSource;
 import org.opensha.sha.earthquake.faultSysSolution.FaultSystemSolution;
 import org.opensha.sha.earthquake.faultSysSolution.modules.GridSourceList;
+import org.opensha.sha.earthquake.faultSysSolution.modules.GridSourceList.FiniteRuptureConverter;
 import org.opensha.sha.earthquake.faultSysSolution.modules.GridSourceList.GriddedRupture;
+import org.opensha.sha.earthquake.faultSysSolution.modules.GridSourceList.GriddedRuptureProperties;
 import org.opensha.sha.earthquake.faultSysSolution.modules.GridSourceList.GriddedRupturePropertiesCache;
 import org.opensha.sha.earthquake.faultSysSolution.modules.GridSourceProvider;
 import org.opensha.sha.earthquake.faultSysSolution.modules.MFDGridSourceProvider;
@@ -283,42 +285,63 @@ public class PointSourceHazardComparison {
 			@Override
 			public ProbEqkSource buildSource(Location centerLoc, IncrementalMagFreqDist mfd, double aveRake,
 					double aveDip, boolean isSupersample, Random r) {
-				return buildDistCorrSource(centerLoc, mfd, aveRake, aveDip, GriddedSeismicitySettings.DEFAULT.forDistanceCorrection(getDistCorr()));
+				return buildDistCorrSource(centerLoc, mfd, aveRake, aveDip,
+						GriddedSeismicitySettings.DEFAULT.forDistanceCorrection(getDistCorr()),
+						new NSHM23_WUS_FiniteRuptureConverter());
 			}
 		},
 		AVERAGE_ALONG("Spinning Average (sample along)", "Average (sample along)", false, PointSourceDistanceCorrections.AVERAGE_SPINNING_ALONG) {
 			@Override
 			public ProbEqkSource buildSource(Location centerLoc, IncrementalMagFreqDist mfd, double aveRake,
 					double aveDip, boolean isSupersample, Random r) {
-				return buildDistCorrSource(centerLoc, mfd, aveRake, aveDip, GriddedSeismicitySettings.DEFAULT.forDistanceCorrection(getDistCorr()));
+				return buildDistCorrSource(centerLoc, mfd, aveRake, aveDip,
+						GriddedSeismicitySettings.DEFAULT.forDistanceCorrection(getDistCorr()),
+						new NSHM23_WUS_FiniteRuptureConverter());
 			}
 		},
 		FIVE_POINT_DIST("5-pt Distribution", "5-pt dist", false, PointSourceDistanceCorrections.FIVE_POINT_SPINNING_DIST) {
 			@Override
 			public ProbEqkSource buildSource(Location centerLoc, IncrementalMagFreqDist mfd, double aveRake,
 					double aveDip, boolean isSupersample, Random r) {
-				return buildDistCorrSource(centerLoc, mfd, aveRake, aveDip, GriddedSeismicitySettings.DEFAULT.forDistanceCorrection(getDistCorr()));
+				return buildDistCorrSource(centerLoc, mfd, aveRake, aveDip,
+						GriddedSeismicitySettings.DEFAULT.forDistanceCorrection(getDistCorr()),
+						new NSHM23_WUS_FiniteRuptureConverter());
 			}
 		},
 		FIVE_POINT_DIST_ALONG("5-pt Distribution (sample along)", "5-pt dist (sample along)", false, PointSourceDistanceCorrections.FIVE_POINT_SPINNING_DIST_ALONG) {
 			@Override
 			public ProbEqkSource buildSource(Location centerLoc, IncrementalMagFreqDist mfd, double aveRake,
 					double aveDip, boolean isSupersample, Random r) {
-				return buildDistCorrSource(centerLoc, mfd, aveRake, aveDip, GriddedSeismicitySettings.DEFAULT.forDistanceCorrection(getDistCorr()));
+				return buildDistCorrSource(centerLoc, mfd, aveRake, aveDip,
+						GriddedSeismicitySettings.DEFAULT.forDistanceCorrection(getDistCorr()),
+						new NSHM23_WUS_FiniteRuptureConverter());
+			}
+		},
+		FIVE_POINT_DIST_ALONG_BETTER_DEPTHS("5-pt Distribution (sample along) better depths", "5-pt dist (sample along, better depths)", false, PointSourceDistanceCorrections.FIVE_POINT_SPINNING_DIST_ALONG) {
+			@Override
+			public ProbEqkSource buildSource(Location centerLoc, IncrementalMagFreqDist mfd, double aveRake,
+					double aveDip, boolean isSupersample, Random r) {
+				return buildDistCorrSource(centerLoc, mfd, aveRake, aveDip,
+						GriddedSeismicitySettings.DEFAULT.forDistanceCorrection(getDistCorr()),
+						new NSHMFiveCentRuptureConverter());
 			}
 		},
 		TWENTY_POINT_DIST("20-pt Distribution", "20-pt dist", false, PointSourceDistanceCorrections.TWENTY_POINT_SPINNING_DIST) {
 			@Override
 			public ProbEqkSource buildSource(Location centerLoc, IncrementalMagFreqDist mfd, double aveRake,
 					double aveDip, boolean isSupersample, Random r) {
-				return buildDistCorrSource(centerLoc, mfd, aveRake, aveDip, GriddedSeismicitySettings.DEFAULT.forDistanceCorrection(getDistCorr()));
+				return buildDistCorrSource(centerLoc, mfd, aveRake, aveDip,
+						GriddedSeismicitySettings.DEFAULT.forDistanceCorrection(getDistCorr()),
+						new NSHM23_WUS_FiniteRuptureConverter());
 			}
 		},
 		TWENTY_POINT_DIST_ALONG("20-pt Distribution (sample along)", "20-pt dist (sample along)", false, PointSourceDistanceCorrections.TWENTY_POINT_SPINNING_DIST_ALONG) {
 			@Override
 			public ProbEqkSource buildSource(Location centerLoc, IncrementalMagFreqDist mfd, double aveRake,
 					double aveDip, boolean isSupersample, Random r) {
-				return buildDistCorrSource(centerLoc, mfd, aveRake, aveDip, GriddedSeismicitySettings.DEFAULT.forDistanceCorrection(getDistCorr()));
+				return buildDistCorrSource(centerLoc, mfd, aveRake, aveDip,
+						GriddedSeismicitySettings.DEFAULT.forDistanceCorrection(getDistCorr()),
+						new NSHM23_WUS_FiniteRuptureConverter());
 			}
 		};
 		
@@ -385,10 +408,9 @@ public class PointSourceHazardComparison {
 		return new Region(new Location(loc.lat-half, loc.lon-half), new Location(loc.lat+half, loc.lon+half));
 	}
 	
-	private static List<GriddedRupture> buildGriddedRupListNSHM(Location loc, IncrementalMagFreqDist mfd, double aveRake, double aveDip) {
+	private static List<GriddedRupture> buildGriddedRupList(Location loc, IncrementalMagFreqDist mfd,
+			double aveRake, double aveDip, FiniteRuptureConverter converter) {
 		List<GriddedRupture> rups = new ArrayList<>();
-		
-		NSHM23_WUS_FiniteRuptureConverter converter = new NSHM23_WUS_FiniteRuptureConverter();
 		FocalMech mech = FocalMech.forFocalMechanism(new FocalMechanism(Double.NaN, aveDip, aveRake));
 		Preconditions.checkNotNull(mech);
 		
@@ -402,6 +424,16 @@ public class PointSourceHazardComparison {
 			rups.add(converter.buildFiniteRupture(0, loc, mag, rate, mech, TectonicRegionType.ACTIVE_SHALLOW, null, null, cache));
 		}
 		return rups;
+	}
+	
+	private static ProbEqkSource buildDistCorrSource(Location centerLoc, IncrementalMagFreqDist mfd, double aveRake,
+			double aveDip, GriddedSeismicitySettings gridSettings, FiniteRuptureConverter converter) {
+		return PointSource.poissonBuilder(centerLoc)
+				.data(GridSourceList.buildPointSourceData(centerLoc, buildGriddedRupList(centerLoc, mfd, aveRake, aveDip, converter),
+						null, gridSettings))
+				.duration(1d)
+				.distCorr(gridSettings.distanceCorrection, gridSettings.pointSourceMagnitudeCutoff)
+				.build();
 	}
 	
 	private static ProbEqkSource buildFiniteRectSource(PointSurfaceBuilder builder, IncrementalMagFreqDist mfd,
@@ -432,14 +464,42 @@ public class PointSourceHazardComparison {
 		return new RupListSource(rups, null);
 	}
 	
-	private static ProbEqkSource buildDistCorrSource(Location centerLoc, IncrementalMagFreqDist mfd, double aveRake,
-			double aveDip, GriddedSeismicitySettings gridSettings) {
-		return PointSource.poissonBuilder(centerLoc)
-				.data(GridSourceList.buildPointSourceData(centerLoc, buildGriddedRupListNSHM(centerLoc, mfd, aveRake, aveDip),
-						null, gridSettings))
-				.duration(1d)
-				.distCorr(gridSettings.distanceCorrection, gridSettings.pointSourceMagnitudeCutoff)
-				.build();
+	public static class NSHMFiveCentRuptureConverter implements FiniteRuptureConverter {
+		
+		private WC1994_MagLengthRelationship WC94 = new WC1994_MagLengthRelationship();
+
+		@Override
+		public GriddedRupture buildFiniteRupture(int gridIndex, Location loc, double magnitude, double rate,
+				FocalMech focalMech, TectonicRegionType trt, int[] associatedSections, double[] associatedSectionFracts,
+				GriddedRupturePropertiesCache cache) {
+			double dipRad = Math.toRadians(focalMech.dip());
+			
+			double middleDepth = 5d;
+			double minDepth = 1d;
+			double maxDepth = 14d;
+			
+			double length = WC94.getMedianLength(magnitude);
+			double aspectWidth = length / 1.5;
+			
+			double ddWidth = (maxDepth - minDepth) / Math.sin(dipRad);
+			ddWidth = Math.min(aspectWidth, ddWidth);
+			double halfVertDepth = 0.5 * ddWidth * Math.sin(dipRad);
+			double upper = middleDepth - halfVertDepth;
+			double lower = middleDepth + halfVertDepth;
+			if (upper < minDepth) {
+				lower += (minDepth - upper);
+				upper = minDepth;
+			}
+			
+//			System.out.println("M"+magnitude+"; middle="+middleDepth+", range=["+upper+", "+lower+"]");
+			
+			GriddedRuptureProperties props = cache.getCached(new GriddedRuptureProperties(magnitude,
+					focalMech.rake(), focalMech.dip(), Double.NaN, null, upper, lower, length, Double.NaN, Double.NaN,
+					trt));
+			
+			return new GriddedRupture(gridIndex, loc, props, rate, associatedSections, associatedSectionFracts);
+		}
+		
 	}
 	
 //	private static ProbEqkSource buildPointSource(Location centerLoc, Region cell, IncrementalMagFreqDist mfd,
@@ -972,11 +1032,7 @@ public class PointSourceHazardComparison {
 			public double calcForRuptureAndLocation(ProbEqkRupture rup, Location siteLoc) {
 				RuptureSurface surf = rup.getRuptureSurface();
 				if (surf instanceof DistanceProtected) {
-					DistanceProtected protectedSurf = (DistanceProtected)surf;
-					PointSurface origSurf = protectedSurf.getUncorrectedSurface();
-					PointSourceDistanceCorrection distCorr = protectedSurf.getDistanceCorrection();
-					WeightedList<DistanceCorrected> corrSurfs = origSurf.getForDistanceCorrection(
-							siteLoc, distCorr, TectonicRegionType.ACTIVE_SHALLOW, rup.getMag());
+					WeightedList<DistanceCorrected> corrSurfs = ((DistanceProtected)surf).getCorrectedSurfaces(siteLoc);
 					Preconditions.checkState(corrSurfs.isNormalized());
 					double fractFW = 0d;
 					for (WeightedValue<DistanceCorrected> value : corrSurfs)
@@ -1043,10 +1099,12 @@ public class PointSourceHazardComparison {
 //		PointSourceType compType = PointSourceType.POINT_SOURCE_NSHM;
 		
 		// misc
-		PointSourceType mainType = PointSourceType.AVERAGE;
+//		PointSourceType mainType = PointSourceType.AVERAGE;
+		PointSourceType mainType = PointSourceType.FIVE_POINT_DIST_ALONG;
 
 //		PointSourceType compType = PointSourceType.AVERAGE_ALONG;
-		PointSourceType compType = PointSourceType.TWENTY_FINITE_RAND_DAS_DD;
+//		PointSourceType compType = PointSourceType.TWENTY_FINITE_RAND_DAS_DD;
+		PointSourceType compType = PointSourceType.FIVE_POINT_DIST_ALONG_BETTER_DEPTHS;
 		
 //		int sleepMins = 60*6;
 //		System.out.println("Sleeping for "+sleepMins+" mins");
@@ -1056,14 +1114,14 @@ public class PointSourceHazardComparison {
 		
 		boolean doSingleCellHazard = true;
 		boolean doNSHMModelHazard = true;
-		boolean doHighRes = true;
-		boolean doSupersample = true;
+//		boolean doHighRes = true;
+//		boolean doSupersample = true;
 //		boolean doHighRes = false;
 //		boolean doSupersample = true;
 //		boolean doHighRes = true;
 //		boolean doSupersample = false;
-//		boolean doHighRes = false;
-//		boolean doSupersample = false;
+		boolean doHighRes = false;
+		boolean doSupersample = false;
 //		boolean doHighResSupersample = doHighRes && doSupersample;
 		boolean doHighResSupersample = false;
 		boolean forceWriteIntermediate = true;
@@ -2707,10 +2765,7 @@ public class PointSourceHazardComparison {
 					WeightedList<? extends RuptureSurface> surfs;
 					RuptureSurface origSurf = rup.getRuptureSurface();
 					if (origSurf instanceof DistanceProtected) {
-						DistanceProtected corrSurf = (DistanceProtected)origSurf;
-						PointSourceDistanceCorrection corr = corrSurf.getDistanceCorrection();
-						PointSurface ptSurf = corrSurf.getUncorrectedSurface();
-						surfs = ptSurf.getForDistanceCorrection(loc, corr, TectonicRegionType.ACTIVE_SHALLOW, mag);
+						surfs = ((DistanceProtected)origSurf).getCorrectedSurfaces(loc);
 					} else {
 						surfs = WeightedList.evenlyWeighted(origSurf);
 					}
@@ -2742,10 +2797,7 @@ public class PointSourceHazardComparison {
 					WeightedList<? extends RuptureSurface> surfs;
 					RuptureSurface origSurf = rup.getRuptureSurface();
 					if (origSurf instanceof DistanceProtected) {
-						DistanceProtected corrSurf = (DistanceProtected)origSurf;
-						PointSourceDistanceCorrection corr = corrSurf.getDistanceCorrection();
-						PointSurface ptSurf = corrSurf.getUncorrectedSurface();
-						surfs = ptSurf.getForDistanceCorrection(loc, corr, TectonicRegionType.ACTIVE_SHALLOW, rup.getMag());
+						surfs = ((DistanceProtected)origSurf).getCorrectedSurfaces(loc);
 					} else {
 						surfs = WeightedList.evenlyWeighted(origSurf);
 					}
