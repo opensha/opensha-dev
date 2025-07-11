@@ -19,7 +19,7 @@ import org.opensha.sha.earthquake.faultSysSolution.modules.GridSourceProvider;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.PRVI25_InvConfigFactory;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.gridded.PRVI25_GridSourceBuilder;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_DeclusteringAlgorithms;
-import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_LogicTreeBranch;
+import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_LogicTree;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_SeisSmoothingAlgorithms;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_SubductionCaribbeanSeismicityRate;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_SubductionMuertosSeismicityRate;
@@ -37,10 +37,10 @@ public class SubductionDefModAverageTest {
 		Location loc = new Location(18.0, -68.2);
 		
 		List<LogicTreeLevel<? extends LogicTreeNode>> allLevels = new ArrayList<>();
-		allLevels.addAll(PRVI25_LogicTreeBranch.levelsSubduction);
-		allLevels.addAll(PRVI25_LogicTreeBranch.levelsSubductionGridded);
+		allLevels.addAll(PRVI25_LogicTree.levelsSubduction);
+		allLevels.addAll(PRVI25_LogicTree.levelsSubductionGridded);
 		LogicTreeBranch<LogicTreeNode> branch = new LogicTreeBranch<>(allLevels);
-		for (LogicTreeNode node : PRVI25_LogicTreeBranch.DEFAULT_SUBDUCTION_INTERFACE)
+		for (LogicTreeNode node : PRVI25_LogicTree.DEFAULT_SUBDUCTION_INTERFACE)
 			branch.setValue(node);
 		branch.setValue(PRVI25_SubductionCaribbeanSeismicityRate.PREFFERRED);
 		branch.setValue(PRVI25_SubductionMuertosSeismicityRate.PREFFERRED);

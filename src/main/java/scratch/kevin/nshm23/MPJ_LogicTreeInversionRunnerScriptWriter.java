@@ -82,7 +82,7 @@ import org.opensha.sha.earthquake.rupForecastImpl.nshm23.prior2018.NSHM18_Deform
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.prior2018.NSHM18_FaultModels;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.prior2018.NSHM18_LogicTreeBranch;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.util.NSHM23_RegionLoader;
-import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_LogicTreeBranch;
+import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_LogicTree;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_SubductionFaultModels;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.util.PRVI25_RegionLoader;
 import org.opensha.sha.imr.AttenRelRef;
@@ -636,7 +636,7 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 		 * PRVI25 logic tree
 		 * TODO (this is a just a marker to find this part quickly, not an actual todo)
 		 */
-//		List<LogicTreeLevel<? extends LogicTreeNode>> levels = PRVI25_LogicTreeBranch.levelsOnFault;
+//		List<LogicTreeLevel<? extends LogicTreeNode>> levels = PRVI25_LogicTree.levelsOnFault;
 //		dirName += "-prvi25_crustal_branches";
 //		double avgNumRups = 50000;
 //		gmpes = new AttenRelRef[] { AttenRelRef.USGS_PRVI_ACTIVE };
@@ -658,14 +658,15 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 //		if (samplingBranchCountMultiplier > 1)
 //			dirName += samplingBranchCountMultiplier+"x";
 		
-		List<LogicTreeLevel<? extends LogicTreeNode>> levels = PRVI25_LogicTreeBranch.levelsSubduction;
+		List<LogicTreeLevel<? extends LogicTreeNode>> levels = PRVI25_LogicTree.levelsSubduction;
 		dirName += "-prvi25_subduction_branches";
 		double avgNumRups = 10000;
 		gmpes = new AttenRelRef[] { AttenRelRef.USGS_PRVI_INTERFACE, AttenRelRef.USGS_PRVI_SLAB };
 		
 //		forceHazardReg = new GriddedRegion(PRVI25_RegionLoader.loadPRVI_Tight(), 0.05, GriddedRegion.ANCHOR_0_0);
+		forceHazardReg = new GriddedRegion(PRVI25_RegionLoader.loadPRVI_MapExtents(), 0.1, GriddedRegion.ANCHOR_0_0);
 //		forceHazardReg = new GriddedRegion(PRVI25_RegionLoader.loadPRVI_MapExtents(), 0.05, GriddedRegion.ANCHOR_0_0);
-		forceHazardReg = new GriddedRegion(PRVI25_RegionLoader.loadPRVI_MapExtents(), 0.025, GriddedRegion.ANCHOR_0_0);
+//		forceHazardReg = new GriddedRegion(PRVI25_RegionLoader.loadPRVI_MapExtents(), 0.025, GriddedRegion.ANCHOR_0_0);
 		sigmaTrunc = 3d;
 		supersample = false;
 		
@@ -674,7 +675,7 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 		
 //		dirName += "-proxyGriddedTests";
 		
-		Class<? extends InversionConfigurationFactory> factoryClass = PRVI25_InvConfigFactory.class;
+//		Class<? extends InversionConfigurationFactory> factoryClass = PRVI25_InvConfigFactory.class;
 		
 //		Class<? extends InversionConfigurationFactory> factoryClass = PRVI25_InvConfigFactory.MueAsCrustal.class;
 //		dirName += "-mue_as_crustal";
@@ -699,6 +700,9 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 		
 //		Class<? extends InversionConfigurationFactory> factoryClass = PRVI25_InvConfigFactory.NoProxyLengthLimit.class;
 //		dirName += "-no_proxy_len_limit";
+		
+		Class<? extends InversionConfigurationFactory> factoryClass = PRVI25_InvConfigFactory.Rates1973.class;
+		dirName += "-1973_rates";
 		
 		if (!factoryClass.equals(PRVI25_InvConfigFactory.class)) {
 			// try instantiate it to make sure we get any static modifiers that might change branch weights

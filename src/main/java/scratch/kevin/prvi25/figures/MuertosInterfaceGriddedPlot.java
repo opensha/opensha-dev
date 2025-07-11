@@ -27,7 +27,7 @@ import org.opensha.sha.earthquake.faultSysSolution.modules.GridSourceList;
 import org.opensha.sha.earthquake.faultSysSolution.modules.GridSourceList.GriddedRupture;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.gridded.PRVI25_GridSourceBuilder;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_DeclusteringAlgorithms;
-import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_LogicTreeBranch;
+import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_LogicTree;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_SeisSmoothingAlgorithms;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_SubductionCaribbeanSeismicityRate;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_SubductionMuertosSeismicityRate;
@@ -50,8 +50,8 @@ public class MuertosInterfaceGriddedPlot {
 		FaultSystemSolution subSol = FaultSystemSolution.load(SUBDUCTION_SOL_LARGE);
 		
 		List<LogicTreeLevel<? extends LogicTreeNode>> levels = new ArrayList<>();
-		levels.addAll(PRVI25_LogicTreeBranch.levelsSubduction);
-		levels.addAll(PRVI25_LogicTreeBranch.levelsSubductionGridded);
+		levels.addAll(PRVI25_LogicTree.levelsSubduction);
+		levels.addAll(PRVI25_LogicTree.levelsSubductionGridded);
 		LogicTreeBranch<LogicTreeNode> branch = new LogicTreeBranch<>(levels);
 		
 		branch.setValue(PRVI25_SubductionScalingRelationships.AVERAGE);

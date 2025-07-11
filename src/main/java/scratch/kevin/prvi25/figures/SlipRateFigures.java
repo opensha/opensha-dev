@@ -50,7 +50,7 @@ import org.opensha.sha.earthquake.faultSysSolution.util.FaultSectionUtils;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_SegmentationModels;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_CrustalDeformationModels;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_CrustalFaultModels;
-import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_LogicTreeBranch;
+import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_LogicTree;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_SubductionDeformationModels;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_SubductionFaultModels;
 import org.opensha.sha.faultSurface.FaultSection;
@@ -552,7 +552,7 @@ public class SlipRateFigures {
 	private static FaultSystemSolution buildNoClassic(File nodeSolDir) throws IOException {
 		BranchAverageSolutionCreator baCreator = new BranchAverageSolutionCreator(new BranchWeightProvider.CurrentWeights());
 		List<LogicTreeLevel<? extends LogicTreeNode>> levels = new ArrayList<>();
-		levels.add(PRVI25_LogicTreeBranch.SEG);
+		levels.add(PRVI25_LogicTree.SEG);
 		for (NSHM23_SegmentationModels segModel : NSHM23_SegmentationModels.values()) {
 			if (segModel.getNodeWeight(null) == 0d || segModel == NSHM23_SegmentationModels.CLASSIC)
 				continue;

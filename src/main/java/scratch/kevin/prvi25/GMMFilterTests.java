@@ -10,7 +10,7 @@ import org.opensha.commons.logicTree.LogicTreeBranch;
 import org.opensha.commons.logicTree.LogicTreeLevel;
 import org.opensha.commons.logicTree.LogicTreeNode;
 import org.opensha.sha.earthquake.faultSysSolution.hazard.mpj.MPJ_LogicTreeHazardCalc;
-import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_LogicTreeBranch;
+import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_LogicTree;
 import org.opensha.sha.imr.AttenRelRef;
 import org.opensha.sha.imr.ScalarIMR;
 import org.opensha.sha.imr.attenRelImpl.nshmp.NSHMP_GMM_Wrapper;
@@ -24,13 +24,13 @@ class GMMFilterTests {
 	
 	public static void main(String[] args) {
 		List<LogicTreeLevel<? extends LogicTreeNode>> allLevels = new ArrayList<>();
-		allLevels.addAll(PRVI25_LogicTreeBranch.levelsCrustalGMM);
-		allLevels.addAll(PRVI25_LogicTreeBranch.levelsInterfaceGMM);
-		allLevels.addAll(PRVI25_LogicTreeBranch.levelsSlabGMM);
+		allLevels.addAll(PRVI25_LogicTree.levelsCrustalGMM);
+		allLevels.addAll(PRVI25_LogicTree.levelsInterfaceGMM);
+		allLevels.addAll(PRVI25_LogicTree.levelsSlabGMM);
 		List<LogicTree<?>> logicTrees = List.of(
-				LogicTree.buildExhaustive(PRVI25_LogicTreeBranch.levelsCrustalGMM, true),
-				LogicTree.buildExhaustive(PRVI25_LogicTreeBranch.levelsInterfaceGMM, true),
-				LogicTree.buildExhaustive(PRVI25_LogicTreeBranch.levelsSlabGMM, true),
+				LogicTree.buildExhaustive(PRVI25_LogicTree.levelsCrustalGMM, true),
+				LogicTree.buildExhaustive(PRVI25_LogicTree.levelsInterfaceGMM, true),
+				LogicTree.buildExhaustive(PRVI25_LogicTree.levelsSlabGMM, true),
 				LogicTree.buildExhaustive(allLevels, true)
 				);
 		

@@ -14,7 +14,7 @@ import org.opensha.sha.earthquake.faultSysSolution.modules.GridSourceList;
 import org.opensha.sha.earthquake.faultSysSolution.modules.GridSourceList.GriddedRupture;
 import org.opensha.sha.earthquake.faultSysSolution.util.SolModuleStripper;
 import org.opensha.sha.earthquake.faultSysSolution.util.TrueMeanSolutionCreator;
-import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_LogicTreeBranch;
+import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_LogicTree;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_SubductionFaultModels;
 import org.opensha.sha.util.TectonicRegionType;
 
@@ -51,7 +51,7 @@ public class InterfaceSlabOnlyBASolWriter {
 		List<LogicTreeBranch<LogicTreeNode>> branches = new ArrayList<>();
 		List<FaultSystemSolution> sols = new ArrayList<>();
 		
-		levels.add(PRVI25_LogicTreeBranch.SUB_FM);
+		levels.add(PRVI25_LogicTree.SUB_FM);
 		
 		sols.add(largeSol);
 		branches.add(new LogicTreeBranch<>(levels, List.of(PRVI25_SubductionFaultModels.PRVI_SUB_FM_LARGE)));

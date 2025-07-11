@@ -20,7 +20,7 @@ import org.opensha.sha.earthquake.faultSysSolution.modules.GridSourceList;
 import org.opensha.sha.earthquake.faultSysSolution.modules.GridSourceList.GriddedRupture;
 import org.opensha.sha.earthquake.faultSysSolution.modules.GridSourceProvider;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.gridded.PRVI25_GridSourceBuilder;
-import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_LogicTreeBranch;
+import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_LogicTree;
 import org.opensha.sha.util.TectonicRegionType;
 
 import com.google.common.base.Preconditions;
@@ -34,7 +34,7 @@ public class SlabMagCornerTests {
 //		PRVI25_GridSourceBuilder.SLAB_MMAX = 7.35d;
 //		PRVI25_GridSourceBuilder.SLAB_M_CORNER = Double.NaN;
 //		File outputDir = new File(INV_DIR, COMBINED_DIR.getName()+"-ba_only-slab_mmax_7p4-vs760");
-		PRVI25_GridSourceBuilder.SLAB_MMAX = 7.45d;
+//		PRVI25_GridSourceBuilder.SLAB_MMAX = 7.45d; // TODO
 		PRVI25_GridSourceBuilder.SLAB_M_CORNER = Double.NaN;
 		File outputDir = new File(INV_DIR, COMBINED_DIR.getName()+"-ba_only-slab_mmax_7p5-vs760");
 		Preconditions.checkState(outputDir.exists() || outputDir.mkdir());
@@ -57,7 +57,7 @@ public class SlabMagCornerTests {
 		
 		GridSourceList gridListWithoutSlab = new GridSourceList.Precomputed(gridReg, modRupsTRT);
 		
-		LogicTree<?> gridTree = LogicTree.buildExhaustive(PRVI25_LogicTreeBranch.levelsSubductionGridded, true);
+		LogicTree<?> gridTree = LogicTree.buildExhaustive(PRVI25_LogicTree.levelsSubductionGridded, true);
 		System.out.println("Built "+gridTree.size()+" branches");
 		
 		List<CompletableFuture<GridSourceList>> futures = new ArrayList<>();

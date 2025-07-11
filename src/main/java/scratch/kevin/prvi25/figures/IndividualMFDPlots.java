@@ -11,11 +11,15 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.Function;
 
+import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.apache.commons.math3.util.Precision;
 import org.jfree.data.Range;
+import org.opensha.commons.data.function.ArbitrarilyDiscretizedFunc;
 import org.opensha.commons.data.function.DiscretizedFunc;
 import org.opensha.commons.data.function.EvenlyDiscretizedFunc;
+import org.opensha.commons.data.uncertainty.UncertainArbDiscFunc;
 import org.opensha.commons.data.uncertainty.UncertainBoundedIncrMagFreqDist;
 import org.opensha.commons.data.xyz.GriddedGeoDataSet;
 import org.opensha.commons.geo.GriddedRegion;
@@ -44,9 +48,11 @@ import org.opensha.sha.earthquake.rupForecastImpl.prvi25.gridded.SeismicityRateM
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_CrustalSeismicityRate;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_DeclusteringAlgorithms;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_SeisSmoothingAlgorithms;
+import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_SeismicityRateEpoch;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_SubductionCaribbeanSeismicityRate;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_SubductionFaultModels;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_SubductionMuertosSeismicityRate;
+import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_SubductionSlabMMax;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.util.PRVI25_RegionLoader;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.util.PRVI25_RegionLoader.PRVI25_SeismicityRegions;
 import org.opensha.sha.faultSurface.FaultSection;
@@ -105,7 +111,7 @@ public class IndividualMFDPlots {
 				Range xRange;
 				String texPrefix;
 				FileWriter texFW;
-				SeismicityRateModel siesModel;
+				Function<PRVI25_SeismicityRateEpoch, SeismicityRateModel> seisModelFunc;
 				if (seisReg == PRVI25_SeismicityRegions.CRUSTAL) {
 					sol = crustalSol;
 					outputDir = crustalOutputDir;
@@ -114,7 +120,13 @@ public class IndividualMFDPlots {
 					xRange = new Range(5d, 8.5);
 					texPrefix = "CrustalMFD";
 					texFW = crustalTexFW;
-					siesModel = PRVI25_CrustalSeismicityRate.loadRateModel();
+					seisModelFunc = epoch -> {
+						try {
+							return PRVI25_CrustalSeismicityRate.loadRateModel(epoch);
+						} catch (IOException e) {
+							throw ExceptionUtils.asRuntimeException(e);
+						}
+					};
 				} else if (seisReg == PRVI25_SeismicityRegions.CAR_INTERFACE) {
 					sol = subductionCombined;
 					outputDir = subductionOutputDir;
@@ -123,7 +135,13 @@ public class IndividualMFDPlots {
 					xRange = new Range(5d, 9.5);
 					texPrefix = "SubCarIntMFD";
 					texFW = subductionTexFW;
-					siesModel = PRVI25_SubductionCaribbeanSeismicityRate.loadRateModel(false);
+					seisModelFunc = epoch -> {
+						try {
+							return PRVI25_SubductionCaribbeanSeismicityRate.loadRateModel(epoch, false);
+						} catch (IOException e) {
+							throw ExceptionUtils.asRuntimeException(e);
+						}
+					};
 				} else if (seisReg == PRVI25_SeismicityRegions.MUE_INTERFACE) {
 					sol = subductionCombined;
 					outputDir = subductionOutputDir;
@@ -132,7 +150,13 @@ public class IndividualMFDPlots {
 					xRange = new Range(5d, 9.5);
 					texPrefix = "SubMueIntMFD";
 					texFW = subductionTexFW;
-					siesModel = PRVI25_SubductionMuertosSeismicityRate.loadRateModel(false);
+					seisModelFunc = epoch -> {
+						try {
+							return PRVI25_SubductionMuertosSeismicityRate.loadRateModel(epoch, false);
+						} catch (IOException e) {
+							throw ExceptionUtils.asRuntimeException(e);
+						}
+					};
 				} else if (seisReg == PRVI25_SeismicityRegions.CAR_INTRASLAB) {
 					sol = subductionCombined;
 					outputDir = subductionOutputDir;
@@ -141,7 +165,13 @@ public class IndividualMFDPlots {
 					xRange = new Range(5d, 9.5);
 					texPrefix = "SubCarSlabMFD";
 					texFW = subductionTexFW;
-					siesModel = PRVI25_SubductionCaribbeanSeismicityRate.loadRateModel(true);
+					seisModelFunc = epoch -> {
+						try {
+							return PRVI25_SubductionCaribbeanSeismicityRate.loadRateModel(epoch, true);
+						} catch (IOException e) {
+							throw ExceptionUtils.asRuntimeException(e);
+						}
+					};
 				} else if (seisReg == PRVI25_SeismicityRegions.MUE_INTRASLAB) {
 					sol = subductionCombined;
 					outputDir = subductionOutputDir;
@@ -150,7 +180,13 @@ public class IndividualMFDPlots {
 					xRange = new Range(5d, 9.5);
 					texPrefix = "SubMueSlabMFD";
 					texFW = subductionTexFW;
-					siesModel = PRVI25_SubductionMuertosSeismicityRate.loadRateModel(true);
+					seisModelFunc = epoch -> {
+						try {
+							return PRVI25_SubductionMuertosSeismicityRate.loadRateModel(epoch, true);
+						} catch (IOException e) {
+							throw ExceptionUtils.asRuntimeException(e);
+						}
+					};
 				} else {
 					throw new IllegalStateException();
 				}
@@ -170,14 +206,28 @@ public class IndividualMFDPlots {
 					onFaultMean = CombinedMFDsPlot.calcFaultMFD(r == 0 ? null : reg, sol, refMFD);
 				else if (trt == TectonicRegionType.SUBDUCTION_INTERFACE)
 					onFaultMean = CombinedMFDsPlot.calcFaultMFD(reg, sol, refMFD);
-				UncertainBoundedIncrMagFreqDist obs;
-				if (r == 0) {
-					obs = siesModel.getBounded(refMFD, xRange.getUpperBound()+0.1);
-				} else {
-					obs = siesModel.getRemapped(reg, seisReg, PRVI25_DeclusteringAlgorithms.AVERAGE,
-							PRVI25_SeisSmoothingAlgorithms.AVERAGE, refMFD, xRange.getUpperBound()+0.1);
-					obs.setName("Observed (subset), N5="+new DecimalFormat("0.0#").format(obs.getCumRate(obs.getClosestXIndex(5.01))));
+				
+				List<UncertainBoundedIncrMagFreqDist> obsList = new ArrayList<>();
+				List<UncertainBoundedIncrMagFreqDist> origObsList = r == 0 ? null : new ArrayList<>();
+				List<Double> obsWeights = new ArrayList<>();
+				for (PRVI25_SeismicityRateEpoch epoch : PRVI25_SeismicityRateEpoch.values()) {
+					double weight = epoch.getNodeWeight(null);
+					if (weight == 0d)
+						continue;
+					SeismicityRateModel seisModel = seisModelFunc.apply(epoch);
+					UncertainBoundedIncrMagFreqDist obs = seisModel.getBounded(refMFD, xRange.getUpperBound()+0.1);
+					if (r == 0) {
+						obsList.add(obs);
+					} else {
+						UncertainBoundedIncrMagFreqDist subsetObs = seisModel.getRemapped(reg, seisReg, PRVI25_DeclusteringAlgorithms.AVERAGE,
+								PRVI25_SeisSmoothingAlgorithms.AVERAGE, refMFD, xRange.getUpperBound()+0.1);
+						subsetObs.setName("Observed (subset), N5="+new DecimalFormat("0.0#").format(obs.getCumRate(obs.getClosestXIndex(5.01))));
+						obsList.add(subsetObs);
+						origObsList.add(obs);
+					}
+					obsWeights.add(weight);
 				}
+				UncertainBoundedIncrMagFreqDist obs = averageUncert(obsList, obsWeights);
 				IncrementalMagFreqDist gridded;
 				UncertainBoundedIncrMagFreqDist[] griddedDists;
 				if (trt == TectonicRegionType.ACTIVE_SHALLOW || trt == TectonicRegionType.SUBDUCTION_INTERFACE) {
@@ -186,13 +236,9 @@ public class IndividualMFDPlots {
 				} else {
 					// regions overlap, need to redo it
 					Preconditions.checkState(r == 0, "Need to do bounds right if we decide to use a slab subset region");
-					if (seisReg == PRVI25_SeismicityRegions.CAR_INTRASLAB)
-						gridded = PRVI25_SubductionCaribbeanSeismicityRate.AVERAGE.build(refMFD,
-								PRVI25_GridSourceBuilder.SLAB_MMAX, PRVI25_GridSourceBuilder.SLAB_M_CORNER, true);
-					else
-						gridded = PRVI25_SubductionMuertosSeismicityRate.AVERAGE.build(refMFD,
-								PRVI25_GridSourceBuilder.SLAB_MMAX, PRVI25_GridSourceBuilder.SLAB_M_CORNER, true);
-					griddedDists = new UncertainBoundedIncrMagFreqDist[] { siesModel.getBounded(refMFD, PRVI25_GridSourceBuilder.SLAB_MMAX) };
+					UncertainBoundedIncrMagFreqDist avgSlab = getMmaxAveragedSlab(refMFD, seisReg, true);
+					gridded = avgSlab;
+					griddedDists = new UncertainBoundedIncrMagFreqDist[] { avgSlab };
 				}
 
 				if (r > 0)
@@ -204,9 +250,12 @@ public class IndividualMFDPlots {
 					if (seisReg == PRVI25_SeismicityRegions.CAR_INTRASLAB) {
 						// combined slab plot
 						IncrementalMagFreqDist slab03 = loadSlab03(refMFD);
-						UncertainBoundedIncrMagFreqDist carDist = siesModel.getBounded(refMFD, PRVI25_GridSourceBuilder.SLAB_MMAX);
-						UncertainBoundedIncrMagFreqDist mueDist = PRVI25_SubductionMuertosSeismicityRate.loadRateModel(true)
-								.getBounded(refMFD, PRVI25_GridSourceBuilder.SLAB_MMAX, PRVI25_GridSourceBuilder.SLAB_M_CORNER);
+						// false here means pref not average
+						UncertainBoundedIncrMagFreqDist carDist = getMmaxAveragedSlab(refMFD, seisReg, false);
+						UncertainBoundedIncrMagFreqDist mueDist = getMmaxAveragedSlab(refMFD, PRVI25_SeismicityRegions.MUE_INTRASLAB, false);
+//						UncertainBoundedIncrMagFreqDist carDist = siesModel.getBounded(refMFD, PRVI25_GridSourceBuilder.SLAB_MMAX);
+//						UncertainBoundedIncrMagFreqDist mueDist = PRVI25_SubductionMuertosSeismicityRate.loadRateModel(true)
+//								.getBounded(refMFD, PRVI25_GridSourceBuilder.SLAB_MMAX, PRVI25_GridSourceBuilder.SLAB_M_CORNER);
 						plotMultiSlab(subductionOutputDir, "subduction_mfds_slab_combined", new Range(5d, 8d),
 								carDist,
 								mueDist,
@@ -216,8 +265,7 @@ public class IndividualMFDPlots {
 								LaTeXUtils.numberExpFormatSigFigs(prevM5, 2), false)+"\n");
 						texFW.write(LaTeXUtils.defineValueCommand("SubSlabPrevModelMFDMFiveRI",
 								LaTeXUtils.numberExpFormatFixedDecimal(1d/prevM5, 1), false)+"\n");
-						IncrementalMagFreqDist mueGridded = PRVI25_SubductionMuertosSeismicityRate.AVERAGE.build(
-								refMFD, PRVI25_GridSourceBuilder.SLAB_MMAX, PRVI25_GridSourceBuilder.SLAB_M_CORNER, true);
+						IncrementalMagFreqDist mueGridded = getMmaxAveragedSlab(refMFD, PRVI25_SeismicityRegions.MUE_INTRASLAB, true);
 						double sumSlabRate = gridded.getCumRate(gridded.getClosestXIndex(5.01)) + mueGridded.getCumRate(mueGridded.getClosestXIndex(5.01));
 						texFW.write(LaTeXUtils.defineValueCommand("SubSlabCombModelMFDMFiveRate",
 								LaTeXUtils.numberExpFormatSigFigs(sumSlabRate, 2), false)+"\n");
@@ -233,7 +281,7 @@ public class IndividualMFDPlots {
 				texFW.write(LaTeXUtils.defineValueCommand(texPrefix+"ObsMFiveRI",
 						LaTeXUtils.numberExpFormatFixedDecimal(1d/obsM5, 1), false)+"\n");
 				if (r > 0) {
-					UncertainBoundedIncrMagFreqDist origObs = siesModel.getBounded(refMFD, xRange.getUpperBound()+0.1);
+					UncertainBoundedIncrMagFreqDist origObs = averageUncert(origObsList, obsWeights);
 					double origM5 = origObs.getCumRate(origObs.getClosestXIndex(5.01));
 					texFW.write(LaTeXUtils.defineValueCommand(texPrefix+"ObsMFivePercent",
 							LaTeXUtils.numberAsPercent(100d*obsM5/origM5, 0), false)+"\n");
@@ -738,6 +786,109 @@ public class IndividualMFDPlots {
 			ret.set(ret.getClosestXIndex(pt.getX()), pt.getY());
 		for (Point2D pt : mfd2)
 			ret.add(ret.getClosestXIndex(pt.getX()), pt.getY());
+		return ret;
+	}
+	
+	private static UncertainBoundedIncrMagFreqDist getMmaxAveragedSlab(EvenlyDiscretizedFunc refMFD,
+			PRVI25_SeismicityRegions seisReg, boolean averageRate) throws IOException {
+		List<UncertainBoundedIncrMagFreqDist> slabMFDs = new ArrayList<>();
+		List<Double> slabWeights = new ArrayList<>();
+		for (PRVI25_SeismicityRateEpoch epoch : PRVI25_SeismicityRateEpoch.values()) {
+			double epochWeight = epoch.getNodeWeight(null);
+			if (epochWeight == 0d)
+				continue;
+			for (PRVI25_SubductionSlabMMax slabMmax : PRVI25_SubductionSlabMMax.values()) {
+				double mMaxWeight = slabMmax.getNodeWeight(null);
+				if (mMaxWeight == 0d)
+					continue;
+				IncrementalMagFreqDist avg;
+				SeismicityRateModel siesModel;
+				if (seisReg == PRVI25_SeismicityRegions.CAR_INTRASLAB) {
+					if (averageRate)
+						avg = PRVI25_SubductionCaribbeanSeismicityRate.AVERAGE.build(epoch, refMFD,
+								slabMmax.getIncrementalMmax(), PRVI25_GridSourceBuilder.SLAB_M_CORNER, true);
+					else
+						avg = PRVI25_SubductionCaribbeanSeismicityRate.PREFFERRED.build(epoch, refMFD,
+								slabMmax.getIncrementalMmax(), PRVI25_GridSourceBuilder.SLAB_M_CORNER, true);
+					siesModel = PRVI25_SubductionCaribbeanSeismicityRate.loadRateModel(epoch, true);
+				} else if (seisReg == PRVI25_SeismicityRegions.MUE_INTRASLAB) {
+					if (averageRate)
+						avg = PRVI25_SubductionMuertosSeismicityRate.AVERAGE.build(epoch, refMFD,
+								slabMmax.getIncrementalMmax(), PRVI25_GridSourceBuilder.SLAB_M_CORNER, true);
+					else
+						avg = PRVI25_SubductionMuertosSeismicityRate.PREFFERRED.build(epoch, refMFD,
+								slabMmax.getIncrementalMmax(), PRVI25_GridSourceBuilder.SLAB_M_CORNER, true);
+					siesModel = PRVI25_SubductionMuertosSeismicityRate.loadRateModel(epoch, true);
+				} else {
+					throw new IllegalStateException();
+				}
+				slabMFDs.add(siesModel.getBounded(refMFD, slabMmax.getIncrementalMmax()));
+				slabWeights.add(epochWeight*mMaxWeight);
+			}
+		}
+		return averageUncert(slabMFDs, slabWeights);
+	}
+	
+	static UncertainBoundedIncrMagFreqDist averageUncert(List<UncertainBoundedIncrMagFreqDist> mfds, List<Double> weights) {
+		if (mfds.size() == 1)
+			return mfds.get(0);
+		UncertainBoundedIncrMagFreqDist refMFD = mfds.get(0);
+		double sumWeight = 0d;
+		for (int i=0; i<mfds.size(); i++) {
+			UncertainBoundedIncrMagFreqDist mfd = mfds.get(i);
+			Preconditions.checkState(mfd.getDelta() == refMFD.getDelta());
+			Preconditions.checkState(mfd.getMinX() == refMFD.getMinX());
+			Preconditions.checkState(mfd.size() == refMFD.size());
+			sumWeight += weights.get(i);
+		}
+		Preconditions.checkState(Precision.equals(sumWeight, 1d, 1e-4));
+		
+		IncrementalMagFreqDist avgPref = new IncrementalMagFreqDist(refMFD.getMinX(), refMFD.size(), refMFD.getDelta());
+		IncrementalMagFreqDist avgLower = new IncrementalMagFreqDist(refMFD.getMinX(), refMFD.size(), refMFD.getDelta());
+		IncrementalMagFreqDist avgUpper = new IncrementalMagFreqDist(refMFD.getMinX(), refMFD.size(), refMFD.getDelta());
+		for (int i=0; i<refMFD.size(); i++) {
+			for (int j=0; j<mfds.size(); j++) {
+				UncertainBoundedIncrMagFreqDist mfd = mfds.get(j);
+				double weight = weights.get(j);
+				avgPref.add(i, weight*mfd.getY(i));
+				avgLower.add(i, weight*mfd.getLowerY(i));
+				avgUpper.add(i, weight*mfd.getUpperY(i));
+			}
+		}
+		UncertainBoundedIncrMagFreqDist ret = new UncertainBoundedIncrMagFreqDist(avgPref, avgLower, avgUpper, refMFD.getBoundType());
+		ret.setName(refMFD.getName());
+		return ret;
+	}
+	
+	static UncertainArbDiscFunc averageUncertCml(List<UncertainArbDiscFunc> mfds, List<Double> weights) {
+		if (mfds.size() == 1)
+			return mfds.get(0);
+		UncertainArbDiscFunc refMFD = mfds.get(0);
+		double sumWeight = 0d;
+		for (int i=0; i<mfds.size(); i++) {
+			UncertainArbDiscFunc mfd = mfds.get(i);
+			Preconditions.checkState(mfd.getMinX() == refMFD.getMinX());
+			Preconditions.checkState(mfd.getMaxX() == refMFD.getMaxX());
+			Preconditions.checkState(mfd.size() == refMFD.size());
+			sumWeight += weights.get(i);
+		}
+		Preconditions.checkState(Precision.equals(sumWeight, 1d, 1e-4));
+		
+		ArbitrarilyDiscretizedFunc avgPref = new ArbitrarilyDiscretizedFunc();
+		ArbitrarilyDiscretizedFunc avgLower = new ArbitrarilyDiscretizedFunc();
+		ArbitrarilyDiscretizedFunc avgUpper = new ArbitrarilyDiscretizedFunc();
+		for (int i=0; i<refMFD.size(); i++) {
+			double x = refMFD.getX(i);
+			for (int j=0; j<mfds.size(); j++) {
+				UncertainArbDiscFunc mfd = mfds.get(j);
+				double weight = weights.get(j);
+				avgPref.set(x, weight*mfd.getY(i));
+				avgLower.set(x, weight*mfd.getLowerY(i));
+				avgUpper.set(x, weight*mfd.getUpperY(i));
+			}
+		}
+		UncertainArbDiscFunc ret = new UncertainArbDiscFunc(avgPref, avgLower, avgUpper, refMFD.getBoundType());
+		ret.setName(refMFD.getName());
 		return ret;
 	}
 	

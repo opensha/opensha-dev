@@ -51,7 +51,7 @@ import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_Crusta
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_CrustalFaultModels;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_CrustalSeismicityRate;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_DeclusteringAlgorithms;
-import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_LogicTreeBranch;
+import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_LogicTree;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_SeisSmoothingAlgorithms;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_SubductionFaultModels;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.util.PRVI25_RegionLoader;
@@ -108,12 +108,12 @@ public class BowinFaultAddTest {
 		boolean rebuild = false;
 
 		List<LogicTreeLevel<? extends LogicTreeNode>> levels = new ArrayList<>();
-		levels.addAll(PRVI25_LogicTreeBranch.levelsOnFault);
-		levels.addAll(PRVI25_LogicTreeBranch.levelsCrustalOffFault);
+		levels.addAll(PRVI25_LogicTree.levelsOnFault);
+		levels.addAll(PRVI25_LogicTree.levelsCrustalOffFault);
 		LogicTreeBranch<LogicTreeNode> branch = new LogicTreeBranch<>(levels);
 		
 		// start with on-fault defaults
-		for (LogicTreeNode node : PRVI25_LogicTreeBranch.DEFAULT_CRUSTAL_ON_FAULT)
+		for (LogicTreeNode node : PRVI25_LogicTree.DEFAULT_CRUSTAL_ON_FAULT)
 			branch.setValue(node);
 		
 		PRVI25_CrustalFaultModels crustalFM = branch.requireValue(PRVI25_CrustalFaultModels.class); 
@@ -139,8 +139,8 @@ public class BowinFaultAddTest {
 		List<LogicTreeLevel<? extends LogicTreeNode>> combLevels = new ArrayList<>();
 		List<LogicTreeBranch<LogicTreeNode>> combBranches = new ArrayList<>();
 		
-		combLevels.add(PRVI25_LogicTreeBranch.CRUSTAL_FM);
-		combLevels.add(PRVI25_LogicTreeBranch.SUB_FM);
+		combLevels.add(PRVI25_LogicTree.CRUSTAL_FM);
+		combLevels.add(PRVI25_LogicTree.SUB_FM);
 		
 		for (PRVI25_SubductionFaultModels subductionFM : subductionBASols.keySet())
 			combBranches.add(new LogicTreeBranch<>(combLevels, List.of(crustalFM, subductionFM)));

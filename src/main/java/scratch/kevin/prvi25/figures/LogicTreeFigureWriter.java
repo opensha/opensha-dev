@@ -34,7 +34,7 @@ import org.opensha.commons.util.ExceptionUtils;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_ScalingRelationships;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.PRVI25_InvConfigFactory;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_CrustalRandomlySampledDeformationModelLevel;
-import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_LogicTreeBranch;
+import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_LogicTree;
 
 import com.google.common.base.Preconditions;
 import com.itextpdf.awt.FontMapper;
@@ -75,22 +75,22 @@ public class LogicTreeFigureWriter extends JPanel {
 		
 		// TODO switch back to reading it
 //		LogicTree<LogicTreeNode> subFaultTree = LogicTree.read(new File(SUBDUCTION_DIR, "logic_tree.json"));
-		LogicTree<LogicTreeNode> subFaultTree = LogicTree.buildExhaustive(PRVI25_LogicTreeBranch.levelsSubduction, true);
+		LogicTree<LogicTreeNode> subFaultTree = LogicTree.buildExhaustive(PRVI25_LogicTree.levelsSubduction, true);
 		trees.add(subFaultTree);
 		prefixes.add("subduction_inversion");
 		LogicTree<?> subGridTree = new PRVI25_InvConfigFactory().getGridSourceTree(subFaultTree);
 		trees.add(subGridTree);
 		prefixes.add("subduction_gridded");
 		
-		List<LogicTreeLevel<? extends LogicTreeNode>> crustalGMMLevels = PRVI25_LogicTreeBranch.levelsCrustalGMM;
+		List<LogicTreeLevel<? extends LogicTreeNode>> crustalGMMLevels = PRVI25_LogicTree.levelsCrustalGMM;
 		LogicTree<LogicTreeNode> crustalGMMTree = LogicTree.buildExhaustive(crustalGMMLevels, true);
 		trees.add(crustalGMMTree);
 		prefixes.add("gmm");
 		
-		List<LogicTreeLevel<? extends LogicTreeNode>> interfaceGMMLevels = PRVI25_LogicTreeBranch.levelsInterfaceGMM;
+		List<LogicTreeLevel<? extends LogicTreeNode>> interfaceGMMLevels = PRVI25_LogicTree.levelsInterfaceGMM;
 		LogicTree<LogicTreeNode> interfaceGMMTree = LogicTree.buildExhaustive(interfaceGMMLevels, true);
 		
-		List<LogicTreeLevel<? extends LogicTreeNode>> slabGMMLevels = PRVI25_LogicTreeBranch.levelsSlabGMM;
+		List<LogicTreeLevel<? extends LogicTreeNode>> slabGMMLevels = PRVI25_LogicTree.levelsSlabGMM;
 		LogicTree<LogicTreeNode> slabGMMTree = LogicTree.buildExhaustive(slabGMMLevels, true);
 		
 		for (int i=0; i<trees.size(); i++) {

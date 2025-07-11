@@ -20,7 +20,7 @@ import org.opensha.sha.earthquake.faultSysSolution.ruptures.plausibility.impl.pr
 import org.opensha.sha.earthquake.faultSysSolution.util.FaultSysTools;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_ScalingRelationships;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.PRVI25_InvConfigFactory;
-import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_LogicTreeBranch;
+import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_LogicTree;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_SubductionFaultModels;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_SubductionScalingRelationships;
 
@@ -40,7 +40,7 @@ public class RupSetStatsTexWriter {
 		
 		FileWriter fw = new FileWriter(new File(outputDir, "rup_set_stats.tex"));
 		
-		LogicTreeBranch<LogicTreeNode> avgCrustalBranch = PRVI25_LogicTreeBranch.DEFAULT_CRUSTAL_ON_FAULT.copy();
+		LogicTreeBranch<LogicTreeNode> avgCrustalBranch = PRVI25_LogicTree.DEFAULT_CRUSTAL_ON_FAULT.copy();
 		avgCrustalBranch.setValue(NSHM23_ScalingRelationships.AVERAGE);
 		List<LogicTreeBranch<LogicTreeNode>> crustalScaleBranches = new ArrayList<>();
 		for (NSHM23_ScalingRelationships scale : NSHM23_ScalingRelationships.values())
@@ -50,7 +50,7 @@ public class RupSetStatsTexWriter {
 		fw.write("% Crustal\n");
 		write(fw, "Crustal", factory, List.of(avgCrustalBranch), crustalScaleBranches);
 		
-		LogicTreeBranch<LogicTreeNode> avgSubLargeBranch = PRVI25_LogicTreeBranch.DEFAULT_SUBDUCTION_INTERFACE.copy();
+		LogicTreeBranch<LogicTreeNode> avgSubLargeBranch = PRVI25_LogicTree.DEFAULT_SUBDUCTION_INTERFACE.copy();
 		avgSubLargeBranch.setValue(PRVI25_SubductionFaultModels.PRVI_SUB_FM_LARGE);
 		avgSubLargeBranch.setValue(PRVI25_SubductionScalingRelationships.AVERAGE);
 		List<LogicTreeBranch<LogicTreeNode>> subLargeScaleBranches = new ArrayList<>();
@@ -61,7 +61,7 @@ public class RupSetStatsTexWriter {
 		fw.write("\n% Subduction, Large FM\n");
 		write(fw, "SubLarge", factory, List.of(avgSubLargeBranch), subLargeScaleBranches);
 		
-		LogicTreeBranch<LogicTreeNode> avgSubSmallBranch = PRVI25_LogicTreeBranch.DEFAULT_SUBDUCTION_INTERFACE.copy();
+		LogicTreeBranch<LogicTreeNode> avgSubSmallBranch = PRVI25_LogicTree.DEFAULT_SUBDUCTION_INTERFACE.copy();
 		avgSubSmallBranch.setValue(PRVI25_SubductionFaultModels.PRVI_SUB_FM_SMALL);
 		avgSubSmallBranch.setValue(PRVI25_SubductionScalingRelationships.AVERAGE);
 		List<LogicTreeBranch<LogicTreeNode>> subSmallScaleBranches = new ArrayList<>();

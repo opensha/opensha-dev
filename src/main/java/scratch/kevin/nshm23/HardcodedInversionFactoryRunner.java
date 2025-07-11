@@ -50,7 +50,7 @@ import org.opensha.sha.earthquake.rupForecastImpl.nshm23.prior2018.NSHM18_LogicT
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.PRVI25_InvConfigFactory;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_CrustalDeformationModels;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_CrustalFaultModels;
-import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_LogicTreeBranch;
+import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_LogicTree;
 import org.opensha.sha.faultSurface.FaultSection;
 import org.opensha.sha.magdist.IncrementalMagFreqDist;
 import org.opensha.sha.magdist.SparseGutenbergRichterSolver;
@@ -152,10 +152,10 @@ public class HardcodedInversionFactoryRunner {
 //		LogicTreeBranch<LogicTreeNode> branch = PRVI25_LogicTreeBranch.DEFAULT_CRUSTAL_ON_FAULT;
 //		branch = branch.copy();
 
-		LogicTreeBranch<LogicTreeNode> branch = new LogicTreeBranch<>(PRVI25_LogicTreeBranch.levelsCrustalCombined);
-		for (LogicTreeNode node : PRVI25_LogicTreeBranch.DEFAULT_CRUSTAL_ON_FAULT)
+		LogicTreeBranch<LogicTreeNode> branch = new LogicTreeBranch<>(PRVI25_LogicTree.levelsCrustalCombined);
+		for (LogicTreeNode node : PRVI25_LogicTree.DEFAULT_CRUSTAL_ON_FAULT)
 			branch.setValue(node);
-		for (LogicTreeNode node : PRVI25_LogicTreeBranch.DEFAULT_CRUSTAL_GRIDDED)
+		for (LogicTreeNode node : PRVI25_LogicTree.DEFAULT_CRUSTAL_GRIDDED)
 			branch.setValue(node);
 		writeGridProv = true;
 

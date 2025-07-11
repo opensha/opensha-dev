@@ -28,6 +28,7 @@ import org.opensha.sha.earthquake.faultSysSolution.FaultSystemSolution;
 import org.opensha.sha.earthquake.faultSysSolution.modules.RupMFDsModule;
 import org.opensha.sha.earthquake.faultSysSolution.util.FaultSysTools;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_CrustalSeismicityRate;
+import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_SeismicityRateEpoch;
 import org.opensha.sha.faultSurface.FaultSection;
 import org.opensha.sha.magdist.IncrementalMagFreqDist;
 
@@ -50,7 +51,8 @@ public class BulgeContributionMFDPlot {
 		
 		IncrementalMagFreqDist fullMFD = sol.calcNucleationMFD_forRegion(null, refMFD.getMinX(), refMFD.getMaxX(), refMFD.getDelta(), false);
 		
-		UncertainBoundedIncrMagFreqDist obsBounds = PRVI25_CrustalSeismicityRate.loadRateModel().getBounded(refMFD, 8.05);
+		PRVI25_SeismicityRateEpoch epoch = PRVI25_SeismicityRateEpoch.DEFAULT;
+		UncertainBoundedIncrMagFreqDist obsBounds = PRVI25_CrustalSeismicityRate.loadRateModel(epoch).getBounded(refMFD, 8.05);
 		// find the largest bulge;
 		double maxRatio = 0d;
 		double sortMag = Double.NaN;

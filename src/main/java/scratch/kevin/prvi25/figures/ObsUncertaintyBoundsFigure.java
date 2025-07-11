@@ -25,6 +25,7 @@ import org.opensha.sha.earthquake.rupForecastImpl.prvi25.gridded.SeismicityRateF
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.gridded.SeismicityRateFileLoader.RateRecord;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.gridded.SeismicityRateFileLoader.RateType;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_CrustalSeismicityRate;
+import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_SeismicityRateEpoch;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_SubductionCaribbeanSeismicityRate;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_SubductionMuertosSeismicityRate;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.util.PRVI25_RegionLoader.PRVI25_SeismicityRegions;
@@ -66,6 +67,7 @@ public class ObsUncertaintyBoundsFigure {
 		List<PRVI25_SeismicityRegions> seisRegions = new ArrayList<>(List.of(PRVI25_SeismicityRegions.values()));
 		seisRegions.add(null); // reference flag
 		PRVI25_SeismicityRegions refRef = PRVI25_SeismicityRegions.CRUSTAL;
+		PRVI25_SeismicityRateEpoch epoch = PRVI25_SeismicityRateEpoch.DEFAULT;
 		
 		double weightLow = PRVI25_CrustalSeismicityRate.LOW.getNodeWeight(null);
 		double weightPref = PRVI25_CrustalSeismicityRate.PREFFERRED.getNodeWeight(null);
@@ -112,19 +114,19 @@ public class ObsUncertaintyBoundsFigure {
 				
 				switch (seisReg) {
 				case CRUSTAL:
-					rates = PRVI25_CrustalSeismicityRate.loadRates(type);
+					rates = PRVI25_CrustalSeismicityRate.loadRates(epoch, type);
 					break;
 				case CAR_INTERFACE:
-					rates = PRVI25_SubductionCaribbeanSeismicityRate.loadRates(type, false);
+					rates = PRVI25_SubductionCaribbeanSeismicityRate.loadRates(epoch, type, false);
 					break;
 				case CAR_INTRASLAB:
-					rates = PRVI25_SubductionCaribbeanSeismicityRate.loadRates(type, true);
+					rates = PRVI25_SubductionCaribbeanSeismicityRate.loadRates(epoch, type, true);
 					break;
 				case MUE_INTERFACE:
-					rates = PRVI25_SubductionMuertosSeismicityRate.loadRates(type, false);
+					rates = PRVI25_SubductionMuertosSeismicityRate.loadRates(epoch, type, false);
 					break;
 				case MUE_INTRASLAB:
-					rates = PRVI25_SubductionMuertosSeismicityRate.loadRates(type, true);
+					rates = PRVI25_SubductionMuertosSeismicityRate.loadRates(epoch, type, true);
 					break;
 
 				default:
