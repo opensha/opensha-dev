@@ -3268,13 +3268,27 @@ public class PureScratch {
 		}
 	}
 	
+	private static void test344() throws IOException {
+		File file = new File("/home/kevin/OpenSHA/nshm23/batch_inversions/2025_07_11-prvi25_subduction_branches/logic_tree_full_gridded.json");
+//		LogicTree<?> tree = LogicTree.read(file);
+		LogicTree<?> tree = LogicTree.readFileBacked(file);
+		
+		for (LogicTreeLevel<?> level : tree.getLevels()) {
+			System.out.println("Level "+level.getName()+" of type "+level.getClass());
+			System.out.println("Node prefixes");
+			List<? extends LogicTreeNode> nodes = level.getNodes();
+			for (int i=0; i<nodes.size() && i <10; i++)
+				System.out.println(nodes.get(i).getFilePrefix());
+		}
+	}
+	
 	/**
 	 * @param args
 	 * @throws Exception 
 	 */
 	public static void main(String[] args) throws Exception {
 		try {
-			test343();
+			test344();
 		} catch (Throwable t) {
 			t.printStackTrace();
 			System.exit(1);

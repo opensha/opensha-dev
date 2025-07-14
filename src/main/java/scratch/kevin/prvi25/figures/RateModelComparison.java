@@ -25,6 +25,8 @@ import org.opensha.sha.earthquake.rupForecastImpl.prvi25.gridded.SeismicityRateF
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.gridded.SeismicityRateFileLoader.Direct;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.gridded.SeismicityRateFileLoader.RateType;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.gridded.SeismicityRateModel;
+import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_CrustalSeismicityRate;
+import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_SeismicityRateEpoch;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.util.PRVI25_RegionLoader.PRVI25_SeismicityRegions;
 import org.opensha.sha.magdist.IncrementalMagFreqDist;
 
@@ -35,10 +37,12 @@ import net.mahdilamb.colormap.Colors;
 public class RateModelComparison {
 
 	public static void main(String[] args) throws IOException {
-		File prevDir = new File("/home/kevin/workspace/opensha/src/main/resources/data/erf/prvi25/seismicity/rates/2025_03_26");
-		File newDir1900 = new File("/home/kevin/workspace/opensha/src/main/resources/data/erf/prvi25/seismicity/rates/2025_07_10");
-		File newDir1973 = new File("/home/kevin/workspace/opensha/src/main/resources/data/erf/prvi25/seismicity/rates/2025_07_11");
-		File directDir = new File("/home/kevin/workspace/opensha/src/main/resources/data/erf/prvi25/seismicity/rates/directrates_2025_05_08");
+		File ratesDir = new File("/home/kevin/workspace/opensha/src/main/resources/data/erf/prvi25/seismicity/rates");
+		File prevDir = new File(ratesDir, "2025_03_26");
+		File newDir1900 = new File(ratesDir, PRVI25_CrustalSeismicityRate.RATE_DATE+"/"+PRVI25_SeismicityRateEpoch.FULL.getRateSubDirName());
+//		File newDir1900 = new File(ratesDir, PRVI25_CrustalSeismicityRate.RATE_DATE+"/1973_scaled_to_1900");
+		File newDir1973 = new File(ratesDir, PRVI25_CrustalSeismicityRate.RATE_DATE+"/"+PRVI25_SeismicityRateEpoch.RECENT.getRateSubDirName());
+		File directDir = new File(ratesDir, "directrates_2025_07_11");
 		
 		File outputDir = new File("/tmp/prvi_seis_rates");
 		Preconditions.checkState(outputDir.exists() || outputDir.mkdir());
@@ -58,7 +62,17 @@ public class RateModelComparison {
 		
 		DecimalFormat pDF = new DecimalFormat("0%");
 		
-		for (PRVI25_SeismicityRegions reg : PRVI25_SeismicityRegions.values()) {
+		List<Double> prevRates = new ArrayList<>();
+		List<Double> newRates1900 = new ArrayList<>();
+		List<Double> newRates1973 = new ArrayList<>();
+		List<Double> directRates1900 = new ArrayList<>();
+		List<Double> directRates1973 = new ArrayList<>();
+		double directSum1900 = 0d;
+		double directSum1973 = 0d;
+		
+		PRVI25_SeismicityRegions[] regions = PRVI25_SeismicityRegions.values();
+		List<String> regionNames = new ArrayList<>();
+		for (PRVI25_SeismicityRegions reg : regions) {
 			CSVFile<String> origCSV = CSVFile.readFile(new File(prevDir, reg.name()+".csv"), false);
 			SeismicityRateModel prevModel = new SeismicityRateModel(origCSV, RateType.M1_TO_MMAX, UncertaintyBoundType.CONF_95);
 			
@@ -106,6 +120,8 @@ public class RateModelComparison {
 				throw new IllegalStateException("Unknown region: "+reg);
 			}
 			
+			regionNames.add(name);
+			
 			for (boolean is1973 : new boolean[] {false,true}) {
 				PlotCurveCharacterstics boundsChar = new PlotCurveCharacterstics(is1973 ? PlotLineType.DASHED : PlotLineType.SOLID, 2f, color);
 				PlotCurveCharacterstics prefChar = new PlotCurveCharacterstics(is1973 ? PlotLineType.DASHED : PlotLineType.SOLID, 5f, color);
@@ -113,13 +129,6 @@ public class RateModelComparison {
 				SeismicityRateModel newModel = is1973 ? newModel1973 : newModel1900;
 				
 				String years = is1973 ? "1973-2023" : "1900-2023";
-				
-				double prevRate = prevModel.getMeanRecord().rateAboveM1;
-				double newRate = newModel.getMeanRecord().rateAboveM1;
-				String changeStr = pDF.format((newRate-prevRate)/prevRate);
-				if (newRate > prevRate)
-					changeStr = "+"+changeStr;
-				System.out.println(name+" "+years+" M>5 rate:\t"+prevRate+" -> "+newRate+" ("+changeStr+")");
 				
 				IncrementalMagFreqDist lower = newModel.buildLower(refMFD, mfdMmax);
 				IncrementalMagFreqDist pref = newModel.buildPreferred(refMFD, mfdMmax);
@@ -154,11 +163,18 @@ public class RateModelComparison {
 ////				upperExact.setName("95% Exact Bounds");
 //				cmlFuncs.add(upperExact);
 //				cmlChars.add(exactBoundsChar);
+				
+				if (is1973)
+					newRates1973.add(newModel.getMeanRecord().rateAboveM1);
+				else
+					newRates1900.add(newModel.getMeanRecord().rateAboveM1);
 			}
 			
 			IncrementalMagFreqDist lower = prevModel.buildLower(refMFD, mfdMmax);
 			IncrementalMagFreqDist pref = prevModel.buildPreferred(refMFD, mfdMmax);
 			IncrementalMagFreqDist upper = prevModel.buildUpper(refMFD, mfdMmax);
+			
+			prevRates.add(prevModel.getMeanRecord().rateAboveM1);
 			
 			color = Color.GRAY;
 			PlotCurveCharacterstics boundsChar = new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, color);
@@ -183,7 +199,7 @@ public class RateModelComparison {
 //			cmlChars.add(incrChars.get(incrChars.size()-1));
 			
 			for (boolean is1973 : new boolean[] {false,true}) {
-				File ratesFile = new File(directDir, "directrates-PRVI "+regName+"-Full-"+(is1973 ? "1973" : "1900")+"-2024.csv");
+				File ratesFile = new File(directDir, "directrates-PRVI "+regName+"-Prob-"+(is1973 ? "1973" : "1900")+"-2024.csv");
 				
 				CSVFile<String> totalRateCSV = CSVFile.readFile(ratesFile, false);
 				List<Direct> directs = SeismicityRateFileLoader.loadDirectBranches(totalRateCSV);
@@ -249,6 +265,11 @@ public class RateModelComparison {
 				meanObsCml.setName(meanIncrObs.getName());
 				cmlFuncs.add(meanObsCml);
 				cmlChars.add(obsChar);
+				
+				if (is1973)
+					directRates1973.add(meanObsCml.getY(meanObsCml.getClosestXIndex(5.01)));
+				else
+					directRates1900.add(meanObsCml.getY(meanObsCml.getClosestXIndex(5.01)));
 			}
 			
 			Preconditions.checkState(incrFuncs.size() == incrChars.size());
@@ -272,6 +293,43 @@ public class RateModelComparison {
 			gp.drawGraphPanel(cmlPlot, false, true, magRange, yRange);
 			
 			PlotUtils.writePlots(outputDir, reg.name()+"_cml", gp, 700, 600, true, true, false);
+		}
+		
+		for (boolean is1973 : new boolean[] {false,true}) {
+			if (is1973)
+				System.out.println("Rate model, updated 1973-2023 vs previous 1900-2023");
+			else
+				System.out.println("Rate model, updated 1900-2023 vs previous 1900-2023");
+			List<Double> newRates = is1973 ? newRates1973 : newRates1900;
+			for (int r=0; r<regions.length; r++) {
+				String name = regionNames.get(r);
+				
+				double prevRate = prevRates.get(r);
+				double newRate = newRates.get(r);
+				String changeStr = pDF.format((newRate-prevRate)/prevRate);
+				if (newRate > prevRate)
+					changeStr = "+"+changeStr;
+				System.out.println("\t"+name+" M>5 rate:\t"+prevRate+" -> "+newRate+" ("+changeStr+")");
+			}
+			System.out.println();
+		}
+		
+		for (boolean is1973 : new boolean[] {false,true}) {
+			if (is1973)
+				System.out.println("Direct rates, 1973-2023");
+			else
+				System.out.println("Direct rates, 1900-2023");
+			List<Double> rates = is1973 ? directRates1973 : directRates1900;
+			double sum = rates.stream().mapToDouble(D->D).sum();
+			Preconditions.checkState(rates.size()==regions.length);
+			System.out.println("\tSum: "+(float)sum);
+			for (int r=0; r<regions.length; r++) {
+				String name = regionNames.get(r);
+				
+				double rate = rates.get(r);
+				System.out.println("\t"+name+" M>5 rate:\t"+(float)rate+" ("+pDF.format(rate/sum)+")");
+			}
+			System.out.println();
 		}
 	}
 

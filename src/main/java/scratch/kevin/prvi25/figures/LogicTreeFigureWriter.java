@@ -31,6 +31,7 @@ import org.opensha.commons.logicTree.LogicTreeLevel;
 import org.opensha.commons.logicTree.LogicTreeLevel.RandomlySampledLevel;
 import org.opensha.commons.logicTree.LogicTreeNode;
 import org.opensha.commons.util.ExceptionUtils;
+import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_MaxMagOffFault;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_ScalingRelationships;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.PRVI25_InvConfigFactory;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_CrustalRandomlySampledDeformationModelLevel;
@@ -57,6 +58,9 @@ public class LogicTreeFigureWriter extends JPanel {
 		nameRemappings.put(NSHM23_ScalingRelationships.WIDTH_LIMITED.getShortName(), "Wdth-Lmtd");
 		nameRemappings.put(NSHM23_ScalingRelationships.WIDTH_LIMITED_CSD.getShortName(), "W-L, CSD");
 		nameRemappings.put(NSHM23_ScalingRelationships.LOGA_C4p2_SQRT_LEN.getShortName(), "Sqrt-Len");
+		nameRemappings.put(NSHM23_MaxMagOffFault.MAG_7p3.getShortName(), "7.3");
+		nameRemappings.put(NSHM23_MaxMagOffFault.MAG_7p6.getShortName(), "7.6");
+		nameRemappings.put(NSHM23_MaxMagOffFault.MAG_7p9.getShortName(), "7.9");
 		nameRemappings.put(PRVI25_CrustalRandomlySampledDeformationModelLevel.NAME, "Geologic Deformation Model Sample");
 		
 		File outputDir = new File(FIGURES_DIR, "logic_trees");

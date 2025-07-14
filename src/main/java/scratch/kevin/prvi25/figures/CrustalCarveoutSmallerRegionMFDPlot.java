@@ -42,20 +42,25 @@ public class CrustalCarveoutSmallerRegionMFDPlot {
 		List<String> names = new ArrayList<>();
 		List<String> prefixes = new ArrayList<>();
 		
+		String fullName = "Full Model Region";
 		regions.add(PRVI25_SeismicityRegions.CRUSTAL.load());
-		names.add("Full Model Region");
+		names.add(fullName);
 		prefixes.add("full_region");
 		
 		regions.add(PRVI25_RegionLoader.loadPRVI_MapExtents());
-		names.add("Smaller Map Region");
+		names.add("Hazard Assessment Region");
 		prefixes.add("smaller_map_region");
 		
 		FaultSystemSolution sol = FaultSystemSolution.load(CRUSTAL_SOL_SUPRA_ONLY);
 		
+		boolean includeCarveout = false;
+		
+		File outputDir = new File("/tmp");
+		
 		EvenlyDiscretizedFunc refMFD = FaultSysTools.initEmptyMFD(2.55, sol.getRupSet().getMaxMag());
 		
-		NSHM23_MaxMagOffFault mMax = NSHM23_MaxMagOffFault.MAG_7p6;
-		PRVI25_SeismicityRateEpoch epoch = PRVI25_SeismicityRateEpoch.DEFAULT;
+		NSHM23_MaxMagOffFault mMax = NSHM23_MaxMagOffFault.MAG_7p9;
+		PRVI25_SeismicityRateEpoch epoch = PRVI25_SeismicityRateEpoch.RECENT_SCALED;
 		
 		DecimalFormat fractDF = new DecimalFormat("0.###");
 		
@@ -63,8 +68,6 @@ public class CrustalCarveoutSmallerRegionMFDPlot {
 			Region region = regions.get(r);
 			IncrementalMagFreqDist solMFD = sol.calcNucleationMFD_forRegion(
 					region, refMFD.getMinX(), refMFD.getMaxX(), refMFD.size(), false);
-			IncrementalMagFreqDist leftoverMFD = new IncrementalMagFreqDist(refMFD.getMinX(), refMFD.getMaxX(), refMFD.size());
-			IncrementalMagFreqDist approxAvgLeftoverMFD = new IncrementalMagFreqDist(refMFD.getMinX(), refMFD.getMaxX(), refMFD.size());
 			
 			GriddedGeoDataSet pdf = PRVI25_SeisSmoothingAlgorithms.AVERAGE.loadXYZ(
 					PRVI25_SeismicityRegions.CRUSTAL, PRVI25_DeclusteringAlgorithms.AVERAGE);
@@ -92,14 +95,6 @@ public class CrustalCarveoutSmallerRegionMFDPlot {
 			double prefWeight = PRVI25_CrustalSeismicityRate.PREFFERRED.getNodeWeight(null);
 			UncertainBoundedIncrMagFreqDist dist = new UncertainBoundedIncrMagFreqDist(pref, lower, upper, UncertaintyBoundType.TWO_SIGMA);
 			
-			for (int i=0; i<refMFD.size(); i++) {
-				leftoverMFD.set(i, Math.max(0, pref.getY(i) - solMFD.getY(i)));
-				double approxAvg = lowerWeight*Math.max(0d, lower.getY(i) - solMFD.getY(i));
-				approxAvg += upperWeight*Math.max(0d, upper.getY(i) - solMFD.getY(i));
-				approxAvg += prefWeight*Math.max(0d, pref.getY(i) - solMFD.getY(i));
-				approxAvgLeftoverMFD.set(i, approxAvg);
-			}
-			
 			List<IncrementalMagFreqDist> funcs = new ArrayList<>();
 			List<PlotCurveCharacterstics> chars = new ArrayList<>();
 			
@@ -118,7 +113,7 @@ public class CrustalCarveoutSmallerRegionMFDPlot {
 			chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 3f, Colors.tab_purple));
 			
 			if (remapped) {
-				origPref.setName("Original Full Preferred Rate");
+				origPref.setName(fullName+" Preferred Rate");
 				funcs.add(origPref);
 				chars.add(new PlotCurveCharacterstics(PlotLineType.DASHED, 3f, Colors.tab_purple));
 			}
@@ -127,13 +122,26 @@ public class CrustalCarveoutSmallerRegionMFDPlot {
 			funcs.add(solMFD);
 			chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 3f, Colors.tab_blue));
 			
-			leftoverMFD.setName("Leftover");
-			funcs.add(leftoverMFD);
-			chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 3f, Colors.tab_orange));
-			
-			approxAvgLeftoverMFD.setName("Approx. Branch Avg. Leftover");
-			funcs.add(approxAvgLeftoverMFD);
-			chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 3f, Colors.tab_olive));
+			if (includeCarveout) {
+				IncrementalMagFreqDist leftoverMFD = new IncrementalMagFreqDist(refMFD.getMinX(), refMFD.getMaxX(), refMFD.size());
+				IncrementalMagFreqDist approxAvgLeftoverMFD = new IncrementalMagFreqDist(refMFD.getMinX(), refMFD.getMaxX(), refMFD.size());
+				
+				for (int i=0; i<refMFD.size(); i++) {
+					leftoverMFD.set(i, Math.max(0, pref.getY(i) - solMFD.getY(i)));
+					double approxAvg = lowerWeight*Math.max(0d, lower.getY(i) - solMFD.getY(i));
+					approxAvg += upperWeight*Math.max(0d, upper.getY(i) - solMFD.getY(i));
+					approxAvg += prefWeight*Math.max(0d, pref.getY(i) - solMFD.getY(i));
+					approxAvgLeftoverMFD.set(i, approxAvg);
+				}
+				
+				leftoverMFD.setName("Leftover");
+				funcs.add(leftoverMFD);
+				chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 3f, Colors.tab_orange));
+				
+				approxAvgLeftoverMFD.setName("Approx. Branch Avg. Leftover");
+				funcs.add(approxAvgLeftoverMFD);
+				chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 3f, Colors.tab_olive));
+			}
 			
 			PlotSpec spec = new PlotSpec(funcs, chars, names.get(r), "Magnitude", "Incremental Rate (1/yr)");
 			spec.setLegendInset(RectangleAnchor.TOP_RIGHT);
@@ -142,7 +150,7 @@ public class CrustalCarveoutSmallerRegionMFDPlot {
 			
 			gp.drawGraphPanel(spec, false, true, new Range(5d, 8d), new Range(1e-6, 1e1));
 			
-			PlotUtils.writePlots(new File("/tmp"), "mfds_"+prefixes.get(r), gp, 800, 800, true, true, false);
+			PlotUtils.writePlots(outputDir, "mfds_"+prefixes.get(r), gp, 800, 800, true, true, false);
 		}
 	}
 
