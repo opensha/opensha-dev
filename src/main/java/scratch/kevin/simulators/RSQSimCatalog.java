@@ -817,6 +817,21 @@ public class RSQSimCatalog implements XMLSaveable {
 				NSHM23_FaultModels.WUS_FM_v3, NSHM23_DeformationModels.AVERAGE),
 		BRUCE_6261_SKIP_200K("rundir6261_skip200k", "Bruce 6261 (Skip 200kyr)", "Bruce Shaw", cal(2025, 6, 26),
 				"WUS_stressRate, delta=2.0km, sigma0=100, b=.008, alpha=0; Skip 200kyr",
+				NSHM23_FaultModels.WUS_FM_v3, NSHM23_DeformationModels.AVERAGE),
+		BRUCE_6275("rundir6275", "Bruce 6275", "Bruce Shaw", cal(2025, 7, 7),
+				"WUS; shearRate; sigmaFracPin=0.5-2; delta=2.0km, sigma0=100, b=.008, alpha=0.25",
+				NSHM23_FaultModels.WUS_FM_v3, NSHM23_DeformationModels.AVERAGE),
+		BRUCE_6278("rundir6278", "Bruce 6278", "Bruce Shaw", cal(2025, 7, 7),
+				"WUS; shearRatePos+.01*Tec0; sigmaFracPin=0.5-2; delta=2.0km, sigma0=100, b=.008, alpha=0.25;  Tec0=1e-9 NS",
+				NSHM23_FaultModels.WUS_FM_v3, NSHM23_DeformationModels.AVERAGE),
+		BRUCE_6281("rundir6281", "Bruce 6281", "Bruce Shaw", cal(2025, 7, 7),
+				"WUS; shearRatePos; sigmaFracPin=0.5-2; delta=2.0km, sigma0=100, b=.008, alpha=0",
+				NSHM23_FaultModels.WUS_FM_v3, NSHM23_DeformationModels.AVERAGE),
+		BRUCE_6282("rundir6282", "Bruce 6282", "Bruce Shaw", cal(2025, 7, 7),
+				"WUS; shearRatePos; sigmaFracPin=0.5-2; delta=2.0km, sigma0=100, b=.008, alpha=0.25",
+				NSHM23_FaultModels.WUS_FM_v3, NSHM23_DeformationModels.AVERAGE),
+		BRUCE_6283("rundir6283", "Bruce 6283", "Bruce Shaw", cal(2025, 7, 7),
+				"WUS; shearRatePos+.01*Tec0; sigmaFracPin=0.5-2; delta=2.0km, sigma0=100, b=.008, alpha=0;  Tec0=1e-9 NS",
 				NSHM23_FaultModels.WUS_FM_v3, NSHM23_DeformationModels.AVERAGE);
 		
 		private String dirName;
@@ -2607,7 +2622,7 @@ public class RSQSimCatalog implements XMLSaveable {
 		}
 		
 		if (plotsSet.contains(StandardPlots.STATIONARITY)) {
-			if (replot || !new File(outputDir, "stationarity.png").exists()) {
+			if (replot || !new File(outputDir, "stationarity.png").exists() || !new File(outputDir, "stationarity_mfds.png").exists()) {
 				StationarityPlot stationarityPlot = new StationarityPlot(minMag, 7d);
 				stationarityPlot.initialize(getName(), outputDir, "stationarity");
 				plots.add(stationarityPlot);
@@ -2616,6 +2631,8 @@ public class RSQSimCatalog implements XMLSaveable {
 			lines.add(topLink);
 			lines.add("");
 			lines.add("![Stationarity]("+outputDir.getName()+"/stationarity.png)");
+			lines.add("");
+			lines.add("![Stationarity]("+outputDir.getName()+"/stationarity_mfds.png)");
 		}
 		
 		String testMagStr;
