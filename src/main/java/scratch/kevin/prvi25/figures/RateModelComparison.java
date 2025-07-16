@@ -42,7 +42,7 @@ public class RateModelComparison {
 		File newDir1900 = new File(ratesDir, PRVI25_CrustalSeismicityRate.RATE_DATE+"/"+PRVI25_SeismicityRateEpoch.FULL.getRateSubDirName());
 //		File newDir1900 = new File(ratesDir, PRVI25_CrustalSeismicityRate.RATE_DATE+"/1973_scaled_to_1900");
 		File newDir1973 = new File(ratesDir, PRVI25_CrustalSeismicityRate.RATE_DATE+"/"+PRVI25_SeismicityRateEpoch.RECENT.getRateSubDirName());
-		File directDir = new File(ratesDir, "directrates_2025_07_11");
+		File directDir = new File(ratesDir, PRVI25_CrustalSeismicityRate.RATE_DATE+"/direct");
 		
 		File outputDir = new File("/tmp/prvi_seis_rates");
 		Preconditions.checkState(outputDir.exists() || outputDir.mkdir());
