@@ -3161,7 +3161,7 @@ public class PureScratch {
 	}
 	
 	private static void test341() throws IOException {
-		GroundMotionModel gmm = Gmm.USGS_PRVI_INTRASLAB_COMBINED_TREE.instance(Imt.SA0P2);
+		GroundMotionModel gmm = Gmm.COMBINED_PRVI_INTRASLAB_2025.instance(Imt.SA0P2);
 		
 		double depth = 80d;
 		double rJB = 0d;
