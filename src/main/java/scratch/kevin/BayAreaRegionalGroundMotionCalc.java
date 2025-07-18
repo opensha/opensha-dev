@@ -21,6 +21,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
+import org.apache.commons.math3.util.Precision;
 import org.jfree.data.Range;
 import org.opensha.commons.data.CSVFile;
 import org.opensha.commons.data.Site;
@@ -36,14 +37,17 @@ import org.opensha.commons.geo.Location;
 import org.opensha.commons.geo.LocationUtils;
 import org.opensha.commons.geo.LocationVector;
 import org.opensha.commons.geo.Region;
+import org.opensha.commons.gui.plot.GeographicMapMaker;
 import org.opensha.commons.gui.plot.HeadlessGraphPanel;
 import org.opensha.commons.gui.plot.PlotCurveCharacterstics;
 import org.opensha.commons.gui.plot.PlotLineType;
 import org.opensha.commons.gui.plot.PlotSpec;
 import org.opensha.commons.gui.plot.PlotUtils;
+import org.opensha.commons.mapping.gmt.elements.GMT_CPT_Files;
 import org.opensha.commons.param.Parameter;
 import org.opensha.commons.param.impl.WarningDoubleParameter;
 import org.opensha.commons.util.ExceptionUtils;
+import org.opensha.commons.util.cpt.CPT;
 import org.opensha.commons.util.io.archive.ArchiveOutput;
 import org.opensha.commons.util.io.archive.ArchiveOutput.ParallelZipFileOutput;
 import org.opensha.sha.calc.HazardCurveCalculator;
@@ -61,6 +65,7 @@ import org.opensha.sha.earthquake.ProbEqkSource;
 import org.opensha.sha.earthquake.faultSysSolution.FaultSystemRupSet;
 import org.opensha.sha.earthquake.faultSysSolution.FaultSystemSolution;
 import org.opensha.sha.earthquake.faultSysSolution.erf.BaseFaultSystemSolutionERF;
+import org.opensha.sha.earthquake.faultSysSolution.modules.FaultGridAssociations;
 import org.opensha.sha.earthquake.faultSysSolution.modules.GridSourceProvider;
 import org.opensha.sha.earthquake.observedEarthquake.ObsEqkRupList;
 import org.opensha.sha.earthquake.observedEarthquake.ObsEqkRupture;
@@ -90,6 +95,7 @@ import org.opensha.sha.imr.param.IntensityMeasureParams.SA_Param;
 import org.opensha.sha.imr.param.SiteParams.DepthTo1pt0kmPerSecParam;
 import org.opensha.sha.imr.param.SiteParams.DepthTo2pt5kmPerSecParam;
 import org.opensha.sha.imr.param.SiteParams.Vs30_Param;
+import org.opensha.sha.magdist.IncrementalMagFreqDist;
 
 import com.google.common.base.Preconditions;
 import com.google.common.base.Stopwatch;
@@ -428,6 +434,94 @@ public class BayAreaRegionalGroundMotionCalc {
 			erf.setGriddedSeismicitySettings(origGridSettings);
 			erf.updateForecast();
 			hazardMapERF = erf;
+			
+			// write nucleation files
+			GridSourceProvider gridProv = erf.getGridSourceProvider();
+			GriddedRegion nuclRateRegion = new GriddedRegion(reg, 0.1, gridProv.getLocation(0));
+			double[] nuclMags = {3.5d, 4d, 4.5, 5d, 5.5, 6d, 6.5, 7d, 7.5d};
+			GriddedGeoDataSet[] nuclXYZs = new GriddedGeoDataSet[nuclMags.length];
+			for (int m=0; m<nuclMags.length; m++)
+				nuclXYZs[m] = new GriddedGeoDataSet(nuclRateRegion);
+			
+			for (int l=0; l<gridProv.getNumLocations(); l++) {
+				Location loc = gridProv.getLocation(l);
+				int index = nuclRateRegion.indexForLocation(loc);
+				if (index >= 0) {
+					IncrementalMagFreqDist mfd = gridProv.getMFD(l);
+//					if (mfd == null)
+//						continue;
+					for (int m=0; m<nuclMags.length; m++) {
+						int magIndex = mfd.getClosestXIndex(nuclMags[m]+0.01);
+						Preconditions.checkState(mfd.getX(magIndex) > nuclMags[m] && mfd.getX(magIndex) < nuclMags[m]+0.1);
+						nuclXYZs[m].add(index, mfd.getCumRate(magIndex));
+					}
+				}
+			}
+			
+			// now add fault ruptures
+			FaultSystemSolution sol = erf.getSolution();
+			FaultGridAssociations assoc = rupSet.requireModule(FaultGridAssociations.class);
+			
+			double[] sectAreas = rupSet.getAreaForAllSections();
+			double[] rupAreas = rupSet.getAreaForAllRups();
+			for (int rupIndex=0; rupIndex<rupSet.getNumRuptures(); rupIndex++) {
+				double sumArea = 0d;
+				List<Integer> sects = rupSet.getSectionsIndicesForRup(rupIndex);
+				
+				double mag = rupSet.getMagForRup(rupIndex);
+				double rate = sol.getRateForRup(rupIndex);
+				for (int sectIndex : sects) {
+					double fractArea = sectAreas[sectIndex]/rupAreas[rupIndex];
+					sumArea += sectAreas[sectIndex];
+					
+					Map<Integer, Double> nodeFracts = assoc.getNodeFractions(rupIndex);
+					for (int origNodeIndex : nodeFracts.keySet()) {
+						int index = nuclRateRegion.indexForLocation(gridProv.getLocation(origNodeIndex));
+						if (index >= 0) {
+							double nodeFract = nodeFracts.get(origNodeIndex);
+							double fractNucl = rate * fractArea * nodeFract;
+							Preconditions.checkState(Double.isFinite(fractNucl));
+							for (int m=0; m<nuclMags.length; m++)
+								if ((float)mag >= (float)nuclMags[m])
+									nuclXYZs[m].add(index, fractNucl);
+						}
+					}
+				}
+				Preconditions.checkState(Precision.equals(sumArea, rupAreas[rupIndex], 1e-2));
+			}
+			
+			CSVFile<String> nuclCSV = new CSVFile<>(true);
+			List<String> nuclHeader = new ArrayList<>();
+			nuclHeader.add("Latitude");
+			nuclHeader.add("Longitude");
+			for (double nuclMag : nuclMags)
+				nuclHeader.add("M>"+(float)nuclMag);
+			nuclCSV.addLine(nuclHeader);
+			
+			GeographicMapMaker mapMaker = new GeographicMapMaker(nuclRateRegion);
+			mapMaker.setWriteGeoJSON(false);
+			
+			for (int m=0; m<nuclMags.length; m++) {
+				System.out.println("M"+nuclMags[m]+" nucl range: "+nuclXYZs[m].getMinZ()+", "+nuclXYZs[m].getMaxZ());
+				CPT cpt = GMT_CPT_Files.SEQUENTIAL_BATLOW_UNIFORM.instance().rescale(
+						Math.floor(Math.log10(nuclXYZs[m].getMinZ())), Math.ceil(Math.log10(nuclXYZs[m].getMaxZ())));
+				cpt.setLog10(true);
+				mapMaker.plotXYZData(nuclXYZs[m], cpt, "M>"+nuclMags[m]+" nucleation rate");
+				
+				mapMaker.plot(outputDir, "nucleation_rates_m"+oDF.format(nuclMags[m]), " ");
+			}
+			
+			for (int i=0; i<nuclRateRegion.getNodeCount(); i++) {
+				List<String> line = new ArrayList<>(nuclHeader.size());
+				Location loc = nuclRateRegion.locationForIndex(i);
+				line.add((float)loc.lat+"");
+				line.add((float)loc.lon+"");
+				for (int m=0; m<nuclMags.length; m++)
+					line.add((float)nuclXYZs[m].get(i)+"");
+				nuclCSV.addLine(line);
+			}
+			nuclCSV.writeToFile(new File(outputDir, "nucleation_rates.csv"));
+			System.exit(0);
 		} else {
 			keptEvents = new ArrayList<>();
 			keptFractsInReg = new ArrayList<>();

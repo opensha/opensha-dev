@@ -57,9 +57,12 @@ import static scratch.kevin.prvi25.figures.PRVI_Paths.*;
 class SeismicityPDFFigures {
 
 	public static void main(String[] args) throws IOException {
-		File crustalOutputDir = new File(FIGURES_DIR, "crustal_grid");
+//		File figsDir = FIGURES_DIR;
+		File figsDir = new File("/tmp/test_pdfs");
+		Preconditions.checkState(figsDir.exists() || figsDir.mkdir());
+		File crustalOutputDir = new File(figsDir, "crustal_grid");
 		Preconditions.checkState(crustalOutputDir.exists() || crustalOutputDir.mkdir());
-		File subOutputDir = new File(FIGURES_DIR, "sub_grid");
+		File subOutputDir = new File(figsDir, "sub_grid");
 		Preconditions.checkState(subOutputDir.exists() || subOutputDir.mkdir());
 		
 		PRVI25_DeclusteringAlgorithms avgDecluster = PRVI25_DeclusteringAlgorithms.AVERAGE;
@@ -182,7 +185,7 @@ class SeismicityPDFFigures {
 			}
 		}
 		for (int i=0; i<xyz.size(); i++)
-			if (!everSets.get(i))
+			if (!everSets.get(i) || xyz.get(i) == 0d)
 				xyz.set(i, Double.NaN);
 		
 		if (magForRate > 0d) {

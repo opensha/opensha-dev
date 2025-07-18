@@ -16,9 +16,11 @@ import java.util.function.Function;
 import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.apache.commons.math3.util.Precision;
 import org.jfree.data.Range;
+import org.opensha.commons.data.WeightedList;
 import org.opensha.commons.data.function.ArbitrarilyDiscretizedFunc;
 import org.opensha.commons.data.function.DiscretizedFunc;
 import org.opensha.commons.data.function.EvenlyDiscretizedFunc;
+import org.opensha.commons.data.uncertainty.BoundedUncertainty;
 import org.opensha.commons.data.uncertainty.UncertainArbDiscFunc;
 import org.opensha.commons.data.uncertainty.UncertainBoundedIncrMagFreqDist;
 import org.opensha.commons.data.xyz.GriddedGeoDataSet;
@@ -829,6 +831,8 @@ public class IndividualMFDPlots {
 		return averageUncert(slabMFDs, slabWeights);
 	}
 	
+	private static boolean AVG_UNCERT_IN_LOG10 = true;
+	
 	static UncertainBoundedIncrMagFreqDist averageUncert(List<UncertainBoundedIncrMagFreqDist> mfds, List<Double> weights) {
 		if (mfds.size() == 1)
 			return mfds.get(0);
@@ -836,6 +840,8 @@ public class IndividualMFDPlots {
 		double sumWeight = 0d;
 		for (int i=0; i<mfds.size(); i++) {
 			UncertainBoundedIncrMagFreqDist mfd = mfds.get(i);
+			Preconditions.checkNotNull(mfd.getBoundType());
+			Preconditions.checkState(mfd.getBoundType() == refMFD.getBoundType());
 			Preconditions.checkState(mfd.getDelta() == refMFD.getDelta());
 			Preconditions.checkState(mfd.getMinX() == refMFD.getMinX());
 			Preconditions.checkState(mfd.size() == refMFD.size());
@@ -843,19 +849,41 @@ public class IndividualMFDPlots {
 		}
 		Preconditions.checkState(Precision.equals(sumWeight, 1d, 1e-4));
 		
-		IncrementalMagFreqDist avgPref = new IncrementalMagFreqDist(refMFD.getMinX(), refMFD.size(), refMFD.getDelta());
-		IncrementalMagFreqDist avgLower = new IncrementalMagFreqDist(refMFD.getMinX(), refMFD.size(), refMFD.getDelta());
-		IncrementalMagFreqDist avgUpper = new IncrementalMagFreqDist(refMFD.getMinX(), refMFD.size(), refMFD.getDelta());
+		IncrementalMagFreqDist pref = new IncrementalMagFreqDist(refMFD.getMinX(), refMFD.size(), refMFD.getDelta());
+		IncrementalMagFreqDist lower = new IncrementalMagFreqDist(refMFD.getMinX(), refMFD.size(), refMFD.getDelta());
+		IncrementalMagFreqDist upper = new IncrementalMagFreqDist(refMFD.getMinX(), refMFD.size(), refMFD.getDelta());
 		for (int i=0; i<refMFD.size(); i++) {
+			boolean anyNonZero = false;
+			for (int j=0; !anyNonZero && j<mfds.size(); j++)
+				anyNonZero = mfds.get(j).getY(i) > 0d;
+			if (!anyNonZero)
+				continue;
+			double average = 0d;
+			WeightedList<BoundedUncertainty> uncertainties = new WeightedList<>(mfds.size());
 			for (int j=0; j<mfds.size(); j++) {
 				UncertainBoundedIncrMagFreqDist mfd = mfds.get(j);
 				double weight = weights.get(j);
-				avgPref.add(i, weight*mfd.getY(i));
-				avgLower.add(i, weight*mfd.getLowerY(i));
-				avgUpper.add(i, weight*mfd.getUpperY(i));
+				average += weight*mfd.getY(i);
+				if (AVG_UNCERT_IN_LOG10)
+					uncertainties.add(new BoundedUncertainty(mfd.getBoundType(),
+							Math.log10(mfd.getLowerY(i)), Math.log10(mfd.getUpperY(i)),
+							mfd.getBoundType().estimateStdDev(Math.log10(mfd.getLowerY(i)), Math.log10(mfd.getUpperY(i)))), weight);
+				else
+					uncertainties.add(new BoundedUncertainty(mfd.getBoundType(),
+							mfd.getLowerY(i), mfd.getUpperY(i),
+							mfd.getStdDev(i)), weight);
+			}
+			pref.set(i, average);
+			BoundedUncertainty uncertMix = BoundedUncertainty.weightedCombination(uncertainties);
+			if (AVG_UNCERT_IN_LOG10) {
+				lower.set(i, Math.pow(10, uncertMix.lowerBound));
+				upper.set(i, Math.pow(10, uncertMix.upperBound));
+			} else {
+				lower.set(i, uncertMix.lowerBound);
+				upper.set(i, uncertMix.upperBound);
 			}
 		}
-		UncertainBoundedIncrMagFreqDist ret = new UncertainBoundedIncrMagFreqDist(avgPref, avgLower, avgUpper, refMFD.getBoundType());
+		UncertainBoundedIncrMagFreqDist ret = new UncertainBoundedIncrMagFreqDist(pref, lower, upper, refMFD.getBoundType());
 		ret.setName(refMFD.getName());
 		return ret;
 	}
@@ -874,20 +902,42 @@ public class IndividualMFDPlots {
 		}
 		Preconditions.checkState(Precision.equals(sumWeight, 1d, 1e-4));
 		
-		ArbitrarilyDiscretizedFunc avgPref = new ArbitrarilyDiscretizedFunc();
-		ArbitrarilyDiscretizedFunc avgLower = new ArbitrarilyDiscretizedFunc();
-		ArbitrarilyDiscretizedFunc avgUpper = new ArbitrarilyDiscretizedFunc();
+		ArbitrarilyDiscretizedFunc pref = new ArbitrarilyDiscretizedFunc();
+		ArbitrarilyDiscretizedFunc lower = new ArbitrarilyDiscretizedFunc();
+		ArbitrarilyDiscretizedFunc upper = new ArbitrarilyDiscretizedFunc();
 		for (int i=0; i<refMFD.size(); i++) {
+			boolean anyNonZero = false;
+			for (int j=0; !anyNonZero && j<mfds.size(); j++)
+				anyNonZero = mfds.get(j).getY(i) > 0d;
+			if (!anyNonZero)
+				continue;
 			double x = refMFD.getX(i);
+			double average = 0d;
+			WeightedList<BoundedUncertainty> uncertainties = new WeightedList<>(mfds.size());
 			for (int j=0; j<mfds.size(); j++) {
 				UncertainArbDiscFunc mfd = mfds.get(j);
 				double weight = weights.get(j);
-				avgPref.set(x, weight*mfd.getY(i));
-				avgLower.set(x, weight*mfd.getLowerY(i));
-				avgUpper.set(x, weight*mfd.getUpperY(i));
+				average += weight*mfd.getY(i);
+				if (AVG_UNCERT_IN_LOG10)
+					uncertainties.add(new BoundedUncertainty(mfd.getBoundType(),
+							Math.log10(mfd.getLowerY(i)), Math.log10(mfd.getUpperY(i)),
+							mfd.getBoundType().estimateStdDev(Math.log10(mfd.getLowerY(i)), Math.log10(mfd.getUpperY(i)))), weight);
+				else
+					uncertainties.add(new BoundedUncertainty(mfd.getBoundType(),
+							mfd.getLowerY(i), mfd.getUpperY(i),
+							mfd.getStdDev(i)), weight);
+			}
+			pref.set(x, average);
+			BoundedUncertainty uncertMix = BoundedUncertainty.weightedCombination(uncertainties);
+			if (AVG_UNCERT_IN_LOG10) {
+				lower.set(x, Math.pow(10, uncertMix.lowerBound));
+				upper.set(x, Math.pow(10, uncertMix.upperBound));
+			} else {
+				lower.set(x, uncertMix.lowerBound);
+				upper.set(x, uncertMix.upperBound);
 			}
 		}
-		UncertainArbDiscFunc ret = new UncertainArbDiscFunc(avgPref, avgLower, avgUpper, refMFD.getBoundType());
+		UncertainArbDiscFunc ret = new UncertainArbDiscFunc(pref, lower, upper, refMFD.getBoundType());
 		ret.setName(refMFD.getName());
 		return ret;
 	}

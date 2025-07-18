@@ -400,15 +400,16 @@ public class CombinedMFDsPlot {
 					EvenlyDiscretizedFunc combObsCml = refMFD.getCumRateDistWithOffset().deepClone();
 					Preconditions.checkState(combObsCml.calcSumOfY_Vals() == 0d);
 					for (boolean is1900 : rateBools) {
-						String ratesPath = ratesPrefix+"directrates-PRVI "+regName+"-Full-"+(is1900 ? "1900" : "1973")+"-2024.csv";
+						String ratesPath = ratesPrefix+PRVI25_CrustalSeismicityRate.getDirectRateFileName(seisReg,
+								is1900 ? PRVI25_SeismicityRateEpoch.FULL : PRVI25_SeismicityRateEpoch.RECENT);
 						System.out.println("Loading direct rates from "+ratesPath);
 						InputStream is = SeismicityRateFileLoader.class.getResourceAsStream(ratesPath);
 						CSVFile<String> totalRateCSV = CSVFile.readStream(is, false);
 						List<Direct> directs = SeismicityRateFileLoader.loadDirectBranches(totalRateCSV);
 						
 						double minFuncMag = is1900 ? 6.01 : 5.01;
-						double maxFuncMag = directs.get(0).maxObsIncrMag;
-						if (maxFuncMag == 0d) {
+						double maxFuncMag = directs.get(0).maxObsIncrMag - 0.01;
+						if (maxFuncMag <= 0d) {
 							// not found
 //							maxFuncMag = directs.get(0).cumulativeDist.getMaxX()+0.01;
 							maxFuncMag = directs.get(0).cumulativeDist.getMaxX()-0.01;

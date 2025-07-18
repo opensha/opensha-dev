@@ -7,14 +7,13 @@ import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.jfree.chart.plot.XYPlot;
-import org.jfree.chart.renderer.xy.XYLineAndShapeRenderer;
 import org.jfree.chart.ui.RectangleAnchor;
 import org.jfree.data.Range;
 import org.opensha.commons.data.CSVFile;
 import org.opensha.commons.data.function.DiscretizedFunc;
 import org.opensha.commons.data.function.EvenlyDiscretizedFunc;
-import org.opensha.commons.data.uncertainty.UncertaintyBoundType;
+import org.opensha.commons.data.uncertainty.UncertainArbDiscFunc;
+import org.opensha.commons.data.uncertainty.UncertainBoundedIncrMagFreqDist;
 import org.opensha.commons.gui.plot.HeadlessGraphPanel;
 import org.opensha.commons.gui.plot.PlotCurveCharacterstics;
 import org.opensha.commons.gui.plot.PlotLineType;
@@ -23,10 +22,11 @@ import org.opensha.commons.gui.plot.PlotUtils;
 import org.opensha.sha.earthquake.faultSysSolution.util.FaultSysTools;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.gridded.SeismicityRateFileLoader;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.gridded.SeismicityRateFileLoader.Direct;
-import org.opensha.sha.earthquake.rupForecastImpl.prvi25.gridded.SeismicityRateFileLoader.RateType;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.gridded.SeismicityRateModel;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_CrustalSeismicityRate;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_SeismicityRateEpoch;
+import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_SubductionCaribbeanSeismicityRate;
+import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_SubductionMuertosSeismicityRate;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.util.PRVI25_RegionLoader.PRVI25_SeismicityRegions;
 import org.opensha.sha.magdist.IncrementalMagFreqDist;
 
@@ -34,17 +34,13 @@ import com.google.common.base.Preconditions;
 
 import net.mahdilamb.colormap.Colors;
 
-public class RateModelComparison {
+public class RateEpochComparison {
 
 	public static void main(String[] args) throws IOException {
 		File ratesDir = new File("/home/kevin/workspace/opensha/src/main/resources/data/erf/prvi25/seismicity/rates");
-		File prevDir = new File(ratesDir, "2025_03_26");
-		File newDir1900 = new File(ratesDir, PRVI25_CrustalSeismicityRate.RATE_DATE+"/"+PRVI25_SeismicityRateEpoch.FULL.getRateSubDirName());
-//		File newDir1900 = new File(ratesDir, PRVI25_CrustalSeismicityRate.RATE_DATE+"/1973_scaled_to_1900");
-		File newDir1973 = new File(ratesDir, PRVI25_CrustalSeismicityRate.RATE_DATE+"/"+PRVI25_SeismicityRateEpoch.RECENT.getRateSubDirName());
 		File directDir = new File(ratesDir, PRVI25_CrustalSeismicityRate.RATE_DATE+"/direct");
 		
-		File outputDir = new File("/tmp/prvi_seis_rates");
+		File outputDir = new File("/tmp/prvi_seis_epochs");
 		Preconditions.checkState(outputDir.exists() || outputDir.mkdir());
 		
 		Range magRange = new Range(5d, 8d);
@@ -57,34 +53,20 @@ public class RateModelComparison {
 		
 		gp.getPlotPrefs().setLegendFontSize(16);
 		
-		List<PlotSpec> allIncrs = new ArrayList<>();
-		List<PlotSpec> allCmls = new ArrayList<>();
+		PRVI25_SeismicityRateEpoch[] epochs =  { PRVI25_SeismicityRateEpoch.FULL,
+				PRVI25_SeismicityRateEpoch.RECENT, PRVI25_SeismicityRateEpoch.RECENT_SCALED };
+		PlotLineType[] epochLines = { PlotLineType.SOLID, PlotLineType.DASHED, PlotLineType.DOTTED };
 		
 		DecimalFormat pDF = new DecimalFormat("0%");
 		
-		List<Double> prevRates = new ArrayList<>();
-		List<Double> newRates1900 = new ArrayList<>();
-		List<Double> newRates1973 = new ArrayList<>();
-		List<Double> directRates1900 = new ArrayList<>();
-		List<Double> directRates1973 = new ArrayList<>();
-		double directSum1900 = 0d;
-		double directSum1973 = 0d;
+		double sumNobs1900 = 0d;
+		double sumNobs1973 = 0d;
 		
 		PRVI25_SeismicityRegions[] regions = PRVI25_SeismicityRegions.values();
-		List<String> regionNames = new ArrayList<>();
 		for (PRVI25_SeismicityRegions reg : regions) {
-			CSVFile<String> origCSV = CSVFile.readFile(new File(prevDir, reg.name()+".csv"), false);
-			SeismicityRateModel prevModel = new SeismicityRateModel(origCSV, RateType.M1_TO_MMAX, UncertaintyBoundType.CONF_95);
-			
-			CSVFile<String> newCSV1900 = CSVFile.readFile(new File(newDir1900, reg.name()+".csv"), false);
-			SeismicityRateModel newModel1900 = new SeismicityRateModel(newCSV1900, RateType.M1_TO_MMAX, UncertaintyBoundType.CONF_95);
-			
-			CSVFile<String> newCSV1973 = CSVFile.readFile(new File(newDir1973, reg.name()+".csv"), false);
-			SeismicityRateModel newModel1973 = new SeismicityRateModel(newCSV1973, RateType.M1_TO_MMAX, UncertaintyBoundType.CONF_95);
-			
 			List<IncrementalMagFreqDist> incrFuncs = new ArrayList<>();
 			List<PlotCurveCharacterstics> incrChars = new ArrayList<>();
-			List<EvenlyDiscretizedFunc> cmlFuncs = new ArrayList<>();
+			List<DiscretizedFunc> cmlFuncs = new ArrayList<>();
 			List<PlotCurveCharacterstics> cmlChars = new ArrayList<>();
 			
 			Color color;
@@ -120,83 +102,84 @@ public class RateModelComparison {
 				throw new IllegalStateException("Unknown region: "+reg);
 			}
 			
-			regionNames.add(name);
+			List<UncertainBoundedIncrMagFreqDist> epochBounds = new ArrayList<>();
+			List<UncertainArbDiscFunc> epochCmlBounds = new ArrayList<>();
+			List<Double> epochWeights = new ArrayList<>();
 			
-			for (boolean is1973 : new boolean[] {false,true}) {
-				PlotCurveCharacterstics boundsChar = new PlotCurveCharacterstics(is1973 ? PlotLineType.DASHED : PlotLineType.SOLID, 2f, color);
-				PlotCurveCharacterstics prefChar = new PlotCurveCharacterstics(is1973 ? PlotLineType.DASHED : PlotLineType.SOLID, 5f, color);
+			for (int e=0; e<epochs.length; e++) {
+				SeismicityRateModel model;
 				
-				SeismicityRateModel newModel = is1973 ? newModel1973 : newModel1900;
+				switch (reg) {
+				case CAR_INTERFACE:
+					model = PRVI25_SubductionCaribbeanSeismicityRate.loadRateModel(epochs[e], false);
+					break;
+				case CAR_INTRASLAB:
+					model = PRVI25_SubductionCaribbeanSeismicityRate.loadRateModel(epochs[e], true);
+					break;
+				case CRUSTAL:
+					model = PRVI25_CrustalSeismicityRate.loadRateModel(epochs[e]);
+					break;
+				case MUE_INTERFACE:
+					model = PRVI25_SubductionMuertosSeismicityRate.loadRateModel(epochs[e], false);
+					break;
+				case MUE_INTRASLAB:
+					model = PRVI25_SubductionMuertosSeismicityRate.loadRateModel(epochs[e], true);
+					break;
+
+				default:
+					throw new IllegalStateException("Unknown region: "+reg);
+				}
 				
-				String years = is1973 ? "1973-2023" : "1900-2023";
+				UncertainBoundedIncrMagFreqDist bounded = model.getBounded(refMFD, mfdMmax);
 				
-				IncrementalMagFreqDist lower = newModel.buildLower(refMFD, mfdMmax);
-				IncrementalMagFreqDist pref = newModel.buildPreferred(refMFD, mfdMmax);
-				IncrementalMagFreqDist upper = newModel.buildUpper(refMFD, mfdMmax);
-				
-				pref.setName(years+" "+pref.getName().replace("Observed", "Preferred"));
-				incrFuncs.add(pref);
-				incrChars.add(prefChar);
-				cmlFuncs.add(pref.getCumRateDistWithOffset());
-				cmlChars.add(incrChars.get(incrChars.size()-1));
-				
-				lower.setName("95% M1-Mmax Bounds");
+				IncrementalMagFreqDist lower = bounded.getLower();
+				lower.setName(null);
 				incrFuncs.add(lower);
-				incrChars.add(boundsChar);
-				cmlFuncs.add(lower.getCumRateDistWithOffset());
+				incrChars.add(new PlotCurveCharacterstics(epochLines[e], 2f, color));
+				EvenlyDiscretizedFunc cmlLower = lower.getCumRateDistWithOffset();
+				cmlFuncs.add(cmlLower);
 				cmlChars.add(incrChars.get(incrChars.size()-1));
 				
+				IncrementalMagFreqDist upper = bounded.getUpper();
 				upper.setName(null);
 				incrFuncs.add(upper);
-				incrChars.add(boundsChar);
-				cmlFuncs.add(upper.getCumRateDistWithOffset());
+				incrChars.add(new PlotCurveCharacterstics(epochLines[e], 2f, color));
+				EvenlyDiscretizedFunc cmlUpper = upper.getCumRateDistWithOffset();
+				cmlFuncs.add(cmlUpper);
 				cmlChars.add(incrChars.get(incrChars.size()-1));
 				
-//				EvenlyDiscretizedFunc lowerExact = ((Exact)newExactModel.getLowerRecord()).cumulativeDist;
-//				lowerExact.setName("95% Exact Bounds");
-////				lowerExact.setName(null);
-//				cmlFuncs.add(lowerExact);
-//				cmlChars.add(exactBoundsChar);
-//				
-//				EvenlyDiscretizedFunc upperExact = ((Exact)newExactModel.getUpperRecord()).cumulativeDist;
-//				upperExact.setName(null);
-////				upperExact.setName("95% Exact Bounds");
-//				cmlFuncs.add(upperExact);
-//				cmlChars.add(exactBoundsChar);
+				bounded.setName(epochs[e].getShortName()+": "+bounded.getName());;
+				incrFuncs.add(bounded);
+				incrChars.add(new PlotCurveCharacterstics(epochLines[e], 5f, color));
+				EvenlyDiscretizedFunc cmlPref = bounded.getCumRateDistWithOffset();
+				cmlFuncs.add(cmlPref);
+				cmlChars.add(incrChars.get(incrChars.size()-1));
 				
-				if (is1973)
-					newRates1973.add(newModel.getMeanRecord().rateAboveM1);
-				else
-					newRates1900.add(newModel.getMeanRecord().rateAboveM1);
+				epochBounds.add(bounded);
+				epochCmlBounds.add(new UncertainArbDiscFunc(cmlPref, cmlLower, cmlUpper, bounded.getBoundType(), null));
+				epochWeights.add(epochs[e].getNodeWeight(null));
 			}
 			
-			IncrementalMagFreqDist lower = prevModel.buildLower(refMFD, mfdMmax);
-			IncrementalMagFreqDist pref = prevModel.buildPreferred(refMFD, mfdMmax);
-			IncrementalMagFreqDist upper = prevModel.buildUpper(refMFD, mfdMmax);
+			UncertainBoundedIncrMagFreqDist averageBounded = IndividualMFDPlots.averageUncert(epochBounds, epochWeights);
+			UncertainArbDiscFunc averageCmlBounded = IndividualMFDPlots.averageUncertCml(epochCmlBounds, epochWeights);
 			
-			prevRates.add(prevModel.getMeanRecord().rateAboveM1);
+//			Color avgColor = Color.GRAY;
+			Color avgColor = Colors.tab_purple;
+			UncertainBoundedIncrMagFreqDist boundsCopy = averageBounded.deepClone();
+			boundsCopy.setName("Mixture "+boundsCopy.getBoundName());
+			incrFuncs.add(0, boundsCopy);
+			incrChars.add(0, new PlotCurveCharacterstics(PlotLineType.SHADED_UNCERTAIN, 1f, new Color(0, 0, 0, 60)));
+			averageBounded.setName("Weighted average");
+			incrFuncs.add(averageBounded);
+			incrChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 3f, avgColor));
 			
-			color = Color.GRAY;
-			PlotCurveCharacterstics boundsChar = new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, color);
-			PlotCurveCharacterstics prefChar = new PlotCurveCharacterstics(PlotLineType.SOLID, 3f, color);
-			
-			pref.setName("Prior "+pref.getName().replace("Observed", "Preferred"));
-			incrFuncs.add(pref);
-			incrChars.add(prefChar);
-			cmlFuncs.add(pref.getCumRateDistWithOffset());
-			cmlChars.add(incrChars.get(incrChars.size()-1));
-			
-//			lower.setName(null);
-//			incrFuncs.add(lower);
-//			incrChars.add(boundsChar);
-//			cmlFuncs.add(lower.getCumRateDistWithOffset());
-//			cmlChars.add(incrChars.get(incrChars.size()-1));
-//			
-//			upper.setName(null);
-//			incrFuncs.add(upper);
-//			incrChars.add(boundsChar);
-//			cmlFuncs.add(upper.getCumRateDistWithOffset());
-//			cmlChars.add(incrChars.get(incrChars.size()-1));
+			UncertainArbDiscFunc boundsCmlCopy = averageCmlBounded.deepClone();
+			boundsCmlCopy.setName("Mixture "+boundsCmlCopy.getBoundName());
+			cmlFuncs.add(0, boundsCmlCopy);
+			cmlChars.add(0, new PlotCurveCharacterstics(PlotLineType.SHADED_UNCERTAIN, 1f, new Color(0, 0, 0, 60)));
+			averageCmlBounded.setName("Weighted average");
+			cmlFuncs.add(averageCmlBounded);
+			cmlChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 3f, avgColor));
 			
 			for (boolean is1973 : new boolean[] {false,true}) {
 				File ratesFile = new File(directDir, PRVI25_CrustalSeismicityRate.getDirectRateFileName(reg,
@@ -206,12 +189,20 @@ public class RateModelComparison {
 				List<Direct> directs = SeismicityRateFileLoader.loadDirectBranches(totalRateCSV);
 				
 				double minFuncMag = is1973 ? 5.01 : 6.01;
-				double maxFuncMag = directs.get(0).maxObsIncrMag-0.01;
+				double maxFuncMag = directs.get(0).maxObsIncrMag - 0.01;
 				if (maxFuncMag <= 0d) {
 					// not found
 //					maxFuncMag = directs.get(0).cumulativeDist.getMaxX()+0.01;
 					maxFuncMag = directs.get(0).cumulativeDist.getMaxX()-0.01;
 				}
+				
+				Direct meanDirect = SeismicityRateFileLoader.locateMean(directs);
+				if (is1973)
+					sumNobs1973 += meanDirect.nObs;
+				else
+					sumNobs1900 += meanDirect.nObs;
+				
+				System.out.println("Direct "+regName+", "+(is1973 ? "1973" : "1900")+" Nobs="+(float)meanDirect.nObs);
 
 				IncrementalMagFreqDist obsRefMFD = FaultSysTools.initEmptyMFD(minFuncMag, maxFuncMag);
 				EvenlyDiscretizedFunc refCml = obsRefMFD.getCumRateDistWithOffset();
@@ -260,78 +251,37 @@ public class RateModelComparison {
 					obsName = "Observed (1900-2023)";
 					obsChar = new PlotCurveCharacterstics(PlotLineType.SOLID, 3f, color1900);
 				}
-				meanIncrObs.setName(obsName);
-				incrFuncs.add(meanIncrObs);
-				incrChars.add(obsChar);
+//				meanIncrObs.setName(obsName);
+//				incrFuncs.add(meanIncrObs);
+//				incrChars.add(obsChar);
 				meanObsCml.setName(meanIncrObs.getName());
 				cmlFuncs.add(meanObsCml);
 				cmlChars.add(obsChar);
-				
-				if (is1973)
-					directRates1973.add(meanObsCml.getY(meanObsCml.getClosestXIndex(5.01)));
-				else
-					directRates1900.add(meanObsCml.getY(meanObsCml.getClosestXIndex(5.01)));
 			}
 			
 			Preconditions.checkState(incrFuncs.size() == incrChars.size());
 			Preconditions.checkState(cmlFuncs.size() == cmlChars.size());
 			
-//			PlotSpec incrPlot = new PlotSpec(incrFuncs, incrChars, name, "Magnitude", "Incremental Rate (1/yr)");
-//			cmlPlot.setLegendInset(RectangleAnchor.BOTTOM_LEFT);
-////			cmlPlot.setLegendInset(RectangleAnchor.TOP_RIGHT);
-//			allIncrs.add(incrPlot);
-//			
-//			gp.drawGraphPanel(incrPlot, false, true, magRange, yRange);
-//			
-//			PlotUtils.writePlots(outputDir, reg.name(), gp, 700, 600, true, true, false);
+			PlotSpec incrPlot = new PlotSpec(incrFuncs, incrChars, name, "Magnitude", "Incremental Rate (1/yr)");
+			incrPlot.setLegendInset(RectangleAnchor.BOTTOM_LEFT);
+//			incrPlot.setLegendInset(RectangleAnchor.TOP_RIGHT);
+			
+			gp.drawGraphPanel(incrPlot, false, true, magRange, yRange);
+			
+			PlotUtils.writePlots(outputDir, reg.name(), gp, 700, 600, true, true, false);
 			
 			PlotSpec cmlPlot = new PlotSpec(cmlFuncs, cmlChars, name, "Magnitude", "Cumulative Rate (1/yr)");
 			cmlPlot.setLegendInset(RectangleAnchor.BOTTOM_LEFT);
 //			cmlPlot.setLegendInset(RectangleAnchor.TOP_RIGHT);
 //			cmlPlot.setLegendInset(RectangleAnchor.TOP, 0.5, 0.95, 0.9, false);
-			allCmls.add(cmlPlot);
 			
 			gp.drawGraphPanel(cmlPlot, false, true, magRange, yRange);
 			
 			PlotUtils.writePlots(outputDir, reg.name()+"_cml", gp, 700, 600, true, true, false);
 		}
 		
-		for (boolean is1973 : new boolean[] {false,true}) {
-			if (is1973)
-				System.out.println("Rate model, updated 1973-2023 vs previous 1900-2023");
-			else
-				System.out.println("Rate model, updated 1900-2023 vs previous 1900-2023");
-			List<Double> newRates = is1973 ? newRates1973 : newRates1900;
-			for (int r=0; r<regions.length; r++) {
-				String name = regionNames.get(r);
-				
-				double prevRate = prevRates.get(r);
-				double newRate = newRates.get(r);
-				String changeStr = pDF.format((newRate-prevRate)/prevRate);
-				if (newRate > prevRate)
-					changeStr = "+"+changeStr;
-				System.out.println("\t"+name+" M>5 rate:\t"+prevRate+" -> "+newRate+" ("+changeStr+")");
-			}
-			System.out.println();
-		}
-		
-		for (boolean is1973 : new boolean[] {false,true}) {
-			if (is1973)
-				System.out.println("Direct rates, 1973-2023");
-			else
-				System.out.println("Direct rates, 1900-2023");
-			List<Double> rates = is1973 ? directRates1973 : directRates1900;
-			double sum = rates.stream().mapToDouble(D->D).sum();
-			Preconditions.checkState(rates.size()==regions.length);
-			System.out.println("\tSum: "+(float)sum);
-			for (int r=0; r<regions.length; r++) {
-				String name = regionNames.get(r);
-				
-				double rate = rates.get(r);
-				System.out.println("\t"+name+" M>5 rate:\t"+(float)rate+" ("+pDF.format(rate/sum)+")");
-			}
-			System.out.println();
-		}
+		System.out.println("Direct total 1900 Nobs="+(float)sumNobs1900);
+		System.out.println("Direct total 1973 Nobs="+(float)sumNobs1973);
 	}
 
 }
