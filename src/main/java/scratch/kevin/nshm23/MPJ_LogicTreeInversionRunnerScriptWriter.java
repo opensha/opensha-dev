@@ -627,7 +627,7 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 		 * PRVI25 logic tree
 		 * TODO (this is a just a marker to find this part quickly, not an actual todo)
 		 */
-		nodes = 34; // TODO REMOVE
+		queue = "scec_hiprio"; // TODO remove
 		List<LogicTreeLevel<? extends LogicTreeNode>> levels = PRVI25_LogicTree.levelsOnFault;
 		dirName += "-prvi25_crustal_branches";
 		double avgNumRups = 50000;
