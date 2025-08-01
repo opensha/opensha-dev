@@ -57,8 +57,8 @@ import static scratch.kevin.prvi25.figures.PRVI_Paths.*;
 class SeismicityPDFFigures {
 
 	public static void main(String[] args) throws IOException {
-//		File figsDir = FIGURES_DIR;
-		File figsDir = new File("/tmp/test_pdfs");
+		File figsDir = FIGURES_DIR;
+//		File figsDir = new File("/tmp/test_pdfs");
 		Preconditions.checkState(figsDir.exists() || figsDir.mkdir());
 		File crustalOutputDir = new File(figsDir, "crustal_grid");
 		Preconditions.checkState(crustalOutputDir.exists() || crustalOutputDir.mkdir());

@@ -23,7 +23,7 @@ import com.google.common.io.Files;
 public class SeisPDFCheckAndInterfaceDepthCutNormalize {
 
 	public static void main(String[] args) throws IOException {
-		File pdfsMainDir = new File("/home/kevin/workspace/opensha/src/main/resources/data/erf/prvi25/seismicity/spatial_seis_pdfs/2025_07_19");
+		File pdfsMainDir = new File("/home/kevin/workspace/opensha/src/main/resources/data/erf/prvi25/seismicity/spatial_seis_pdfs/2025_08_01");
 		DecimalFormat pDF = new DecimalFormat("0.0%");
 		
 		for (PRVI25_SeismicityRegions seisReg : PRVI25_SeismicityRegions.values()) {
