@@ -72,41 +72,35 @@ public class BranchAveragedHazardScriptWriter {
 		supersample = true;
 		sigmaTrunc = 3d;
 		
-//		String baseDirName = "2025_05_21-prvi25_crustal_subduction_combined_branches";
+//		String baseDirName = "2025_07_19-prvi25_crustal_subduction_combined_branches";
 //		String suffix = "ba_only";
 //		String solFileName = "combined_branch_averaged_solution.zip";
-		
-		String baseDirName = "2025_05_21-prvi25_crustal_subduction_combined_branches";
-//		String suffix = "ba_only-slab_mc_7p4";
-		String suffix = "ba_only-slab_mmax_7p5";
-		String solFileName = "combined_branch_averaged_solution.zip";
-		gridSpacing = 0.02;
 		
 //		region = PRVI25_RegionLoader.loadPRVI_IntermediateModelMapExtents();
 //		gridSpacing = 0.02;
 //		periods = new double[] { 0d, 1d };
-//		String baseDirName = "2025_05_21-prvi25_crustal_subduction_combined_branches";
+//		String baseDirName = "2025_07_19-prvi25_crustal_subduction_combined_branches";
 //		String suffix = "ba_only-wider_region";
 //		String solFileName = "combined_branch_averaged_solution.zip";
 		
-//		String baseDirName = "2025_05_21-prvi25_crustal_branches-dmSample10x";
+//		String baseDirName = "2025_07_19-prvi25_crustal_branches-dmSample10x";
 //		String suffix = "ba_only";
 //		String solFileName = "results_PRVI_CRUSTAL_FM_V1p1_branch_averaged_gridded.zip";
 		
-//		String baseDirName = "2025_05_21-prvi25_subduction_branches";
-//		// slab (gridded only)
-////		String suffix = "ba_only-SLAB_only";
-////		String solFileName = "results_PRVI_SLAB_ONLY_branch_averaged_gridded.zip";
-////		bgOps = new IncludeBackgroundOption[] { IncludeBackgroundOption.ONLY };
-//		// interface (will do fault + gridded)
-////		String suffix = "ba_only-INTERFACE_only";
-////		String solFileName = "results_PRVI_INTERFACE_ONLY_branch_averaged_gridded.zip";
-//		// both
-//		String suffix = "ba_only-both_fms";
-//		String solFileName = "results_PRVI_SUB_FMs_combined_branch_averaged_gridded.zip";
+		String baseDirName = "2025_07_19-prvi25_subduction_branches";
+		// slab (gridded only)
+//		String suffix = "ba_only-SLAB_only";
+//		String solFileName = "results_PRVI_SLAB_ONLY_branch_averaged_gridded.zip";
+//		bgOps = new IncludeBackgroundOption[] { IncludeBackgroundOption.ONLY };
+		// interface (will do fault + gridded)
+//		String suffix = "ba_only-INTERFACE_only";
+//		String solFileName = "results_PRVI_INTERFACE_ONLY_branch_averaged_gridded.zip";
+		// both
+		String suffix = "ba_only-both_fms";
+		String solFileName = "results_PRVI_SUB_FMs_combined_branch_averaged_gridded.zip";
 		
-		vs30 = 760d; suffix += "-vs760";
-//		vs30 = 260d; suffix += "-vs260";
+//		vs30 = 760d; suffix += "-vs760";
+		vs30 = 260d; suffix += "-vs260";
 		
 		/*
 		 * RSQSim

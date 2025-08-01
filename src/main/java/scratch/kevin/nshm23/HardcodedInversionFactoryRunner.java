@@ -133,10 +133,10 @@ public class HardcodedInversionFactoryRunner {
 //		NSHM23_InvConfigFactory factory = new DefModSamplingEnabledInvConfig.ConnDistB0p5MidSegCorrCapSigma();
 //		dirName += "-nshm23-dm_sample_cap_sigma";
 		
-//		PRVI25_InvConfigFactory factory = new PRVI25_InvConfigFactory();
-//		dirName += "-prvi25";
-		PRVI25_InvConfigFactory factory = new PRVI25_InvConfigFactory.MueAsCrustal();
-		dirName += "-prvi25-mue_as_crustal";
+		PRVI25_InvConfigFactory factory = new PRVI25_InvConfigFactory();
+		dirName += "-prvi25";
+//		PRVI25_InvConfigFactory factory = new PRVI25_InvConfigFactory.MueAsCrustal();
+//		dirName += "-prvi25-mue_as_crustal";
 //		PRVI25_InvConfigFactory factory = new PRVI25_InvConfigFactory.LimitCrustalBelowObserved_0p9();
 //		dirName += "-prvi25-limit_below_obs";
 //		PRVI25_InvConfigFactory.SUB_SECT_DDW_FRACT = 0.25; dirName += "-quarter_len_sub_sects";
@@ -152,19 +152,19 @@ public class HardcodedInversionFactoryRunner {
 //		LogicTreeBranch<LogicTreeNode> branch = PRVI25_LogicTreeBranch.DEFAULT_CRUSTAL_ON_FAULT;
 //		branch = branch.copy();
 
-		LogicTreeBranch<LogicTreeNode> branch = new LogicTreeBranch<>(PRVI25_LogicTree.levelsCrustalCombined);
-		for (LogicTreeNode node : PRVI25_LogicTree.DEFAULT_CRUSTAL_ON_FAULT)
-			branch.setValue(node);
-		for (LogicTreeNode node : PRVI25_LogicTree.DEFAULT_CRUSTAL_GRIDDED)
-			branch.setValue(node);
-		writeGridProv = true;
-
-//		LogicTreeBranch<LogicTreeNode> branch = new LogicTreeBranch<>(PRVI25_LogicTreeBranch.levelsSubductionCombined);
-//		for (LogicTreeNode node : PRVI25_LogicTreeBranch.DEFAULT_SUBDUCTION_INTERFACE)
+//		LogicTreeBranch<LogicTreeNode> branch = new LogicTreeBranch<>(PRVI25_LogicTree.levelsCrustalCombined);
+//		for (LogicTreeNode node : PRVI25_LogicTree.DEFAULT_CRUSTAL_ON_FAULT)
 //			branch.setValue(node);
-//		for (LogicTreeNode node : PRVI25_LogicTreeBranch.DEFAULT_SUBDUCTION_GRIDDED)
+//		for (LogicTreeNode node : PRVI25_LogicTree.DEFAULT_CRUSTAL_GRIDDED)
 //			branch.setValue(node);
 //		writeGridProv = true;
+
+		LogicTreeBranch<LogicTreeNode> branch = new LogicTreeBranch<>(PRVI25_LogicTree.levelsSubductionCombined);
+		for (LogicTreeNode node : PRVI25_LogicTree.DEFAULT_SUBDUCTION_INTERFACE)
+			branch.setValue(node);
+		for (LogicTreeNode node : PRVI25_LogicTree.DEFAULT_SUBDUCTION_GRIDDED)
+			branch.setValue(node);
+		writeGridProv = true;
 
 //		branch.setValue(NSHM23_SegmentationModels.NONE);
 //		branch.setValue(SupraSeisBValues.B_0p0);

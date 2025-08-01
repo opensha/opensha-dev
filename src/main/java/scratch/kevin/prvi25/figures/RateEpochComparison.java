@@ -160,8 +160,8 @@ public class RateEpochComparison {
 				epochWeights.add(epochs[e].getNodeWeight(null));
 			}
 			
-			UncertainBoundedIncrMagFreqDist averageBounded = IndividualMFDPlots.averageUncert(epochBounds, epochWeights);
-			UncertainArbDiscFunc averageCmlBounded = IndividualMFDPlots.averageUncertCml(epochCmlBounds, epochWeights);
+			UncertainBoundedIncrMagFreqDist averageBounded = PRVI25_SeismicityRateEpoch.averageUncert(epochBounds, epochWeights);
+			UncertainArbDiscFunc averageCmlBounded = PRVI25_SeismicityRateEpoch.averageUncertCml(epochCmlBounds, epochWeights);
 			
 //			Color avgColor = Color.GRAY;
 			Color avgColor = Colors.tab_purple;

@@ -43,6 +43,7 @@ import org.opensha.sha.earthquake.rupForecastImpl.prvi25.gridded.PRVI25_GridSour
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.gridded.SeismicityRateFileLoader;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.gridded.SeismicityRateFileLoader.Direct;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.gridded.SeismicityRateFileLoader.Exact;
+import org.opensha.sha.earthquake.rupForecastImpl.prvi25.gridded.SeismicityRateFileLoader.RateRecord;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.gridded.SeismicityRateFileLoader.RateType;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.gridded.SeismicityRateModel;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_CrustalSeismicityRate;
@@ -385,7 +386,8 @@ public class CombinedMFDsPlot {
 					double obsMmax = 0d;
 					int transAlpha = 60;
 					
-					String ratesPrefix = "/data/erf/prvi25/seismicity/rates/directrates_2025_05_08/";
+//					String ratesPrefix = "/data/erf/prvi25/seismicity/rates/directrates_2025_05_08/";
+					String ratesPrefix = "/data/erf/prvi25/seismicity/rates/"+PRVI25_CrustalSeismicityRate.RATE_DATE+"/direct/";
 					
 					Preconditions.checkState(plot1900 || plot1973);
 					boolean[] rateBools;
@@ -470,15 +472,15 @@ public class CombinedMFDsPlot {
 						
 						PlotCurveCharacterstics obsChar;
 						String obsName;
-						Color darkishGray = new Color(80, 80, 80);
+//						Color darkishGray = new Color(80, 80, 80);
 						if (plotEpochOverlap) {
 							// we're including both in the plot, and they'll overlap
 							if (is1900) {
 								obsName = "Observed (1900-2023)";
-								obsChar = new PlotCurveCharacterstics(PlotLineType.SHORT_DASHED, 3f, Color.BLACK);
+								obsChar = new PlotCurveCharacterstics(PlotLineType.SHORT_DASHED, 3f, Colors.tab_brown);
 							} else {
 								obsName = "Observed (1973-2023)";
-								obsChar = new PlotCurveCharacterstics(PlotLineType.SHORT_DASHED, 3f, darkishGray);
+								obsChar = new PlotCurveCharacterstics(PlotLineType.SHORT_DASHED, 3f, Color.DARK_GRAY);
 							}
 						} else if (plot1900 && plot1973) {
 							// we're including both as one stitched line
@@ -486,13 +488,13 @@ public class CombinedMFDsPlot {
 								obsName = "Observed";
 							else
 								obsName = null; // hide label
-							obsChar = new PlotCurveCharacterstics(PlotLineType.SHORT_DASHED, 3f, darkishGray);
+							obsChar = new PlotCurveCharacterstics(PlotLineType.SHORT_DASHED, 3f, Color.DARK_GRAY);
 						} else {
 							if (is1900)
 								obsName = "Observed (1900-2023)";
 							else
 								obsName = "Observed (1973-2023)";
-							obsChar = new PlotCurveCharacterstics(PlotLineType.SHORT_DASHED, 3f, darkishGray);
+							obsChar = new PlotCurveCharacterstics(PlotLineType.SHORT_DASHED, 3f, Color.DARK_GRAY);
 						}
 						meanIncrObs.setName(obsName);
 						myIncrFuncs.add(meanIncrObs);
@@ -541,12 +543,26 @@ public class CombinedMFDsPlot {
 							
 							List<Exact> uncertBranches;
 							if (seisReg == null) {
+								String unionPrefix = "/data/erf/prvi25/seismicity/rates/"+PRVI25_CrustalSeismicityRate.RATE_DATE;
+								if (epoch == PRVI25_SeismicityRateEpoch.RECENT_SCALED) {
+									unionPrefix += "/"+PRVI25_SeismicityRateEpoch.RECENT.getRateSubDirName();
+								} else {
+									unionPrefix += "/"+epoch.getRateSubDirName();
+								}
+								
 								InputStream is = SeismicityRateFileLoader.class.getResourceAsStream(
-										ratesPrefix+"rateunc-Union-Full-v3.csv");
+										unionPrefix+"/UNION.csv");
+//										ratesPrefix+"rateunc-Union-Full-v3.csv");
 //										ratesPrefix+"rateunc-1900-M6-Union-Full-v4.csv");
 //										ratesPrefix+"rateunc-mix-Union-Full-v3.csv");
 								CSVFile<String> unionRates = CSVFile.readStream(is, false);
 								uncertBranches = SeismicityRateFileLoader.loadExactBranches(unionRates);
+								if (epoch == PRVI25_SeismicityRateEpoch.RECENT_SCALED) {
+									List<? extends RateRecord> scaled = PRVI25_CrustalSeismicityRate.getScaledToFull(uncertBranches);
+									uncertBranches.clear();
+									for (RateRecord rec : scaled)
+										uncertBranches.add((Exact)rec);
+								}
 							} else if (seisReg == PRVI25_SeismicityRegions.CRUSTAL) {
 								uncertBranches = (List<Exact>)PRVI25_CrustalSeismicityRate.loadRates(epoch, RateType.EXACT);
 							} else if (seisReg == PRVI25_SeismicityRegions.CAR_INTERFACE) {
@@ -583,8 +599,8 @@ public class CombinedMFDsPlot {
 									averageIncr, incr2p5, incr97p5, UncertaintyBoundType.CONF_95);
 							UncertainBoundedIncrMagFreqDist incrBounds68 = new UncertainBoundedIncrMagFreqDist(
 									averageIncr, incr16, incr84, UncertaintyBoundType.CONF_68);
-							UncertainArbDiscFunc cmlBounds95 = new UncertainArbDiscFunc(averageCml, cml2p5, cml97p5);
-							UncertainArbDiscFunc cmlBounds68 = new UncertainArbDiscFunc(averageCml, cml16, cml84);
+							UncertainArbDiscFunc cmlBounds95 = new UncertainArbDiscFunc(averageCml, cml2p5, cml97p5, UncertaintyBoundType.CONF_95);
+							UncertainArbDiscFunc cmlBounds68 = new UncertainArbDiscFunc(averageCml, cml16, cml84, UncertaintyBoundType.CONF_68);
 							
 							incrBounds95funcs.add(incrBounds95);
 							incrBounds68funcs.add(incrBounds68);
@@ -593,10 +609,10 @@ public class CombinedMFDsPlot {
 							epochWeights.add(weight);
 						}
 						
-						UncertainBoundedIncrMagFreqDist incrBounds95 = IndividualMFDPlots.averageUncert(incrBounds95funcs, epochWeights);
-						UncertainBoundedIncrMagFreqDist incrBounds68 = IndividualMFDPlots.averageUncert(incrBounds68funcs, epochWeights);
-						UncertainArbDiscFunc cmlBounds95 = IndividualMFDPlots.averageUncertCml(cmlBounds95funcs, epochWeights);
-						UncertainArbDiscFunc cmlBounds68 = IndividualMFDPlots.averageUncertCml(cmlBounds68funcs, epochWeights);
+						UncertainBoundedIncrMagFreqDist incrBounds95 = PRVI25_SeismicityRateEpoch.averageUncert(incrBounds95funcs, epochWeights);
+						UncertainBoundedIncrMagFreqDist incrBounds68 = PRVI25_SeismicityRateEpoch.averageUncert(incrBounds68funcs, epochWeights);
+						UncertainArbDiscFunc cmlBounds95 = PRVI25_SeismicityRateEpoch.averageUncertCml(cmlBounds95funcs, epochWeights);
+						UncertainArbDiscFunc cmlBounds68 = PRVI25_SeismicityRateEpoch.averageUncertCml(cmlBounds68funcs, epochWeights);
 						
 						incrBounds95.setName("68% and 95% bounds");
 						myIncrFuncs.add(incrBounds95);

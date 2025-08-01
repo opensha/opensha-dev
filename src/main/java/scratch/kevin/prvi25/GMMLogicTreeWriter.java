@@ -69,19 +69,19 @@ public class GMMLogicTreeWriter {
 		 * 
 		 * fetch logic trees first
 		 */
-//		List<LogicTreeLevel<? extends LogicTreeNode>> gmmLevels = PRVI25_LogicTreeBranch.levelsCrustalGMM;
+//		List<LogicTreeLevel<? extends LogicTreeNode>> gmmLevels = PRVI25_LogicTree.levelsCrustalGMM;
 //		File sourceDir = CRUSTAL_DIR;
 //		File outputDir = new File(sourceDir.getParentFile(), sourceDir.getName()+"-gmTreeCalcs"+dirSuffix);
 //		// supra-seis only
-////		File sourceTreeFile = new File(sourceDir, "logic_tree.json");
-////		int mins = 1440;
-////		IncludeBackgroundOption bgOp = IncludeBackgroundOption.EXCLUDE;
+//		File sourceTreeFile = new File(sourceDir, "logic_tree.json");
+//		int mins = 1440;
+//		IncludeBackgroundOption bgOp = IncludeBackgroundOption.EXCLUDE;
 //		// including gridded
-//		int mins = 1440*5;
-//		File sourceTreeFile = new File(sourceDir, "logic_tree_full_gridded.json");
-//		erfSamples = 10000; gmmSamplesPerERF = 1; jobSuffix = "_sampled"; logicTreeOutputName = "logic_tree_full_gridded_sampled.json";
-////		File sourceTreeFile = new File(sourceDir, "logic_tree_full_gridded_sampled.json"); jobSuffix = "_sampled";
-//		IncludeBackgroundOption bgOp = IncludeBackgroundOption.INCLUDE;
+////		int mins = 1440*5;
+////		File sourceTreeFile = new File(sourceDir, "logic_tree_full_gridded.json");
+////		erfSamples = 10000; gmmSamplesPerERF = 1; jobSuffix = "_sampled"; logicTreeOutputName = "logic_tree_full_gridded_sampled.json";
+//////		File sourceTreeFile = new File(sourceDir, "logic_tree_full_gridded_sampled.json"); jobSuffix = "_sampled";
+////		IncludeBackgroundOption bgOp = IncludeBackgroundOption.INCLUDE;
 		
 		/*
 		 * Interface separate slab and interface
@@ -92,13 +92,13 @@ public class GMMLogicTreeWriter {
 		 * 
 		 * fetch logic trees first
 		 */
-//		List<LogicTreeLevel<? extends LogicTreeNode>> gmmLevels = PRVI25_LogicTreeBranch.levelsInterfaceGMM;
+//		List<LogicTreeLevel<? extends LogicTreeNode>> gmmLevels = PRVI25_LogicTree.levelsInterfaceGMM;
 //		File sourceDir = SUBDUCTION_DIR;
 //		File outputDir = new File(sourceDir.getParentFile(), sourceDir.getName()+"-gmTreeCalcs"+dirSuffix);
 //		// supra-seis only
-//		File sourceTreeFile = new File(sourceDir, "logic_tree.json");
-//		int mins = 1440;
-//		IncludeBackgroundOption bgOp = IncludeBackgroundOption.EXCLUDE;
+////		File sourceTreeFile = new File(sourceDir, "logic_tree.json");
+////		int mins = 1440;
+////		IncludeBackgroundOption bgOp = IncludeBackgroundOption.EXCLUDE;
 //		// interface gridded only
 ////		int mins = 1440;
 //////		File sourceTreeFile = new File(sourceDir, "logic_tree_gridded_only.json");
@@ -112,14 +112,14 @@ public class GMMLogicTreeWriter {
 ////		jobSuffix = "_interface";
 ////		outputSuffix = jobSuffix;
 //		// interface both (combine only)
-////		combineOnly = true;
-////		int mins = 1440;
-////		forceInputFileName = "results_full_gridded_interface_only.zip";
-////		File sourceTreeFile = new File(sourceDir, "logic_tree_full_gridded.json");
-////		logicTreeOutputName = "logic_tree_full_gridded_interface_only.json";
-////		IncludeBackgroundOption bgOp = IncludeBackgroundOption.INCLUDE;
-////		jobSuffix = "_interface";
-////		outputSuffix = jobSuffix;
+//		combineOnly = true;
+//		int mins = 1440;
+//		forceInputFileName = "results_full_gridded_interface_only.zip";
+//		File sourceTreeFile = new File(sourceDir, "logic_tree_full_gridded.json");
+//		logicTreeOutputName = "logic_tree_full_gridded_interface_only.json";
+//		IncludeBackgroundOption bgOp = IncludeBackgroundOption.INCLUDE;
+//		jobSuffix = "_interface";
+//		outputSuffix = jobSuffix;
 		
 		/*
 		 * Slab
@@ -141,7 +141,7 @@ public class GMMLogicTreeWriter {
 		/*
 		 * Branch averaged (GMM-only)
 		 */
-//		List<LogicTreeLevel<? extends LogicTreeNode>> gmmLevels = PRVI25_LogicTreeBranch.levelsCombinedGMM;
+//		List<LogicTreeLevel<? extends LogicTreeNode>> gmmLevels = PRVI25_LogicTree.levelsCombinedGMM;
 //		File sourceDir = COMBINED_DIR;
 ////		File sourceDir = new File(INV_DIR, "2025_01_02-prvi25_crustal_subduction_combined_branches");
 //		File outputDir = new File(sourceDir.getParentFile(), sourceDir.getName()+"-ba_only-gmTreeCalcs"+dirSuffix);
