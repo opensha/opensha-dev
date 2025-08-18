@@ -77,14 +77,14 @@ public class LogicTreeFigureWriter extends JPanel {
 		trees.add(crustalGriddedTree);
 		prefixes.add("crustal_gridded");
 		
-		// TODO switch back to reading it
-//		LogicTree<LogicTreeNode> subFaultTree = LogicTree.read(new File(SUBDUCTION_DIR, "logic_tree.json"));
-		LogicTree<LogicTreeNode> subFaultTree = LogicTree.buildExhaustive(PRVI25_LogicTree.levelsSubduction, true);
+		LogicTree<LogicTreeNode> subFaultTree = LogicTree.read(new File(SUBDUCTION_DIR, "logic_tree.json"));
 		trees.add(subFaultTree);
 		prefixes.add("subduction_inversion");
 		LogicTree<?> subGridTree = new PRVI25_InvConfigFactory().getGridSourceTree(subFaultTree);
 		trees.add(subGridTree);
 		prefixes.add("subduction_gridded");
+		
+		LogicTree<LogicTreeNode> combERFTree = LogicTree.read(new File(COMBINED_DIR, "logic_tree_full_gridded.json"));
 		
 		List<LogicTreeLevel<? extends LogicTreeNode>> crustalGMMLevels = PRVI25_LogicTree.levelsCrustalGMM;
 		LogicTree<LogicTreeNode> crustalGMMTree = LogicTree.buildExhaustive(crustalGMMLevels, true);
@@ -141,9 +141,22 @@ public class LogicTreeFigureWriter extends JPanel {
 		int subERFbranches = subFaultTree.size()*subGridTree.size();
 		texFW.write(LaTeXUtils.defineValueCommand("SubductionCombinedERFBranches", LaTeXUtils.groupedIntNumber(subERFbranches))+"\n");
 		
-		int totalERFbranches = crustalERFbranches * subERFbranches;
+		System.out.println("Have "+crustalERFbranches+" total crustal ERF branches");
+		System.out.println("Have "+subERFbranches+" total subduction ERF branches");
+		long totalERFbranches = (long)crustalERFbranches * (long)subERFbranches / 3l; // common factor for epoch branches
+//		int totalERFbranches = combERFTree.size();
+		System.out.println("Have "+totalERFbranches+" total ERF branches");
 		texFW.write(LaTeXUtils.defineValueCommand("CombinedERFBranches", LaTeXUtils.groupedIntNumber(totalERFbranches))+"\n");
-		texFW.write(LaTeXUtils.defineValueCommand("CombinedERFBranchesMillions", LaTeXUtils.groupedIntNumber(totalERFbranches*1e-6))+"\n");
+		String humanERF;
+		if (totalERFbranches > 1e7) {
+			// billions
+			humanERF = new DecimalFormat("0.#").format(totalERFbranches*1e-9)+" billion";
+		} else {
+			// millions
+			humanERF = LaTeXUtils.groupedIntNumber(totalERFbranches*1e-6)+" million";
+		}
+		System.out.println("ERF branches human readable: "+humanERF);
+		texFW.write(LaTeXUtils.defineValueCommand("CombinedERFBranchesHuman", humanERF)+"\n");
 		
 		texFW.close();
 	}

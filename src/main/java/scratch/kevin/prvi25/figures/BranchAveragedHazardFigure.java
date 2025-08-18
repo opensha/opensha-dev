@@ -22,6 +22,8 @@ import org.opensha.commons.geo.LocationList;
 import org.opensha.commons.geo.LocationUtils;
 import org.opensha.commons.geo.Region;
 import org.opensha.commons.gui.plot.GeographicMapMaker;
+import org.opensha.commons.gui.plot.PlotCurveCharacterstics;
+import org.opensha.commons.gui.plot.PlotLineType;
 import org.opensha.commons.mapping.gmt.elements.GMT_CPT_Files;
 import org.opensha.commons.util.cpt.CPT;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.util.PRVI25_RegionLoader;
@@ -47,6 +49,9 @@ public class BranchAveragedHazardFigure {
 //		cpt = cpt.asDiscrete(30, true);
 		
 		GeographicMapMaker mapMaker = new GeographicMapMaker(reg);
+		
+//		mapMaker.plotInsetRegions(List.of(PRVI25_RegionLoader.loadPRVI_MapExtents()),
+//				new PlotCurveCharacterstics(PlotLineType.DASHED, 2f, Color.BLACK), null, 0f);
 		
 		String label = "1s SA (g), 2% in 50 years";
 		

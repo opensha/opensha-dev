@@ -478,7 +478,7 @@ public class GriddedRateDistributionSolutionWriter {
 		return gr;
 	}
 	
-	private static List<double[]> loadRates(File csvFile) throws IOException {
+	public static List<double[]> loadRates(File csvFile) throws IOException {
 		CSVFile<String> csv = CSVFile.readFile(csvFile, false);
 		
 		boolean reading = false;

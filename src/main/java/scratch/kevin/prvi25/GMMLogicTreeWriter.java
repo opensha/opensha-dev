@@ -50,7 +50,10 @@ public class GMMLogicTreeWriter {
 		
 //		GriddedRegion gridReg = new GriddedRegion(PRVI25_RegionLoader.loadPRVI_ModelBroad(), 0.1, GriddedRegion.ANCHOR_0_0);
 //		GriddedRegion gridReg = new GriddedRegion(PRVI25_RegionLoader.loadPRVI_MapExtents(), 0.025, GriddedRegion.ANCHOR_0_0);
-		GriddedRegion gridReg = new GriddedRegion(PRVI25_RegionLoader.loadPRVI_Tight(), 0.025, GriddedRegion.ANCHOR_0_0);
+		// use for ERF+GMC
+		GriddedRegion gridReg = new GriddedRegion(PRVI25_RegionLoader.loadPRVI_Tight(), 0.05, GriddedRegion.ANCHOR_0_0);
+		// use for GMC
+//		GriddedRegion gridReg = new GriddedRegion(PRVI25_RegionLoader.loadPRVI_Tight(), 0.025, GriddedRegion.ANCHOR_0_0);
 		System.out.println("Region has "+gridReg.getNodeCount()+" nodes");
 		
 		Double vs30 = null;
@@ -79,7 +82,7 @@ public class GMMLogicTreeWriter {
 //		// including gridded
 ////		int mins = 1440*5;
 ////		File sourceTreeFile = new File(sourceDir, "logic_tree_full_gridded.json");
-////		erfSamples = 10000; gmmSamplesPerERF = 1; jobSuffix = "_sampled"; logicTreeOutputName = "logic_tree_full_gridded_sampled.json";
+////		erfSamples = 20000; gmmSamplesPerERF = 1; jobSuffix = "_sampled"; logicTreeOutputName = "logic_tree_full_gridded_sampled.json";
 //////		File sourceTreeFile = new File(sourceDir, "logic_tree_full_gridded_sampled.json"); jobSuffix = "_sampled";
 ////		IncludeBackgroundOption bgOp = IncludeBackgroundOption.INCLUDE;
 		
@@ -96,9 +99,9 @@ public class GMMLogicTreeWriter {
 //		File sourceDir = SUBDUCTION_DIR;
 //		File outputDir = new File(sourceDir.getParentFile(), sourceDir.getName()+"-gmTreeCalcs"+dirSuffix);
 //		// supra-seis only
-////		File sourceTreeFile = new File(sourceDir, "logic_tree.json");
-////		int mins = 1440;
-////		IncludeBackgroundOption bgOp = IncludeBackgroundOption.EXCLUDE;
+//		File sourceTreeFile = new File(sourceDir, "logic_tree.json");
+//		int mins = 1440;
+//		IncludeBackgroundOption bgOp = IncludeBackgroundOption.EXCLUDE;
 //		// interface gridded only
 ////		int mins = 1440;
 //////		File sourceTreeFile = new File(sourceDir, "logic_tree_gridded_only.json");
@@ -112,14 +115,14 @@ public class GMMLogicTreeWriter {
 ////		jobSuffix = "_interface";
 ////		outputSuffix = jobSuffix;
 //		// interface both (combine only)
-//		combineOnly = true;
-//		int mins = 1440;
-//		forceInputFileName = "results_full_gridded_interface_only.zip";
-//		File sourceTreeFile = new File(sourceDir, "logic_tree_full_gridded.json");
-//		logicTreeOutputName = "logic_tree_full_gridded_interface_only.json";
-//		IncludeBackgroundOption bgOp = IncludeBackgroundOption.INCLUDE;
-//		jobSuffix = "_interface";
-//		outputSuffix = jobSuffix;
+////		combineOnly = true;
+////		int mins = 1440;
+////		forceInputFileName = "results_full_gridded_interface_only.zip";
+////		File sourceTreeFile = new File(sourceDir, "logic_tree_full_gridded.json");
+////		logicTreeOutputName = "logic_tree_full_gridded_interface_only.json";
+////		IncludeBackgroundOption bgOp = IncludeBackgroundOption.INCLUDE;
+////		jobSuffix = "_interface";
+////		outputSuffix = jobSuffix;
 		
 		/*
 		 * Slab
@@ -303,7 +306,7 @@ public class GMMLogicTreeWriter {
 		List<Site> sites = new ArrayList<>();
 		for (int row=1; row<csv.getNumRows(); row++) {
 			String name = csv.get(row, 0);
-			Location loc = new Location(csv.getDouble(row, 1), csv.getDouble(row, 2));
+			Location loc = new Location(csv.getDouble(row, 2), csv.getDouble(row, 1));
 			sites.add(new Site(loc, name));
 		}
 		csv = new CSVFile<>(true);

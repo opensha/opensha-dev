@@ -186,10 +186,13 @@ public class SlipRateFigures {
 			for (int i=0; i<targetSubSects.size(); i++)
 				solSlips.add(solSlipsModule.get(i)*1e3);
 			Map<Integer, List<Double>> solSlipsByParent = new HashMap<>();
+			Map<Integer, String> parentNames = new HashMap<>();
 			for (FaultSection sect : rupSet.getFaultSectionDataList()) {
 				int parentID = sect.getParentSectionId();
-				if (!solSlipsByParent.containsKey(parentID))
+				if (!solSlipsByParent.containsKey(parentID)) {
 					solSlipsByParent.put(parentID, new ArrayList<>());
+					parentNames.put(parentID, sect.getParentSectionName());
+				}
 				solSlipsByParent.get(parentID).add(solSlipsModule.get(sect.getSectionId())*1e3);
 			}
 			Map<Integer, Double> solAverageSlipsByParent = solSlipsByParent.entrySet().stream()
@@ -235,6 +238,8 @@ public class SlipRateFigures {
 			
 			List<XYAnnotation> linearAnns = circleFaultAnns(targetSubSects, "Main Ridge", solSlips, targetSlips, TextAnchor.TOP_LEFT);
 			linearAnns.addAll(circleFaultAnns(targetSubSects, "Bouillante Montserrat", solSlips, targetSlips, TextAnchor.BASELINE_RIGHT));
+			linearAnns.addAll(circleFaultAnns(targetSubSects, "Septentrional 1", solSlips, targetSlips, TextAnchor.BASELINE_RIGHT));
+//			linearAnns.addAll(circleFaultAnns(targetSubSects, "Septentrional 2", solSlips, targetSlips, TextAnchor.BASELINE_RIGHT));
 			
 			Range linearRange = new Range(0d, 10d);
 			Range logRange = new Range(1e-1, 2e1);
@@ -265,6 +270,9 @@ public class SlipRateFigures {
 						scaledToBins.add(absDiff/binWidth);
 					}
 				} else {
+					CSVFile<String> parentSlipsCSV = new CSVFile<>(true);
+					parentSlipsCSV.addLine("Parent Section ID", "Parent Section Name", "Target Slip Rate (mm/yr)",
+							"Solution Slip Rate (mm/yr)", "Difference (mm/yr)", "Fractional Mismit", "Bin Fractional Misfit");
 					for (int parentID : solAverageSlipsByParent.keySet()) {
 						double solVal = solAverageSlipsByParent.get(parentID);
 						double targetVal = targetAverageSlipsByParent.get(parentID);
@@ -272,8 +280,23 @@ public class SlipRateFigures {
 						double absDiff = Math.abs(solVal - targetVal);
 						absValues.add(absDiff);
 						scaledToRates.add(absDiff/targetVal);
-						scaledToBins.add(absDiff/binWidth); 
+						scaledToBins.add(absDiff/binWidth);
+						
+						String parentName = parentNames.get(parentID);
+						parentSlipsCSV.addLine(
+								parentID+"",
+								parentName,
+								(float)targetVal+"",
+								(float)solVal+"",
+								(float)(solVal - targetVal)+"",
+								(float)(absDiff/targetVal)+"",
+								(float)(absDiff/binWidth)+"");
+						
+						if (parentName.equals("Septentrional 1")) {
+							slipTEX.write(LaTeXUtils.defineValueCommand("SeptentrionalSlipMisfitPct", pDF.format(absDiff/targetVal))+"\n");
+						}
 					}
+					parentSlipsCSV.writeToFile(new File(solOutputDir, prefix+"_parent_slips.csv"));
 				}
 				for (boolean max : new boolean[] {false,true}) {
 					String label = subsection ? "Subsection" : "Fault section aggregated";

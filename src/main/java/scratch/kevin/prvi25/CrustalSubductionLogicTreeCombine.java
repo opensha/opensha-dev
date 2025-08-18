@@ -64,8 +64,16 @@ public class CrustalSubductionLogicTreeCombine extends AbstractLogicTreeCombiner
 		if (cmd.hasOption("hazard-dir-name"))
 			hazardDirName = cmd.getOptionValue("hazard-dir-name");
 		String gridRegFileName = GRID_REG_FILE_NAME_DEFAULT;
-		if (cmd.hasOption("grid-reg-file-name"))
+		if (cmd.hasOption("grid-reg-file-name")) {
 			gridRegFileName = cmd.getOptionValue("grid-reg-file-name");
+		} else if (hazardDirName != HAZARD_DIR_NAME_DEFAULT) {
+			File testFile = new File(crustalDir, gridRegFileName);
+			if (!testFile.exists()) {
+				testFile = new File(crustalDir, hazardDirName+".zip");
+				if (testFile.exists())
+					gridRegFileName = testFile.getName();
+			}
+		}
 		IncludeBackgroundOption bgOp = GRID_SEIS_DEFAULT;
 		if (cmd.hasOption("gridded-seis"))
 			bgOp = IncludeBackgroundOption.valueOf(cmd.getOptionValue("gridded-seis"));

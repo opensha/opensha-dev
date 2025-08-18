@@ -5,12 +5,16 @@ import java.awt.Font;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
+import java.util.Random;
 
 import org.jfree.chart.annotations.XYTextAnnotation;
 import org.jfree.chart.ui.TextAnchor;
 import org.jfree.data.Range;
+import org.opensha.commons.data.CSVFile;
 import org.opensha.commons.data.function.DefaultXY_DataSet;
+import org.opensha.commons.data.function.DiscretizedFunc;
 import org.opensha.commons.data.function.EvenlyDiscretizedFunc;
 import org.opensha.commons.data.function.XY_DataSet;
 import org.opensha.commons.gui.plot.HeadlessGraphPanel;
@@ -18,6 +22,7 @@ import org.opensha.commons.gui.plot.PlotCurveCharacterstics;
 import org.opensha.commons.gui.plot.PlotLineType;
 import org.opensha.commons.gui.plot.PlotSpec;
 import org.opensha.commons.gui.plot.PlotUtils;
+import org.opensha.commons.util.DataUtils.MinMaxAveTracker;
 import org.opensha.sha.earthquake.faultSysSolution.util.FaultSysTools;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.gridded.SeismicityRateFileLoader;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.gridded.SeismicityRateFileLoader.Exact;
@@ -34,6 +39,7 @@ import org.opensha.sha.magdist.GutenbergRichterMagFreqDist;
 import com.google.common.base.Preconditions;
 
 import net.mahdilamb.colormap.Colors;
+import scratch.kevin.prvi25.GriddedRateDistributionSolutionWriter;
 
 import static scratch.kevin.prvi25.figures.PRVI_Paths.*;
 
@@ -68,6 +74,9 @@ public class ObsUncertaintyBoundsFigure {
 		seisRegions.add(null); // reference flag
 		PRVI25_SeismicityRegions refRef = PRVI25_SeismicityRegions.CRUSTAL;
 		PRVI25_SeismicityRateEpoch epoch = PRVI25_SeismicityRateEpoch.DEFAULT;
+//		File refRatePairsFile = null;
+//		File refRatePairsFile = new File("/home/kevin/OpenSHA/nshm23/prvi/rate_raw_data/2025_03_26/rbpairs-Crustal-Full-v3.csv");
+		File refRatePairsFile = new File("/home/kevin/OpenSHA/nshm23/prvi/rate_raw_data/2025_07_17/1900_2023/rbpairs-Crustal-Prob-v9.csv");
 		
 		double weightLow = PRVI25_CrustalSeismicityRate.LOW.getNodeWeight(null);
 		double weightPref = PRVI25_CrustalSeismicityRate.PREFFERRED.getNodeWeight(null);
@@ -166,7 +175,7 @@ public class ObsUncertaintyBoundsFigure {
 					highMFD = cmlMFD(high, refMFD);
 				}
 				
-				lowMFD.setName(type.toString());
+				lowMFD.setName(type.toString().replace("Branches", "branches"));
 				funcs.add(lowMFD);
 				chars.add(new PlotCurveCharacterstics(plt, 3f, color));
 				highMFD.setName(null);
@@ -255,6 +264,50 @@ public class ObsUncertaintyBoundsFigure {
 			gp.drawGraphPanel(plot, false, true, xRange, yRange);
 			
 			PlotUtils.writePlots(outputDir, prefix, gp, 700, 650, true, true, false);
+			
+			if (ref && refRatePairsFile != null) {
+				List<double[]> ratePairs = GriddedRateDistributionSolutionWriter.loadRates(refRatePairsFile);
+				Collections.shuffle(ratePairs, new Random(ratePairs.size()));
+				
+//				int c = 200;
+//				int a = 127;
+//				int c = 150;
+//				int a = 80;
+				int c = 180;
+				int a = 60;
+				PlotCurveCharacterstics indvChar = new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, new Color(c, c, c, a));
+				int maxNumRates = 1000;
+				int numRates = Integer.min(maxNumRates, ratePairs.size());
+				for (int i=0; i<numRates; i++) {
+					double[] pair = ratePairs.get(i);
+					GutenbergRichterMagFreqDist gr = new GutenbergRichterMagFreqDist(refMFD.getMinX(), refMFD.size(), refMFD.getDelta());
+					// this sets shape, min/max
+					// subtract a tiny amount from mMax so that if it's exactly at a bin edge, e.g. 7.9, it rounds down, e.g. to 7.85
+					gr.setAllButTotCumRate(refMFD.getX(0), refMFD.getMaxX(), 1e16, pair[1]);
+					// this scales it to match
+					// similarly, add a tiny amount to M1 so that if it's exactly at a bin edge (which it should be as it's determined
+					// using cumulative binning), it rounds up to the incremental bin for that cumulative edge
+//					gr.scaleToCumRate(refMFD.getClosestXIndex(m1+0.001), pair[0]);
+					// this is actually cumulative, but the GR dist object works in incremental space
+					gr.scaleToIncrRate(refMFD.getClosestXIndex(m1+0.001), pair[0]);
+					gr.setName(null);
+					
+					funcs.add(0, gr);
+					chars.add(0, indvChar);
+					
+					if (i == 0) {
+						DiscretizedFunc forLegend = gr.deepClone();
+						forLegend.scale(1e-10);
+						forLegend.setName("Individual samples");
+						funcs.add(0, forLegend);
+						chars.add(0, new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, new Color(c, c, c))); // alpha disabled
+					}
+				}
+				
+				gp.drawGraphPanel(plot, false, true, xRange, yRange);
+				
+				PlotUtils.writePlots(outputDir, prefix+"_with_indv", gp, 700, 650, true, true, false);
+			}
 		}
 	}
 	

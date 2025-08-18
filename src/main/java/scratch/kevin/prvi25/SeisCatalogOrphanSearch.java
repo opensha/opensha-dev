@@ -36,6 +36,7 @@ import org.opensha.commons.util.DataUtils.MinMaxAveTracker;
 import org.opensha.commons.util.cpt.CPT;
 import org.opensha.commons.util.cpt.CPTVal;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.gridded.PRVI25_GridSourceBuilder;
+import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_CrustalSeismicityRate;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.util.PRVI25_RegionLoader.PRVI25_SeismicityRegions;
 
 import com.google.common.base.Preconditions;
@@ -45,7 +46,7 @@ public class SeisCatalogOrphanSearch {
 	public static void main(String[] args) throws IOException {
 		File mainDir = new File("/home/kevin/OpenSHA/prvi25/seis_catalogs");
 		
-		File dir = new File(mainDir, "2025_07_17");
+		File dir = new File(mainDir, PRVI25_CrustalSeismicityRate.RATE_DATE);
 		boolean filterByCrustalReg = true;
 		boolean remapORtoSlab = true;
 		File catFile = new File(dir, "pmmx_071725_c2-separatedAveraged_v2.csv");
