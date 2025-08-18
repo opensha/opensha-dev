@@ -17,7 +17,7 @@ import org.opensha.sha.earthquake.faultSysSolution.modules.GridSourceList;
 import org.opensha.sha.earthquake.faultSysSolution.modules.GridSourceProvider;
 import org.opensha.sha.earthquake.faultSysSolution.modules.RegionsOfInterest;
 import org.opensha.sha.earthquake.faultSysSolution.util.TrueMeanSolutionCreator;
-import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_LogicTreeBranch;
+import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_LogicTree;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_SubductionFaultModels;
 
 import com.google.common.base.Preconditions;
@@ -60,7 +60,7 @@ public class SubductionCombinedModelCreator {
 		List<LogicTreeLevel<? extends LogicTreeNode>> levels = new ArrayList<>();
 		List<LogicTreeBranch<LogicTreeNode>> branches = new ArrayList<>();
 		
-		levels.add(PRVI25_LogicTreeBranch.SUB_FM);
+		levels.add(PRVI25_LogicTree.SUB_FM);
 		
 		for (PRVI25_SubductionFaultModels subductionFM : subductionBASols.keySet())
 			branches.add(new LogicTreeBranch<>(levels, List.of(subductionFM)));

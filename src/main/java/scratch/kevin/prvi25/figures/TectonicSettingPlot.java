@@ -58,28 +58,40 @@ public class TectonicSettingPlot {
 		
 		List<FaultSection> allSects = new ArrayList<>();
 		List<PlotCurveCharacterstics> allSectChars = new ArrayList<>();
+		PlotCurveCharacterstics boundaryChar = new PlotCurveCharacterstics(PlotLineType.SOLID, 1.5f, Colors.tab_blue.darker());
 		PlotCurveCharacterstics crustalChar = new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, Color.DARK_GRAY);
-		PlotCurveCharacterstics polyChar = new PlotCurveCharacterstics(PlotLineType.POLYGON_SOLID, 1f, new Color(0, 0, 0, 30));
+//		PlotCurveCharacterstics polyChar = new PlotCurveCharacterstics(PlotLineType.POLYGON_SOLID, 1f, new Color(0, 0, 0, 30));
+		PlotCurveCharacterstics polyChar = new PlotCurveCharacterstics(PlotLineType.POLYGON_SOLID, 1f, new Color(0, 0, 0, 60));
+//		PlotCurveCharacterstics polyChar = new PlotCurveCharacterstics(PlotLineType.POLYGON_SOLID, 1f, new Color(153, 153, 153));
 		PlotCurveCharacterstics subChar = new PlotCurveCharacterstics(PlotLineType.SOLID, 6f, Color.DARK_GRAY);
+		PlotCurveCharacterstics invisibleChar = new PlotCurveCharacterstics(PlotLineType.SOLID, 4f, new Color(255, 255, 255, 0));
 		allSects.addAll(PRVI25_CrustalFaultModels.PRVI_CRUSTAL_FM_V1p1.getFaultSections());
 		while (allSectChars.size() < allSects.size())
 			allSectChars.add(crustalChar);
 		allSects.addAll(PRVI25_SubductionFaultModels.PRVI_SUB_FM_LARGE.getFaultSections());
 		while (allSectChars.size() < allSects.size())
 			allSectChars.add(subChar);
+		mapMaker.setPoliticalBoundaryChar(boundaryChar);
 		mapMaker.setFaultSections(allSects);
 		mapMaker.setSectOutlineChar(null);
 		mapMaker.setPlotProxySectPolys(polyChar != null);
+		mapMaker.setSectPolygonChar(polyChar);
 		mapMaker.plotSectChars(allSectChars);
-		legendItems.add("Crustal traces");
+		legendItems.add("Coastlines ");
+		legendChars.add(boundaryChar);
+		legendItems.add(" Interface upper traces");
+		legendChars.add(subChar);
+//		legendItems.add("                ");
+//		legendChars.add(invisibleChar);
+		legendItems.add("Crustal fault traces");
 		legendChars.add(crustalChar);
 		if (polyChar != null) {
 			mapMaker.setSectPolygonChar(polyChar);
-			legendItems.add("Crustal zones");
+			legendItems.add("Crustal fault zones ");
 			legendChars.add(new PlotCurveCharacterstics(PlotSymbol.FILLED_SQUARE, 7f, polyChar.getColor()));
 		}
-		legendItems.add("Inteface traces");
-		legendChars.add(subChar);
+		legendItems.add("   ");
+		legendChars.add(invisibleChar);
 		
 		List<Region> regions = new ArrayList<>();
 		List<PlotCurveCharacterstics> outlines = new ArrayList<>();
@@ -110,28 +122,38 @@ public class TectonicSettingPlot {
 		mapRegAnn.setFont(mapRegFont);
 		mapMaker.addAnnotation(mapRegAnn);
 		
-		PlotCurveCharacterstics interfaceChar = new PlotCurveCharacterstics(PlotLineType.SHORT_DASHED, 5f, Colors.tab_blue.darker());
-		PlotCurveCharacterstics slabChar = new PlotCurveCharacterstics(PlotLineType.SOLID, 3f, Colors.tab_green);
+//		PlotCurveCharacterstics interfaceChar = new PlotCurveCharacterstics(PlotLineType.SHORT_DASHED, 5f, Colors.tab_blue.darker());
+//		PlotCurveCharacterstics slabChar = new PlotCurveCharacterstics(PlotLineType.SOLID, 3f, Colors.tab_green);
+		PlotCurveCharacterstics carInterfaceChar = new PlotCurveCharacterstics(PlotLineType.SHORT_DASHED, 5f, Colors.tab_orange);
+		PlotCurveCharacterstics carSlabChar = new PlotCurveCharacterstics(PlotLineType.SOLID, 3f, Colors.tab_lightorange);
+		PlotCurveCharacterstics mueInterfaceChar = new PlotCurveCharacterstics(PlotLineType.SHORT_DASHED, 5f, Colors.tab_green);
+		PlotCurveCharacterstics mueSlabChar = new PlotCurveCharacterstics(PlotLineType.SOLID, 3f, Colors.tab_lightgreen);
 		
-		regions.add(PRVI25_SeismicityRegions.CAR_INTRASLAB.load());
-		outlines.add(slabChar);
-		fills.add(null);
-		
-		legendItems.add("Interface seismicity regions");
-		legendChars.add(interfaceChar);
+		legendItems.add(" ");
+		legendChars.add(carInterfaceChar);
+		legendItems.add(" Interface seismicity region boundaries");
+		legendChars.add(mueInterfaceChar);
+//		legendItems.add("      ");
+//		legendChars.add(invisibleChar);
+		legendItems.add(" ");
+		legendChars.add(carSlabChar);
+		legendItems.add(" Intraslab seismicity region boundaries");
+		legendChars.add(mueSlabChar);
 		
 		regions.add(PRVI25_SeismicityRegions.MUE_INTRASLAB.load());
-		outlines.add(slabChar);
+		outlines.add(mueSlabChar);
 		fills.add(null);
-		legendItems.add("Intraslab seismicity regions");
-		legendChars.add(slabChar);
 		
-		regions.add(PRVI25_SeismicityRegions.CAR_INTERFACE.load());
-		outlines.add(interfaceChar);
+		regions.add(PRVI25_SeismicityRegions.CAR_INTRASLAB.load());
+		outlines.add(carSlabChar);
 		fills.add(null);
 		
 		regions.add(PRVI25_SeismicityRegions.MUE_INTERFACE.load());
-		outlines.add(interfaceChar);
+		outlines.add(mueInterfaceChar);
+		fills.add(null);
+		
+		regions.add(PRVI25_SeismicityRegions.CAR_INTERFACE.load());
+		outlines.add(carInterfaceChar);
 		fills.add(null);
 		
 		Font interfaceFont = new Font(Font.SANS_SERIF, Font.BOLD, 22);
@@ -190,9 +212,10 @@ public class TectonicSettingPlot {
 		
 		mapMaker.setCustomLegendItems(legendItems, legendChars);
 		
-		mapMaker.plot(outputDir, "tectonic_setting", " ");
+//		mapMaker.plot(outputDir, "tectonic_setting", " ");
 		PlotSpec plot = mapMaker.buildPlot(" ");
-		plot.setLegendInset(RectangleAnchor.BOTTOM_LEFT, 0.05, 0.05, 0.66, false);
+		System.out.println("Built plot");
+		plot.setLegendInset(RectangleAnchor.BOTTOM_LEFT, 0.05, 0.05, 0.6, false);
 		
 		for (PlotElement elem : plot.getPlotElems())
 			if (elem instanceof XY_DataSet && ((XY_DataSet)elem).getName().contains("Proxy Fault"))
@@ -200,12 +223,17 @@ public class TectonicSettingPlot {
 		
 		HeadlessGraphPanel gp = PlotUtils.initHeadless();
 		
+		gp.getPlotPrefs().setLegendFontSize(19);
+		
+		System.out.println("Drawing graph panel");
 		gp.drawGraphPanel(plot, false, false, mapMaker.getXRange(), mapMaker.getYRange());
 		
+		System.out.println("Setting ticks");
 		PlotUtils.setXTick(gp, 1d);
 		PlotUtils.setYTick(gp, 1d);
 		
-		PlotUtils.writePlots(outputDir, "tectonic_setting", gp, 800, true, true, true, false);;
+		System.out.println("Writing plots");
+		PlotUtils.writePlots(outputDir, "tectonic_setting", gp, 850, true, true, true, false);
 	}
 
 }

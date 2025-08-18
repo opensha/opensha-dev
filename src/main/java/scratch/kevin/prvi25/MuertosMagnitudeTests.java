@@ -18,7 +18,7 @@ import org.opensha.sha.earthquake.faultSysSolution.RupSetScalingRelationship;
 import org.opensha.sha.earthquake.faultSysSolution.modules.ClusterRuptures;
 import org.opensha.sha.earthquake.faultSysSolution.ruptures.util.RupCartoonGenerator;
 import org.opensha.sha.earthquake.faultSysSolution.util.FaultSectionUtils;
-import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_LogicTreeBranch;
+import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_LogicTree;
 import org.opensha.sha.faultSurface.FaultSection;
 
 import com.google.common.base.Preconditions;
@@ -27,7 +27,7 @@ public class MuertosMagnitudeTests {
 	
 	public static void main(String[] args) throws IOException {
 		List<LogicTreeLevel<? extends RupSetScalingRelationship>> scaleLevels =
-				List.of(PRVI25_LogicTreeBranch.CRUSTAL_SCALE, PRVI25_LogicTreeBranch.SUB_SCALE);
+				List.of(PRVI25_LogicTree.CRUSTAL_SCALE, PRVI25_LogicTree.SUB_SCALE);
 		
 		ModuleContainer.VERBOSE_DEFAULT = false;
 		

@@ -58,9 +58,9 @@ public class HazardComp2003PageGen {
 	};
 	
 	public static void main(String[] args) throws IOException {
-		String imtName = "PGA";
-		String imtDir = "PGA";
-		double period = 0d;
+//		String imtName = "PGA";
+//		String imtDir = "PGA";
+//		double period = 0d;
 		
 //		String imtName = "0.2s SA";
 //		String imtDir = "SA0P2";
@@ -70,9 +70,9 @@ public class HazardComp2003PageGen {
 //		String imtDir = "SA1P0";
 //		double period = 1d;
 		
-//		String imtName = "5s SA";
-//		String imtDir = "SA5P0";
-//		double period = 5d;
+		String imtName = "5s SA";
+		String imtDir = "SA5P0";
+		double period = 5d;
 		
 //		ReturnPeriods[] rps = ReturnPeriods.values();
 		ReturnPeriods[] rps = { ReturnPeriods.TWO_IN_50, ReturnPeriods.TEN_IN_50 };
@@ -94,7 +94,7 @@ public class HazardComp2003PageGen {
 		File outputDir = new File(combinedDir, "nshm03_erf_comparisons_"+imtDir);
 		double sourceSpacing = 0.01;
 		File sourcesDir03 = new File("/home/kevin/OpenSHA/nshm23/nshmp-haz-models/ext_hazard_calcs/"
-				+ "prvi-t14-2003-ERF-2025-GMMs-v157-2025conf-0p01ext-vs760-20250128-8583ec0cfc90a1/vs30-760/"+imtDir+"/source");
+				+ "prvi-t14-2003-ERF-2025-GMMs-v1.7.10-2025conf-0p01ext-vs760-20250812-6aa514571a45ae/vs30-760/"+imtDir+"/source");
 
 		System.out.println("Output dir: "+outputDir.getAbsolutePath());
 		Preconditions.checkState(outputDir.exists() || outputDir.mkdir());

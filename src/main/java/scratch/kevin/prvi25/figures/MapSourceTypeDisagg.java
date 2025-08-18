@@ -80,8 +80,8 @@ public class MapSourceTypeDisagg {
 		double[] periods = {0d, 0.2d, 1d, 5d};
 		ReturnPeriods[] rps = SolHazardMapCalc.MAP_RPS;
 		
-		String suffix = "-vs760";
-//		String suffix = "-vs260";
+//		String suffix = "-vs760";
+		String suffix = "-vs260";
 		
 		dirs.put(MapType.COMBINED, new File(INV_DIR, COMBINED_DIR.getName()+"-ba_only"+suffix));
 		dirs.put(MapType.CRUSTAL, new File(INV_DIR, CRUSTAL_DIR.getName()+"-ba_only"+suffix));

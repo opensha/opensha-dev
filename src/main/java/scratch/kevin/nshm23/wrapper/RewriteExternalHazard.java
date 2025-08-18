@@ -26,9 +26,13 @@ public class RewriteExternalHazard {
 		
 		File invsDir = new File("/data/kevin/nshm23/batch_inversions");
 		
+//		File extCalcDir = new File("/home/kevin/OpenSHA/nshm23/nshmp-haz-models/ext_hazard_calcs/"
+//				+ "prvi-t2-2003-ERF-2025-vB1-GMMs-2025conf-0p01-vs760-20241213-49f58ecb02d600/vs30-760");
+//		File outputDir = new File(invsDir, "2024_12_13-nshmp-haz-external-prvi-2b1-prvi25gmms-vs760");
+		
 		File extCalcDir = new File("/home/kevin/OpenSHA/nshm23/nshmp-haz-models/ext_hazard_calcs/"
-				+ "prvi-t2-2003-ERF-2025-vB1-GMMs-2025conf-0p01-vs760-20241213-49f58ecb02d600/vs30-760");
-		File outputDir = new File(invsDir, "2024_12_13-nshmp-haz-external-prvi-2b1-prvi25gmms-vs760");
+				+ "prvi-t14-2003-ERF-2025-GMMs-v1.7.10-2025conf-0p01ext-vs760-20250812-6aa514571a45ae/vs30-760");
+		File outputDir = new File(invsDir, "2025_08_15-nshmp-haz-external-prvi03-t14-prvi25gmms-vs760");
 		
 		GriddedRegion gridReg = new GriddedRegion(
 				PRVI25_RegionLoader.loadPRVI_MapExtents(),

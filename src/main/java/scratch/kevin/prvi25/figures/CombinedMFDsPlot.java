@@ -43,9 +43,11 @@ import org.opensha.sha.earthquake.rupForecastImpl.prvi25.gridded.PRVI25_GridSour
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.gridded.SeismicityRateFileLoader;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.gridded.SeismicityRateFileLoader.Direct;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.gridded.SeismicityRateFileLoader.Exact;
+import org.opensha.sha.earthquake.rupForecastImpl.prvi25.gridded.SeismicityRateFileLoader.RateRecord;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.gridded.SeismicityRateFileLoader.RateType;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.gridded.SeismicityRateModel;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_CrustalSeismicityRate;
+import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_SeismicityRateEpoch;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_SubductionCaribbeanSeismicityRate;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_SubductionMuertosSeismicityRate;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.util.PRVI25_RegionLoader.PRVI25_SeismicityRegions;
@@ -384,7 +386,8 @@ public class CombinedMFDsPlot {
 					double obsMmax = 0d;
 					int transAlpha = 60;
 					
-					String ratesPrefix = "/data/erf/prvi25/seismicity/rates/directrates_2025_05_08/";
+//					String ratesPrefix = "/data/erf/prvi25/seismicity/rates/directrates_2025_05_08/";
+					String ratesPrefix = "/data/erf/prvi25/seismicity/rates/"+PRVI25_CrustalSeismicityRate.RATE_DATE+"/direct/";
 					
 					Preconditions.checkState(plot1900 || plot1973);
 					boolean[] rateBools;
@@ -399,15 +402,16 @@ public class CombinedMFDsPlot {
 					EvenlyDiscretizedFunc combObsCml = refMFD.getCumRateDistWithOffset().deepClone();
 					Preconditions.checkState(combObsCml.calcSumOfY_Vals() == 0d);
 					for (boolean is1900 : rateBools) {
-						String ratesPath = ratesPrefix+"directrates-PRVI "+regName+"-Full-"+(is1900 ? "1900" : "1973")+"-2024.csv";
+						String ratesPath = ratesPrefix+PRVI25_CrustalSeismicityRate.getDirectRateFileName(seisReg,
+								is1900 ? PRVI25_SeismicityRateEpoch.FULL : PRVI25_SeismicityRateEpoch.RECENT);
 						System.out.println("Loading direct rates from "+ratesPath);
 						InputStream is = SeismicityRateFileLoader.class.getResourceAsStream(ratesPath);
 						CSVFile<String> totalRateCSV = CSVFile.readStream(is, false);
 						List<Direct> directs = SeismicityRateFileLoader.loadDirectBranches(totalRateCSV);
 						
 						double minFuncMag = is1900 ? 6.01 : 5.01;
-						double maxFuncMag = directs.get(0).maxObsIncrMag;
-						if (maxFuncMag == 0d) {
+						double maxFuncMag = directs.get(0).maxObsIncrMag - 0.01;
+						if (maxFuncMag <= 0d) {
 							// not found
 //							maxFuncMag = directs.get(0).cumulativeDist.getMaxX()+0.01;
 							maxFuncMag = directs.get(0).cumulativeDist.getMaxX()-0.01;
@@ -468,15 +472,15 @@ public class CombinedMFDsPlot {
 						
 						PlotCurveCharacterstics obsChar;
 						String obsName;
-						Color darkishGray = new Color(80, 80, 80);
+//						Color darkishGray = new Color(80, 80, 80);
 						if (plotEpochOverlap) {
 							// we're including both in the plot, and they'll overlap
 							if (is1900) {
 								obsName = "Observed (1900-2023)";
-								obsChar = new PlotCurveCharacterstics(PlotLineType.SHORT_DASHED, 3f, Color.BLACK);
+								obsChar = new PlotCurveCharacterstics(PlotLineType.SHORT_DASHED, 3f, Colors.tab_brown);
 							} else {
 								obsName = "Observed (1973-2023)";
-								obsChar = new PlotCurveCharacterstics(PlotLineType.SHORT_DASHED, 3f, darkishGray);
+								obsChar = new PlotCurveCharacterstics(PlotLineType.SHORT_DASHED, 3f, Color.DARK_GRAY);
 							}
 						} else if (plot1900 && plot1973) {
 							// we're including both as one stitched line
@@ -484,13 +488,13 @@ public class CombinedMFDsPlot {
 								obsName = "Observed";
 							else
 								obsName = null; // hide label
-							obsChar = new PlotCurveCharacterstics(PlotLineType.SHORT_DASHED, 3f, darkishGray);
+							obsChar = new PlotCurveCharacterstics(PlotLineType.SHORT_DASHED, 3f, Color.DARK_GRAY);
 						} else {
 							if (is1900)
 								obsName = "Observed (1900-2023)";
 							else
 								obsName = "Observed (1973-2023)";
-							obsChar = new PlotCurveCharacterstics(PlotLineType.SHORT_DASHED, 3f, darkishGray);
+							obsChar = new PlotCurveCharacterstics(PlotLineType.SHORT_DASHED, 3f, Color.DARK_GRAY);
 						}
 						meanIncrObs.setName(obsName);
 						myIncrFuncs.add(meanIncrObs);
@@ -526,52 +530,89 @@ public class CombinedMFDsPlot {
 					System.out.println(combObsCml);
 					
 					if (useRateModelUncert) {
-						List<Exact> uncertBranches;
-						if (seisReg == null) {
-							InputStream is = SeismicityRateFileLoader.class.getResourceAsStream(
-									ratesPrefix+"rateunc-Union-Full-v3.csv");
-//									ratesPrefix+"rateunc-1900-M6-Union-Full-v4.csv");
-//									ratesPrefix+"rateunc-mix-Union-Full-v3.csv");
-							CSVFile<String> unionRates = CSVFile.readStream(is, false);
-							uncertBranches = SeismicityRateFileLoader.loadExactBranches(unionRates);
-						} else if (seisReg == PRVI25_SeismicityRegions.CRUSTAL) {
-							uncertBranches = (List<Exact>)PRVI25_CrustalSeismicityRate.loadRates(RateType.EXACT);
-						} else if (seisReg == PRVI25_SeismicityRegions.CAR_INTERFACE) {
-							uncertBranches = (List<Exact>)PRVI25_SubductionCaribbeanSeismicityRate.loadRates(RateType.EXACT, false);
-						} else if (seisReg == PRVI25_SeismicityRegions.CAR_INTRASLAB) {
-							uncertBranches = (List<Exact>)PRVI25_SubductionCaribbeanSeismicityRate.loadRates(RateType.EXACT, true);
-						} else if (seisReg == PRVI25_SeismicityRegions.MUE_INTERFACE) {
-							uncertBranches = (List<Exact>)PRVI25_SubductionMuertosSeismicityRate.loadRates(RateType.EXACT, false);
-						} else if (seisReg == PRVI25_SeismicityRegions.MUE_INTRASLAB) {
-							uncertBranches = (List<Exact>)PRVI25_SubductionMuertosSeismicityRate.loadRates(RateType.EXACT, true);
-						} else {
-							throw new IllegalStateException();
+						List<UncertainBoundedIncrMagFreqDist> incrBounds95funcs = new ArrayList<>();
+						List<UncertainBoundedIncrMagFreqDist> incrBounds68funcs = new ArrayList<>();
+						List<UncertainArbDiscFunc> cmlBounds95funcs = new ArrayList<>();
+						List<UncertainArbDiscFunc> cmlBounds68funcs = new ArrayList<>();
+						List<Double> epochWeights = new ArrayList<>();
+						
+						for (PRVI25_SeismicityRateEpoch epoch : PRVI25_SeismicityRateEpoch.values()) {
+							double weight = epoch.getNodeWeight(null);
+							if (weight == 0d)
+								continue;
+							
+							List<Exact> uncertBranches;
+							if (seisReg == null) {
+								String unionPrefix = "/data/erf/prvi25/seismicity/rates/"+PRVI25_CrustalSeismicityRate.RATE_DATE;
+								if (epoch == PRVI25_SeismicityRateEpoch.RECENT_SCALED) {
+									unionPrefix += "/"+PRVI25_SeismicityRateEpoch.RECENT.getRateSubDirName();
+								} else {
+									unionPrefix += "/"+epoch.getRateSubDirName();
+								}
+								
+								InputStream is = SeismicityRateFileLoader.class.getResourceAsStream(
+										unionPrefix+"/UNION.csv");
+//										ratesPrefix+"rateunc-Union-Full-v3.csv");
+//										ratesPrefix+"rateunc-1900-M6-Union-Full-v4.csv");
+//										ratesPrefix+"rateunc-mix-Union-Full-v3.csv");
+								CSVFile<String> unionRates = CSVFile.readStream(is, false);
+								uncertBranches = SeismicityRateFileLoader.loadExactBranches(unionRates);
+								if (epoch == PRVI25_SeismicityRateEpoch.RECENT_SCALED) {
+									List<? extends RateRecord> scaled = PRVI25_CrustalSeismicityRate.getScaledToFull(uncertBranches);
+									uncertBranches.clear();
+									for (RateRecord rec : scaled)
+										uncertBranches.add((Exact)rec);
+								}
+							} else if (seisReg == PRVI25_SeismicityRegions.CRUSTAL) {
+								uncertBranches = (List<Exact>)PRVI25_CrustalSeismicityRate.loadRates(epoch, RateType.EXACT);
+							} else if (seisReg == PRVI25_SeismicityRegions.CAR_INTERFACE) {
+								uncertBranches = (List<Exact>)PRVI25_SubductionCaribbeanSeismicityRate.loadRates(epoch, RateType.EXACT, false);
+							} else if (seisReg == PRVI25_SeismicityRegions.CAR_INTRASLAB) {
+								uncertBranches = (List<Exact>)PRVI25_SubductionCaribbeanSeismicityRate.loadRates(epoch, RateType.EXACT, true);
+							} else if (seisReg == PRVI25_SeismicityRegions.MUE_INTERFACE) {
+								uncertBranches = (List<Exact>)PRVI25_SubductionMuertosSeismicityRate.loadRates(epoch, RateType.EXACT, false);
+							} else if (seisReg == PRVI25_SeismicityRegions.MUE_INTRASLAB) {
+								uncertBranches = (List<Exact>)PRVI25_SubductionMuertosSeismicityRate.loadRates(epoch, RateType.EXACT, true);
+							} else {
+								throw new IllegalStateException();
+							}
+							
+							EvenlyDiscretizedFunc cml2p5 = SeismicityRateFileLoader.locateQuantile(uncertBranches, 0.025).cumulativeDist;
+							EvenlyDiscretizedFunc cml16 = SeismicityRateFileLoader.locateQuantile(uncertBranches, 0.16).cumulativeDist;
+							EvenlyDiscretizedFunc cml84 = SeismicityRateFileLoader.locateQuantile(uncertBranches, 0.84).cumulativeDist;
+							EvenlyDiscretizedFunc cml97p5 = SeismicityRateFileLoader.locateQuantile(uncertBranches, 0.975).cumulativeDist;
+							
+							IncrementalMagFreqDist obsRefMFD = FaultSysTools.initEmptyMFD(5.01, obsMmax);
+							IncrementalMagFreqDist incr2p5 = SeismicityRateFileLoader.buildIncrementalMFD(
+									SeismicityRateFileLoader.locateQuantile(uncertBranches, 0.025), obsRefMFD, obsMmax); 
+							IncrementalMagFreqDist incr16 = SeismicityRateFileLoader.buildIncrementalMFD(
+									SeismicityRateFileLoader.locateQuantile(uncertBranches, 0.16), obsRefMFD, obsMmax);
+							IncrementalMagFreqDist incr84 = SeismicityRateFileLoader.buildIncrementalMFD(
+									SeismicityRateFileLoader.locateQuantile(uncertBranches, 0.84), obsRefMFD, obsMmax);
+							IncrementalMagFreqDist incr97p5 = SeismicityRateFileLoader.buildIncrementalMFD(
+									SeismicityRateFileLoader.locateQuantile(uncertBranches, 0.975), obsRefMFD, obsMmax);
+							
+							IncrementalMagFreqDist averageIncr = average(incr16, incr84);
+							EvenlyDiscretizedFunc averageCml = averageCml(cml16, cml84);
+							
+							UncertainBoundedIncrMagFreqDist incrBounds95 = new UncertainBoundedIncrMagFreqDist(
+									averageIncr, incr2p5, incr97p5, UncertaintyBoundType.CONF_95);
+							UncertainBoundedIncrMagFreqDist incrBounds68 = new UncertainBoundedIncrMagFreqDist(
+									averageIncr, incr16, incr84, UncertaintyBoundType.CONF_68);
+							UncertainArbDiscFunc cmlBounds95 = new UncertainArbDiscFunc(averageCml, cml2p5, cml97p5, UncertaintyBoundType.CONF_95);
+							UncertainArbDiscFunc cmlBounds68 = new UncertainArbDiscFunc(averageCml, cml16, cml84, UncertaintyBoundType.CONF_68);
+							
+							incrBounds95funcs.add(incrBounds95);
+							incrBounds68funcs.add(incrBounds68);
+							cmlBounds95funcs.add(cmlBounds95);
+							cmlBounds68funcs.add(cmlBounds68);
+							epochWeights.add(weight);
 						}
 						
-						EvenlyDiscretizedFunc cml2p5 = SeismicityRateFileLoader.locateQuantile(uncertBranches, 0.025).cumulativeDist;
-						EvenlyDiscretizedFunc cml16 = SeismicityRateFileLoader.locateQuantile(uncertBranches, 0.16).cumulativeDist;
-						EvenlyDiscretizedFunc cml84 = SeismicityRateFileLoader.locateQuantile(uncertBranches, 0.84).cumulativeDist;
-						EvenlyDiscretizedFunc cml97p5 = SeismicityRateFileLoader.locateQuantile(uncertBranches, 0.975).cumulativeDist;
-						
-						IncrementalMagFreqDist obsRefMFD = FaultSysTools.initEmptyMFD(5.01, obsMmax);
-						IncrementalMagFreqDist incr2p5 = SeismicityRateFileLoader.buildIncrementalMFD(
-								SeismicityRateFileLoader.locateQuantile(uncertBranches, 0.025), obsRefMFD, obsMmax); 
-						IncrementalMagFreqDist incr16 = SeismicityRateFileLoader.buildIncrementalMFD(
-								SeismicityRateFileLoader.locateQuantile(uncertBranches, 0.16), obsRefMFD, obsMmax);
-						IncrementalMagFreqDist incr84 = SeismicityRateFileLoader.buildIncrementalMFD(
-								SeismicityRateFileLoader.locateQuantile(uncertBranches, 0.84), obsRefMFD, obsMmax);
-						IncrementalMagFreqDist incr97p5 = SeismicityRateFileLoader.buildIncrementalMFD(
-								SeismicityRateFileLoader.locateQuantile(uncertBranches, 0.975), obsRefMFD, obsMmax);
-						
-						IncrementalMagFreqDist averageIncr = average(incr16, incr84);
-						EvenlyDiscretizedFunc averageCml = averageCml(cml16, cml84);
-						
-						UncertainBoundedIncrMagFreqDist incrBounds95 = new UncertainBoundedIncrMagFreqDist(
-								averageIncr, incr2p5, incr97p5, UncertaintyBoundType.CONF_95);
-						UncertainBoundedIncrMagFreqDist incrBounds68 = new UncertainBoundedIncrMagFreqDist(
-								averageIncr, incr16, incr84, UncertaintyBoundType.CONF_68);
-						UncertainArbDiscFunc cmlBounds95 = new UncertainArbDiscFunc(averageCml, cml2p5, cml97p5);
-						UncertainArbDiscFunc cmlBounds68 = new UncertainArbDiscFunc(averageCml, cml16, cml84);
+						UncertainBoundedIncrMagFreqDist incrBounds95 = PRVI25_SeismicityRateEpoch.averageUncert(incrBounds95funcs, epochWeights);
+						UncertainBoundedIncrMagFreqDist incrBounds68 = PRVI25_SeismicityRateEpoch.averageUncert(incrBounds68funcs, epochWeights);
+						UncertainArbDiscFunc cmlBounds95 = PRVI25_SeismicityRateEpoch.averageUncertCml(cmlBounds95funcs, epochWeights);
+						UncertainArbDiscFunc cmlBounds68 = PRVI25_SeismicityRateEpoch.averageUncertCml(cmlBounds68funcs, epochWeights);
 						
 						incrBounds95.setName("68% and 95% bounds");
 						myIncrFuncs.add(incrBounds95);

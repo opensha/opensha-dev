@@ -2,6 +2,7 @@ package scratch.kevin.nshm23;
 
 import java.io.File;
 import java.io.IOException;
+import java.lang.reflect.InvocationTargetException;
 import java.text.DecimalFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -82,7 +83,7 @@ import org.opensha.sha.earthquake.rupForecastImpl.nshm23.prior2018.NSHM18_Deform
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.prior2018.NSHM18_FaultModels;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.prior2018.NSHM18_LogicTreeBranch;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.util.NSHM23_RegionLoader;
-import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_LogicTreeBranch;
+import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_LogicTree;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_SubductionFaultModels;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.util.PRVI25_RegionLoader;
 import org.opensha.sha.imr.AttenRelRef;
@@ -474,16 +475,6 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 ////		dirName += "-dm_sampling_cap_sigma";
 ////		individualRandomLevels.add(new RandomDefModSampleLevel());
 //		
-//		if (!factoryClass.equals(NSHM23_InvConfigFactory.class)) {
-//			// try instantiate it to make sure we get any static modifiers that might change branch weights
-//			try {
-//				System.out.println("Instantiating factory class: "+factoryClass.getName());
-//				factoryClass.getDeclaredConstructor().newInstance();
-//			} catch (Exception e) {
-//				e.printStackTrace();
-//			}
-//		}
-//		
 ////		levels = new ArrayList<>(levels);
 ////		boolean randB = true;
 ////		boolean randSeg = true;
@@ -636,36 +627,39 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 		 * PRVI25 logic tree
 		 * TODO (this is a just a marker to find this part quickly, not an actual todo)
 		 */
-//		List<LogicTreeLevel<? extends LogicTreeNode>> levels = PRVI25_LogicTreeBranch.levelsOnFault;
-//		dirName += "-prvi25_crustal_branches";
-//		double avgNumRups = 50000;
-//		gmpes = new AttenRelRef[] { AttenRelRef.USGS_PRVI_ACTIVE };
-//		
-//		// random DM sampling
-//		levels = new ArrayList<>(levels);
-//		int origNumLevels = levels.size();
-//		for (int i=levels.size(); --i>=0;)
-//			if (levels.get(i).getNodes().get(0) instanceof PRVI25_CrustalDeformationModels)
-//				levels.remove(i);
-//		Preconditions.checkState(levels.size() == origNumLevels -1);
-//		individualRandomLevels.add(new PRVI25_CrustalRandomlySampledDeformationModelLevel());
-////		samplingBranchCountMultiplier = 5; // 5 for each branch
-//		samplingBranchCountMultiplier = 10; // 10 for each branch
-////		samplingBranchCountMultiplier = 20; // 20 for each branch
-////		samplingBranchCountMultiplier = 50; // 50 for each branch
-//		randSeed *= samplingBranchCountMultiplier;
-//		dirName += "-dmSample";
-//		if (samplingBranchCountMultiplier > 1)
-//			dirName += samplingBranchCountMultiplier+"x";
+//		queue = "scec_hiprio"; // TODO remove
 		
-		List<LogicTreeLevel<? extends LogicTreeNode>> levels = PRVI25_LogicTreeBranch.levelsSubduction;
-		dirName += "-prvi25_subduction_branches";
-		double avgNumRups = 10000;
-		gmpes = new AttenRelRef[] { AttenRelRef.USGS_PRVI_INTERFACE, AttenRelRef.USGS_PRVI_SLAB };
+		List<LogicTreeLevel<? extends LogicTreeNode>> levels = PRVI25_LogicTree.levelsOnFault;
+		dirName += "-prvi25_crustal_branches";
+		double avgNumRups = 50000;
+		gmpes = new AttenRelRef[] { AttenRelRef.USGS_PRVI_ACTIVE };
+		
+		// random DM sampling
+		levels = new ArrayList<>(levels);
+		int origNumLevels = levels.size();
+		for (int i=levels.size(); --i>=0;)
+			if (levels.get(i).getNodes().get(0) instanceof PRVI25_CrustalDeformationModels)
+				levels.remove(i);
+		Preconditions.checkState(levels.size() == origNumLevels -1);
+		individualRandomLevels.add(new PRVI25_CrustalRandomlySampledDeformationModelLevel());
+//		samplingBranchCountMultiplier = 5; // 5 for each branch
+		samplingBranchCountMultiplier = 10; // 10 for each branch
+//		samplingBranchCountMultiplier = 20; // 20 for each branch
+//		samplingBranchCountMultiplier = 50; // 50 for each branch
+		randSeed *= samplingBranchCountMultiplier;
+		dirName += "-dmSample";
+		if (samplingBranchCountMultiplier > 1)
+			dirName += samplingBranchCountMultiplier+"x";
+		
+//		List<LogicTreeLevel<? extends LogicTreeNode>> levels = PRVI25_LogicTree.levelsSubduction;
+//		dirName += "-prvi25_subduction_branches";
+//		double avgNumRups = 10000;
+//		gmpes = new AttenRelRef[] { AttenRelRef.USGS_PRVI_INTERFACE, AttenRelRef.USGS_PRVI_SLAB };
 		
 //		forceHazardReg = new GriddedRegion(PRVI25_RegionLoader.loadPRVI_Tight(), 0.05, GriddedRegion.ANCHOR_0_0);
+//		forceHazardReg = new GriddedRegion(PRVI25_RegionLoader.loadPRVI_MapExtents(), 0.1, GriddedRegion.ANCHOR_0_0); // good for quicker tests
 //		forceHazardReg = new GriddedRegion(PRVI25_RegionLoader.loadPRVI_MapExtents(), 0.05, GriddedRegion.ANCHOR_0_0);
-		forceHazardReg = new GriddedRegion(PRVI25_RegionLoader.loadPRVI_MapExtents(), 0.025, GriddedRegion.ANCHOR_0_0);
+		forceHazardReg = new GriddedRegion(PRVI25_RegionLoader.loadPRVI_MapExtents(), 0.025, GriddedRegion.ANCHOR_0_0); // this is what I use for the paper
 		sigmaTrunc = 3d;
 		supersample = false;
 		
@@ -700,15 +694,8 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 //		Class<? extends InversionConfigurationFactory> factoryClass = PRVI25_InvConfigFactory.NoProxyLengthLimit.class;
 //		dirName += "-no_proxy_len_limit";
 		
-		if (!factoryClass.equals(PRVI25_InvConfigFactory.class)) {
-			// try instantiate it to make sure we get any static modifiers that might change branch weights
-			try {
-				System.out.println("Instantiating factory class: "+factoryClass.getName());
-				factoryClass.getDeclaredConstructor().newInstance();
-			} catch (Exception e) {
-				e.printStackTrace();
-			}
-		}
+//		Class<? extends InversionConfigurationFactory> factoryClass = PRVI25_InvConfigFactory.Rates1973scaledTo1900.class;
+//		dirName += "-1973_rates_scaled_to_1900";
 		
 		forceHazardGridSpacing = 0.1;
 		nodeBAskipSectBySect = false;
@@ -750,6 +737,15 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 		 * END PRVI25 logic tree
 		 */
 		// TODO this is the end of the configurable section
+		
+		System.out.println("Instantiating factory class: "+factoryClass.getName());
+		InversionConfigurationFactory factory = null;
+		try {
+			factory = factoryClass.getDeclaredConstructor().newInstance();
+		} catch (Exception e) {
+			e.printStackTrace();
+			System.exit(1);;
+		}
 		
 		LogicTree<LogicTreeNode> logicTree;
 		if (forceRequiredNonzeroWeight)
@@ -1070,6 +1066,9 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 		
 		boolean griddedJob = GridSourceProviderFactory.class.isAssignableFrom(factoryClass);
 		if (griddedJob) {
+			LogicTree<?> gridTree = ((GridSourceProviderFactory)factory).getGridSourceTree(logicTree);
+			System.out.println("Will do gridded seismicity jobs. Grid tree has "+gridTree.size()
+					+" nodes, fault x grid tree has "+(gridTree.size()*logicTree.size()));
 			boolean allLevelsAffected = true;
 			for (LogicTreeLevel<?> level : levels) {
 				if (!GridSourceProvider.affectedByLevel(level)) {
@@ -1077,6 +1076,16 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 					allLevelsAffected = false;
 				}
 			}
+			
+			numCalcs = gridTree.size()*logicTree.size();
+			nodeRounds = (int)Math.ceil((double)numCalcs/(double)(nodes));
+			// greater of 10 hours, and 45 minutes per round
+			mins = Integer.max(60*10, 45*nodeRounds);
+			// make sure to not exceed 1 week
+			mins = Integer.min(mins, 60*24*7 - 1);
+			
+			System.out.println("Gridded mins: "+mins);
+			
 			argz = "--factory '"+factoryClass.getName()+"'"; // surround in single quotes to escape $'s
 			argz += " --logic-tree "+ltPath;
 			argz += " --sol-dir "+resultsPath;

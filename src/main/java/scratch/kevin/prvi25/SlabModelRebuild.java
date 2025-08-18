@@ -15,6 +15,8 @@ import org.opensha.commons.geo.GriddedRegion;
 import org.opensha.commons.logicTree.LogicTree;
 import org.opensha.commons.logicTree.LogicTreeBranch;
 import org.opensha.commons.util.modules.AverageableModule.AveragingAccumulator;
+import org.opensha.commons.util.modules.ModuleArchive;
+import org.opensha.commons.util.modules.OpenSHA_Module;
 import org.opensha.sha.earthquake.faultSysSolution.FaultSystemSolution;
 import org.opensha.sha.earthquake.faultSysSolution.modules.GridSourceList;
 import org.opensha.sha.earthquake.faultSysSolution.modules.GridSourceList.GriddedRupture;
@@ -25,21 +27,15 @@ import org.opensha.sha.util.TectonicRegionType;
 
 import com.google.common.base.Preconditions;
 
-public class SlabMagCornerTests {
+public class SlabModelRebuild {
 
 	public static void main(String[] args) throws IOException {
-//		PRVI25_GridSourceBuilder.SLAB_MMAX = 7.95d;
-//		PRVI25_GridSourceBuilder.SLAB_M_CORNER = 7.4d;
-//		File outputDir = new File(INV_DIR, COMBINED_DIR.getName()+"-ba_only-slab_mc_7p4-vs760");
-//		PRVI25_GridSourceBuilder.SLAB_MMAX = 7.35d;
-//		PRVI25_GridSourceBuilder.SLAB_M_CORNER = Double.NaN;
-//		File outputDir = new File(INV_DIR, COMBINED_DIR.getName()+"-ba_only-slab_mmax_7p4-vs760");
-//		PRVI25_GridSourceBuilder.SLAB_MMAX = 7.45d; // TODO
-		PRVI25_GridSourceBuilder.SLAB_M_CORNER = Double.NaN;
-		File outputDir = new File(INV_DIR, COMBINED_DIR.getName()+"-ba_only-slab_mmax_7p5-vs760");
-		Preconditions.checkState(outputDir.exists() || outputDir.mkdir());
+//		File inputFile = COMBINED_SOL;
+//		File inputFile = SUBDUCTION_SOL_LARGE;
+		File inputFile = SUBDUCTION_SOL_SMALL;
 		
-		FaultSystemSolution origSol = FaultSystemSolution.load(COMBINED_SOL);
+		File outputFile = new File(inputFile.getParentFile(), inputFile.getName().replace(".zip", "")+"_slab_rebuild.zip");
+		FaultSystemSolution origSol = FaultSystemSolution.load(inputFile);
 		
 		GridSourceList origGridList = origSol.requireModule(GridSourceList.class);
 		GriddedRegion gridReg = origGridList.getGriddedRegion();
@@ -89,7 +85,11 @@ public class SlabMagCornerTests {
 		GridSourceList modGridList = GridSourceList.combine(gridListWithoutSlab, avgSlab);
 		
 		origSol.setGridSourceProvider(modGridList);
-		origSol.write(new File(outputDir, COMBINED_SOL.getName()));
+		origSol.write(outputFile);
+		
+//		ModuleArchive<OpenSHA_Module> slabOnlyArchive = new ModuleArchive<>();
+//		slabOnlyArchive.addModule(avgSlab);
+//		slabOnlyArchive.write(new File(COMBINED_DIR, "slab_gridded_rebuild.zip"));
 	}
 
 }

@@ -21,6 +21,7 @@ import org.jfree.chart.annotations.XYAnnotation;
 import org.jfree.chart.annotations.XYBoxAnnotation;
 import org.jfree.chart.annotations.XYPolygonAnnotation;
 import org.jfree.chart.annotations.XYTextAnnotation;
+import org.jfree.chart.plot.XYPlot;
 import org.jfree.chart.ui.RectangleAnchor;
 import org.jfree.chart.ui.TextAnchor;
 import org.jfree.data.Range;
@@ -78,7 +79,7 @@ public class SubductionDefModConvert {
 	private static boolean WRITE_SECT_INDEXES = false;
 
 	public static void main(String[] args) throws IOException {
-		String version = "v4";
+		String version = "v5";
 		File fmDir = new File("/home/kevin/workspace/opensha/src/main/resources/data/erf/prvi25/fault_models/subduction/"+version);
 		File dmDir = new File("/home/kevin/workspace/opensha/src/main/resources/data/erf/prvi25/def_models/subduction/"+version);
 		File inputsDir = new File(fmDir, "inputs");
@@ -102,11 +103,12 @@ public class SubductionDefModConvert {
 		
 		boolean interpolate = true;
 		boolean interpSymmetry = true;
+		boolean interpAcrossNH_PR = true;
 		double fractUncert = 0.1;
 		
 //		File plotOutputDir = new File("/home/kevin/Documents/papers/2024_PRVI_Subduction/figures/def_model");
-//		File plotOutputDir = new File(PRVI_Paths.FIGURES_DIR, "sub_dm");
-		File plotOutputDir = new File("/tmp/dm_plots");
+		File plotOutputDir = new File(PRVI_Paths.FIGURES_DIR, "sub_dm");
+//		File plotOutputDir = new File("/tmp/dm_plots");
 		Preconditions.checkState(plotOutputDir.exists() || plotOutputDir.mkdir());
 		
 		List<PRVI25_SubductionFaultModels> debugPlotFMs = new ArrayList<>();
@@ -241,6 +243,8 @@ public class SubductionDefModConvert {
 						Map<Integer, List<MinisectionSlipRecord>> minisectionRecsMap = new HashMap<>();
 						Map<Integer, List<MinisectionSlipRecord>> minisectionRecsMapToOrigIDs = new HashMap<>();
 						
+						Map<Integer, String> shorNamesMap = new HashMap<>();
+						
 						for (String name : stitchInIDs.keySet()) {
 							int outID = stitchOutIDs.get(name);
 							Feature[] features = stitchFeatureSets.get(name);
@@ -270,8 +274,11 @@ public class SubductionDefModConvert {
 								lower.addAll(geometry.lines.get(1));
 								
 								int sectID = feature.properties.getInt("id", -1);
-								String sectName = feature.properties.getString("FaultName")+" ("+feature.properties.getString("FaultDesc")+")";
+								String shortName = feature.properties.getString("FaultName");
+								String sectName = shortName+" ("+feature.properties.getString("FaultDesc")+")";
 								System.out.println("Processing "+sectID+". "+sectName);
+								
+								shorNamesMap.put(sectID, shortName);
 								
 								// check that lower is in the same direction
 								double upperStrike = upper.getAveStrike();
@@ -385,6 +392,7 @@ public class SubductionDefModConvert {
 								
 								List<Double> sectStartDASs = new ArrayList<>();
 								List<Double> sectMidDASs = new ArrayList<>();
+								List<String> sectShortNames = new ArrayList<>();
 								List<Double> sectEndDASs = new ArrayList<>();
 								List<MinisectionSlipRecord> sectRefMinis = new ArrayList<>();
 								
@@ -409,6 +417,7 @@ public class SubductionDefModConvert {
 									sectStartDASs.add(start);
 									sectMidDASs.add(middle);
 									sectEndDASs.add(end);
+									sectShortNames.add(shorNamesMap.get(id));
 								}
 								
 								System.out.println("Total DAS for "+name+": "+runningDAS);
@@ -426,12 +435,27 @@ public class SubductionDefModConvert {
 									double middle = sectMidDASs.get(i);
 									double end = sectEndDASs.get(i);
 									
+//									System.out.println(i+". "+mini.parentID);
+									
 									if (i == 0) {
 										// first, start at the beginning not the middle
 										Preconditions.checkState(start == 0d);
 										dasSlipFunc.set(0d, mini.slipRate);
 										dasSlipUncertFunc.set(0d, mini.slipRateStdDev);
 										dasRakeFunc.set(0d, mini.rake);
+									} else if (!interpAcrossNH_PR && i > 0 && mini.parentID == 7500 && sectRefMinis.get(i-1).parentID == 7501) {
+										// skip interpolation between NH and PR
+										interpRanges.add(null);
+										
+										MinisectionSlipRecord prev = sectRefMinis.get(i-1);
+										
+										double prevEnd = start - 1e-6;
+										dasSlipFunc.set(prevEnd, prev.slipRate);
+										dasSlipUncertFunc.set(prevEnd, prev.slipRateStdDev);
+										dasRakeFunc.set(prevEnd, prev.rake);
+										dasSlipFunc.set(start, mini.slipRate);
+										dasSlipUncertFunc.set(start, mini.slipRateStdDev);
+										dasRakeFunc.set(start, mini.rake);
 									} else if (interpSymmetry) {
 										// enforce symmetry
 										double prevHalfLen = sectEndDASs.get(i-1) - sectMidDASs.get(i-1);
@@ -494,7 +518,7 @@ public class SubductionDefModConvert {
 								String interpPrefix = prefix+"_interp_"+name.replaceAll("\\W+", "_");
 								debugWriteInterpFuncsOrders(plotOutputDir, interpPrefix, name,
 										dasSlipFunc, dasSlipUncertFunc, dasRakeFunc, sectStartDASs,
-										sectMidDASs, interpRanges);
+										sectMidDASs, interpRanges, sectShortNames);
 							}
 							
 							// calculate modified moment rates
@@ -715,7 +739,7 @@ public class SubductionDefModConvert {
 	private static void debugWriteInterpFuncsOrders(File outputDir, String prefix, String name,
 			ArbitrarilyDiscretizedFunc dasSlipFunc, ArbitrarilyDiscretizedFunc dasSlipUncertFunc,
 			ArbitrarilyDiscretizedFunc dasRakeFunc, List<Double> sectStartDASs,
-			List<Double> sectMidDASs, List<double[]> interpRanges) throws IOException {
+			List<Double> sectMidDASs, List<double[]> interpRanges, List<String> sectShortNames) throws IOException {
 		
 		List<PlotSpec> specs = new ArrayList<>(3);
 		List<Range> yRanges = new ArrayList<>(3);
@@ -801,9 +825,11 @@ public class SubductionDefModConvert {
 			List<XYAnnotation> anns = new ArrayList<>();
 
 			for (double[] interpRange : interpRanges) {
-				XYBoxAnnotation boxAnn = new XYBoxAnnotation(interpRange[0], interpMinY, interpRange[1], interpMaxY,
-						null, null, anns.size() % 2 == 0 ? interpColor1 : interpColor2);
-				anns.add(boxAnn);
+				if (interpRange != null) {
+					XYBoxAnnotation boxAnn = new XYBoxAnnotation(interpRange[0], interpMinY, interpRange[1], interpMaxY,
+							null, null, anns.size() % 2 == 0 ? interpColor1 : interpColor2);
+					anns.add(boxAnn);
+				}
 			}
 			
 			// annotate interpolation ranges
@@ -837,8 +863,49 @@ public class SubductionDefModConvert {
 		yRanges.remove(1);
 		height = 800;
 		
+		// add names
+		List<Integer> specWeights = new ArrayList<>();
+		for (int i=0; i<specs.size(); i++)
+			specWeights.add(100);
+		List<XY_DataSet> funcs = new ArrayList<>();
+		List<PlotCurveCharacterstics> chars = new ArrayList<>();
+		List<XYTextAnnotation> anns = new ArrayList<>();
+		double maxY = 10;
+		for (int s=0; s<sectStartDASs.size(); s++) {
+			String shortName = sectShortNames.get(s);
+			
+			double mid = sectMidDASs.get(s);
+			
+			XYTextAnnotation ann = new XYTextAnnotation(shortName, mid, 0.5*maxY);
+			ann.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 18));
+			ann.setTextAnchor(TextAnchor.CENTER);
+			anns.add(ann);
+			
+			if (s > 0) {
+				DefaultXY_DataSet xy = new DefaultXY_DataSet();
+				double start = sectStartDASs.get(s);
+				xy.set(start, 0d);
+				xy.set(start, maxY);
+				
+				funcs.add(xy);
+				chars.add(startChar);
+			}
+		}
+		PlotSpec nameSpec = new PlotSpec(funcs, chars, " ", specs.get(0).getXAxisLabel(), "");
+		nameSpec.setPlotAnnotations(anns);
+		specs.add(1, nameSpec);
+		yRanges.add(1, new Range(0d, maxY));
+		specWeights.add(1, 10);
+		
 		HeadlessGraphPanel gp = PlotUtils.initHeadless();
 		gp.drawGraphPanel(specs, false, false, List.of(new Range(0d, dasSlipFunc.getMaxX())), yRanges);
+		
+		PlotUtils.setSubPlotWeights(gp, Ints.toArray(specWeights));
+		
+		XYPlot subPlot = PlotUtils.getSubPlots(gp).get(1);
+		subPlot.setDomainGridlinesVisible(false);
+		subPlot.setRangeGridlinesVisible(false);
+		subPlot.getRangeAxis().setTickLabelsVisible(false);
 		
 		PlotUtils.writePlots(outputDir, prefix, gp, width, height, true, true, false);
 	}

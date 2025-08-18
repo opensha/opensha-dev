@@ -52,7 +52,7 @@ import org.opensha.sha.earthquake.rupForecastImpl.prvi25.gridded.PRVI25_GridSour
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.gridded.SeismicityRateFileLoader.RateType;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_CrustalSeismicityRate;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_DeclusteringAlgorithms;
-import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_LogicTreeBranch;
+import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_LogicTree;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_SeisSmoothingAlgorithms;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_SubductionCaribbeanSeismicityRate;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_SubductionMuertosSeismicityRate;
@@ -105,7 +105,7 @@ public class GriddedRateDistributionSolutionWriter {
 		Random rand = new Random(numTotalSamples);
 		
 		List<PRVI25_DeclusteringAlgorithms> origDeclusterNodes = new ArrayList<>();
-		LogicTreeLevel<PRVI25_DeclusteringAlgorithms> origDeclusterLevel = PRVI25_LogicTreeBranch.SEIS_DECLUSTER;
+		LogicTreeLevel<PRVI25_DeclusteringAlgorithms> origDeclusterLevel = PRVI25_LogicTree.SEIS_DECLUSTER;
 		List<FileBackedNode> crustalDeclusterNodes = new ArrayList<>();
 		List<FileBackedNode> interfaceDeclusterNodes = new ArrayList<>();
 		for (PRVI25_DeclusteringAlgorithms node : origDeclusterLevel.getNodes()) {
@@ -125,7 +125,7 @@ public class GriddedRateDistributionSolutionWriter {
 		interfaceDeclusterLevel.setAffected(origDeclusterLevel.getAffected(), origDeclusterLevel.getNotAffected(), false);
 		
 		List<PRVI25_SeisSmoothingAlgorithms> origSmoothingNodes = new ArrayList<>();
-		LogicTreeLevel<PRVI25_SeisSmoothingAlgorithms> origSmoothingLevel = PRVI25_LogicTreeBranch.SEIS_SMOOTH;
+		LogicTreeLevel<PRVI25_SeisSmoothingAlgorithms> origSmoothingLevel = PRVI25_LogicTree.SEIS_SMOOTH;
 		List<FileBackedNode> crustalSmoothingNodes = new ArrayList<>();
 		List<FileBackedNode> interfaceSmoothingNodes = new ArrayList<>();
 		for (PRVI25_SeisSmoothingAlgorithms node : origSmoothingLevel.getNodes()) {
@@ -147,13 +147,13 @@ public class GriddedRateDistributionSolutionWriter {
 		List<LogicTreeLevel<? extends LogicTreeNode>> fullRandLevels = new ArrayList<>();
 		fullRandLevels.add(crustalDeclusterLevel);
 		fullRandLevels.add(crustalSmoothingLevel);
-		fullRandLevels.add(PRVI25_LogicTreeBranch.MMAX_OFF);
+		fullRandLevels.add(PRVI25_LogicTree.MMAX_OFF);
 		CrustalRateSamplingLevel crustalSampler = new CrustalRateSamplingLevel(crustalPairs);
 		crustalSampler.buildNodes(rand, numTotalSamples);
 		fullRandLevels.add(crustalSampler);
 		fullRandLevels.add(interfaceDeclusterLevel);
 		fullRandLevels.add(interfaceSmoothingLevel);
-		fullRandLevels.add(PRVI25_LogicTreeBranch.SUB_SCALE);
+		fullRandLevels.add(PRVI25_LogicTree.SUB_SCALE);
 		CarSlabRateSamplingLevel carSampler = new CarSlabRateSamplingLevel(carSlabPairs, carInterfacePairs);
 		carSampler.buildNodes(rand, numTotalSamples);
 		MueRateSamplingLevel mueSampler = new MueRateSamplingLevel(mueSlabPairs, mueInterfacePairs);
@@ -163,13 +163,13 @@ public class GriddedRateDistributionSolutionWriter {
 		List<LogicTreeLevel<? extends LogicTreeNode>> threeBranchLevels = new ArrayList<>();
 		threeBranchLevels.add(crustalDeclusterLevel);
 		threeBranchLevels.add(crustalSmoothingLevel);
-		threeBranchLevels.add(PRVI25_LogicTreeBranch.MMAX_OFF);
-		threeBranchLevels.add(PRVI25_LogicTreeBranch.CRUSTAL_SEIS_RATE);
+		threeBranchLevels.add(PRVI25_LogicTree.MMAX_OFF);
+		threeBranchLevels.add(PRVI25_LogicTree.CRUSTAL_SEIS_RATE);
 		threeBranchLevels.add(interfaceDeclusterLevel);
 		threeBranchLevels.add(interfaceSmoothingLevel);
-		threeBranchLevels.add(PRVI25_LogicTreeBranch.SUB_SCALE);
-		threeBranchLevels.add(PRVI25_LogicTreeBranch.CAR_SEIS_RATE);
-		threeBranchLevels.add(PRVI25_LogicTreeBranch.MUE_SEIS_RATE);
+		threeBranchLevels.add(PRVI25_LogicTree.SUB_SCALE);
+		threeBranchLevels.add(PRVI25_LogicTree.CAR_SEIS_RATE);
+		threeBranchLevels.add(PRVI25_LogicTree.MUE_SEIS_RATE);
 		
 		Region reg = PRVI25_RegionLoader.loadPRVI_Tight();
 		GriddedRegion gridReg = new GriddedRegion(reg, 0.05, GriddedRegion.ANCHOR_0_0);
@@ -204,8 +204,10 @@ public class GriddedRateDistributionSolutionWriter {
 		
 		PRVI25_SubductionScalingRelationships scale = PRVI25_SubductionScalingRelationships.LOGA_C4p0;
 		List<LogicTreeLevel<? extends LogicTreeNode>> levelsForInterface = new ArrayList<>();
-		levelsForInterface.add(PRVI25_LogicTreeBranch.SUB_SCALE);
-		levelsForInterface.addAll(PRVI25_LogicTreeBranch.levelsSubductionGridded);
+		levelsForInterface.add(PRVI25_LogicTree.SUB_SCALE);
+		levelsForInterface.addAll(PRVI25_LogicTree.levelsSubductionGridded);
+		
+		double slabMmax = 7.95; // TODO: use branches
 		
 		int sampleIndex = 0;
 		int threeBranchWriteCount = 0;
@@ -263,7 +265,7 @@ public class GriddedRateDistributionSolutionWriter {
 												branch.setOrigBranchWeight(curWeight);
 											}
 											
-											LogicTreeBranch<LogicTreeNode> branchForCrustal = new LogicTreeBranch<>(PRVI25_LogicTreeBranch.levelsCrustalOffFault);
+											LogicTreeBranch<LogicTreeNode> branchForCrustal = new LogicTreeBranch<>(PRVI25_LogicTree.levelsCrustalOffFault);
 											branchForCrustal.setValue(crustalOrigDeclusterNode);
 											branchForCrustal.setValue(crustalOrigSmoothingNode);
 											branchForCrustal.setValue(crustalRate);
@@ -334,7 +336,7 @@ public class GriddedRateDistributionSolutionWriter {
 									branch.setValue(mueSample);
 									branch.setValue(scale);
 									
-									LogicTreeBranch<LogicTreeNode> branchForCrustal = new LogicTreeBranch<>(PRVI25_LogicTreeBranch.levelsCrustalOffFault);
+									LogicTreeBranch<LogicTreeNode> branchForCrustal = new LogicTreeBranch<>(PRVI25_LogicTree.levelsCrustalOffFault);
 									branchForCrustal.setValue(crustalOrigDeclusterNode);
 									branchForCrustal.setValue(crustalOrigSmoothingNode);
 									branchForCrustal.setValue(mmaxOff);
@@ -350,9 +352,9 @@ public class GriddedRateDistributionSolutionWriter {
 										public GridResult get() {
 											try {
 												GutenbergRichterMagFreqDist carSlabGR = buildGR(carSample.slabRate, carSample.slabB,
-														PRVI25_GridSourceBuilder.SLAB_MMAX, 5d, refMFD);
+														slabMmax, 5d, refMFD);
 												GutenbergRichterMagFreqDist mueSlabGR = buildGR(mueSample.slabRate, mueSample.slabB,
-														PRVI25_GridSourceBuilder.SLAB_MMAX, 5d, refMFD);
+														slabMmax, 5d, refMFD);
 												
 												GridSourceList carSlabList = PRVI25_GridSourceBuilder.buildSlabGridSourceList(
 														branchForInterface, PRVI25_SeismicityRegions.CAR_INTRASLAB, carSlabGR);
@@ -476,7 +478,7 @@ public class GriddedRateDistributionSolutionWriter {
 		return gr;
 	}
 	
-	private static List<double[]> loadRates(File csvFile) throws IOException {
+	public static List<double[]> loadRates(File csvFile) throws IOException {
 		CSVFile<String> csv = CSVFile.readFile(csvFile, false);
 		
 		boolean reading = false;

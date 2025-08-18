@@ -25,7 +25,7 @@ import org.opensha.sha.earthquake.faultSysSolution.util.TrueMeanSolutionCreator;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.gridded.NSHM23_SingleRegionGridSourceProvider;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.gridded.PRVI25_GridSourceBuilder;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_CrustalFaultModels;
-import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_LogicTreeBranch;
+import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_LogicTree;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_SubductionFaultModels;
 
 import com.google.common.base.Preconditions;
@@ -106,8 +106,8 @@ public class CrustalSubductionTrueMeanCreator {
 		List<LogicTreeLevel<? extends LogicTreeNode>> levels = new ArrayList<>();
 		List<LogicTreeBranch<LogicTreeNode>> branches = new ArrayList<>();
 		
-		levels.add(PRVI25_LogicTreeBranch.CRUSTAL_FM);
-		levels.add(PRVI25_LogicTreeBranch.SUB_FM);
+		levels.add(PRVI25_LogicTree.CRUSTAL_FM);
+		levels.add(PRVI25_LogicTree.SUB_FM);
 		
 		for (PRVI25_CrustalFaultModels crustalFM : crustalBASols.keySet())
 			for (PRVI25_SubductionFaultModels subductionFM : subductionBASols.keySet())

@@ -153,6 +153,7 @@ import org.opensha.sha.earthquake.faultSysSolution.ruptures.util.SectionDistance
 import org.opensha.sha.earthquake.faultSysSolution.ruptures.util.UniqueRupture;
 import org.opensha.sha.earthquake.faultSysSolution.util.BranchAverageSolutionCreator;
 import org.opensha.sha.earthquake.faultSysSolution.util.FaultSectionUtils;
+import org.opensha.sha.earthquake.faultSysSolution.util.FaultSysHazardCalcSettings;
 import org.opensha.sha.earthquake.faultSysSolution.util.FaultSysTools;
 import org.opensha.sha.earthquake.faultSysSolution.util.SolHazardMapCalc.ReturnPeriods;
 import org.opensha.sha.earthquake.faultSysSolution.util.SubSectionBuilder;
@@ -188,8 +189,9 @@ import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_Crusta
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_CrustalGMMs;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_CrustalSeismicityRate;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_DeclusteringAlgorithms;
-import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_LogicTreeBranch;
+import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_LogicTree;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_SeisSmoothingAlgorithms;
+import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_SeismicityRateEpoch;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_SubductionCaribbeanSeismicityRate;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_SubductionDeformationModels;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_SubductionFaultModels;
@@ -2745,7 +2747,7 @@ public class PureScratch {
 //			System.out.println("\tgmmFilter="+((NSHMP_GMM_Wrapper)gmm).getGroundMotionTreeFilter());
 //		}
 		
-		LogicTree<?> tree = LogicTree.buildExhaustive(PRVI25_LogicTreeBranch.levelsCrustalGMM, true);
+		LogicTree<?> tree = LogicTree.buildExhaustive(PRVI25_LogicTree.levelsCrustalGMM, true);
 		String json = tree.getJSON();
 		System.out.println(json);
 		System.out.println("Reading from JSON");
@@ -2756,7 +2758,7 @@ public class PureScratch {
 		System.out.println("All good!");
 		
 		for (LogicTreeBranch<?> branch : tree) {
-			Map<TectonicRegionType, ? extends Supplier<ScalarIMR>> suppliers = MPJ_LogicTreeHazardCalc.getGMM_Suppliers(branch, null);
+			Map<TectonicRegionType, ? extends Supplier<ScalarIMR>> suppliers = FaultSysHazardCalcSettings.getGMM_Suppliers(branch, null, false);
 			System.out.println(branch+", weight="+branch.getBranchWeight());
 			for (TectonicRegionType trt : suppliers.keySet()) {
 				System.out.println("\tTRT: "+trt);
@@ -3168,7 +3170,7 @@ public class PureScratch {
 	}
 	
 	private static void test341() throws IOException {
-		GroundMotionModel gmm = Gmm.USGS_PRVI_INTRASLAB_COMBINED_TREE.instance(Imt.SA0P2);
+		GroundMotionModel gmm = Gmm.COMBINED_PRVI_INTRASLAB_2025.instance(Imt.SA0P2);
 		
 		double depth = 80d;
 		double rJB = 0d;
@@ -3236,21 +3238,25 @@ public class PureScratch {
 		List<String> labels = new ArrayList<>();
 		List<SeismicityRateModel> rateModels = new ArrayList<>();
 		
+		PRVI25_SeismicityRateEpoch epoch = PRVI25_SeismicityRateEpoch.FULL;
+//		PRVI25_SeismicityRateEpoch epoch = PRVI25_SeismicityRateEpoch.ONLY_1973;
+		
 		labels.add("Crustal");
-		rateModels.add(PRVI25_CrustalSeismicityRate.loadRateModel(RateType.M1_TO_MMAX));
+		rateModels.add(PRVI25_CrustalSeismicityRate.loadRateModel(epoch, RateType.M1_TO_MMAX));
 		
 		labels.add("CAR Interface");
-		rateModels.add(PRVI25_SubductionCaribbeanSeismicityRate.loadRateModel(RateType.M1_TO_MMAX, false));
+		rateModels.add(PRVI25_SubductionCaribbeanSeismicityRate.loadRateModel(epoch, RateType.M1_TO_MMAX, false));
 		
 		labels.add("CAR Intraslab");
-		rateModels.add(PRVI25_SubductionCaribbeanSeismicityRate.loadRateModel(RateType.M1_TO_MMAX, true));
+		rateModels.add(PRVI25_SubductionCaribbeanSeismicityRate.loadRateModel(epoch, RateType.M1_TO_MMAX, true));
 		
 		labels.add("MUE Interface");
-		rateModels.add(PRVI25_SubductionMuertosSeismicityRate.loadRateModel(RateType.M1_TO_MMAX, false));
+		rateModels.add(PRVI25_SubductionMuertosSeismicityRate.loadRateModel(epoch, RateType.M1_TO_MMAX, false));
 		
 		labels.add("MUE Intraslab");
-		rateModels.add(PRVI25_SubductionMuertosSeismicityRate.loadRateModel(RateType.M1_TO_MMAX, true));
+		rateModels.add(PRVI25_SubductionMuertosSeismicityRate.loadRateModel(epoch, RateType.M1_TO_MMAX, true));
 		
+		System.out.println("Epoch: "+epoch);
 		DecimalFormat pDF = new DecimalFormat("0.00%");
 		for (int i=0; i<labels.size(); i++) {
 			System.out.println(labels.get(i));
@@ -3260,7 +3266,7 @@ public class PureScratch {
 			double upper = model.getUpperRecord().rateAboveM1;
 			double avg = 0.74*pref + 0.13*lower + 0.13*upper;
 			
-			System.out.println("\tPref:\t"+(float)pref);
+			System.out.println("\tPref:\t"+(float)pref+"\t["+(float)lower+", "+(float)upper+"]");
 			double fDiff = (avg-pref)/pref;
 			String pDiffStr = pDF.format(fDiff);
 			if (fDiff > 0)
@@ -3269,6 +3275,7 @@ public class PureScratch {
 		}
 	}
 	
+<<<<<<< HEAD
 	private static void test343b() throws IOException {
 		WC1994_MagLengthRelationship wc = new WC1994_MagLengthRelationship();
 		for (Point2D pt : FaultSysTools.initEmptyMFD(5.01, 8.01)) {

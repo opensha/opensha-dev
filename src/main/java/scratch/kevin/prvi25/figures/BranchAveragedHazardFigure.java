@@ -13,6 +13,7 @@ import java.util.List;
 import java.util.StringTokenizer;
 
 import org.jfree.chart.annotations.XYTextAnnotation;
+import org.jfree.chart.ui.RectangleEdge;
 import org.jfree.chart.ui.TextAnchor;
 import org.opensha.commons.data.xyz.GriddedGeoDataSet;
 import org.opensha.commons.geo.GriddedRegion;
@@ -21,6 +22,8 @@ import org.opensha.commons.geo.LocationList;
 import org.opensha.commons.geo.LocationUtils;
 import org.opensha.commons.geo.Region;
 import org.opensha.commons.gui.plot.GeographicMapMaker;
+import org.opensha.commons.gui.plot.PlotCurveCharacterstics;
+import org.opensha.commons.gui.plot.PlotLineType;
 import org.opensha.commons.mapping.gmt.elements.GMT_CPT_Files;
 import org.opensha.commons.util.cpt.CPT;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.util.PRVI25_RegionLoader;
@@ -43,8 +46,12 @@ public class BranchAveragedHazardFigure {
 				.rescale(Math.log10(0.05), Math.log10(0.5));
 //				.rescale(-1, 0);
 		cpt.setLog10(true);
+//		cpt = cpt.asDiscrete(30, true);
 		
 		GeographicMapMaker mapMaker = new GeographicMapMaker(reg);
+		
+//		mapMaker.plotInsetRegions(List.of(PRVI25_RegionLoader.loadPRVI_MapExtents()),
+//				new PlotCurveCharacterstics(PlotLineType.DASHED, 2f, Color.BLACK), null, 0f);
 		
 		String label = "1s SA (g), 2% in 50 years";
 		
@@ -67,6 +74,16 @@ public class BranchAveragedHazardFigure {
 		}
 		Preconditions.checkState(index == gridReg.getNodeCount());
 		bRead.close();
+		
+		if (!cpt.isLog10()) {
+			// not using log10 CPT plotting, need to make it log10 on our own
+			label = "Log10 "+label;
+			xyz.log10();
+		}
+		
+//		mapMaker.setCPTLocation(RectangleEdge.TOP);
+//		mapMaker.setCPTLocation(RectangleEdge.LEFT);
+//		mapMaker.setCPTLocation(RectangleEdge.RIGHT);
 		
 		mapMaker.plotXYZData(xyz, cpt, label);
 		

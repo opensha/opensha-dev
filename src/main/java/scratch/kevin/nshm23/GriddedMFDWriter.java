@@ -21,6 +21,7 @@ import org.opensha.commons.logicTree.LogicTreeBranch;
 import org.opensha.commons.logicTree.LogicTreeLevel;
 import org.opensha.commons.logicTree.LogicTreeNode;
 import org.opensha.commons.util.io.archive.ArchiveOutput;
+import org.opensha.commons.util.modules.AverageableModule.AveragingAccumulator;
 import org.opensha.commons.util.modules.ModuleContainer;
 import org.opensha.sha.earthquake.faultSysSolution.FaultSystemRupSet;
 import org.opensha.sha.earthquake.faultSysSolution.FaultSystemSolution;
@@ -30,6 +31,8 @@ import org.opensha.sha.earthquake.faultSysSolution.modules.GridSourceProvider;
 import org.opensha.sha.earthquake.faultSysSolution.modules.RupMFDsModule;
 import org.opensha.sha.earthquake.faultSysSolution.modules.SolutionLogicTree;
 import org.opensha.sha.earthquake.faultSysSolution.util.FaultSysTools;
+import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_RegionalSeismicity;
+import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_SeisSmoothingAlgorithms;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.util.NSHM23_RegionLoader;
 import org.opensha.sha.magdist.IncrementalMagFreqDist;
 import org.opensha.sha.magdist.SummedMagFreqDist;
@@ -54,118 +57,136 @@ public class GriddedMFDWriter {
 		
 		FaultSystemSolution refSol = FaultSystemSolution.load(new File(solDir, "results_WUS_FM_v3_branch_averaged_gridded.zip"));
 		
-////		File outputFile = new File("/tmp/nshm23_wus_gridded_mfds.csv");
-////		FaultSystemSolution sol = refSol;
-//		
-////		File outputFile = new File("/tmp/nshm23_wus_gridded_mfds_b0.csv");
-////		FaultSystemSolution sol = FaultSystemSolution.load(new File(baSolDir, "SupraB_SupraB0.0.zip"));
-//		
-////		File outputFile = new File("/tmp/nshm23_wus_gridded_mfds_b0.25.csv");
-////		FaultSystemSolution sol = FaultSystemSolution.load(new File(baSolDir, "SupraB_SupraB0.25.zip"));
-//		
-////		File outputFile = new File("/tmp/nshm23_wus_gridded_mfds_b0.5.csv");
-////		FaultSystemSolution sol = FaultSystemSolution.load(new File(baSolDir, "SupraB_SupraB0.5.zip"));
-//		
-////		File outputFile = new File("/tmp/nshm23_wus_gridded_mfds_b0.75.csv");
-////		FaultSystemSolution sol = FaultSystemSolution.load(new File(baSolDir, "SupraB_SupraB0.75.zip"));
-//		
-////		File outputFile = new File("/tmp/nshm23_wus_gridded_mfds_b1.csv");
-////		FaultSystemSolution sol = FaultSystemSolution.load(new File(baSolDir, "SupraB_SupraB1.0.zip"));
-//		
-////		File outputFile = new File("/tmp/nshm23_wus_gridded_mfds_classic.csv");
-////		FaultSystemSolution sol = FaultSystemSolution.load(new File(baSolDir, "SegModel_Classic.zip"));
-//		
-////		File outputFile = new File("/tmp/nshm23_wus_gridded_mfds_seg_low.csv");
-////		FaultSystemSolution sol = FaultSystemSolution.load(new File(baSolDir, "SegModel_Low.zip"));
-//		
-////		File outputFile = new File("/tmp/nshm23_wus_gridded_mfds_seg_middle.csv");
-////		FaultSystemSolution sol = FaultSystemSolution.load(new File(baSolDir, "SegModel_Middle.zip"));
-//		
-////		File outputFile = new File("/tmp/nshm23_wus_gridded_mfds_seg_high.csv");
-////		FaultSystemSolution sol = FaultSystemSolution.load(new File(baSolDir, "SegModel_High.zip"));
-//		
-////		File outputFile = new File("/tmp/nshm23_wus_gridded_mfds_seg_none.csv");
-////		FaultSystemSolution sol = FaultSystemSolution.load(new File(baSolDir, "SegModel_None.zip"));
-//		
-////		File outputFile = new File("/tmp/nshm23_wus_gridded_mfds_b0_seg_none.csv");
-////		FaultSystemSolution sol = FaultSystemSolution.load(new File(baPairSolDir, "SupraB_SupraB0.0_SegModel_None.zip"));
-//		
+//		File outputFile = new File("/tmp/nshm23_wus_gridded_mfds.csv");
+//		FaultSystemSolution sol = refSol;
+		
+//		File outputFile = new File("/tmp/nshm23_wus_gridded_mfds_b0.csv");
+//		FaultSystemSolution sol = FaultSystemSolution.load(new File(baSolDir, "SupraB_SupraB0.0.zip"));
+		
+//		File outputFile = new File("/tmp/nshm23_wus_gridded_mfds_b0.25.csv");
+//		FaultSystemSolution sol = FaultSystemSolution.load(new File(baSolDir, "SupraB_SupraB0.25.zip"));
+		
+//		File outputFile = new File("/tmp/nshm23_wus_gridded_mfds_b0.5.csv");
+//		FaultSystemSolution sol = FaultSystemSolution.load(new File(baSolDir, "SupraB_SupraB0.5.zip"));
+		
+//		File outputFile = new File("/tmp/nshm23_wus_gridded_mfds_b0.75.csv");
+//		FaultSystemSolution sol = FaultSystemSolution.load(new File(baSolDir, "SupraB_SupraB0.75.zip"));
+		
+//		File outputFile = new File("/tmp/nshm23_wus_gridded_mfds_b1.csv");
+//		FaultSystemSolution sol = FaultSystemSolution.load(new File(baSolDir, "SupraB_SupraB1.0.zip"));
+		
+//		File outputFile = new File("/tmp/nshm23_wus_gridded_mfds_classic.csv");
+//		FaultSystemSolution sol = FaultSystemSolution.load(new File(baSolDir, "SegModel_Classic.zip"));
+		
+//		File outputFile = new File("/tmp/nshm23_wus_gridded_mfds_seg_low.csv");
+//		FaultSystemSolution sol = FaultSystemSolution.load(new File(baSolDir, "SegModel_Low.zip"));
+		
+//		File outputFile = new File("/tmp/nshm23_wus_gridded_mfds_seg_middle.csv");
+//		FaultSystemSolution sol = FaultSystemSolution.load(new File(baSolDir, "SegModel_Middle.zip"));
+		
+//		File outputFile = new File("/tmp/nshm23_wus_gridded_mfds_seg_high.csv");
+//		FaultSystemSolution sol = FaultSystemSolution.load(new File(baSolDir, "SegModel_High.zip"));
+		
+//		File outputFile = new File("/tmp/nshm23_wus_gridded_mfds_seg_none.csv");
+//		FaultSystemSolution sol = FaultSystemSolution.load(new File(baSolDir, "SegModel_None.zip"));
+		
+//		File outputFile = new File("/tmp/nshm23_wus_gridded_mfds_b0_seg_none.csv");
+//		FaultSystemSolution sol = FaultSystemSolution.load(new File(baPairSolDir, "SupraB_SupraB0.0_SegModel_None.zip"));
+		
 //		File outputFile = new File("/tmp/nshm23_wus_gridded_mfds_b1_seg_classic.csv");
 //		FaultSystemSolution sol = FaultSystemSolution.load(new File(baPairSolDir, "SupraB_SupraB1.0_SegModel_Classic.zip"));
-//		
-////		File outputFile = new File("/tmp/ucerf3_gridded_mfds.csv");
-////		refSol = null;
-////		reg = new CaliforniaRegions.RELM_TESTING();
-////		FaultSystemSolution sol = FaultSystemSolution.load(new File("/home/kevin/OpenSHA/nshm23/batch_inversions/2021_11_30-u3_branches-orig_calcs-5h/results_FM3_1_branch_averaged.zip"));
-//		
-//		FaultGridAssociations assoc = sol.getRupSet().getModule(FaultGridAssociations.class);
-//		if (assoc == null) {
-//			if (refSol != null)
-//				assoc = refSol.getRupSet().requireModule(FaultGridAssociations.class);
-//			else if (outputFile.getName().contains("ucerf3"))
-//				assoc = FaultPolyMgr.loadSerializedUCERF3(FaultModels.FM3_1);
-//		}
-//		
-//		CSVFile<String> csv = buildForSolution(refSol, sol, assoc, gridReg, refMFD);
-//		csv.writeToFile(outputFile);
 		
-		SolutionLogicTree slt = SolutionLogicTree.load(new File("/home/kevin/OpenSHA/nshm23/batch_inversions/"
-				+ "2024_02_02-nshm23_branches-WUS_FM_v3-gridded_rebuild/results_full_gridded_downsampled_1k.zip"));
-		File sltOutputFile = new File("/tmp/nshm23_wus_1k_branch_mfds.zip");
-		ArchiveOutput output = new ArchiveOutput.AsynchronousZipFileOutput(sltOutputFile);
-		CSVFile<String> ltCSV = new CSVFile<>(true);
-		List<String> ltHeader = new ArrayList<>();
-		ltHeader.add("Branch Index");
-		ltHeader.add("Branch Weight");
-		LogicTree<?> tree = slt.getLogicTree();
-		for (LogicTreeLevel<?> level : tree.getBranch(0).getLevels())
-			ltHeader.add(level.getShortName());
-		ltCSV.addLine(ltHeader);
-		CompletableFuture<Void> prevFuture = null;
-		FaultGridAssociations assoc = refSol.getRupSet().getModule(FaultGridAssociations.class);
-		slt.setVerbose(false);
-		ModuleContainer.VERBOSE_DEFAULT = false;
-		for (int i=0; i<tree.size(); i++) {
-			LogicTreeBranch<?> branch = tree.getBranch(i);
-			System.out.println("Branch "+i+": "+branch);
-			double weight = tree.getBranchWeight(i);
-			List<String> ltLine = new ArrayList<>(ltHeader.size());
-			ltLine.add(i+"");
-			ltLine.add(weight+"");
-			for (LogicTreeNode node : branch)
-				ltLine.add(node.getShortName());
-			ltCSV.addLine(ltLine);
-			
-			FaultSystemSolution sol = slt.forBranch(branch);
-			
-			if (prevFuture != null)
-				prevFuture.join();
-			
-			int index = i;
-			
-			prevFuture = CompletableFuture.runAsync(new Runnable() {
-				
-				@Override
-				public void run() {
-					try {
-						CSVFile<String> csv = buildForSolution(refSol, sol, assoc, gridReg, refMFD);
-						
-						output.putNextEntry("branch_"+index+".csv");
-						csv.writeToStream(output.getOutputStream());
-						output.closeEntry();
-					} catch (IOException e) {
-						e.printStackTrace();
-						System.exit(1);
-					}
-				}
-			});
+		SolutionLogicTree gridSLT = SolutionLogicTree.load(new File(solDir, "results_gridded_branches.zip"));
+		FaultSystemSolution sol = refSol;
+		
+//		File outputFile = new File("/tmp/nshm23_wus_gridded_mfds_rate_high.csv");
+//		sol.setGridSourceProvider(getAverageGridProv(gridSLT, NSHM23_RegionalSeismicity.HIGH));
+		
+//		File outputFile = new File("/tmp/nshm23_wus_gridded_mfds_rate_pref.csv");
+//		sol.setGridSourceProvider(getAverageGridProv(gridSLT, NSHM23_RegionalSeismicity.PREFFERRED));
+		
+//		File outputFile = new File("/tmp/nshm23_wus_gridded_mfds_rate_low.csv");
+//		sol.setGridSourceProvider(getAverageGridProv(gridSLT, NSHM23_RegionalSeismicity.LOW));
+		
+//		File outputFile = new File("/tmp/nshm23_wus_gridded_mfds_smooth_adaptive.csv");
+//		sol.setGridSourceProvider(getAverageGridProv(gridSLT, NSHM23_SeisSmoothingAlgorithms.ADAPTIVE));
+		
+		File outputFile = new File("/tmp/nshm23_wus_gridded_mfds_smooth_fixed.csv");
+		sol.setGridSourceProvider(getAverageGridProv(gridSLT, NSHM23_SeisSmoothingAlgorithms.FIXED));
+		
+//		File outputFile = new File("/tmp/ucerf3_gridded_mfds.csv");
+//		refSol = null;
+//		reg = new CaliforniaRegions.RELM_TESTING();
+//		FaultSystemSolution sol = FaultSystemSolution.load(new File("/home/kevin/OpenSHA/nshm23/batch_inversions/2021_11_30-u3_branches-orig_calcs-5h/results_FM3_1_branch_averaged.zip"));
+		
+		FaultGridAssociations assoc = sol.getRupSet().getModule(FaultGridAssociations.class);
+		if (assoc == null) {
+			if (refSol != null)
+				assoc = refSol.getRupSet().requireModule(FaultGridAssociations.class);
+			else if (outputFile.getName().contains("ucerf3"))
+				assoc = FaultPolyMgr.loadSerializedUCERF3(FaultModels.FM3_1);
 		}
-		prevFuture.join();
-		output.putNextEntry("logic_tree.csv");
-		ltCSV.writeToStream(output.getOutputStream());
-		output.closeEntry();
-		tree.writeToArchive(output, "");
-		output.close();
+		
+		CSVFile<String> csv = buildForSolution(refSol, sol, assoc, gridReg, refMFD);
+		csv.writeToFile(outputFile);
+		
+//		SolutionLogicTree slt = SolutionLogicTree.load(new File("/home/kevin/OpenSHA/nshm23/batch_inversions/"
+//				+ "2024_02_02-nshm23_branches-WUS_FM_v3-gridded_rebuild/results_full_gridded_downsampled_1k.zip"));
+//		File sltOutputFile = new File("/tmp/nshm23_wus_1k_branch_mfds.zip");
+//		ArchiveOutput output = new ArchiveOutput.AsynchronousZipFileOutput(sltOutputFile);
+//		CSVFile<String> ltCSV = new CSVFile<>(true);
+//		List<String> ltHeader = new ArrayList<>();
+//		ltHeader.add("Branch Index");
+//		ltHeader.add("Branch Weight");
+//		LogicTree<?> tree = slt.getLogicTree();
+//		for (LogicTreeLevel<?> level : tree.getBranch(0).getLevels())
+//			ltHeader.add(level.getShortName());
+//		ltCSV.addLine(ltHeader);
+//		CompletableFuture<Void> prevFuture = null;
+//		FaultGridAssociations assoc = refSol.getRupSet().getModule(FaultGridAssociations.class);
+//		slt.setVerbose(false);
+//		ModuleContainer.VERBOSE_DEFAULT = false;
+//		for (int i=0; i<tree.size(); i++) {
+//			LogicTreeBranch<?> branch = tree.getBranch(i);
+//			System.out.println("Branch "+i+": "+branch);
+//			double weight = tree.getBranchWeight(i);
+//			List<String> ltLine = new ArrayList<>(ltHeader.size());
+//			ltLine.add(i+"");
+//			ltLine.add(weight+"");
+//			for (LogicTreeNode node : branch)
+//				ltLine.add(node.getShortName());
+//			ltCSV.addLine(ltLine);
+//			
+//			FaultSystemSolution sol = slt.forBranch(branch);
+//			
+//			if (prevFuture != null)
+//				prevFuture.join();
+//			
+//			int index = i;
+//			
+//			prevFuture = CompletableFuture.runAsync(new Runnable() {
+//				
+//				@Override
+//				public void run() {
+//					try {
+//						CSVFile<String> csv = buildForSolution(refSol, sol, assoc, gridReg, refMFD);
+//						
+//						output.putNextEntry("branch_"+index+".csv");
+//						csv.writeToStream(output.getOutputStream());
+//						output.closeEntry();
+//					} catch (IOException e) {
+//						e.printStackTrace();
+//						System.exit(1);
+//					}
+//				}
+//			});
+//		}
+//		prevFuture.join();
+//		output.putNextEntry("logic_tree.csv");
+//		ltCSV.writeToStream(output.getOutputStream());
+//		output.closeEntry();
+//		tree.writeToArchive(output, "");
+//		output.close();
 	}
 
 	public static CSVFile<String> buildForSolution(FaultSystemSolution refSol, FaultSystemSolution sol, FaultGridAssociations assoc,
@@ -250,6 +271,38 @@ public class GriddedMFDWriter {
 //		System.out.println(summedMFD);
 		
 		return csv;
+	}
+	
+	private static GridSourceProvider getAverageGridProv(SolutionLogicTree gridTree, LogicTreeNode... fixedNodes) throws IOException {
+		LogicTree<?> tree = gridTree.getLogicTree();
+		AveragingAccumulator<GridSourceProvider> accumulator = null;
+		int numIncluded = 0;
+		double weightIncluded = 0d;
+		double totWeight = 0d;
+		for (LogicTreeBranch<?> branch : tree) {
+			double weight = tree.getBranchWeight(branch);
+			totWeight += weight;
+			boolean keep = true;
+			for (LogicTreeNode node : fixedNodes) {
+				if (!branch.hasValue(node)) {
+					keep = false;
+					break;
+				}
+			}
+			if (!keep)
+				continue;
+			weightIncluded += weight;
+			numIncluded++;
+			System.out.println("Processing branch: "+branch);
+			GridSourceProvider gridProv = gridTree.loadGridProvForBranch(branch);
+			if (accumulator == null)
+				accumulator = gridProv.averagingAccumulator();
+			accumulator.process(gridProv, weight);
+		}
+		System.out.println("Kept "+numIncluded+"/"+tree.size()+" branches");
+		System.out.println("Kept "+(float)(100d*weightIncluded/totWeight)+" % by weight");
+		Preconditions.checkNotNull(accumulator);
+		return accumulator.getAverage();
 	}
 
 }

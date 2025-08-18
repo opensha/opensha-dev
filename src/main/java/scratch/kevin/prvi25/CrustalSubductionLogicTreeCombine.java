@@ -28,6 +28,7 @@ import org.opensha.sha.earthquake.faultSysSolution.treeCombiners.SiteHazardCurve
 import org.opensha.sha.earthquake.faultSysSolution.treeCombiners.SolutionLogicTreeCombinationProcessor;
 import org.opensha.sha.earthquake.faultSysSolution.util.FaultSysTools;
 import org.opensha.sha.earthquake.param.IncludeBackgroundOption;
+import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_LogicTree;
 import org.opensha.sha.imr.logicTree.ScalarIMR_ParamsLogicTreeNode;
 import org.opensha.sha.imr.logicTree.ScalarIMRsLogicTreeNode;
 
@@ -63,8 +64,16 @@ public class CrustalSubductionLogicTreeCombine extends AbstractLogicTreeCombiner
 		if (cmd.hasOption("hazard-dir-name"))
 			hazardDirName = cmd.getOptionValue("hazard-dir-name");
 		String gridRegFileName = GRID_REG_FILE_NAME_DEFAULT;
-		if (cmd.hasOption("grid-reg-file-name"))
+		if (cmd.hasOption("grid-reg-file-name")) {
 			gridRegFileName = cmd.getOptionValue("grid-reg-file-name");
+		} else if (hazardDirName != HAZARD_DIR_NAME_DEFAULT) {
+			File testFile = new File(crustalDir, gridRegFileName);
+			if (!testFile.exists()) {
+				testFile = new File(crustalDir, hazardDirName+".zip");
+				if (testFile.exists())
+					gridRegFileName = testFile.getName();
+			}
+		}
 		IncludeBackgroundOption bgOp = GRID_SEIS_DEFAULT;
 		if (cmd.hasOption("gridded-seis"))
 			bgOp = IncludeBackgroundOption.valueOf(cmd.getOptionValue("gridded-seis"));
@@ -144,6 +153,14 @@ public class CrustalSubductionLogicTreeCombine extends AbstractLogicTreeCombiner
 			System.out.println("Will average across "+averageAcrossLevels.size()+" GMM levels");
 		}
 		
+		List<LogicTreeLevel<? extends LogicTreeNode>> commonLevels = null;
+		for (LogicTreeLevel<?> level : crustalLT.getLevels()) {
+			if (level.getName().equals(PRVI25_LogicTree.SEIS_EPOCH.getName())) {
+				commonLevels = List.of(level);
+				break;
+			}
+		}
+		
 //		CrustalSubductionLogicTreeCombine combiner = new CrustalSubductionLogicTreeCombine(
 //				crustalLT, crustalSLT, new File(crustalDir, hazardDirName), bgOp,
 //				subductionLT, subductionSLT, new File(subductionDir, hazardDirName), bgOp,
@@ -151,9 +168,9 @@ public class CrustalSubductionLogicTreeCombine extends AbstractLogicTreeCombiner
 //				new File(outputDir, outputHazardFileName), gridReg);
 		CrustalSubductionLogicTreeCombine combiner;
 		if (REVERSE)
-			combiner = new CrustalSubductionLogicTreeCombine(subductionLT, crustalLT, averageAcrossLevels);
+			combiner = new CrustalSubductionLogicTreeCombine(subductionLT, crustalLT, commonLevels, averageAcrossLevels);
 		else
-			combiner = new CrustalSubductionLogicTreeCombine(crustalLT, subductionLT, averageAcrossLevels);
+			combiner = new CrustalSubductionLogicTreeCombine(crustalLT, subductionLT, commonLevels, averageAcrossLevels);
 		
 		if (!cmd.hasOption("disable-write-results") && !averageEither) {
 			File resultsOutputFile = new File(outputDir, resultsFileName);
@@ -268,8 +285,9 @@ public class CrustalSubductionLogicTreeCombine extends AbstractLogicTreeCombiner
 		return ops;
 	}
 
-	public CrustalSubductionLogicTreeCombine(LogicTree<?> outerLT, LogicTree<?> innerLT, List<LogicTreeLevel<?>> averageAcrossLevels) {
-		super(outerLT, innerLT, null, averageAcrossLevels);
+	public CrustalSubductionLogicTreeCombine(LogicTree<?> outerLT, LogicTree<?> innerLT,
+			List<LogicTreeLevel<? extends LogicTreeNode>> commonLevels, List<LogicTreeLevel<?>> averageAcrossLevels) {
+		super(outerLT, innerLT, commonLevels, averageAcrossLevels);
 	}
 	
 	private static boolean isLevelGMM(LogicTreeLevel<?> level) {
@@ -301,6 +319,9 @@ public class CrustalSubductionLogicTreeCombine extends AbstractLogicTreeCombiner
 		for (LogicTreeLevel<?> level : tree.getLevels()) {
 			String name = level.getName();
 			String lowerName = name.toLowerCase();
+			if (level.getName().equals(PRVI25_LogicTree.SEIS_EPOCH.getName()))
+				// common to both, don't remap
+				continue;
 			if (lowerName.contains("crustal") || lowerName.contains("subduction")
 					|| lowerName.contains("interface") || lowerName.contains("slab")
 					|| lowerName.contains("muertos") || lowerName.contains("caribbean")) {

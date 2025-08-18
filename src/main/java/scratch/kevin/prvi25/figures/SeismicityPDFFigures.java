@@ -35,8 +35,10 @@ import org.opensha.sha.earthquake.rupForecastImpl.prvi25.gridded.PRVI25_GridSour
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_CrustalSeismicityRate;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_DeclusteringAlgorithms;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_SeisSmoothingAlgorithms;
+import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_SeismicityRateEpoch;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_SubductionCaribbeanSeismicityRate;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_SubductionMuertosSeismicityRate;
+import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_SubductionSlabMMax;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.util.PRVI25_RegionLoader;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.util.PRVI25_RegionLoader.PRVI25_SeismicityRegions;
 import org.opensha.sha.faultSurface.PointSurface;
@@ -55,9 +57,12 @@ import static scratch.kevin.prvi25.figures.PRVI_Paths.*;
 class SeismicityPDFFigures {
 
 	public static void main(String[] args) throws IOException {
-		File crustalOutputDir = new File(FIGURES_DIR, "crustal_grid");
+		File figsDir = FIGURES_DIR;
+//		File figsDir = new File("/tmp/test_pdfs");
+		Preconditions.checkState(figsDir.exists() || figsDir.mkdir());
+		File crustalOutputDir = new File(figsDir, "crustal_grid");
 		Preconditions.checkState(crustalOutputDir.exists() || crustalOutputDir.mkdir());
-		File subOutputDir = new File(FIGURES_DIR, "sub_grid");
+		File subOutputDir = new File(figsDir, "sub_grid");
 		Preconditions.checkState(subOutputDir.exists() || subOutputDir.mkdir());
 		
 		PRVI25_DeclusteringAlgorithms avgDecluster = PRVI25_DeclusteringAlgorithms.AVERAGE;
@@ -132,30 +137,39 @@ class SeismicityPDFFigures {
 			
 			double rateScalar = 1;
 			if (magForRate > 0d) {
-				IncrementalMagFreqDist mfd;
-				switch (seisReg) {
-				case CRUSTAL:
-					mfd = PRVI25_CrustalSeismicityRate.PREFFERRED.build(refMFD, refMFD.getMaxX());
-					break;
-				case CAR_INTERFACE:
-					mfd = PRVI25_SubductionCaribbeanSeismicityRate.PREFFERRED.build(refMFD, refMFD.getMaxX(), Double.NaN, false);
-					break;
-				case CAR_INTRASLAB:
-					mfd = PRVI25_SubductionCaribbeanSeismicityRate.PREFFERRED.build(refMFD,
-							PRVI25_GridSourceBuilder.SLAB_MMAX, PRVI25_GridSourceBuilder.SLAB_M_CORNER, true);
-					break;
-				case MUE_INTERFACE:
-					mfd = PRVI25_SubductionMuertosSeismicityRate.PREFFERRED.build(refMFD, refMFD.getMaxX(), Double.NaN, false);
-					break;
-				case MUE_INTRASLAB:
-					mfd = PRVI25_SubductionMuertosSeismicityRate.PREFFERRED.build(refMFD,
-							PRVI25_GridSourceBuilder.SLAB_MMAX, PRVI25_GridSourceBuilder.SLAB_M_CORNER, true);
-					break;
+				double sumWeight = 0d;
+				rateScalar = 0d;
+				for (PRVI25_SeismicityRateEpoch epoch : PRVI25_SeismicityRateEpoch.values()) {
+					double weight = epoch.getNodeWeight(null);
+					if (weight == 0d)
+						continue;
+					IncrementalMagFreqDist mfd;
+					switch (seisReg) {
+					case CRUSTAL:
+						mfd = PRVI25_CrustalSeismicityRate.PREFFERRED.build(epoch, refMFD, refMFD.getMaxX());
+						break;
+					case CAR_INTERFACE:
+						mfd = PRVI25_SubductionCaribbeanSeismicityRate.PREFFERRED.build(epoch, refMFD, refMFD.getMaxX(), Double.NaN, false);
+						break;
+					case CAR_INTRASLAB:
+						mfd = PRVI25_SubductionCaribbeanSeismicityRate.PREFFERRED.build(epoch, refMFD,
+								PRVI25_SubductionSlabMMax.MAG_8p0.getIncrementalMmax(), PRVI25_GridSourceBuilder.SLAB_M_CORNER, true);
+						break;
+					case MUE_INTERFACE:
+						mfd = PRVI25_SubductionMuertosSeismicityRate.PREFFERRED.build(epoch, refMFD, refMFD.getMaxX(), Double.NaN, false);
+						break;
+					case MUE_INTRASLAB:
+						mfd = PRVI25_SubductionMuertosSeismicityRate.PREFFERRED.build(epoch, refMFD,
+								PRVI25_SubductionSlabMMax.MAG_8p0.getIncrementalMmax(), PRVI25_GridSourceBuilder.SLAB_M_CORNER, true);
+						break;
 
-				default:
-					throw new IllegalStateException();
+					default:
+						throw new IllegalStateException();
+					}
+					rateScalar += weight * mfd.getCumRate(refMFD.getClosestXIndex(magForRate+0.01));
+					sumWeight += weight;
 				}
-				rateScalar = mfd.getCumRate(refMFD.getClosestXIndex(magForRate+0.01));
+				rateScalar /= sumWeight;
 				totalRate += rateScalar;
 			}
 			
@@ -171,7 +185,7 @@ class SeismicityPDFFigures {
 			}
 		}
 		for (int i=0; i<xyz.size(); i++)
-			if (!everSets.get(i))
+			if (!everSets.get(i) || xyz.get(i) == 0d)
 				xyz.set(i, Double.NaN);
 		
 		if (magForRate > 0d) {

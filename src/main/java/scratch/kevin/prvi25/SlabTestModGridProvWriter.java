@@ -51,7 +51,7 @@ import org.opensha.sha.earthquake.param.IncludeBackgroundOption;
 import org.opensha.sha.earthquake.param.IncludeBackgroundParam;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.gridded.PRVI25_GridSourceBuilder;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_DeclusteringAlgorithms;
-import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_LogicTreeBranch;
+import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_LogicTree;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_SeisSmoothingAlgorithms;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_SubductionCaribbeanSeismicityRate;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_SubductionMuertosSeismicityRate;
@@ -159,7 +159,7 @@ public class SlabTestModGridProvWriter {
 		writeMap(outputDir, "slab_2003", "2003", maps2003, periods, rps);
 		
 		// first just build 2025 provs
-		LogicTreeBranch<LogicTreeNode> slabBranch = new LogicTreeBranch<>(PRVI25_LogicTreeBranch.levelsSubductionGridded);
+		LogicTreeBranch<LogicTreeNode> slabBranch = new LogicTreeBranch<>(PRVI25_LogicTree.levelsSubductionGridded);
 		slabBranch.setValue(PRVI25_DeclusteringAlgorithms.AVERAGE);
 		slabBranch.setValue(PRVI25_SeisSmoothingAlgorithms.AVERAGE);
 		slabBranch.setValue(PRVI25_SubductionCaribbeanSeismicityRate.PREFFERRED);
@@ -266,7 +266,8 @@ public class SlabTestModGridProvWriter {
 		writeMapComparisons(outputDir, "slab_2025_vs_2003_at_slab2", "[2025] vs [2003@Slab2]", maps2025, maps2003atSlab2, periods, rps);
 		writeMapComparisons(outputDir, "slab_2003_at_slab2_vs_2003", "[2003@Slab2] vs [2003]", maps2003atSlab2, maps2003, periods, rps);
 		
-		PRVI25_GridSourceBuilder.SLAB_MMAX = 7.15;
+//		PRVI25_GridSourceBuilder.SLAB_MMAX = 7.15; TODO
+		System.exit(1);
 		GridSourceList combSources2025mmax7p2 = PRVI25_GridSourceBuilder.buildSlabGridSourceList(slabBranch);
 		
 		System.out.println("Calculating 2025 Mmax=7.2 maps");

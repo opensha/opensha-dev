@@ -28,7 +28,7 @@ import org.opensha.commons.util.cpt.CPT;
 import org.opensha.sha.earthquake.faultSysSolution.FaultSystemRupSet;
 import org.opensha.sha.earthquake.faultSysSolution.util.FaultSysTools;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.PRVI25_InvConfigFactory;
-import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_LogicTreeBranch;
+import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_LogicTree;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_SubductionCouplingModels;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_SubductionDeformationModels;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_SubductionFaultModels;
@@ -52,7 +52,7 @@ public class PRVI_SubductionSubSectPlots {
 			0.5*(plotReg.getMinLon() + plotReg.getMaxLon()));
 
 	public static void main(String[] args) throws IOException {
-		LogicTreeBranch<LogicTreeNode> branch = PRVI25_LogicTreeBranch.DEFAULT_SUBDUCTION_INTERFACE;
+		LogicTreeBranch<LogicTreeNode> branch = PRVI25_LogicTree.DEFAULT_SUBDUCTION_INTERFACE;
 		PRVI25_SubductionScalingRelationships scale = PRVI25_SubductionScalingRelationships.AVERAGE;
 		String scaleLabel = "average scaling";
 		branch = branch.copy();

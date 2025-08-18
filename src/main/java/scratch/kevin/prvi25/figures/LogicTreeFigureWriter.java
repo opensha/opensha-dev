@@ -31,10 +31,11 @@ import org.opensha.commons.logicTree.LogicTreeLevel;
 import org.opensha.commons.logicTree.LogicTreeLevel.RandomlySampledLevel;
 import org.opensha.commons.logicTree.LogicTreeNode;
 import org.opensha.commons.util.ExceptionUtils;
+import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_MaxMagOffFault;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_ScalingRelationships;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.PRVI25_InvConfigFactory;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_CrustalRandomlySampledDeformationModelLevel;
-import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_LogicTreeBranch;
+import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_LogicTree;
 
 import com.google.common.base.Preconditions;
 import com.itextpdf.awt.FontMapper;
@@ -57,6 +58,9 @@ public class LogicTreeFigureWriter extends JPanel {
 		nameRemappings.put(NSHM23_ScalingRelationships.WIDTH_LIMITED.getShortName(), "Wdth-Lmtd");
 		nameRemappings.put(NSHM23_ScalingRelationships.WIDTH_LIMITED_CSD.getShortName(), "W-L, CSD");
 		nameRemappings.put(NSHM23_ScalingRelationships.LOGA_C4p2_SQRT_LEN.getShortName(), "Sqrt-Len");
+		nameRemappings.put(NSHM23_MaxMagOffFault.MAG_7p3.getShortName(), "7.3");
+		nameRemappings.put(NSHM23_MaxMagOffFault.MAG_7p6.getShortName(), "7.6");
+		nameRemappings.put(NSHM23_MaxMagOffFault.MAG_7p9.getShortName(), "7.9");
 		nameRemappings.put(PRVI25_CrustalRandomlySampledDeformationModelLevel.NAME, "Geologic Deformation Model Sample");
 		
 		File outputDir = new File(FIGURES_DIR, "logic_trees");
@@ -73,24 +77,24 @@ public class LogicTreeFigureWriter extends JPanel {
 		trees.add(crustalGriddedTree);
 		prefixes.add("crustal_gridded");
 		
-		// TODO switch back to reading it
-//		LogicTree<LogicTreeNode> subFaultTree = LogicTree.read(new File(SUBDUCTION_DIR, "logic_tree.json"));
-		LogicTree<LogicTreeNode> subFaultTree = LogicTree.buildExhaustive(PRVI25_LogicTreeBranch.levelsSubduction, true);
+		LogicTree<LogicTreeNode> subFaultTree = LogicTree.read(new File(SUBDUCTION_DIR, "logic_tree.json"));
 		trees.add(subFaultTree);
 		prefixes.add("subduction_inversion");
 		LogicTree<?> subGridTree = new PRVI25_InvConfigFactory().getGridSourceTree(subFaultTree);
 		trees.add(subGridTree);
 		prefixes.add("subduction_gridded");
 		
-		List<LogicTreeLevel<? extends LogicTreeNode>> crustalGMMLevels = PRVI25_LogicTreeBranch.levelsCrustalGMM;
+		LogicTree<LogicTreeNode> combERFTree = LogicTree.read(new File(COMBINED_DIR, "logic_tree_full_gridded.json"));
+		
+		List<LogicTreeLevel<? extends LogicTreeNode>> crustalGMMLevels = PRVI25_LogicTree.levelsCrustalGMM;
 		LogicTree<LogicTreeNode> crustalGMMTree = LogicTree.buildExhaustive(crustalGMMLevels, true);
 		trees.add(crustalGMMTree);
 		prefixes.add("gmm");
 		
-		List<LogicTreeLevel<? extends LogicTreeNode>> interfaceGMMLevels = PRVI25_LogicTreeBranch.levelsInterfaceGMM;
+		List<LogicTreeLevel<? extends LogicTreeNode>> interfaceGMMLevels = PRVI25_LogicTree.levelsInterfaceGMM;
 		LogicTree<LogicTreeNode> interfaceGMMTree = LogicTree.buildExhaustive(interfaceGMMLevels, true);
 		
-		List<LogicTreeLevel<? extends LogicTreeNode>> slabGMMLevels = PRVI25_LogicTreeBranch.levelsSlabGMM;
+		List<LogicTreeLevel<? extends LogicTreeNode>> slabGMMLevels = PRVI25_LogicTree.levelsSlabGMM;
 		LogicTree<LogicTreeNode> slabGMMTree = LogicTree.buildExhaustive(slabGMMLevels, true);
 		
 		for (int i=0; i<trees.size(); i++) {
@@ -137,9 +141,22 @@ public class LogicTreeFigureWriter extends JPanel {
 		int subERFbranches = subFaultTree.size()*subGridTree.size();
 		texFW.write(LaTeXUtils.defineValueCommand("SubductionCombinedERFBranches", LaTeXUtils.groupedIntNumber(subERFbranches))+"\n");
 		
-		int totalERFbranches = crustalERFbranches * subERFbranches;
+		System.out.println("Have "+crustalERFbranches+" total crustal ERF branches");
+		System.out.println("Have "+subERFbranches+" total subduction ERF branches");
+		long totalERFbranches = (long)crustalERFbranches * (long)subERFbranches / 3l; // common factor for epoch branches
+//		int totalERFbranches = combERFTree.size();
+		System.out.println("Have "+totalERFbranches+" total ERF branches");
 		texFW.write(LaTeXUtils.defineValueCommand("CombinedERFBranches", LaTeXUtils.groupedIntNumber(totalERFbranches))+"\n");
-		texFW.write(LaTeXUtils.defineValueCommand("CombinedERFBranchesMillions", LaTeXUtils.groupedIntNumber(totalERFbranches*1e-6))+"\n");
+		String humanERF;
+		if (totalERFbranches > 1e7) {
+			// billions
+			humanERF = new DecimalFormat("0.#").format(totalERFbranches*1e-9)+" billion";
+		} else {
+			// millions
+			humanERF = LaTeXUtils.groupedIntNumber(totalERFbranches*1e-6)+" million";
+		}
+		System.out.println("ERF branches human readable: "+humanERF);
+		texFW.write(LaTeXUtils.defineValueCommand("CombinedERFBranchesHuman", humanERF)+"\n");
 		
 		texFW.close();
 	}

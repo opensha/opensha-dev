@@ -27,7 +27,7 @@ import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_Segmen
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.SupraSeisBValues;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.targetMFDs.SupraSeisBValInversionTargetMFDs;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.PRVI25_InvConfigFactory;
-import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_LogicTreeBranch;
+import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_LogicTree;
 import org.opensha.sha.faultSurface.FaultSection;
 import org.opensha.sha.magdist.IncrementalMagFreqDist;
 import org.opensha.sha.magdist.SummedMagFreqDist;
@@ -53,7 +53,7 @@ public class AnegadaMFDTests {
 
 	public static void main(String[] args) throws IOException {
 		PRVI25_InvConfigFactory factory = new PRVI25_InvConfigFactory();
-		LogicTreeBranch<LogicTreeNode> branch = PRVI25_LogicTreeBranch.DEFAULT_CRUSTAL_ON_FAULT.copy();
+		LogicTreeBranch<LogicTreeNode> branch = PRVI25_LogicTree.DEFAULT_CRUSTAL_ON_FAULT.copy();
 		FaultSystemRupSet rupSet = factory.buildRuptureSet(branch, 32);
 		
 		File outputDir = new File("/tmp");

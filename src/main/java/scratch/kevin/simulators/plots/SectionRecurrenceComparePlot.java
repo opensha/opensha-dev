@@ -150,7 +150,7 @@ public class SectionRecurrenceComparePlot extends AbstractPlot {
 	public void finalizePlot() throws IOException {
 		double durationYears = getCurrentDurationYears();
 		
-		FaultSystemRupSet rupSet = compSol.getRupSet();
+		FaultSystemRupSet rupSet = compSol == null ? null : compSol.getRupSet();
 		
 		File outputDir = getOutputDir();
 		String prefix = getOutputPrefix();
@@ -172,7 +172,7 @@ public class SectionRecurrenceComparePlot extends AbstractPlot {
 						compID = id;
 					
 					Double compRI = compVals.get(compID);
-					if (compRI == null) {
+					if (compRI == null && compSol != null) {
 						double compRate = 0d;
 						List<Integer> compRups;
 						if (sectType == SectType.PARENT)
@@ -185,7 +185,7 @@ public class SectionRecurrenceComparePlot extends AbstractPlot {
 						compRI = 1d/compRate;
 						compVals.put(compID, compRI);
 					}
-					if (!Double.isFinite(compRI))
+					if (compRI == null || !Double.isFinite(compRI))
 						continue;
 					
 //					System.out.println(u3RI+" "+simRI);

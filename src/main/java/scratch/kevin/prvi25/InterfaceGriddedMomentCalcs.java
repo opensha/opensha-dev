@@ -16,7 +16,7 @@ import org.opensha.sha.earthquake.faultSysSolution.modules.SectSlipRates;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_LogicTreeBranch;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.SubSeisMoRateReductions;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.PRVI25_InvConfigFactory;
-import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_LogicTreeBranch;
+import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_LogicTree;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_SubductionBValues;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_SubductionScalingRelationships;
 import org.opensha.sha.faultSurface.FaultSection;
@@ -49,7 +49,7 @@ public class InterfaceGriddedMomentCalcs {
 		double maxGridMagToConsider = 10d;
 		
 		List<LogicTreeLevel<? extends LogicTreeNode>> levels = List.of(
-				PRVI25_LogicTreeBranch.SUB_SUPRA_B,
+				PRVI25_LogicTree.SUB_SUPRA_B,
 				NSHM23_LogicTreeBranch.SUB_SEIS_MO);
 		LogicTreeBranch<LogicTreeNode> subRedBranch = new LogicTreeBranch<>(levels);
 		subRedBranch.setValue(PRVI25_SubductionBValues.AVERAGE);

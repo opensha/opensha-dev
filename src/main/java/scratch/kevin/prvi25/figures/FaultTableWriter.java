@@ -12,6 +12,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import org.opensha.commons.data.function.ArbDiscrEmpiricalDistFunc;
+import org.opensha.commons.data.function.LightFixedXFunc;
+import org.opensha.commons.logicTree.LogicTree;
 import org.opensha.commons.logicTree.LogicTreeBranch;
 import org.opensha.sha.earthquake.faultSysSolution.FaultSystemRupSet;
 import org.opensha.sha.earthquake.faultSysSolution.FaultSystemSolution;
@@ -50,9 +53,17 @@ public class FaultTableWriter {
 		FaultSystemRupSet rupSet = sol.getRupSet();
 		
 		SolutionLogicTree slt = SolutionLogicTree.load(CRUSTAL_SLT);
-		List<double[]> branchRates = new ArrayList<>(slt.getLogicTree().size());
-		for (LogicTreeBranch<?> branch : slt.getLogicTree())
-			branchRates.add(slt.loadRatesForBranch(branch));
+		LogicTree<?> logicTree = slt.getLogicTree();
+		List<double[]> branchRates = new ArrayList<>(logicTree.size());
+		List<Double> branchWeights = new ArrayList<>(logicTree.size());
+		for (int i=0; i<logicTree.size(); i++) {
+			LogicTreeBranch<?> branch = logicTree.getBranch(i);
+			double[] rates = slt.loadRatesForBranch(branch);
+			Preconditions.checkState(rates.length == rupSet.getNumRuptures());
+			branchRates.add(rates);
+			double weight = logicTree.getBranchWeight(i);
+			branchWeights.add(weight);
+		}
 		
 		Map<String, String> prefixRemappings = getNameRemappings();
 		
@@ -79,15 +90,15 @@ public class FaultTableWriter {
 		FileWriter fw = new FileWriter(outputFile);
 		
 		fw.write("\\begin{table}[h!]\n");
-		fw.write("\\tbl{Participation recurrence intervals (branch-averaged and the extrema across all "
-				+ "\\dynvalCrustalFaultBranches{} branches) and magnitude ranges (using average scaling) for crustal faults. "
+		fw.write("\\tbl{Participation recurrence intervals (branch-averaged and 95\\% bounds across all "
+				+ "\\dynvalCrustalFaultBranches{} branches) and supra-seismogenic magnitude ranges (using average scaling) for crustal faults. "
 				+ "Faults with multiple sections or zones are grouped, and the listed recurrence intervals apply to any "
 				+ "rupture involving any part of any section.\\label{tbl:crustal_fault_ris}}\n");
 		fw.write("{\\begin{tabular*}{\\columnwidth}{@{\\extracolsep{\\fill}}lccc@{}}\n");
 		fw.write("\\textbf{Name} "
 				+ "& \\multicolumn{1}{c}{\\textbf{Magnitude range}} "
 				+ "& \\multicolumn{1}{c}{\\textbf{Recurrence interval (years)}} "
-				+ "& \\multicolumn{1}{c}{\\textbf{Branch recurrence extrema (years)}} "
+				+ "& \\multicolumn{1}{c}{\\textbf{Branch recurrence 95\\% bounds (years)}} "
 				+ "\\\\\n");
 		fw.write("\\colrule\n");
 		DecimalFormat magDF = new DecimalFormat("0.0");
@@ -113,17 +124,37 @@ public class FaultTableWriter {
 				mMin = Math.min(mMin, mag);
 				mMax = Math.max(mMax, mag);
 			}
-			double ri = calcRI(rupIDs, sol.getRateForAllRups());
-			double minRI = Double.POSITIVE_INFINITY;
-			double maxRI = 0d;
+			double rate = calcRate(rupIDs, sol.getRateForAllRups());
+			double ri = 1d/rate;
+			double minRate = Double.POSITIVE_INFINITY;
+			double maxRate = 0d;
+			List<Double> faultRates = new ArrayList<>(branchRates.size());
 			for (double[] rates : branchRates) {
-				double branchRI = calcRI(rupIDs, rates);
-				minRI = Math.min(maxRI, branchRI);
-				maxRI = Math.max(maxRI, branchRI);
+				double branchRate = calcRate(rupIDs, rates);
+				faultRates.add(branchRate);
+				minRate = Math.min(minRate, branchRate);
+				maxRate = Math.max(maxRate, branchRate);
 			}
+			LightFixedXFunc ncdf = ArbDiscrEmpiricalDistFunc.calcQuickNormCDF(faultRates, branchWeights);
+			double rate2p5 = ArbDiscrEmpiricalDistFunc.calcFractileFromNormCDF(ncdf, 0.025);
+			double rate97p5 = ArbDiscrEmpiricalDistFunc.calcFractileFromNormCDF(ncdf, 0.975);
+			
+			System.out.println(name);
+			System.out.println("\tBA rate="+(float)rate);
+			System.out.println("\t95% rates=["+(float)rate2p5+", "+(float)rate97p5+"]");
+			System.out.println("\tExtrema rates=["+(float)minRate+", "+(float)maxRate+"]");
+			System.out.println("\tBA RI="+LaTeXUtils.groupedIntNumber(ri));
+			System.out.println("\t95% RIs=["+LaTeXUtils.groupedIntNumber(1d/rate97p5)+", "+LaTeXUtils.groupedIntNumber(1d/rate2p5)+"]");
+			System.out.println("\tExtrema RIs=["+LaTeXUtils.groupedIntNumber(1d/maxRate)+", "+LaTeXUtils.groupedIntNumber(1d/minRate)+"]");
+			double minRI = 1d/maxRate;
+			double maxRI = 1d/minRate;
+			Preconditions.checkState(ri > minRI && ri < maxRI, "RI=%s for %s outside extrema: [%s, %s]", (int)ri, name, (int)minRI, (int)maxRI);
+			double ri2p5 = 1d/rate97p5;
+			double ri97p5 = 1d/rate2p5;
+			Preconditions.checkState(ri > ri2p5 && ri < ri97p5, "RI=%s for %s outside 95% bounds: [%s, %s]", (int)ri, name, (int)ri2p5, (int)ri97p5);
 			String line = name+" & ["+magDF.format(mMin)+", "+magDF.format(mMax)+"] "
 					+ "& "+LaTeXUtils.groupedIntNumber(ri)+" "
-					+ "& ["+(int)(minRI+0.5)+", "+(int)(maxRI+0.5)+"]"+" \\\\";
+					+ "& ["+(int)(ri2p5+0.5)+", "+(int)(ri97p5+0.5)+"]"+" \\\\";
 			System.out.println(line);
 			fw.write(line+"\n");
 		}
@@ -135,12 +166,11 @@ public class FaultTableWriter {
 		fw.close();
 	}
 	
-	private static double calcRI(List<Integer> rupIDs, double[] rates) {
+	private static double calcRate(List<Integer> rupIDs, double[] rates) {
 		double rate = 0d;
-		for (int rupIndex : rupIDs) {
+		for (int rupIndex : rupIDs)
 			rate += rates[rupIndex];
-		}
-		return 1d/rate;
+		return rate;
 	}
 
 }

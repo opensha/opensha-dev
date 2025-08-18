@@ -34,7 +34,7 @@ import org.opensha.sha.earthquake.faultSysSolution.ruptures.util.UniqueRupture;
 import org.opensha.sha.earthquake.faultSysSolution.util.FaultSectionUtils;
 import org.opensha.sha.earthquake.faultSysSolution.util.FaultSysTools;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.PRVI25_InvConfigFactory;
-import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_LogicTreeBranch;
+import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_LogicTree;
 import org.opensha.sha.faultSurface.FaultSection;
 import org.opensha.sha.faultSurface.GeoJSONFaultSection;
 import org.opensha.sha.faultSurface.RuptureSurface;
@@ -60,7 +60,7 @@ public class ProxyFaultRepresentationFigures {
 //		FaultSystemRupSet rupSet = sol.getRupSet();
 		
 		FaultSystemRupSet rupSet = new PRVI25_InvConfigFactory().buildRuptureSet(
-				PRVI25_LogicTreeBranch.DEFAULT_CRUSTAL_ON_FAULT, FaultSysTools.defaultNumThreads());
+				PRVI25_LogicTree.DEFAULT_CRUSTAL_ON_FAULT, FaultSysTools.defaultNumThreads());
 		ProxyFaultSectionInstances proxyModule = ProxyFaultSectionInstances.build(rupSet, 5, 3d);
 		rupSet.addModule(proxyModule);
 		
