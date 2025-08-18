@@ -1,12 +1,18 @@
 	package scratch.kevin.latex;
 
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.nio.charset.Charset;
 import java.text.DecimalFormat;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import org.opensha.commons.util.DataUtils;
 
 import com.google.common.base.Preconditions;
+import com.google.common.io.Files;
 
 public class LaTeXUtils {
 
@@ -150,18 +156,165 @@ public class LaTeXUtils {
 	public static String numberAsPercent(Number number, int decimalPlaces) {
 		return numberExpFormatFixedDecimal(number, decimalPlaces)+LATEX_ESCAPE_MAP.get('%');
 	}
+	
+	public static final String BEGIN_DYNVAL_INCLUDES_HEADER = "% begin dynval includes";
+	public static final String END_DYNVAL_INCLUDES_HEADER = "% end dynval includes";
+	
+	public static void embedDynvalIncludes(File inputTexFile, File outputTexFile) throws IOException {
+		embedDynvalIncludes(inputTexFile, inputTexFile.getParentFile(), outputTexFile);
+	}
+	
+	public static void embedDynvalIncludes(File inputTexFile, File refDir, File outputTexFile) throws IOException {
+		boolean processingIncludes = false;
+		Map<String, String> dynVals = null;
+		
+		List<String> lines = Files.readLines(inputTexFile, Charset.defaultCharset());
+		File tmpOutputFile = new File(outputTexFile.getParentFile(), outputTexFile.getName()+".bak");
+		FileWriter fw = new FileWriter(tmpOutputFile, Charset.defaultCharset());
+		for (String line : lines) {
+			if (dynVals == null) {
+				if (line.trim().equalsIgnoreCase(BEGIN_DYNVAL_INCLUDES_HEADER)) {
+					System.out.println("Found '"+BEGIN_DYNVAL_INCLUDES_HEADER+"'");
+					processingIncludes = true;
+					dynVals = new HashMap<>();
+					continue;
+				}
+			}
+			if (processingIncludes) {
+				line = line.trim();
+				if (!line.isBlank()) {
+					if (line.equalsIgnoreCase(END_DYNVAL_INCLUDES_HEADER)) {
+						System.out.println("Found '"+END_DYNVAL_INCLUDES_HEADER+"'");
+						System.out.println("Processed "+dynVals.size()+" total dynamic values");
+						processingIncludes = false;
+						continue;
+					} else if (line.startsWith("%")) {
+						continue;
+					} else {
+						Preconditions.checkState(line.startsWith("\\include{"),
+								"Inside dynval include block but line doesn't start with an \\include{: %s", line);
+						String path = line.substring(line.indexOf('{')+1);
+						Preconditions.checkState(path.contains("}"), "Line doesn't close '}': %s", line);
+						path = path.substring(0, path.indexOf('}'));
+						File includeFile = new File(refDir, path);
+						if (!includeFile.exists() && !path.toLowerCase().endsWith(".tex"))
+							includeFile = new File(refDir, path+".tex");
+						System.out.println("\tProcessing "+includeFile.getName());
+						Preconditions.checkState(includeFile.exists(), "Include path not found. raw='%s', abs='%s'",
+								path, includeFile.getAbsolutePath());
+						for (String varLine : Files.readLines(includeFile, Charset.defaultCharset())) {
+							varLine = varLine.trim();
+							if (varLine.isBlank() || varLine.startsWith("%"))
+								continue;
+							Preconditions.checkState(varLine.startsWith("\\newcommand{\\dynval"),
+									"Unexpected line in dynval include; should start with '\\newcommand{\\dynval': %s",
+									varLine);
+							try {
+								String varName = varLine.substring(varLine.indexOf("dynval"));
+								String varValue = varName.substring(varName.indexOf("{")+1);
+								varValue = varValue.substring(0, varValue.lastIndexOf("}"));
+								varName = varName.substring(0, varName.indexOf("}"));
+								System.out.println("\t\t'"+varName+"': '"+varValue+"'");
+								dynVals.put(varName, varValue);
+							} catch (RuntimeException e) {
+								throw new IllegalStateException("Error parsing dynval from: "+varLine, e);
+							}
+						}
+					}
+				}
+			} else {
+				while (line.contains("\\dynval") && !line.startsWith("%")) {
+					Preconditions.checkNotNull(dynVals, "dynval command found before include header was found; surround "
+							+ "includes with lines stating '%s' and '%s'\n\tLine: %s",
+							BEGIN_DYNVAL_INCLUDES_HEADER, END_DYNVAL_INCLUDES_HEADER, line);
+					int startIndex = line.indexOf("\\dynval");
+					String subString = line.substring(startIndex);
+					Preconditions.checkState(subString.contains("{}"), "dynval commands must terminate with {}: %s", line);
+					int endIndex = subString.indexOf("{}");
+					endIndex += startIndex;
+					String varName = line.substring(startIndex+1, endIndex); // +1 skips the \
+					Preconditions.checkState(dynVals.containsKey(varName),
+							"Variable not found: %s\nfull line: %s", varName, line);
+					
+					String newLine = "";
+					if (startIndex > 0)
+						newLine = line.substring(0, startIndex);
+					String varValue = dynVals.get(varName);
+					System.out.println("Processed '"+varName+"' -> '"+varValue+"'");
+					newLine += varValue;
+					newLine += line.substring(endIndex+2); // +2 here skips the {}
+					line = newLine;
+				}
+				fw.write(line);
+				fw.write("\n");
+			}
+		}
+		
+		fw.close();
+		Files.move(tmpOutputFile, outputTexFile);
+	}
+	
+	public static void embedIncludes(File inputTexFile, File outputTexFile) throws IOException {
+		embedIncludes(inputTexFile, inputTexFile.getParentFile(), outputTexFile);
+	}
+	
+	public static void embedIncludes(File inputTexFile, File refDir, File outputTexFile) throws IOException {
+		List<String> lines = Files.readLines(inputTexFile, Charset.defaultCharset());
+		File tmpOutputFile = new File(outputTexFile.getParentFile(), outputTexFile.getName()+".bak");
+		FileWriter fw = new FileWriter(tmpOutputFile, Charset.defaultCharset());
+		for (String line : lines) {
+			if (line.trim().startsWith("\\include{")) {
+				line = line.trim();
+				String path = line.substring(line.indexOf('{')+1);
+				Preconditions.checkState(path.contains("}"), "Line doesn't close '}': %s", line);
+				path = path.substring(0, path.indexOf('}'));
+				File includeFile = new File(refDir, path);
+				if (!includeFile.exists() && !path.toLowerCase().endsWith(".tex"))
+					includeFile = new File(refDir, path+".tex");
+				System.out.println("\tEmbedding "+includeFile.getName());
+				Preconditions.checkState(includeFile.exists(), "Include path not found. raw='%s', abs='%s'",
+						path, includeFile.getAbsolutePath());
+				for (String includeLine : Files.readLines(includeFile, Charset.defaultCharset())) {
+					fw.write(includeLine);
+					fw.write("\n");
+				}
+			} else {
+				fw.write(line);
+				fw.write("\n");
+			}
+		}
+		
+		fw.close();
+		Files.move(tmpOutputFile, outputTexFile);
+	}
 
-	public static void main(String[] args) {
-		String raw = "Special characters: & % $ # _ { } ~ ^ \\ and \\& already escaped.";
-		String escaped = escapeLaTeX(raw);
-		System.out.println("Original: " + raw);
-		System.out.println("Escaped: " + escaped);
+	public static void main(String[] args) throws IOException {
+//		String raw = "Special characters: & % $ # _ { } ~ ^ \\ and \\& already escaped.";
+//		String escaped = escapeLaTeX(raw);
+//		System.out.println("Original: " + raw);
+//		System.out.println("Escaped: " + escaped);
+//		
+//		System.out.println(numberAsPercent(100d*0.505/1.3, 0));
+//		
+//		System.out.println(defineValueCommand("SlipRateExample", "33%"));
+//		System.out.println(defineValueCommand("SlipRateExample", "\\expnum("+numberExpFormat(3.14)+")", false));
+//		System.out.println(defineValueCommand("SlipRateExample", "\\expnum("+numberExpFormat(3e-10)+")", false));
 		
-		System.out.println(numberAsPercent(100d*0.505/1.3, 0));
+		File prviDir = new File("/home/kevin/Documents/papers/2024_PRVI_ERF");
 		
-		System.out.println(defineValueCommand("SlipRateExample", "33%"));
-		System.out.println(defineValueCommand("SlipRateExample", "\\expnum("+numberExpFormat(3.14)+")", false));
-		System.out.println(defineValueCommand("SlipRateExample", "\\expnum("+numberExpFormat(3e-10)+")", false));
+		File mainBranch = new File(prviDir, "prvi25-erf-paper");
+		File initialBranch = new File(prviDir, "initial-bssa-submission");
+		
+//		File refDir = initialBranch;
+//		File inputFile = new File(mainBranch, "submission/original/main_for_diff.tex");
+//		File outputFile = new File(mainBranch, "submission/original/embedded_for_diff.tex");
+		
+		File refDir = mainBranch;
+		File inputFile = new File(mainBranch, "main.tex");
+		File outputFile = new File(mainBranch, "main_embedded.tex");
+		
+		embedDynvalIncludes(inputFile, refDir, outputFile);
+		embedIncludes(outputFile, refDir, outputFile);
 	}
 
 }
