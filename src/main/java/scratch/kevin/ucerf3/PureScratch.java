@@ -149,6 +149,7 @@ import org.opensha.sha.earthquake.faultSysSolution.ruptures.util.SectionDistance
 import org.opensha.sha.earthquake.faultSysSolution.ruptures.util.UniqueRupture;
 import org.opensha.sha.earthquake.faultSysSolution.util.BranchAverageSolutionCreator;
 import org.opensha.sha.earthquake.faultSysSolution.util.FaultSectionUtils;
+import org.opensha.sha.earthquake.faultSysSolution.util.FaultSysHazardCalcSettings;
 import org.opensha.sha.earthquake.faultSysSolution.util.FaultSysTools;
 import org.opensha.sha.earthquake.faultSysSolution.util.SolHazardMapCalc.ReturnPeriods;
 import org.opensha.sha.earthquake.faultSysSolution.util.SubSectionBuilder;
@@ -2749,7 +2750,7 @@ public class PureScratch {
 		System.out.println("All good!");
 		
 		for (LogicTreeBranch<?> branch : tree) {
-			Map<TectonicRegionType, ? extends Supplier<ScalarIMR>> suppliers = MPJ_LogicTreeHazardCalc.getGMM_Suppliers(branch, null);
+			Map<TectonicRegionType, ? extends Supplier<ScalarIMR>> suppliers = FaultSysHazardCalcSettings.getGMM_Suppliers(branch, null, false);
 			System.out.println(branch+", weight="+branch.getBranchWeight());
 			for (TectonicRegionType trt : suppliers.keySet()) {
 				System.out.println("\tTRT: "+trt);
