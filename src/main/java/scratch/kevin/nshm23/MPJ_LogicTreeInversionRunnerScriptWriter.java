@@ -627,34 +627,34 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 		 * PRVI25 logic tree
 		 * TODO (this is a just a marker to find this part quickly, not an actual todo)
 		 */
-		queue = "scec_hiprio"; // TODO remove
+//		queue = "scec_hiprio"; // TODO remove
 		
-//		List<LogicTreeLevel<? extends LogicTreeNode>> levels = PRVI25_LogicTree.levelsOnFault;
-//		dirName += "-prvi25_crustal_branches";
-//		double avgNumRups = 50000;
-//		gmpes = new AttenRelRef[] { AttenRelRef.USGS_PRVI_ACTIVE };
-//		
-//		// random DM sampling
-//		levels = new ArrayList<>(levels);
-//		int origNumLevels = levels.size();
-//		for (int i=levels.size(); --i>=0;)
-//			if (levels.get(i).getNodes().get(0) instanceof PRVI25_CrustalDeformationModels)
-//				levels.remove(i);
-//		Preconditions.checkState(levels.size() == origNumLevels -1);
-//		individualRandomLevels.add(new PRVI25_CrustalRandomlySampledDeformationModelLevel());
-////		samplingBranchCountMultiplier = 5; // 5 for each branch
-//		samplingBranchCountMultiplier = 10; // 10 for each branch
-////		samplingBranchCountMultiplier = 20; // 20 for each branch
-////		samplingBranchCountMultiplier = 50; // 50 for each branch
-//		randSeed *= samplingBranchCountMultiplier;
-//		dirName += "-dmSample";
-//		if (samplingBranchCountMultiplier > 1)
-//			dirName += samplingBranchCountMultiplier+"x";
+		List<LogicTreeLevel<? extends LogicTreeNode>> levels = PRVI25_LogicTree.levelsOnFault;
+		dirName += "-prvi25_crustal_branches";
+		double avgNumRups = 50000;
+		gmpes = new AttenRelRef[] { AttenRelRef.USGS_PRVI_ACTIVE };
 		
-		List<LogicTreeLevel<? extends LogicTreeNode>> levels = PRVI25_LogicTree.levelsSubduction;
-		dirName += "-prvi25_subduction_branches";
-		double avgNumRups = 10000;
-		gmpes = new AttenRelRef[] { AttenRelRef.USGS_PRVI_INTERFACE, AttenRelRef.USGS_PRVI_SLAB };
+		// random DM sampling
+		levels = new ArrayList<>(levels);
+		int origNumLevels = levels.size();
+		for (int i=levels.size(); --i>=0;)
+			if (levels.get(i).getNodes().get(0) instanceof PRVI25_CrustalDeformationModels)
+				levels.remove(i);
+		Preconditions.checkState(levels.size() == origNumLevels -1);
+		individualRandomLevels.add(new PRVI25_CrustalRandomlySampledDeformationModelLevel());
+//		samplingBranchCountMultiplier = 5; // 5 for each branch
+		samplingBranchCountMultiplier = 10; // 10 for each branch
+//		samplingBranchCountMultiplier = 20; // 20 for each branch
+//		samplingBranchCountMultiplier = 50; // 50 for each branch
+		randSeed *= samplingBranchCountMultiplier;
+		dirName += "-dmSample";
+		if (samplingBranchCountMultiplier > 1)
+			dirName += samplingBranchCountMultiplier+"x";
+		
+//		List<LogicTreeLevel<? extends LogicTreeNode>> levels = PRVI25_LogicTree.levelsSubduction;
+//		dirName += "-prvi25_subduction_branches";
+//		double avgNumRups = 10000;
+//		gmpes = new AttenRelRef[] { AttenRelRef.USGS_PRVI_INTERFACE, AttenRelRef.USGS_PRVI_SLAB };
 		
 //		forceHazardReg = new GriddedRegion(PRVI25_RegionLoader.loadPRVI_Tight(), 0.05, GriddedRegion.ANCHOR_0_0);
 //		forceHazardReg = new GriddedRegion(PRVI25_RegionLoader.loadPRVI_MapExtents(), 0.1, GriddedRegion.ANCHOR_0_0); // good for quicker tests
@@ -1077,12 +1077,14 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 				}
 			}
 			
-			numCalcs = gridTree.size();
+			numCalcs = gridTree.size()*logicTree.size();
 			nodeRounds = (int)Math.ceil((double)numCalcs/(double)(nodes));
 			// greater of 10 hours, and 45 minutes per round
 			mins = Integer.max(60*10, 45*nodeRounds);
 			// make sure to not exceed 1 week
 			mins = Integer.min(mins, 60*24*7 - 1);
+			
+			System.out.println("Gridded mins: "+mins);
 			
 			argz = "--factory '"+factoryClass.getName()+"'"; // surround in single quotes to escape $'s
 			argz += " --logic-tree "+ltPath;
