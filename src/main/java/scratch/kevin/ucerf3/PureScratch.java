@@ -3275,7 +3275,6 @@ public class PureScratch {
 		}
 	}
 	
-<<<<<<< HEAD
 	private static void test343b() throws IOException {
 		WC1994_MagLengthRelationship wc = new WC1994_MagLengthRelationship();
 		for (Point2D pt : FaultSysTools.initEmptyMFD(5.01, 8.01)) {

@@ -331,7 +331,7 @@ public class BayAreaRegionalGroundMotionCalc {
 					PoissonPointSourceData sampledData = samplingData.getForDistance(minDist);
 					if (sampledData != data) {
 						source = new PoissonPointSource(center, source.getTectonicRegionType(),
-								pointSource.getDuration(), sampledData, pointSource.getDistCorrs());
+								pointSource.getDuration(), sampledData, pointSource.getDistCorr(), gridSettings.pointSourceMagnitudeCutoff);
 						numSupersampled++;
 //						System.out.println("Supersampling with minDist="+(float)minDist);
 //					} else if (minDist < 50d){
@@ -569,7 +569,7 @@ public class BayAreaRegionalGroundMotionCalc {
 					Preconditions.checkNotNull(surf, "Didn't find it");
 				} else {
 //					surf = new PointSurface(lat, lon, depth);
-					surf = new PointSurface(lat, lon, 0d);
+					surf = new PointSurface(new Location(lat, lon, 0d));
 					((PointSurface)surf).setAveDip(90d);
 				}
 				ProbEqkRupture rup = new ProbEqkRupture(mag, rake, probEach, surf, loc);

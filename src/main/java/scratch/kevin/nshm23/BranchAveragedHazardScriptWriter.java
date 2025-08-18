@@ -41,12 +41,23 @@ public class BranchAveragedHazardScriptWriter {
 		double gridSpacing = 0.1;
 		boolean supersample = false;
 		boolean supersampleQuick = false;
+		boolean supersampleFinite = false;
 		boolean quickGridded = false;
 		
 		double[] periods = { 0d, 0.2d, 1d, 5d };
 		AttenRelRef[] gmms = null;
 		
+		PointSourceDistanceCorrections distCorr = null;
+		BackgroundRupType bgRupType = null;
+		Integer bgFiniteNum = null;
+		String extraGridArgs = null;
+		Double pointFiniteMinMag = null;
+		
+		Integer forceMaxDispatch = null;
+		
 		Region region = NSHM23_RegionLoader.loadFullConterminousWUS();
+		
+		String forceOutputName = null;
 		
 		/*
 		 * NSHM23
@@ -166,7 +177,7 @@ public class BranchAveragedHazardScriptWriter {
 //				PRVI25_RegionLoader.loadPRVI_ModelBroad(), gridSpacing, GriddedRegion.ANCHOR_0_0);
 		System.out.println("Region has "+gridReg.getNodeCount()+" nodes");
 		
-		String dirName = baseDirName;
+		String dirName = forceOutputName == null ? baseDirName : forceOutputName;
 		if (suffix != null && !suffix.isBlank())
 			dirName += "-"+suffix;
 		if (noMFDs)
@@ -175,6 +186,36 @@ public class BranchAveragedHazardScriptWriter {
 		File localMainDir = new File("/home/kevin/OpenSHA/UCERF4/batch_inversions");
 		File localDir = new File(localMainDir, dirName);
 		Preconditions.checkState(localDir.exists() || localDir.mkdir());
+		
+		File remoteMainDir = new File("/project/scec_608/kmilner/nshm23/batch_inversions");
+		int remoteTotalThreads = 20;
+		int remoteTotalMemGB = 50;
+		String queue = "scec";
+		int nodes = 36;
+		int mins = 600;
+//		int nodes = 18;
+//		JavaShellScriptWriter mpjWrite = new MPJExpressShellScriptWriter(
+//				USC_CARC_ScriptWriter.JAVA_BIN, remoteTotalMemGB*1024, null, USC_CARC_ScriptWriter.MPJ_HOME);
+		JavaShellScriptWriter parallelMPJWrite = new FastMPJShellScriptWriter(
+				USC_CARC_ScriptWriter.JAVA_BIN, remoteTotalMemGB*1024, null, USC_CARC_ScriptWriter.FMPJ_HOME);
+		JavaShellScriptWriter singleMPJWrite = new NoMPJSingleNodeShellScriptWriter(USC_CARC_ScriptWriter.JAVA_BIN,
+				remoteTotalMemGB*1024, null);
+		BatchScriptWriter pbsWrite = new USC_CARC_ScriptWriter();
+		
+//		File remoteMainDir = new File("/caldera/hovenweep/projects/usgs/hazards/ehp/kmilner/nshm23/batch_inversions");
+//		int remoteTotalThreads = 128;
+//		int remoteTotalMemGB = 448;
+//		String queue = null;
+//		int nodes = 4;
+//		int mins = 180;
+////		int nodes = 18;
+////		JavaShellScriptWriter mpjWrite = new MPJExpressShellScriptWriter(
+////				USC_CARC_ScriptWriter.JAVA_BIN, remoteTotalMemGB*1024, null, USC_CARC_ScriptWriter.MPJ_HOME);
+//		JavaShellScriptWriter parallelMPJWrite = new FastMPJShellScriptWriter(
+//				HovenweepScriptWriter.JAVA_BIN, remoteTotalMemGB*1024, null, HovenweepScriptWriter.FMPJ_HOME);
+//		JavaShellScriptWriter singleMPJWrite = new NoMPJSingleNodeShellScriptWriter(HovenweepScriptWriter.JAVA_BIN,
+//				remoteTotalMemGB*1024, null);
+//		BatchScriptWriter pbsWrite = new HovenweepScriptWriter();
 		
 		if (parallelMPJWrite instanceof FastMPJShellScriptWriter)
 			((FastMPJShellScriptWriter)parallelMPJWrite).setUseLaunchWrapper(true);

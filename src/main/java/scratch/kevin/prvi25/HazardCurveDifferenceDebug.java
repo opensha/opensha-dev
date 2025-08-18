@@ -48,7 +48,6 @@ import org.opensha.sha.earthquake.param.UseRupMFDsParam;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_LogicTree;
 import org.opensha.sha.earthquake.util.GridCellSupersamplingSettings;
 import org.opensha.sha.earthquake.util.GriddedSeismicitySettings;
-import org.opensha.sha.faultSurface.utils.PointSourceDistanceCorrections;
 import org.opensha.sha.gui.infoTools.IMT_Info;
 import org.opensha.sha.imr.AttenRelRef;
 import org.opensha.sha.imr.AttenRelSupplier;
