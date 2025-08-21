@@ -16,6 +16,7 @@ import org.opensha.commons.param.Parameter;
 import org.opensha.commons.param.constraint.impl.DoubleDiscreteConstraint;
 import org.opensha.commons.util.ExceptionUtils;
 import org.opensha.sha.earthquake.EqkRupture;
+import org.opensha.sha.faultSurface.cache.SurfaceDistances;
 import org.opensha.sha.imr.AttenuationRelationship;
 import org.opensha.sha.imr.param.IntensityMeasureParams.DampingParam;
 import org.opensha.sha.imr.param.IntensityMeasureParams.PGA_Param;
@@ -200,6 +201,9 @@ public class SimulationDisaggAttenuationRelationshipWrapper<E> extends Attenuati
 	@Override
 	protected void setPropagationEffectParams() {}
 	
+	@Override
+	public void setPropagationEffectParams(SurfaceDistances distances) {}
+
 	private IMT getIMT() {
 		Parameter<?> imtParam = getIntensityMeasure();
 		if (imtParam.getName().equals(SA_Param.NAME))

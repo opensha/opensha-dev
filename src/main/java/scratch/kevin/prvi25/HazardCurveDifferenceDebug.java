@@ -34,7 +34,6 @@ import org.opensha.sha.earthquake.AbstractERF;
 import org.opensha.sha.earthquake.ProbEqkSource;
 import org.opensha.sha.earthquake.faultSysSolution.FaultSystemSolution;
 import org.opensha.sha.earthquake.faultSysSolution.erf.BaseFaultSystemSolutionERF;
-import org.opensha.sha.earthquake.faultSysSolution.hazard.QuickGriddedHazardMapCalc;
 import org.opensha.sha.earthquake.faultSysSolution.modules.GridSourceList;
 import org.opensha.sha.earthquake.faultSysSolution.modules.GridSourceList.GriddedRupture;
 import org.opensha.sha.earthquake.faultSysSolution.modules.GridSourceList.GriddedRuptureProperties;
@@ -262,78 +261,78 @@ public class HazardCurveDifferenceDebug {
 			}
 		}
 		
-		ExecutorService exec = Executors.newSingleThreadExecutor();
-		DiscretizedFunc avgQuickCurve = xVals.deepClone();
-		double sumQuickWeight = 0d;
-		avgQuickCurve.scale(0d);
-		for (int b=0; b<quickGMMSuppliers.size(); b++) {
-			Map<TectonicRegionType, ? extends Supplier<ScalarIMR>> suppliers = quickGMMSuppliers.get(b);
-			double weight = quickGMMSupplierWeights.get(b);
-			sumQuickWeight += weight;
-			
-			QuickGriddedHazardMapCalc quickCalc = new QuickGriddedHazardMapCalc(suppliers, 0, xVals, sourceFilters, quickSettings);
-			
-			GridSourceProvider gridProv;
-			if (calcTRT == null) {
-				gridProv = erf.getGridSourceProvider();
-			} else {
-				GridSourceList fullGridProv = (GridSourceList) erf.getGridSourceProvider();
-				List<List<GriddedRupture>> ruptureLists = new ArrayList<>();
-				for (int l=0; l<fullGridProv.getNumLocations(); l++) {
-					List<GriddedRupture> ruptures = new ArrayList<>();
-					ruptures.addAll(fullGridProv.getRuptures(calcTRT, l));
-					ruptureLists.add(ruptures);
-				}
-				Preconditions.checkState(ruptureLists.size() == fullGridProv.getNumLocations());
-				gridProv = new GridSourceList.Precomputed(fullGridProv.getGriddedRegion(), calcTRT, ruptureLists);
-			}
-			DiscretizedFunc quickCurve = quickCalc.calc(gridProv, gridReg, exec, 1)[0];
-			if (calcTRT != TectonicRegionType.SUBDUCTION_SLAB) {
-				// need to add on-fault
-				erf.setParameter(IncludeBackgroundParam.NAME, IncludeBackgroundOption.EXCLUDE);
-				erf.updateForecast();
-				
-				if (calcTRT == null)
-					calcERF = erf;
-				else
-					calcERF = new GMMTreeCalcDebug.TRTWrappedERF(erf, calcTRT, null);
-				
-				Map<TectonicRegionType, ScalarIMR> quickGMMs = new HashMap<>();
-				for (TectonicRegionType trt : suppliers.keySet())
-					quickGMMs.put(trt, suppliers.get(trt).get());
-				
-				DiscretizedFunc excludeCurve = new CurveCalc(site, calcERF, quickGMMs, xVals).get();
-				ArbitrarilyDiscretizedFunc combCurve = new ArbitrarilyDiscretizedFunc();
-				for (int i=0; i<quickCurve.size(); i++)
-					combCurve.set(quickCurve.getX(i), 1d - (1d - quickCurve.getY(i))*(1d - excludeCurve.getY(i)));
-				quickCurve = combCurve;
-			}
-			for (int i=0; i<quickCurve.size(); i++)
-				avgQuickCurve.set(i, avgQuickCurve.getY(i) + weight*quickCurve.getY(i));
-		}
-		
-		exec.shutdown();
-		
-		if ((float)sumQuickWeight != 1f)
-			avgQuickCurve.scale(1d/sumQuickWeight);
-		
-		for (int i=0; i<fullCurve.size(); i++) {
-			double x = fullCurve.getX(i);
-			double y1 = fullCurve.getY(i);
-			double y2 = avgQuickCurve.getY(i);
-			double diff = y2 - y1;
-			double pDiff = 100d * diff / y1;
-			System.out.println("X: "+(float)x+"\tFull: "+(float)y1+"\tQuick: "+(float)y2+"\tDiff: "+(float)diff+" ("+(float)pDiff+" %)");
-		}
-		
-		ReturnPeriods rp = ReturnPeriods.TWO_IN_50;
-		double rpProb = rp.oneYearProb;
-		System.out.println("Return period: "+rp+" at y="+rpProb);
-		double rp1 = fullCurve.getFirstInterpolatedX_inLogXLogYDomain(rpProb);
-		double rp2 = avgQuickCurve.getFirstInterpolatedX_inLogXLogYDomain(rpProb);
-		double diff = rp2 - rp1;
-		double pDiff = 100d * diff / rp1;
-		System.out.println("Full 2in50: "+(float)rp1+"\tQuick 2in50: "+(float)rp2+"\tDiff: "+(float)diff+" ("+(float)pDiff+" %)");
+//		ExecutorService exec = Executors.newSingleThreadExecutor();
+//		DiscretizedFunc avgQuickCurve = xVals.deepClone();
+//		double sumQuickWeight = 0d;
+//		avgQuickCurve.scale(0d);
+//		for (int b=0; b<quickGMMSuppliers.size(); b++) {
+//			Map<TectonicRegionType, ? extends Supplier<ScalarIMR>> suppliers = quickGMMSuppliers.get(b);
+//			double weight = quickGMMSupplierWeights.get(b);
+//			sumQuickWeight += weight;
+//			
+//			QuickGriddedHazardMapCalc quickCalc = new QuickGriddedHazardMapCalc(suppliers, 0, xVals, sourceFilters, quickSettings);
+//			
+//			GridSourceProvider gridProv;
+//			if (calcTRT == null) {
+//				gridProv = erf.getGridSourceProvider();
+//			} else {
+//				GridSourceList fullGridProv = (GridSourceList) erf.getGridSourceProvider();
+//				List<List<GriddedRupture>> ruptureLists = new ArrayList<>();
+//				for (int l=0; l<fullGridProv.getNumLocations(); l++) {
+//					List<GriddedRupture> ruptures = new ArrayList<>();
+//					ruptures.addAll(fullGridProv.getRuptures(calcTRT, l));
+//					ruptureLists.add(ruptures);
+//				}
+//				Preconditions.checkState(ruptureLists.size() == fullGridProv.getNumLocations());
+//				gridProv = new GridSourceList.Precomputed(fullGridProv.getGriddedRegion(), calcTRT, ruptureLists);
+//			}
+//			DiscretizedFunc quickCurve = quickCalc.calc(gridProv, gridReg, exec, 1)[0];
+//			if (calcTRT != TectonicRegionType.SUBDUCTION_SLAB) {
+//				// need to add on-fault
+//				erf.setParameter(IncludeBackgroundParam.NAME, IncludeBackgroundOption.EXCLUDE);
+//				erf.updateForecast();
+//				
+//				if (calcTRT == null)
+//					calcERF = erf;
+//				else
+//					calcERF = new GMMTreeCalcDebug.TRTWrappedERF(erf, calcTRT, null);
+//				
+//				Map<TectonicRegionType, ScalarIMR> quickGMMs = new HashMap<>();
+//				for (TectonicRegionType trt : suppliers.keySet())
+//					quickGMMs.put(trt, suppliers.get(trt).get());
+//				
+//				DiscretizedFunc excludeCurve = new CurveCalc(site, calcERF, quickGMMs, xVals).get();
+//				ArbitrarilyDiscretizedFunc combCurve = new ArbitrarilyDiscretizedFunc();
+//				for (int i=0; i<quickCurve.size(); i++)
+//					combCurve.set(quickCurve.getX(i), 1d - (1d - quickCurve.getY(i))*(1d - excludeCurve.getY(i)));
+//				quickCurve = combCurve;
+//			}
+//			for (int i=0; i<quickCurve.size(); i++)
+//				avgQuickCurve.set(i, avgQuickCurve.getY(i) + weight*quickCurve.getY(i));
+//		}
+//		
+//		exec.shutdown();
+//		
+//		if ((float)sumQuickWeight != 1f)
+//			avgQuickCurve.scale(1d/sumQuickWeight);
+//		
+//		for (int i=0; i<fullCurve.size(); i++) {
+//			double x = fullCurve.getX(i);
+//			double y1 = fullCurve.getY(i);
+//			double y2 = avgQuickCurve.getY(i);
+//			double diff = y2 - y1;
+//			double pDiff = 100d * diff / y1;
+//			System.out.println("X: "+(float)x+"\tFull: "+(float)y1+"\tQuick: "+(float)y2+"\tDiff: "+(float)diff+" ("+(float)pDiff+" %)");
+//		}
+//		
+//		ReturnPeriods rp = ReturnPeriods.TWO_IN_50;
+//		double rpProb = rp.oneYearProb;
+//		System.out.println("Return period: "+rp+" at y="+rpProb);
+//		double rp1 = fullCurve.getFirstInterpolatedX_inLogXLogYDomain(rpProb);
+//		double rp2 = avgQuickCurve.getFirstInterpolatedX_inLogXLogYDomain(rpProb);
+//		double diff = rp2 - rp1;
+//		double pDiff = 100d * diff / rp1;
+//		System.out.println("Full 2in50: "+(float)rp1+"\tQuick 2in50: "+(float)rp2+"\tDiff: "+(float)diff+" ("+(float)pDiff+" %)");
 	}
 	
 //	private static SourceFilterManager sourceFilters = new SourceFilterManager(SourceFilters.TRT_DIST_CUTOFFS);

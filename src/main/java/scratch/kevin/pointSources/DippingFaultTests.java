@@ -44,7 +44,7 @@ import org.opensha.sha.earthquake.rupForecastImpl.PointSourceNshm;
 import org.opensha.sha.earthquake.util.GriddedFiniteRuptureSettings;
 import org.opensha.sha.earthquake.util.GriddedSeismicitySettings;
 import org.opensha.sha.faultSurface.PointSurface;
-import org.opensha.sha.faultSurface.PointSurface.DistanceCorrected;
+import org.opensha.sha.faultSurface.PointSurface.SiteSpecificDistanceCorrected;
 import org.opensha.sha.faultSurface.RectangularSurface;
 import org.opensha.sha.faultSurface.RuptureSurface;
 import org.opensha.sha.faultSurface.utils.PointSurfaceBuilder;
@@ -292,7 +292,7 @@ public class DippingFaultTests {
 				site.addParameterList(gmm.getSiteParams());
 				gmm.setSite(site);
 				
-				WeightedList<DistanceCorrected> myPointSurfs = pointSurf.getForDistanceCorrection(siteLoc, distCorr, trt, mag);
+				WeightedList<SiteSpecificDistanceCorrected> myPointSurfs = pointSurf.getForDistanceCorrection(siteLoc, distCorr, trt, mag);
 				WeightedList<? extends RuptureSurface> myFiniteSurfs;
 				List<Double> myFiniteStrikes = new ArrayList<>(numFinite);
 				List<Integer> myFiniteRupSubSurfIndexes = new ArrayList<>(numFinite);
@@ -321,8 +321,8 @@ public class DippingFaultTests {
 					}
 					myFiniteSurfs = matchingFiniteSurfs;
 					
-					WeightedList<DistanceCorrected> matchingPointSurfs = new WeightedList<>();
-					for (WeightedValue<DistanceCorrected> surfVal : myPointSurfs) {
+					WeightedList<SiteSpecificDistanceCorrected> matchingPointSurfs = new WeightedList<>();
+					for (WeightedValue<SiteSpecificDistanceCorrected> surfVal : myPointSurfs) {
 						boolean surfHW = surfVal.value.getDistanceX(siteLoc) >= 0d;
 						if (surfHW == forceHW.booleanValue())
 							matchingPointSurfs.add(surfVal.value, surfVal.weight);

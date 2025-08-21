@@ -82,8 +82,8 @@ import org.opensha.sha.earthquake.rupForecastImpl.nshm23.gridded.NSHM23_Abstract
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.gridded.NSHM23_SingleRegionGridSourceProvider.NSHM23_WUS_FiniteRuptureConverter;
 import org.opensha.sha.earthquake.util.GriddedSeismicitySettings;
 import org.opensha.sha.faultSurface.PointSurface;
-import org.opensha.sha.faultSurface.PointSurface.DistanceCorrected;
-import org.opensha.sha.faultSurface.PointSurface.DistanceProtected;
+import org.opensha.sha.faultSurface.PointSurface.SiteSpecificDistanceCorrected;
+import org.opensha.sha.faultSurface.PointSurface.DistanceCorrectable;
 import org.opensha.sha.faultSurface.QuadSurface;
 import org.opensha.sha.faultSurface.RectangularSurface;
 import org.opensha.sha.faultSurface.RuptureSurface;
@@ -113,6 +113,8 @@ import com.google.common.collect.ImmutableMap.Builder;
 
 public class PointSourceHazardComparison {
 	
+	private static TectonicRegionType TRT = TectonicRegionType.ACTIVE_SHALLOW;
+	
 	enum PointSourceType {
 		TRUE_POINT_SOURCE("True Point Source", "True point", false, PointSourceDistanceCorrections.NONE) {
 			@Override
@@ -121,7 +123,7 @@ public class PointSourceHazardComparison {
 //				return new PointEqkSource(centerLoc, mfd, 1d, aveRake, aveDip);
 				return PointSource.poissonBuilder(centerLoc)
 						.truePointSources()
-						.forMFDAndFocalMech(mfd, new FocalMechanism(Double.NaN, aveDip, aveRake))
+						.forMFDAndFocalMech(mfd, new FocalMechanism(Double.NaN, aveDip, aveRake), TRT)
 						.duration(1d)
 						.build();
 			}
@@ -421,7 +423,7 @@ public class PointSourceHazardComparison {
 			double rate = mfd.getY(i);
 			if (rate == 0d)
 				continue;
-			rups.add(converter.buildFiniteRupture(0, loc, mag, rate, mech, TectonicRegionType.ACTIVE_SHALLOW, null, null, cache));
+			rups.add(converter.buildFiniteRupture(0, loc, mag, rate, mech, TRT, null, null, cache));
 		}
 		return rups;
 	}
@@ -1031,11 +1033,11 @@ public class PointSourceHazardComparison {
 			@Override
 			public double calcForRuptureAndLocation(ProbEqkRupture rup, Location siteLoc) {
 				RuptureSurface surf = rup.getRuptureSurface();
-				if (surf instanceof DistanceProtected) {
-					WeightedList<DistanceCorrected> corrSurfs = ((DistanceProtected)surf).getCorrectedSurfaces(siteLoc);
+				if (surf instanceof DistanceCorrectable) {
+					WeightedList<SiteSpecificDistanceCorrected> corrSurfs = ((DistanceCorrectable)surf).getCorrectedSurfaces(siteLoc);
 					Preconditions.checkState(corrSurfs.isNormalized());
 					double fractFW = 0d;
-					for (WeightedValue<DistanceCorrected> value : corrSurfs)
+					for (WeightedValue<SiteSpecificDistanceCorrected> value : corrSurfs)
 						if (value.value.getDistanceX(siteLoc) >= 0d)
 							fractFW += value.weight;
 //					System.out.println("FractFW="+fractFW+" for "+corrSurfs.size()+" corr surfs");
@@ -2764,8 +2766,8 @@ public class PointSourceHazardComparison {
 					double rate = rup.getMeanAnnualRate(1);
 					WeightedList<? extends RuptureSurface> surfs;
 					RuptureSurface origSurf = rup.getRuptureSurface();
-					if (origSurf instanceof DistanceProtected) {
-						surfs = ((DistanceProtected)origSurf).getCorrectedSurfaces(loc);
+					if (origSurf instanceof DistanceCorrectable) {
+						surfs = ((DistanceCorrectable)origSurf).getCorrectedSurfaces(loc);
 					} else {
 						surfs = WeightedList.evenlyWeighted(origSurf);
 					}
@@ -2796,8 +2798,8 @@ public class PointSourceHazardComparison {
 					double rate = rup.getMeanAnnualRate(1);
 					WeightedList<? extends RuptureSurface> surfs;
 					RuptureSurface origSurf = rup.getRuptureSurface();
-					if (origSurf instanceof DistanceProtected) {
-						surfs = ((DistanceProtected)origSurf).getCorrectedSurfaces(loc);
+					if (origSurf instanceof DistanceCorrectable) {
+						surfs = ((DistanceCorrectable)origSurf).getCorrectedSurfaces(loc);
 					} else {
 						surfs = WeightedList.evenlyWeighted(origSurf);
 					}
