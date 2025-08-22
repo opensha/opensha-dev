@@ -169,7 +169,7 @@ public class NshmErf extends AbstractERF {
 
       case ZONE:
         ZoneRuptureSet zrs = (ZoneRuptureSet) ruptureSet;
-        return (grid)
+        return (faults)
             ? pointRuptureSetToSources(zrs, weight, duration)
             : List.of();
 

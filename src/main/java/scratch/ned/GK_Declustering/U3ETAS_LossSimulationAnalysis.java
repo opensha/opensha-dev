@@ -3395,9 +3395,13 @@ int cat =0;
 
 		// plot aggr/max loss histrograms as func of log10(maxLoss):
 		for(int i=0;i<ratioHistPoiss.size(); i++) {
-			double newVal = ratioHistTD.getY(i)/numHistTD.getY(i);
+			double newVal = 1;
+			if(numHistTD.getY(i) != 0)
+				newVal = ratioHistTD.getY(i)/numHistTD.getY(i);
 			ratioHistTD.set(i,newVal);
-			newVal = ratioHistPoiss.getY(i)/numHistPoiss.getY(i);
+			newVal = 1;
+			if(numHistPoiss.getY(i) != 0)
+				newVal = ratioHistPoiss.getY(i)/numHistPoiss.getY(i);
 			ratioHistPoiss.set(i,newVal);
 		}
 		ratioHistTD.setName("ratioHistTD");
@@ -3414,6 +3418,132 @@ int cat =0;
 
 			
 	}
+	
+	
+	public void plotAveAggrVsMaxLosses() {
+		
+		HistogramFunction ratioHistTD = getBlankIncrLossCurveLogX();
+		HistogramFunction numHistTD = getBlankIncrLossCurveLogX();
+		HistogramFunction ratioHistPoiss = getBlankIncrLossCurveLogX();
+		HistogramFunction numHistPoiss = getBlankIncrLossCurveLogX();
+		
+		File outputDir = new File(dirName+ "/AveAggrVsMaxLosses");
+		if(!outputDir.exists()) outputDir.mkdir();
+
+		double maxLossFromAllCats = 0;
+		
+		double aveAggrOverMax_TD=0;
+		double aveAggrOverMax_Pois=0;
+		double aveAggrOverMax_TD_num=0;
+		double aveAggrOverMax_Pois_num=0;
+		double aveAggrOverMax_TD_gt1Billion=0;
+		double aveAggrOverMax_Pois_gt1Billion=0;
+		double aveAggrOverMax_TD_gt1Billion_num=0;
+		double aveAggrOverMax_Pois_gt1Billion_num=0;
+
+		
+		for(int catalogIndex=0;catalogIndex<getCatalogs().size();catalogIndex++) {
+
+			ArrayList<ObsEqkRupList> tempCatList = new ArrayList<ObsEqkRupList>();
+			tempCatList.add(getCatalogs().get(catalogIndex));
+
+			ArrayList<ObsEqkRupList> subCatList = getSubcatalogList(tempCatList, 1d);
+			for (ObsEqkRupList catalog:subCatList) {
+				double maxLoss=0, aggrLoss=0;
+				for (ObsEqkRupture obsRup : catalog) {
+					ETAS_EqkRupture rup = (ETAS_EqkRupture)obsRup;
+					double randLoss = randomLossForEventID[rup.getID()]; // covModel.getDistribution(aveLoss).sample(); // get randome sample
+					if(maxLoss<randLoss) maxLoss=randLoss;
+					aggrLoss+=randLoss;
+					if(maxLossFromAllCats<randLoss)
+						maxLossFromAllCats=randLoss;
+				}
+				if(maxLoss != 0.0) {
+					aveAggrOverMax_TD += aggrLoss/maxLoss;
+					aveAggrOverMax_TD_num+=1;
+					if(maxLoss>1e9) {
+						aveAggrOverMax_TD_gt1Billion+=aggrLoss/maxLoss;
+						aveAggrOverMax_TD_gt1Billion_num+=1;
+					}
+				}
+				else {
+					aveAggrOverMax_TD += 1.0;
+				}
+				if(Math.log10(maxLoss)>ratioHistTD.getMinX()-ratioHistTD.getDelta()/2) {
+					ratioHistTD.add(Math.log10(maxLoss), aggrLoss/maxLoss);
+					numHistTD.add(Math.log10(maxLoss), 1.0);
+				}
+			}
+
+			// Now do poisson result
+			tempCatList = new ArrayList<ObsEqkRupList>();
+			tempCatList.add(getRandomizedCatalogs().get(catalogIndex));
+			subCatList = getSubcatalogList(tempCatList, 1d);
+			for (ObsEqkRupList catalog:subCatList) {
+				double maxLoss=0, aggrLoss=0;
+				for (ObsEqkRupture obsRup : catalog) {
+					ETAS_EqkRupture rup = (ETAS_EqkRupture)obsRup;
+					double randLoss = randomLossForEventID[rup.getID()]; // covModel.getDistribution(aveLoss).sample(); // get randome sample
+					if(maxLoss<randLoss) maxLoss=randLoss;
+					aggrLoss+=randLoss;
+				}
+				if(maxLoss != 0.0) {
+					aveAggrOverMax_Pois += aggrLoss/maxLoss;
+					aveAggrOverMax_Pois_num+=1;
+					if(maxLoss>1e9) {
+						aveAggrOverMax_Pois_gt1Billion+=aggrLoss/maxLoss;
+						aveAggrOverMax_Pois_gt1Billion_num+=1;
+					}
+
+				}
+				else {
+					aveAggrOverMax_Pois += 1.0;
+				}
+
+				if(Math.log10(maxLoss)>ratioHistPoiss.getMinX()-ratioHistPoiss.getDelta()/2) {
+					ratioHistPoiss.add(Math.log10(maxLoss), aggrLoss/maxLoss);
+					numHistPoiss.add(Math.log10(maxLoss), 1.0);
+				}
+
+			}
+
+		}
+		
+		aveAggrOverMax_TD_gt1Billion /= aveAggrOverMax_TD_gt1Billion_num;
+		aveAggrOverMax_TD /= aveAggrOverMax_TD_num;
+		
+		aveAggrOverMax_Pois_gt1Billion /= aveAggrOverMax_Pois_gt1Billion_num;
+		aveAggrOverMax_Pois /= aveAggrOverMax_Pois_num;
+
+		// plot aggr/max loss histrograms as func of log10(maxLoss):
+		for(int i=0;i<ratioHistPoiss.size(); i++) {
+			double newVal = 1;
+//			if(numHistTD.getY(i) != 0)
+//				newVal = ratioHistTD.getY(i)/numHistTD.getY(i);
+//			ratioHistTD.set(i,newVal);
+			ratioHistTD.set(i,ratioHistTD.getY(i)/numHistTD.getY(i));
+//			newVal = 1;
+//			if(numHistPoiss.getY(i) != 0)
+//				newVal = ratioHistPoiss.getY(i)/numHistPoiss.getY(i);
+//			ratioHistPoiss.set(i,newVal);
+			ratioHistPoiss.set(i,ratioHistPoiss.getY(i)/numHistPoiss.getY(i));
+		}
+		ratioHistTD.setName("ratioHistTD");
+		ratioHistTD.setInfo("maxLossFromAllCats="+maxLossFromAllCats+"\naveAggrOverMax_TD="+aveAggrOverMax_TD+"\naveAggrOverMax_TD_gt1Billion="+aveAggrOverMax_TD_gt1Billion);
+		ratioHistPoiss.setName("ratioHistPoiss");
+		ratioHistPoiss.setInfo("aveAggrOverMax_Pois="+aveAggrOverMax_Pois+"\naveAggrOverMax_Pois_gt1Billion="+aveAggrOverMax_Pois_gt1Billion);
+
+		ArrayList<XY_DataSet> funcList2 = new ArrayList<XY_DataSet>(); 
+		funcList2.add(ratioHistTD);
+		funcList2.add(ratioHistPoiss);
+		ArrayList<PlotCurveCharacterstics> plotChars2 = new ArrayList<PlotCurveCharacterstics>();	
+		plotChars2.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, Color.RED));
+		plotChars2.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, Color.BLACK));
+		String fileNamePrefix = dirName+"/AveAggrVsMaxLosses/aveAggrVsMaxLosses";
+		PlottingUtils.writeAndOrPlotFuncs(funcList2, plotChars2, "", "Log10(MaxLoss ($))", "Ratio", null, null, false, false, fileNamePrefix, true);
+			
+	}
+
 	
 	
 	public void plotAccumulatedLossVsTimeForCatalog(int catalogIndex) {
@@ -4230,7 +4360,7 @@ if(subCatalogIndex==210663 && rupID == 77552) { // this is the parent of the fir
 		U3ETAS_LossSimulationAnalysis analysis = new U3ETAS_LossSimulationAnalysis(seed);
 		
 		// this shows the MagProbDist discrepancy is less for 1 day than 1 wk or 1 month, as found for losses
-		analysis.makeFigSetG_MagExceedances();
+//		analysis.makeFigSetG_MagExceedances();
 		
 		
 		// this examines  conditional loss exceedance curves for the year 2024
@@ -4253,6 +4383,7 @@ if(subCatalogIndex==210663 && rupID == 77552) { // this is the parent of the fir
 		
 		// no popup window here
 //		analysis.makeFig1_100yrRates(432, 231-50); // put sequence at 50-yr mark
+//		System.out.println("Done");
 		
 		
 		// these are long term MFDs so COV not needed
@@ -4278,6 +4409,8 @@ if(subCatalogIndex==210663 && rupID == 77552) { // this is the parent of the fir
 //		analysis.makeFigSetE_Exceedances();
 		
 //		analysis.plotMaxAndAggrLossesPerYearInCatalog(432);
+		
+		analysis.plotAveAggrVsMaxLosses();
 
 
 		// this plots the distribution of rupture losses as a function of magnitude (not including rup rates)

@@ -95,7 +95,7 @@ public class PlottingUtils {
 			UncertainArbDiscFunc func = uncertFuncs.get(i);
 			funcs.add(func);
 			funcs.add(func);
-			plotChars2.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 2f, plotChars.get(i).getColor()));
+			plotChars2.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, plotChars.get(i).getColor()));
 			plotChars2.add(new PlotCurveCharacterstics(PlotLineType.SHADED_UNCERTAIN_TRANS, 1f, plotChars.get(i).getColor()));
 		}
 		

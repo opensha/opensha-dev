@@ -592,7 +592,7 @@ public class PoissonRateFromNinT_Calc {
 		writeFivePointRates("Charlevoix 4 in 9.5k-10.2k", 4, 9.5e3, 10.2e3, new double[] {1.8E-04,3.2E-04,4.7E-04,6.7E-04,9.8E-04});
 
 		
-		System.exit(0);
+//		System.exit(0);
 	
 
 
