@@ -28,7 +28,7 @@ public class NshmErfTest {
   // private static final Path MODEL =
   // Path.of("../nshmp-lib/src/test/resources/model/test-model");
   // private static final Path MODEL = Path.of("../nshm-conus-2018-5.x-maint");
-  private static final Path MODEL = Path.of("../nshm-conus");
+  private static final Path MODEL = Path.of("../nshm-prvi");
 
   // static gov.usgs.earthquake.nshmp.geo.Location testLoc =
   // gov.usgs.earthquake.nshmp.geo.Location.create(-122, 39.0);
@@ -40,12 +40,12 @@ public class NshmErfTest {
 
   public static void main(String[] args) {
 
-    Set<TectonicRegionType> trts =
-        EnumSet.of(TectonicRegionType.STABLE_SHALLOW);
-    // Set<TectonicRegionType> trts = EnumSet.noneOf(TectonicRegionType.class);
+//    Set<TectonicRegionType> trts =
+//        EnumSet.of(TectonicRegionType.STABLE_SHALLOW);
+     Set<TectonicRegionType> trts = EnumSet.noneOf(TectonicRegionType.class);
 
     HazardModel model = HazardModel.load(MODEL);
-    NshmErf erf = new NshmErf(model, trts, IncludeBackgroundOption.EXCLUDE);
+    NshmErf erf = new NshmErf(model, trts, IncludeBackgroundOption.INCLUDE);
     System.out.println("NSHM ERF size: " + erf.getNumSources());
     erf.getTimeSpan().setDuration(1.0);
     erf.updateForecast();
