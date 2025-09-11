@@ -30,10 +30,10 @@ public class NshmErfTest {
   // private static final Path MODEL = Path.of("../nshm-conus-2018-5.x-maint");
   private static final Path MODEL = Path.of("../nshm-prvi");
 
-  // static gov.usgs.earthquake.nshmp.geo.Location testLoc =
-  // gov.usgs.earthquake.nshmp.geo.Location.create(-122, 39.0);
-  static gov.usgs.earthquake.nshmp.geo.Location testLoc =
-      gov.usgs.earthquake.nshmp.geo.Location.create(-80, 33.2);
+   static gov.usgs.earthquake.nshmp.geo.Location testLoc =
+       gov.usgs.earthquake.nshmp.geo.Location.create(-66.117, 18.465);
+//  static gov.usgs.earthquake.nshmp.geo.Location testLoc =
+//      gov.usgs.earthquake.nshmp.geo.Location.create(-80, 33.2);
 
   // static gov.usgs.earthquake.nshmp.geo.Location testLoc =
   // gov.usgs.earthquake.nshmp.geo.Location.create(-110, 37.5);
@@ -125,7 +125,7 @@ public class NshmErfTest {
       }
     }
 
-    // calcHazard(erf);
+     calcHazard(erf);
   }
 
   private static void calcHazard(NshmErf erf) {
@@ -133,8 +133,10 @@ public class NshmErfTest {
     gmpe.setParamDefaults();
     gmpe.setIntensityMeasure(PGA_Param.NAME);
 
-    Site site = new Site(new Location(34, -118)); // Los Angeles
+    Site site = new Site(new Location(18.465, -66.117)); // San Juan
+//    Site site = new Site(new Location(34, -118)); // Los Angeles
     // Site site = new Site(new Location(40.75, -111.90)); // Salt lake City
+    
 
     for (Parameter<?> param : gmpe.getSiteParams()) {
       site.addParameter((Parameter<?>) param.clone());
