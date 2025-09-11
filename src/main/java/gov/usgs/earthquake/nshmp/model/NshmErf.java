@@ -190,6 +190,18 @@ public class NshmErf extends AbstractERF {
             ? ruptureSetToSources(ruptureSet, weight, duration)
             : List.of();
 
+      case INTERFACE_CLUSTER:
+        ClusterRuptureSet icrs = (ClusterRuptureSet) ruptureSet;
+        return (subInterface && faults)
+            ? clusterRuptureSetToSources(icrs, weight, duration)
+            : List.of();
+
+      case INTERFACE_SYSTEM:
+        SystemRuptureSet isrs = (SystemRuptureSet) ruptureSet;
+        return (faults)
+            ? systemRuptureSetToSources(isrs, weight, duration)
+            : List.of();
+
       case SLAB:
         return (subSlab && faults)
             ? ruptureSetToSources(ruptureSet, weight, duration)
