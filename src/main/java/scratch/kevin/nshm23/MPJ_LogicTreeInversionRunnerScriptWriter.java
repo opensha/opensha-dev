@@ -131,7 +131,7 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 		boolean supersample = false;
 		double[] periods = null;
 		
-		File remoteMainDir = new File("/project/scec_608/kmilner/nshm23/batch_inversions");
+		File remoteMainDir = new File("/project2/scec_608/kmilner/fss_inversions");
 		int remoteTotalThreads = 20;
 		int remoteInversionsPerBundle = 1;
 		int remoteTotalMemGB = 50;
@@ -661,7 +661,6 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 //		forceHazardReg = new GriddedRegion(PRVI25_RegionLoader.loadPRVI_MapExtents(), 0.05, GriddedRegion.ANCHOR_0_0);
 		forceHazardReg = new GriddedRegion(PRVI25_RegionLoader.loadPRVI_MapExtents(), 0.025, GriddedRegion.ANCHOR_0_0); // this is what I use for the paper
 		sigmaTrunc = 3d;
-		supersample = false;
 		
 //		levels = new ArrayList<>(levels);
 //		levels.add(NSHM23_LogicTreeBranch.SUB_SECT_CONSTR);
@@ -947,7 +946,7 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 		List<File> classpath = new ArrayList<>();
 		classpath.add(new File(dirPath+"/opensha-dev-all.jar"));
 		if (mpjWrite instanceof NoMPJSingleNodeShellScriptWriter)
-			classpath.add(new File("/project/scec_608/kmilner/git/opensha/lib/mpj-0.38.jar"));
+			classpath.add(new File("/project2/scec_608/kmilner/git/opensha/lib/mpj-0.38.jar"));
 		
 		File localLogicTree = new File(localDir, "logic_tree.json");
 		logicTree.write(localLogicTree);

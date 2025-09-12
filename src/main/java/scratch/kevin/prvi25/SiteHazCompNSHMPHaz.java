@@ -22,24 +22,39 @@ import org.opensha.commons.util.FileNameUtils;
 import org.opensha.sha.calc.HazardCurveCalculator;
 import org.opensha.sha.calc.params.filters.SourceFilterManager;
 import org.opensha.sha.calc.params.filters.SourceFilters;
+import org.opensha.sha.earthquake.ProbEqkRupture;
+import org.opensha.sha.earthquake.ProbEqkSource;
+import org.opensha.sha.earthquake.faultSysSolution.FaultSystemRupSet;
 import org.opensha.sha.earthquake.faultSysSolution.FaultSystemSolution;
 import org.opensha.sha.earthquake.faultSysSolution.erf.BaseFaultSystemSolutionERF;
+import org.opensha.sha.earthquake.faultSysSolution.util.FaultSectionUtils;
+import org.opensha.sha.earthquake.param.AseismicityAreaReductionParam;
 import org.opensha.sha.earthquake.param.IncludeBackgroundOption;
 import org.opensha.sha.earthquake.param.IncludeBackgroundParam;
+import org.opensha.sha.earthquake.param.UseProxySectionsParam;
+import org.opensha.sha.earthquake.param.UseRupMFDsParam;
+import org.opensha.sha.faultSurface.FaultSection;
 import org.opensha.sha.gui.infoTools.IMT_Info;
 import org.opensha.sha.imr.AttenRelRef;
 import org.opensha.sha.imr.ScalarIMR;
 import org.opensha.sha.imr.attenRelImpl.nshmp.GroundMotionLogicTreeFilter;
 import org.opensha.sha.imr.attenRelImpl.nshmp.NSHMP_GMM_Wrapper;
+import org.opensha.sha.imr.param.IntensityMeasureParams.PGA_Param;
 import org.opensha.sha.imr.param.IntensityMeasureParams.SA_Param;
 import org.opensha.sha.imr.param.OtherParams.SigmaTruncLevelParam;
 import org.opensha.sha.imr.param.OtherParams.SigmaTruncTypeParam;
 
 import com.google.common.base.Preconditions;
+import com.google.common.collect.ImmutableList;
 
 import gov.usgs.earthquake.nshmp.gmm.Gmm;
+import gov.usgs.earthquake.nshmp.gmm.GmmInput;
+import gov.usgs.earthquake.nshmp.gmm.GroundMotion;
 import gov.usgs.earthquake.nshmp.gmm.GroundMotions;
 import gov.usgs.earthquake.nshmp.gmm.UsgsPrviBackbone2025;
+import gov.usgs.earthquake.nshmp.gmm.GmmInput.Constraints;
+import gov.usgs.earthquake.nshmp.gmm.GmmInput.Field;
+import gov.usgs.earthquake.nshmp.tree.LogicTree;
 import net.mahdilamb.colormap.Colors;
 
 public class SiteHazCompNSHMPHaz {
@@ -54,12 +69,17 @@ public class SiteHazCompNSHMPHaz {
 //				+ "prvi-0.2s-ask14base-crustalFaultOnly-PRVI_2025_ACTIVE_CRUST_NO_EPI_SIGMA_NGA.csv"), true);
 		
 //		NSHMP_GMM_Wrapper gmm = new NSHMP_GMM_Wrapper.Single(Gmm.PRVI_2025_ACTIVE_CRUST);
+////		gmm.setGroundMotionTreeFilter(new GroundMotionLogicTreeFilter.StringMatching(
+//////				UsgsPrviBackbone2025.SIGMA_NGA_ID,
+////				GroundMotions.EPI_OFF
+////				));
 //		CSVFile<String> inCSV = CSVFile.readFile(new File("/home/kevin/Downloads/"
 //				+ "prvi-0.2s-prvi25active-crustalFaultOnly-curves.csv"), true);
 		
 		NSHMP_GMM_Wrapper gmm = new NSHMP_GMM_Wrapper.WeightedCombination(
 				WeightedList.of(new WeightedValue<>(Gmm.PRVI_2025_ACTIVE_CRUST, 0.5),
 				new WeightedValue<>(Gmm.PRVI_2025_ACTIVE_CRUST_ADJUSTED, 0.5)), "Name", "Name");
+//		NSHMP_GMM_Wrapper gmm = new NSHMP_GMM_Wrapper.Single(Gmm.TOTAL_TREE_PRVI_ACTIVE_CRUST_2025);
 //		gmm.setGroundMotionTreeFilter(new GroundMotionLogicTreeFilter.StringMatching(
 //				UsgsPrviBackbone2025.SIGMA_NGA_ID,
 //				GroundMotions.EPI_OFF
@@ -68,19 +88,62 @@ public class SiteHazCompNSHMPHaz {
 				+ "prvi-0.2s-prvi25activeTotal-crustalFaultOnly-curves.csv"), true);
 		
 		gmm.setIntensityMeasure(SA_Param.NAME);
-		gmm.getOtherParams().setValue(SigmaTruncTypeParam.NAME, SigmaTruncTypeParam.SIGMA_TRUNC_TYPE_1SIDED);
-		gmm.getOtherParams().setValue(SigmaTruncLevelParam.NAME, 3d);
 		SA_Param.setPeriodInSA_Param(gmm.getIntensityMeasure(), 0.2);
 		String xName = "0.2s SA (g)";
+//		gmm.setIntensityMeasure(PGA_Param.NAME);
+//		String xName = "PGA (g)";
+		gmm.getOtherParams().setValue(SigmaTruncTypeParam.NAME, SigmaTruncTypeParam.SIGMA_TRUNC_TYPE_1SIDED);
+		gmm.getOtherParams().setValue(SigmaTruncLevelParam.NAME, 3d);
+		
+		
+		System.out.println("Zhype used ? Gmm.PRVI_2025_ACTIVE_CRUST: "+Gmm.PRVI_2025_ACTIVE_CRUST.constraints().get(Field.ZHYP).isPresent());
+		System.out.println("Zhype used ? Gmm.PRVI_2025_ACTIVE_CRUST: "+Gmm.TOTAL_TREE_PRVI_ACTIVE_CRUST_2025.constraints().get(Field.ZHYP).isPresent());
+		
+		if (gmm instanceof NSHMP_GMM_Wrapper.Single) {
+			Gmm singleGMM = ((NSHMP_GMM_Wrapper.Single)gmm).getGmmRef();
+			Constraints constraints = singleGMM.constraints();
+			for (Field field : Field.values()) {
+				if (constraints.get(field).isPresent()) {
+					// this field is used
+					System.out.println(singleGMM.name()+" reports that "+field+" is used");
+				} else {
+					System.out.println(singleGMM.name()+" reports that "+field+" is unused");
+				}
+			}
+		}
 		
 		FaultSystemSolution sol = FaultSystemSolution.load(new File("/home/kevin/OpenSHA/nshm23/batch_inversions/"
 				+ "2025_08_01-prvi25_crustal_branches-dmSample10x/"
 				+ "results_PRVI_CRUSTAL_FM_V1p1_branch_averaged_gridded_simplified.zip"));
+//				+ "results_PRVI_CRUSTAL_FM_V1p1_branch_averaged_gridded.zip"));
 		BaseFaultSystemSolutionERF erf = new BaseFaultSystemSolutionERF();
 		erf.setSolution(sol);
 		erf.setParameter(IncludeBackgroundParam.NAME, IncludeBackgroundOption.EXCLUDE);
+//		erf.setParameter(UseProxySectionsParam.NAME, false);
+//		erf.setParameter(AseismicityAreaReductionParam.NAME, false);
+		erf.setParameter(UseRupMFDsParam.NAME, false);
 		erf.getTimeSpan().setDuration(1d);
 		erf.updateForecast();
+		
+		FaultSystemRupSet rupSet = sol.getRupSet();
+		int testParentID = FaultSectionUtils.findParentSectionID(rupSet.getFaultSectionDataList(), "South Lajas");
+		int testRupID = -1;
+		double testRupMag = 0d;
+		for (int r : rupSet.getRupturesForParentSection(testParentID)) {
+			boolean allMatch = true;
+			for (FaultSection sect : rupSet.getFaultSectionDataForRupture(r)) {
+				if (sect.getParentSectionId() != testParentID) {
+					allMatch = false;
+					break;
+				}
+			}
+			if (allMatch && rupSet.getMagForRup(r) > testRupMag) {
+				testRupID = r;
+				testRupMag = rupSet.getMagForRup(r);
+			}
+		}
+		int testSourceID = erf.getSrcIndexForFltSysRup(testRupID);
+		ProbEqkSource testSource = erf.getSource(testSourceID);
 		
 		HazardCurveCalculator calc = new HazardCurveCalculator(new SourceFilterManager(SourceFilters.TRT_DIST_CUTOFFS));
 		
@@ -110,6 +173,19 @@ public class SiteHazCompNSHMPHaz {
 				theirs.set(x, y);
 			}
 			theirs.setName("NSHMP-Haz");
+			
+			System.out.println("Site:\t"+name);
+			gmm.setSite(site);
+			for (int r=0; r<testSource.getNumRuptures(); r++) {
+				ProbEqkRupture rup = testSource.getRupture(r);
+				gmm.setEqkRupture(rup);
+				GmmInput gmmInput = gmm.getCurrentGmmInput();
+				LogicTree<GroundMotion> gmmTree = gmm.getGroundMotionTree();
+				System.out.println("FSS rup "+testRupID+", ERF source "+testSourceID+" ("+r+")");
+				System.out.println(gmmInput);
+				System.out.println(gmmTree);
+			}
+			System.out.println();
 			
 			calc.getHazardCurve(logXvalues, site, gmm, erf);
 			

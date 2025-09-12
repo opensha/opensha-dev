@@ -74,12 +74,12 @@ public class ProxyFaultRepresentationFigures {
 		
 		double lengthLimit = 75d;
 		
-//		RupType[] types = RupType.values();
+		RupType[] types = RupType.values();
 //		double lenFractBuffer = 1.05;
-		RupType[] types = {
-				RupType.PROXY,
-				RupType.SPLIT_PROXIES
-		};
+//		RupType[] types = {
+//				RupType.PROXY,
+//				RupType.SPLIT_PROXIES
+//		};
 		double lenFractBuffer = 0.5;
 		
 		CPT colors = GMT_CPT_Files.CATEGORICAL_BATLOW_UNIFORM.instance();

@@ -89,6 +89,7 @@ import org.opensha.commons.logicTree.LogicTreeNode.RandomlySampledNode;
 import org.opensha.commons.mapping.PoliticalBoundariesData;
 import org.opensha.commons.mapping.gmt.elements.GMT_CPT_Files;
 import org.opensha.commons.param.Parameter;
+import org.opensha.commons.param.ParameterList;
 import org.opensha.commons.util.DataUtils.MinMaxAveTracker;
 import org.opensha.commons.util.IDPairing;
 import org.opensha.commons.util.Interpolate;
@@ -3281,6 +3282,24 @@ public class PureScratch {
 			for (int i=0; i<nodes.size() && i <10; i++)
 				System.out.println(nodes.get(i).getFilePrefix());
 		}
+	}
+	
+	private static void test345() throws IOException {
+		List<ScalarIMR> imrs = new ArrayList<>();
+		
+		imrs.add(AttenRelRef.CB_2008.get());
+		imrs.add(AttenRelRef.AS_2008.get());
+		
+		ParameterList commonSiteParams = new ParameterList();
+		
+		for (ScalarIMR imr : imrs) {
+			for (Parameter<?> param : imr.getSiteParams()) {
+				if (!commonSiteParams.containsParameter(param)) {
+					commonSiteParams.addParameter((Parameter<?>)param.clone());
+				}
+			}
+		}
+		
 	}
 	
 	/**

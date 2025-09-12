@@ -157,7 +157,7 @@ public class BranchAveragedHazardScriptWriter {
 		File localDir = new File(localMainDir, dirName);
 		Preconditions.checkState(localDir.exists() || localDir.mkdir());
 		
-		File remoteMainDir = new File("/project/scec_608/kmilner/nshm23/batch_inversions");
+		File remoteMainDir = new File("/project2/scec_608/kmilner/fss_inversions");
 		int remoteTotalThreads = 20;
 		int remoteTotalMemGB = 50;
 		String queue = "scec";
@@ -202,7 +202,7 @@ public class BranchAveragedHazardScriptWriter {
 		parallelMPJWrite.setClasspath(classpath);
 		
 		List<File> singleClasspath = new ArrayList<>(classpath);
-		singleClasspath.add(new File("/project/scec_608/kmilner/git/opensha/lib/mpj-0.38.jar"));
+		singleClasspath.add(new File("/project2/scec_608/kmilner/git/opensha/lib/mpj-0.38.jar"));
 		singleMPJWrite.setClasspath(singleClasspath);
 
 		// write the region

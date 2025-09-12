@@ -97,6 +97,14 @@ public class LogicTreeFigureWriter extends JPanel {
 		List<LogicTreeLevel<? extends LogicTreeNode>> slabGMMLevels = PRVI25_LogicTree.levelsSlabGMM;
 		LogicTree<LogicTreeNode> slabGMMTree = LogicTree.buildExhaustive(slabGMMLevels, true);
 		
+		List<LogicTreeLevel<? extends LogicTreeNode>> subGMMLevels = new ArrayList<>();
+		subGMMLevels.addAll(interfaceGMMLevels);
+		subGMMLevels.addAll(slabGMMLevels);
+		
+		LogicTree<LogicTreeNode> subGMMTree = LogicTree.buildExhaustive(subGMMLevels, true);
+		trees.add(subGMMTree);
+		prefixes.add("subduction_gmm");
+		
 		for (int i=0; i<trees.size(); i++) {
 			LogicTree<?> tree = trees.get(i);
 			String prefix = prefixes.get(i);
