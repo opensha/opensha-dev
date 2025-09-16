@@ -3302,13 +3302,74 @@ public class PureScratch {
 		
 	}
 	
+	private static void test346() throws IOException {
+		String[] headings = {
+				"## My Anchor",
+				"## My    Anchor",
+				"## My Other Anchor",
+				"## My Symbol &ge; Anchor",
+				"## Mayagüez PR"
+		};
+		
+		List<String> lines = new ArrayList<>();
+		
+		lines.add("# My Title");
+		lines.add("");
+		int tocIndex = lines.size();
+		lines.add("");
+		
+		int subHeadingCount = 0;
+		
+		// write each heading once
+		for (String heading : headings) {
+			lines.add(heading);
+			lines.add("");
+			lines.add("This is subheading count "+(subHeadingCount++));
+			lines.add("");
+			for (int i=0; i<10; i++) {
+				lines.add(".");
+				lines.add("");
+			}
+		}
+		
+		// do it again
+		for (String heading : headings) {
+			lines.add(heading);
+			lines.add("");
+			lines.add("This is subheading count "+(subHeadingCount++));
+			lines.add("");
+			for (int i=0; i<10; i++) {
+				lines.add(".");
+				lines.add("");
+			}
+		}
+		
+		// now write each out twice in a row
+		for (String heading : headings) {
+			for (int n=0; n<2; n++) {
+				lines.add(heading);
+				lines.add("");
+				lines.add("This is subheading count "+(subHeadingCount++));
+				lines.add("");
+				for (int i=0; i<10; i++) {
+					lines.add(".");
+					lines.add("");
+				}
+			}
+		}
+		
+		lines.addAll(tocIndex, MarkdownUtils.buildTOC(lines, 1));
+		
+		MarkdownUtils.writeHTML(lines, new File("/tmp/md_test.html"));
+	}
+	
 	/**
 	 * @param args
 	 * @throws Exception 
 	 */
 	public static void main(String[] args) throws Exception {
 		try {
-			test344();
+			test346();
 		} catch (Throwable t) {
 			t.printStackTrace();
 			System.exit(1);
