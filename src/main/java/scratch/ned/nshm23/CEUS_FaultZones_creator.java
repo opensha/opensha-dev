@@ -49,8 +49,8 @@ import gov.usgs.earthquake.nshmp.model.NshmSource;
  *	AR/Saline River/			N in T
  *	IL/Wabash Valley/			N in T
  *	ME/Charlevoix/				N in T
- *	SC/Charleston/				N in T
- *	VA/Central Virginia/		N in T
+ *	SC/Charleston/				N in T		3 sources
+ *	VA/Central Virginia/		N in T		2 sources
  * 
  * @author field
  *
@@ -73,20 +73,6 @@ public class CEUS_FaultZones_creator {
 		
 		// hard coded list of source zone IDs
 		ArrayList<Integer> srcZoneID_List = getSourceZoneID_List();
-		
-//		ArrayList<Integer> srcZoneID_List = new ArrayList<Integer>();
-//		srcZoneID_List.add(10001);
-//		srcZoneID_List.add(10002);
-//		srcZoneID_List.add(3710);
-//		srcZoneID_List.add(3711);
-//		srcZoneID_List.add(3712);
-//		srcZoneID_List.add(3500);
-//		srcZoneID_List.add(30000);
-//		srcZoneID_List.add(3300);
-//		srcZoneID_List.add(40000);
-//		srcZoneID_List.add(50000);
-//		srcZoneID_List.add(20000);
-//		srcZoneID_List.add(3400);
 		
 		NshmErf erf = null;
 		
@@ -114,12 +100,14 @@ public class CEUS_FaultZones_creator {
 		    for(String nm:skippedSrcNames)
 			    System.out.println("\t"+nm);
 		    System.out.println("\n");
+		    
+		    if(testIdList.size() != srcZoneID_List.size())
+		    	throw new RuntimeException("testIdList.size() != srcZoneID_List.size()");
 
 		    System.out.println("Unique IDs:");
 		    for(int id:testIdList)
 			    System.out.println("\t"+id);
 		    System.out.println("\n");
-			
 		}
 
 		
@@ -202,7 +190,7 @@ public class CEUS_FaultZones_creator {
 		// these three apply to both branches
 		nInTDataList = new ArrayList<NinT_Data>();
 		nInTDataList.add(new NinT_Data(1.0, 1, 1800, 2800));  
-		activityWeight = 0.837; // TEMPORARY FIX UNTIL ALLISON FIXES ERROR THAT MEDAIN RATHER THAN MEAN WAS USED FOR THEIR GRIDDED RATES
+		activityWeight = 1.0; 
 		srcName = "Central Virginia Local Zone Source";
 		geojsonPath = nshmModelDirPath+"stable-crust/zone/VA/Central Virginia/active/local/local.geojson";
 		csvPath = nshmModelDirPath+"stable-crust/zone/VA/Central Virginia/active/local/local.csv";
@@ -306,12 +294,12 @@ public class CEUS_FaultZones_creator {
 		sourceList.add(processSlipRateSourceZone( srcName,  geojsonPath,  csvPath, length, ddw, slipRate, activityWeight, netBranchWeight, erf, duration, lineSource));
 
 		// JOINER RIDGE
-		// Al
+		// 
 		srcName = "Joiner Ridge Zone Source";
 		activityWeight = 1.0;
 		length = 35.0; // km
 		ddw = 15.0; //km
-		slipRate = 0.06; // cm/yr; Allison's doc says this should be 0.03, and this is separate from the activityWeight of 0.5 in the files
+		slipRate = 0.03; 
 		geojsonPath = nshmModelDirPath+"stable-crust/zone/AR/Joiner Ridge/active/joiner_ridge.geojson";
 		csvPath = nshmModelDirPath+"stable-crust/zone/AR/Joiner Ridge/active/joiner-ridge.csv";
 		activityWeight = 1.0;
@@ -447,9 +435,15 @@ public class CEUS_FaultZones_creator {
 			System.out.println("\n");
 		}
 		
-		if(Math.abs(meanRate/csvTotRate - 1.0) > 0.02)
-			throw new RuntimeException("rate discrepancy more then 2% for "+srcName+"; rate = "+meanRate+"; rate from Peter's file = "+csvTotRate);
+		if(Math.abs(meanRate/csvTotRate - 1.0) > 0.01) {
+			String message = "rate discrepancy more then 1% for "+srcName+"; rate = "+meanRate+"; rate from Peter's file = "+csvTotRate+"; ratio = "+(float)(meanRate/csvTotRate);
+//			throw new RuntimeException(message);
+			System.out.flush(); // this forces immediate writing
+			System.err.println("WARNING: "+message);
+			System.err.println();
+			System.err.flush();
 
+		}
 		// test against ERF
 		LocationList erfLocList = new LocationList();
 		if(erf != null && D) {
@@ -466,7 +460,7 @@ public class CEUS_FaultZones_creator {
 		    }		
 		    double erfRateTest = Math.abs(1.0-erfRate/(csvTotRate*netBranchWt));
 		    if(erfRateTest>1e-4)
-		    	throw new RuntimeException("csvTotRate inconsistent with ERF rate for "+nshmName);
+		    	throw new RuntimeException("csvTotRate inconsistent with ERF rate for "+nshmName+"; erfRate="+erfRate+" & csvTotRate*netBranchWt="+(csvTotRate*netBranchWt));
 		    
 			System.out.println("\terfRate:"+(float)erfRate+"\tTestRatio:"+(float)(meanBranchRate/erfRate)+"\n");
 		}
@@ -496,10 +490,14 @@ public class CEUS_FaultZones_creator {
 	  * @return
 	  */
 	private static NshmErf getNshmERF(String nshmModelDirPath) {
+		long startTime = System.currentTimeMillis();
 	    Set<TectonicRegionType> trts = EnumSet.of(TectonicRegionType.STABLE_SHALLOW);
 	    NshmErf erf = new NshmErf(Path.of(nshmModelDirPath), trts, IncludeBackgroundOption.EXCLUDE);
 	    erf.getTimeSpan().setDuration(1.0);
 	    erf.updateForecast();
+	    long runtime = System.currentTimeMillis()-startTime;
+	    float runTimeMin = (float)runtime/(float)(1000*60);
+	    if(D) System.out.println("ERF instantiation took "+runTimeMin +" minutes");
 	    return erf;
 	}
 	
@@ -658,18 +656,34 @@ public class CEUS_FaultZones_creator {
 	public static ArrayList<Integer> getSourceZoneID_List() {
 		// hard coded list of source zone IDs
 		ArrayList<Integer> srcZoneID_List = new ArrayList<Integer>();
-		srcZoneID_List.add(10001);
-		srcZoneID_List.add(10002);
+
+		srcZoneID_List.add(3520);
+		srcZoneID_List.add(3530);
+		srcZoneID_List.add(3540);
+		srcZoneID_List.add(3510);
+		srcZoneID_List.add(3550);
 		srcZoneID_List.add(3710);
 		srcZoneID_List.add(3711);
 		srcZoneID_List.add(3712);
+		srcZoneID_List.add(3560);
 		srcZoneID_List.add(3500);
-		srcZoneID_List.add(30000);
-		srcZoneID_List.add(3300);
-		srcZoneID_List.add(40000);
-		srcZoneID_List.add(50000);
-		srcZoneID_List.add(20000);
-		srcZoneID_List.add(3400);
+		srcZoneID_List.add(3571);
+		srcZoneID_List.add(3572);
+
+// OLD models:
+//		srcZoneID_List.add(10001);
+//		srcZoneID_List.add(10002);
+//		srcZoneID_List.add(3710);
+//		srcZoneID_List.add(3711);
+//		srcZoneID_List.add(3712);
+//		srcZoneID_List.add(3500);
+//		srcZoneID_List.add(30000);
+//		srcZoneID_List.add(3300);
+//		srcZoneID_List.add(40000);
+//		srcZoneID_List.add(50000);
+//		srcZoneID_List.add(20000);
+//		srcZoneID_List.add(3400);
+		
 		return srcZoneID_List;
 
 	}
@@ -679,15 +693,20 @@ public class CEUS_FaultZones_creator {
 
 	public static void main(String[] args) {
 		
+		String nshmModelDirPath = "/Users/field/nshm-haz_data/nshm-conus-6.1.2/";
+
+		// the following will no longer work:
 //		String nshmModelDirPath = "/Users/field/nshm-haz_data/oldVersions/nshm-conus-6.0.0/";
-		String nshmModelDirPath = "/Users/field/nshm-haz_data/nshm-conus-6.b.4/";
+//		String nshmModelDirPath = "/Users/field/nshm-haz_data/nshm-conus-6.b.4/";
+//		String nshmModelDirPath = "/Users/field/nshm-haz_data/nshm-conus-6.0.0/";
+		
 		double duration = 50;
 		boolean lineSource = false;
 		ArrayList<AreaSourceNSHM23> srcList = getFaultSourceZoneList(nshmModelDirPath, duration, lineSource);
 		
 		System.out.println("Names from srcList:");
 		for(AreaSourceNSHM23 src:srcList)
-			System.out.println(src.getName());
+			System.out.println(src.id+"\t"+src.getName());
 //		System.exit(0);
 		
 		

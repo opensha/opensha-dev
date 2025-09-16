@@ -58,9 +58,9 @@ public class HazardComp2003PageGen {
 	};
 	
 	public static void main(String[] args) throws IOException {
-//		String imtName = "PGA";
-//		String imtDir = "PGA";
-//		double period = 0d;
+		String imtName = "PGA";
+		String imtDir = "PGA";
+		double period = 0d;
 		
 //		String imtName = "0.2s SA";
 //		String imtDir = "SA0P2";
@@ -70,9 +70,9 @@ public class HazardComp2003PageGen {
 //		String imtDir = "SA1P0";
 //		double period = 1d;
 		
-		String imtName = "5s SA";
-		String imtDir = "SA5P0";
-		double period = 5d;
+//		String imtName = "5s SA";
+//		String imtDir = "SA5P0";
+//		double period = 5d;
 		
 //		ReturnPeriods[] rps = ReturnPeriods.values();
 		ReturnPeriods[] rps = { ReturnPeriods.TWO_IN_50, ReturnPeriods.TEN_IN_50 };
@@ -151,6 +151,7 @@ public class HazardComp2003PageGen {
 		
 //		CPT hazCPT = GMT_CPT_Files.RAINBOW_UNIFORM.instance().rescale(-3, 1);
 		CPT hazCPT = GMT_CPT_Files.RAINBOW_UNIFORM.instance().rescale(-1.5, 0.5);
+		hazCPT.setLog10(true);
 		hazCPT.setNanColor(transparent);
 		
 //		CPT pDiffCPT = MethodsAndIngredientsHazChangeFigures.getCenterMaskedCPT(GMT_CPT_Files.DIVERGING_VIK_UNIFORM.instance(), 10d, 50d);
@@ -297,10 +298,10 @@ public class HazardComp2003PageGen {
 				
 				table.initNewLine();
 				
-				mapMaker.plotXYZData(asLog10(map25), hazCPT, mapLabelAdd+name25+", "+hazLabel+" (g)");
+				mapMaker.plotXYZData(map25, hazCPT, mapLabelAdd+name25+", "+hazLabel+" (g)");
 				mapMaker.plot(resourcesDir, prefix+"_nshm25", " ");
 				table.addColumn("![Map]("+resourcesDir.getName()+"/"+prefix+"_nshm25.png)");
-				mapMaker.plotXYZData(asLog10(map03), hazCPT, mapLabelAdd+name03+", "+hazLabel+" (g)");
+				mapMaker.plotXYZData(map03, hazCPT, mapLabelAdd+name03+", "+hazLabel+" (g)");
 				mapMaker.plot(resourcesDir, prefix+"_nshm03", " ");
 				table.addColumn("![Map]("+resourcesDir.getName()+"/"+prefix+"_nshm03.png)");
 				
@@ -557,20 +558,6 @@ public class HazardComp2003PageGen {
 		}
 		
 		return ret;
-	}
-	
-	private static GriddedGeoDataSet asLog10(GriddedGeoDataSet xyz) {
-		xyz = zerosToNaNs(xyz);
-		xyz.log10();
-		return xyz;
-	}
-	
-	private static GriddedGeoDataSet zerosToNaNs(GriddedGeoDataSet xyz) {
-		xyz = xyz.copy();
-		for (int i=0; i<xyz.size(); i++)
-			if (xyz.get(i) == 0d)
-				xyz.set(i, Double.NaN);
-		return xyz;
 	}
 
 }

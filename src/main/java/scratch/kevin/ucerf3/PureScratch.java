@@ -45,7 +45,6 @@ import org.opensha.commons.calc.GaussianDistCalc;
 import org.opensha.commons.calc.GaussianExceedProbCalculator;
 import org.opensha.commons.calc.WeightedSampler;
 import org.opensha.commons.calc.magScalingRelations.magScalingRelImpl.Somerville_2006_MagAreaRel;
-import org.opensha.commons.calc.magScalingRelations.magScalingRelImpl.WC1994_MagLengthRelationship;
 import org.opensha.commons.data.CSVFile;
 import org.opensha.commons.data.Site;
 import org.opensha.commons.data.comcat.ComcatAccessor;
@@ -90,8 +89,8 @@ import org.opensha.commons.logicTree.LogicTreeNode.RandomlySampledNode;
 import org.opensha.commons.mapping.PoliticalBoundariesData;
 import org.opensha.commons.mapping.gmt.elements.GMT_CPT_Files;
 import org.opensha.commons.param.Parameter;
+import org.opensha.commons.param.ParameterList;
 import org.opensha.commons.util.DataUtils.MinMaxAveTracker;
-import org.opensha.commons.util.FaultUtils;
 import org.opensha.commons.util.IDPairing;
 import org.opensha.commons.util.Interpolate;
 import org.opensha.commons.util.MarkdownUtils;
@@ -108,10 +107,8 @@ import org.opensha.refFaultParamDb.vo.DeformationModelSummary;
 import org.opensha.sha.calc.HazardCurveCalculator;
 import org.opensha.sha.earthquake.AbstractNthRupERF;
 import org.opensha.sha.earthquake.EqkRupture;
-import org.opensha.sha.earthquake.PointSource;
 import org.opensha.sha.earthquake.ProbEqkRupture;
 import org.opensha.sha.earthquake.ProbEqkSource;
-import org.opensha.sha.earthquake.SiteAdaptiveSource;
 import org.opensha.sha.earthquake.faultSysSolution.FaultSystemRupSet;
 import org.opensha.sha.earthquake.faultSysSolution.FaultSystemSolution;
 import org.opensha.sha.earthquake.faultSysSolution.RupSetDeformationModel;
@@ -170,7 +167,6 @@ import org.opensha.sha.earthquake.rupForecastImpl.WGCEP_UCERF_2_Final.FaultSegme
 import org.opensha.sha.earthquake.rupForecastImpl.WGCEP_UCERF_2_Final.MeanUCERF2.MeanUCERF2;
 import org.opensha.sha.earthquake.rupForecastImpl.WGCEP_UCERF_2_Final.data.A_FaultsFetcher;
 import org.opensha.sha.earthquake.rupForecastImpl.WGCEP_UCERF_2_Final.data.finalReferenceFaultParamDb.DeformationModelSummaryFinal;
-import org.opensha.sha.earthquake.rupForecastImpl.nshm23.erf.NSHM23_WUS_BranchAveragedERF;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.gridded.NSHM23_SingleRegionGridSourceProvider.NSHM23_WUS_FiniteRuptureConverter;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_DeformationModels;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_FaultModels;
@@ -198,14 +194,10 @@ import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_Subduc
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_SubductionMuertosSeismicityRate;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.util.PRVI25_RegionLoader;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.util.PRVI25_RegionLoader.PRVI25_SeismicityRegions;
-import org.opensha.sha.earthquake.util.GridCellSupersamplingSettings;
-import org.opensha.sha.earthquake.util.GriddedFiniteRuptureSettings;
-import org.opensha.sha.earthquake.util.GriddedSeismicitySettings;
 import org.opensha.sha.faultSurface.FaultSection;
 import org.opensha.sha.faultSurface.GeoJSONFaultSection;
 import org.opensha.sha.faultSurface.PointSurface;
 import org.opensha.sha.faultSurface.RuptureSurface;
-import org.opensha.sha.faultSurface.utils.ptSrcCorr.PointSourceDistanceCorrections;
 import org.opensha.sha.gui.infoTools.IMT_Info;
 import org.opensha.sha.imr.AttenRelRef;
 import org.opensha.sha.imr.ScalarIMR;
@@ -258,6 +250,7 @@ import scratch.UCERF3.erf.ETAS.launcher.TriggerRupture;
 import scratch.UCERF3.erf.ETAS.launcher.TriggerRupture.EdgeFault;
 import scratch.UCERF3.griddedSeismicity.AbstractGridSourceProvider;
 import scratch.kevin.nshm23.dmCovarianceTests.RandomDefModSampleLevel;
+import scratch.kevin.pointSources.InvCDF_RJBCorrPointSurface;
 import scratch.kevin.prvi25.figures.PRVI_Paths;
 import scratch.kevin.simulators.RSQSimCatalog;
 import scratch.kevin.simulators.RSQSimCatalog.Catalogs;
@@ -1891,12 +1884,12 @@ public class PureScratch {
 			System.out.println("\tCDF1: "+(float)GaussianDistCalc.getCDF(i));
 			System.out.println("\tCDF2: "+(float)normDist.cumulativeProbability(i));
 		}
-//		for (int i=1; i<6; i++) {
-//			System.out.println("Sigmas="+i);
-//			DiscretizedFunc func = InvCDF_RJBCorrPointSurface.getSigmaSpacedProbs(i);
-//			for (Point2D pt : func)
-//				System.out.println("\t"+(float)pt.getX()+": "+(float)pt.getY());
-//		}
+		for (int i=1; i<6; i++) {
+			System.out.println("Sigmas="+i);
+			DiscretizedFunc func = InvCDF_RJBCorrPointSurface.getSigmaSpacedProbs(i);
+			for (Point2D pt : func)
+				System.out.println("\t"+(float)pt.getX()+": "+(float)pt.getY());
+		}
 	}
 	
 	private static void test301() throws IOException {
@@ -3224,11 +3217,13 @@ public class PureScratch {
 				double rJB = surf.getDistanceJB(site.getLocation());
 				double rRup = surf.getDistanceRup(site.getLocation());
 				double zTor = surf.getAveRupTopDepth();
-				Preconditions.checkState((float)rJB == (float)siteDist, "rJB=%s but siteDist=%s; type=%s",
-						(float)rJB, (float)siteDist, surf.getClass().getName());
+				Preconditions.checkState((float)rJB == (float)siteDist, "rJB=%s but siteDist=%s; type=%s; distCorr=%s",
+						(float)rJB, (float)siteDist, surf.getClass().getName(),
+						surf instanceof PointSurface ? ((PointSurface)surf).getDistanceCorrection() : null);
 				double calcRup = Math.sqrt(rJB*rJB + zTor*zTor);
-				Preconditions.checkState((float)rRup == (float)calcRup, "rRup=%s, expected sqrt(%s^2 + %s^2)=%s; type=%s",
-						(float)rRup, (float)rJB, (float)zTor, (float)calcRup, surf.getClass().getName());
+				Preconditions.checkState((float)rRup == (float)calcRup, "rRup=%s, expected sqrt(%s^2 + %s^2)=%s; type=%s; distCorr=%s",
+						(float)rRup, (float)rJB, (float)zTor, (float)calcRup, surf.getClass().getName(),
+						surf instanceof PointSurface ? ((PointSurface)surf).getDistanceCorrection() : null);
 			}
 		}
 		System.out.println("All good");
@@ -3275,246 +3270,97 @@ public class PureScratch {
 		}
 	}
 	
-	private static void test343b() throws IOException {
-		WC1994_MagLengthRelationship wc = new WC1994_MagLengthRelationship();
-		for (Point2D pt : FaultSysTools.initEmptyMFD(5.01, 8.01)) {
-			System.out.println((float)pt.getX()+":\t"+wc.getMedianLength(pt.getX())+" km");
-		}
-	}
-	
 	private static void test344() throws IOException {
-		BaseFaultSystemSolutionERF erf = new NSHM23_WUS_BranchAveragedERF();
-		int numFinite = 12;
+		File file = new File("/home/kevin/OpenSHA/nshm23/batch_inversions/2025_07_11-prvi25_subduction_branches/logic_tree_full_gridded.json");
+//		LogicTree<?> tree = LogicTree.read(file);
+		LogicTree<?> tree = LogicTree.readFileBacked(file);
 		
-		GriddedSeismicitySettings settings = erf.getGriddedSeismicitySettings();
-		
-		settings = settings.forSurfaceType(BackgroundRupType.FINITE)
-				.forDistanceCorrection(PointSourceDistanceCorrections.NONE.get())
-				.forPointSourceMagCutoff(5d)
-				.forFiniteRuptureSettings(GriddedFiniteRuptureSettings.DEFAULT_CROSSHAIR.forNumSurfaces(numFinite))
-				.forSupersamplingSettings(null);
-		
-		erf.setParameter(IncludeBackgroundParam.NAME, IncludeBackgroundOption.ONLY);
-		erf.setGriddedSeismicitySettings(settings);
-		
-		System.out.println("Updating forecast");
-		erf.updateForecast();
-		
-		int numSourcesToShow = 1000;
-		float magToShow = 7.05f;
-		float rakeToShow = 0f;
-		DecimalFormat strikeDF = new DecimalFormat("000.00");
-		for (int s=0; s<erf.getNumSources() && s<numSourcesToShow; s++) {
-			ProbEqkSource source = erf.getSource(s);
-			Preconditions.checkState(source instanceof PointSource);
-			Location loc = ((PointSource)source).getLocation();
-			System.out.println("Source "+s+" at "+loc);
-			List<Double> strikes = new ArrayList<>();
-			for (ProbEqkRupture rup : source) {
-				if (magToShow == (float)rup.getMag() && rakeToShow == (float)rup.getAveRake())
-					strikes.add(rup.getRuptureSurface().getAveStrike());
-//				System.out.println("\tM"+(float)rup.getMag()+", rake="+(float)rup.getAveRake()
-//						+", strike="+(float)rup.getRuptureSurface().getAveStrike());
-			}
-			StringBuilder str = new StringBuilder("\t");
-			for (int i=0; i<strikes.size(); i++) {
-				if (i > 0) {
-					str.append("; ");
-				}
-				double strike = strikes.get(i);
-				str.append(strikeDF.format(strikes.get(i)));
-				if (i > 0) {
-					double prev = strikes.get(i-1);
-					double diff = FaultUtils.getAbsAngleDiff(strike, prev);
-					str.append(" (|diff|="+strikeDF.format(diff)+")");
-				}
-			}
-			System.out.println(str);
+		for (LogicTreeLevel<?> level : tree.getLevels()) {
+			System.out.println("Level "+level.getName()+" of type "+level.getClass());
+			System.out.println("Node prefixes");
+			List<? extends LogicTreeNode> nodes = level.getNodes();
+			for (int i=0; i<nodes.size() && i <10; i++)
+				System.out.println(nodes.get(i).getFilePrefix());
 		}
 	}
 	
 	private static void test345() throws IOException {
-//		double min = 0d;
-//		double max = 180d;
-//		int num = 180;
-//		boolean sampleEdges = false;
+		List<ScalarIMR> imrs = new ArrayList<>();
 		
-//		double min = 0d;
-//		double max = 200d;
-//		int num = 5;
-//		boolean sampleEdges = false;
+		imrs.add(AttenRelRef.CB_2008.get());
+		imrs.add(AttenRelRef.AS_2008.get());
 		
-//		double min = 0d;
-//		double max = 1d;
-//		int num = 11;
-//		boolean sampleEdges = true;
+		ParameterList commonSiteParams = new ParameterList();
 		
-		double min = -5d;
-		double max = 5d;
-		int num = 11;
-		boolean sampleEdges = true;
+		for (ScalarIMR imr : imrs) {
+			for (Parameter<?> param : imr.getSiteParams()) {
+				if (!commonSiteParams.containsParameter(param)) {
+					commonSiteParams.addParameter((Parameter<?>)param.clone());
+				}
+			}
+		}
 		
-//		double min = 0d;
-//		double max = 90d;
-//		int num = 40;
-//		boolean sampleEdges = false;
-		
-//		double min = 0d;
-//		double max = 360d;
-//		int num = 40;
-		
-		double delta = (max-min)/(double)(sampleEdges ? num-1 : num);
-		double ret0 = sampleEdges ? min : min + 0.5*delta;
-		double[] ret = new double[num];
-		for (int i=0; i<num; i++)
-			ret[i] = ret0 + i*delta;
-		
-		System.out.println("min="+(float)min+", max="+(float)max+", num="+num+", delta="+delta);
-		System.out.println("Samples:");
-		for (double val : ret)
-			System.out.println("\t"+(float)val);
 	}
 	
 	private static void test346() throws IOException {
-		double[] mags = {5d, 6d, 7d};
+		String[] headings = {
+				"## My Anchor",
+				"## My    Anchor",
+				"## My Other Anchor",
+				"## My Symbol &ge; Anchor",
+				"## Mayagüez PR"
+		};
 		
-		WC1994_MagLengthRelationship wc = new WC1994_MagLengthRelationship();
+		List<String> lines = new ArrayList<>();
 		
-		for (double mag : mags) {
-			double len = wc.getMedianLength(mag);
-			System.out.println("M"+(float)mag);
-			System.out.println("\tour WC:\t"+(float)len);
-			double otherLen = Math.pow(10, 0.59*mag - 2.44);
-			System.out.println("\tother WC:\t"+(float)otherLen);
-		}
-	}
-	
-	private static void test347() throws IOException {
-		BaseFaultSystemSolutionERF erf = new NSHM23_WUS_BranchAveragedERF();
-		int numFinite = 2;
+		lines.add("# My Title");
+		lines.add("");
+		int tocIndex = lines.size();
+		lines.add("");
 		
-		GriddedSeismicitySettings settings = erf.getGriddedSeismicitySettings();
+		int subHeadingCount = 0;
 		
-		settings = settings
-				.forSurfaceType(BackgroundRupType.FINITE)
-//				.forSurfaceType(BackgroundRupType.POINT)
-//				.forDistanceCorrection(PointSourceDistanceCorrections.NONE.get())
-//				.forDistanceCorrection(PointSourceDistanceCorrections.FIVE_POINT_RJB_DIST.get())
-				.forPointSourceMagCutoff(5d)
-				.forFiniteRuptureSettings(GriddedFiniteRuptureSettings.DEFAULT_CROSSHAIR.forNumSurfaces(numFinite))
-//				.forSupersamplingSettings(null);
-				.forSupersamplingSettings(GridCellSupersamplingSettings.DEFAULT.forApplyToFinite(true));
-		
-		erf.setParameter(IncludeBackgroundParam.NAME, IncludeBackgroundOption.ONLY);
-		erf.setGriddedSeismicitySettings(settings);
-		erf.getTimeSpan().setDuration(1d);
-
-		boolean doRawSum = false;
-		
-		System.out.println("Updating forecast");
-		erf.updateForecast();
-		
-		MinMaxAveTracker countTrack = new MinMaxAveTracker();
-		int prevNum = -1;
-		double sumRate = 0d;
-		double rawSumRate = 0d;
-		for (int i=0; i<erf.getNumSources(); i++) {
-			ProbEqkSource source = erf.getSource(i);
-			if (source instanceof SiteAdaptiveSource) {
-				Preconditions.checkState(source instanceof PointSource);
-				Location sourceLoc = ((PointSource)source).getLocation();
-				Site site = new Site(sourceLoc);
-				source = ((SiteAdaptiveSource)source).getForSite(site);
-			}
-			int numRups = source.getNumRuptures();
-			if (numRups != prevNum || i == erf.getNumSources()-1) {
-				System.out.println("Source "+i+" has "+numRups+" ruptures");
-				prevNum = numRups;
-			}
-			countTrack.addValue(numRups);
-			sumRate += source.computeTotalEquivMeanAnnualRate(1d);
-			if (doRawSum) {
-				for (ProbEqkRupture rup : source)
-					rawSumRate += rup.getMeanAnnualRate(1d);
-			} else if (i % 100 == 0) {
-				// audit it every once in a while
-				double origSourceRate = source.computeTotalEquivMeanAnnualRate(1d);
-				double rawSourceRate = 0d;
-				for (ProbEqkRupture rup : source)
-					rawSourceRate += rup.getMeanAnnualRate(1d);
-				Preconditions.checkState(Precision.equals(origSourceRate, rawSourceRate, 1e-6),
-						"Raw and source-computed rate mismatch: %s != %s", (float)origSourceRate, (float)rawSourceRate);
+		// write each heading once
+		for (String heading : headings) {
+			lines.add(heading);
+			lines.add("");
+			lines.add("This is subheading count "+(subHeadingCount++));
+			lines.add("");
+			for (int i=0; i<10; i++) {
+				lines.add(".");
+				lines.add("");
 			}
 		}
-		System.out.println(countTrack);
-		System.out.println("Total rate: "+(float)sumRate);
-		if (doRawSum)
-			System.out.println("Total prob-to-rate: "+(float)rawSumRate);
-	}
-	
-	private static void test348() throws IOException {
-		BaseFaultSystemSolutionERF erf = new NSHM23_WUS_BranchAveragedERF();
-		int numFinite = 2;
 		
-		GriddedSeismicitySettings settings = erf.getGriddedSeismicitySettings();
+		// do it again
+		for (String heading : headings) {
+			lines.add(heading);
+			lines.add("");
+			lines.add("This is subheading count "+(subHeadingCount++));
+			lines.add("");
+			for (int i=0; i<10; i++) {
+				lines.add(".");
+				lines.add("");
+			}
+		}
 		
-		settings = settings
-//				.forSurfaceType(BackgroundRupType.FINITE)
-				.forSurfaceType(BackgroundRupType.POINT)
-//				.forDistanceCorrection(PointSourceDistanceCorrections.NONE.get())
-//				.forDistanceCorrection(PointSourceDistanceCorrections.FIVE_POINT_RJB_DIST.get())
-				.forPointSourceMagCutoff(5d)
-				.forFiniteRuptureSettings(GriddedFiniteRuptureSettings.DEFAULT_CROSSHAIR.forNumSurfaces(numFinite))
-//				.forSupersamplingSettings(null);
-				.forSupersamplingSettings(GridCellSupersamplingSettings.DEFAULT.forApplyToFinite(true));
+		// now write each out twice in a row
+		for (String heading : headings) {
+			for (int n=0; n<2; n++) {
+				lines.add(heading);
+				lines.add("");
+				lines.add("This is subheading count "+(subHeadingCount++));
+				lines.add("");
+				for (int i=0; i<10; i++) {
+					lines.add(".");
+					lines.add("");
+				}
+			}
+		}
 		
-		erf.setParameter(IncludeBackgroundParam.NAME, IncludeBackgroundOption.ONLY);
-		erf.setGriddedSeismicitySettings(settings);
-		erf.getTimeSpan().setDuration(1d);
+		lines.addAll(tocIndex, MarkdownUtils.buildTOC(lines, 1));
 		
-		System.out.println("Updating forecast");
-		erf.updateForecast();
-		
-		Site site = new Site(new Location(34.053, -118.243));
-		ScalarIMR gmm = AttenRelRef.CB_2008.get();
-		site.addParameterList(gmm.getSiteParams());
-		gmm.setIntensityMeasure(SA_Param.NAME);
-		SA_Param.setPeriodInSA_Param(gmm.getIntensityMeasure(), 1d);
-		HazardCurveCalculator calc = new HazardCurveCalculator();
-		DiscretizedFunc xVals = new IMT_Info().getDefaultHazardCurve(SA_Param.NAME);
-		
-		DiscretizedFunc logXVals = new ArbitrarilyDiscretizedFunc();
-		for (Point2D pt : xVals)
-			logXVals.set(Math.log(pt.getX()), 0d);
-		System.out.println("Calculating point");
-		calc.getHazardCurve(logXVals, site, gmm, erf);
-		
-		DiscretizedFunc pointCurve = xVals.deepClone();
-		for (int i=0; i<pointCurve.size(); i++)
-			pointCurve.set(i, logXVals.getY(i));
-		
-		settings = settings.forSurfaceType(BackgroundRupType.FINITE);
-		erf.setGriddedSeismicitySettings(settings);
-		erf.updateForecast();
-		
-		System.out.println("Calculating finite");
-		calc.getHazardCurve(logXVals, site, gmm, erf);
-		DiscretizedFunc finiteCurve = xVals.deepClone();
-		for (int i=0; i<finiteCurve.size(); i++)
-			finiteCurve.set(i, logXVals.getY(i));
-		
-		DecimalFormat pDF = new DecimalFormat("0.0%");
-//		for (int i=0; i<xVals.size(); i++) {
-		int i = 40;
-			double x = xVals.getX(i);
-			double ptY = pointCurve.getY(i);
-			double finiteY = finiteCurve.getY(i);
-			double fDiff = (finiteY - ptY) / ptY;
-			String pDiffStr = pDF.format(fDiff);
-			if (fDiff >= 0)
-				pDiffStr = "+"+pDiffStr;
-			System.out.println("x="+(float)x+"\tptY="+(float)ptY+"\tfiniteY="+(float)finiteY+"\t("+pDiffStr+")");
-//		}
+		MarkdownUtils.writeHTML(lines, new File("/tmp/md_test.html"));
 	}
 	
 	/**
@@ -3523,7 +3369,7 @@ public class PureScratch {
 	 */
 	public static void main(String[] args) throws Exception {
 		try {
-			test348();
+			test346();
 		} catch (Throwable t) {
 			t.printStackTrace();
 			System.exit(1);

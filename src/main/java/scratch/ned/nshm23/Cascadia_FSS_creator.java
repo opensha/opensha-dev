@@ -495,20 +495,20 @@ public class Cascadia_FSS_creator {
 
 
 	public static void main(String[] args) {
-		String nshmModelDirPath = "/Users/field/nshm-haz_data/nshm-conus-6.b.4/";
+		String nshmModelDirPath = "/Users/field/nshm-haz_data/nshm-conus-6.1.2/";
 		
-		GeoJSONFaultSection sect = CEUS_FSS_creator.getFaultSection(nshmModelDirPath+"subduction/interface/Cascadia/features/Cascadia 1-1 (middle).geojson");
-		System.out.println("OrigAveUpperDepth = "+sect.getOrigAveUpperDepth());
-		System.out.println("AveLowerDepth() = "+sect.getAveLowerDepth());
-		System.out.println("Trace:\n\n"+sect.getFaultTrace());
-		System.exit(0);
 		
 		getFaultSystemSolution(nshmModelDirPath, FaultModelEnum.ALL);
 		getFaultSystemSolution(nshmModelDirPath, FaultModelEnum.TOP);
 		getFaultSystemSolution(nshmModelDirPath, FaultModelEnum.MIDDLE);
 		getFaultSystemSolution(nshmModelDirPath, FaultModelEnum.BOTTOM);
 		
-		
+//		GeoJSONFaultSection sect = CEUS_FSS_creator.getFaultSection(nshmModelDirPath+"subduction/interface/Cascadia/features/Cascadia 1-1 (middle).geojson");
+//		System.out.println("OrigAveUpperDepth = "+sect.getOrigAveUpperDepth());
+//		System.out.println("AveLowerDepth() = "+sect.getAveLowerDepth());
+//		System.out.println("Trace:\n\n"+sect.getFaultTrace());
+//		System.exit(0);
+
 		// THIS IS HOW PETER CREATES THE SURFACE (FROM gov.usgs.earthquake.nshmp.model.InterfaceSource.InterfaceSource(Builder))
 //	    upperTrace = feature.traces.get(0);
 //	    upperTraceLength = upperTrace.length();

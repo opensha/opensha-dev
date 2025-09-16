@@ -256,7 +256,7 @@ if(src.getName().equals("Unnamed fault system source")) // temp fix for Peters I
 		list.add(getIsolatedFaultSection(nshmModelDirPath+"active-crust/fault/Chugach - St.Elias.geojson", elliotSlipRateMap, geoSlipRateMap));
 		list.add(getIsolatedFaultSection(nshmModelDirPath+"active-crust/fault/Cordova.geojson", elliotSlipRateMap, geoSlipRateMap));
 		list.add(getIsolatedFaultSection(nshmModelDirPath+"active-crust/fault/Council.geojson", elliotSlipRateMap, geoSlipRateMap));
-		list.add(getIsolatedFaultSection(nshmModelDirPath+"active-crust/fault/DOT T Johnson.geojson", elliotSlipRateMap, geoSlipRateMap));
+//		list.add(getIsolatedFaultSection(nshmModelDirPath+"active-crust/fault/DOT T Johnson.geojson", elliotSlipRateMap, geoSlipRateMap)); // remove in version 3.0.0
 		list.add(getIsolatedFaultSection(nshmModelDirPath+"active-crust/fault/Dall Mountain.geojson", elliotSlipRateMap, geoSlipRateMap));
 		list.add(getIsolatedFaultSection(nshmModelDirPath+"active-crust/fault/Decoeli Mountain.geojson", elliotSlipRateMap, geoSlipRateMap));
 		list.add(getIsolatedFaultSection(nshmModelDirPath+"active-crust/fault/Denali (Holitna).geojson", elliotSlipRateMap, geoSlipRateMap));
@@ -574,17 +574,16 @@ if(src.getName().equals("Unnamed fault system source")) // temp fix for Peters I
 
 	public static void main(String[] args) {
 		
-		String nshmModelDirPath = "/Users/field/nshm-haz_data/nshm-alaska-main_Jan10_2024/";
-		
-		DeformationModelEnum defModel = DeformationModelEnum.BOTH;
-//		getFaultSystemSolutionList(nshmModelDirPath, DeformationModelEnum.BOTH);
-		
-		NshmErf erf = AK_FaultZones_creator.getNshmERF(nshmModelDirPath);
-		getBigFSS(nshmModelDirPath,defModel,erf);
+		String nshmModelDirPath = "/Users/field/nshm-haz_data/nshm-alaska-3.0.1/";
+		DeformationModelEnum defModel = DeformationModelEnum.ELLIOT;
+		getFaultSystemSolutionList(nshmModelDirPath, defModel);
 
 //		System.exit(0);
 
 		
+//		NshmErf erf = AK_FaultZones_creator.getNshmERF(nshmModelDirPath);
+//		getBigFSS(nshmModelDirPath,defModel,erf);
+
 //		forPeter();
 //		
 //		double length = 34.983*1e3;

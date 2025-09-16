@@ -80,14 +80,23 @@ public class MapSourceTypeDisagg {
 		double[] periods = {0d, 0.2d, 1d, 5d};
 		ReturnPeriods[] rps = SolHazardMapCalc.MAP_RPS;
 		
-//		String suffix = "-vs760";
-		String suffix = "-vs260";
+		String suffix = "-vs760";
+//		String suffix = "-vs260";
 		
-		dirs.put(MapType.COMBINED, new File(INV_DIR, COMBINED_DIR.getName()+"-ba_only"+suffix));
-		dirs.put(MapType.CRUSTAL, new File(INV_DIR, CRUSTAL_DIR.getName()+"-ba_only"+suffix));
-		dirs.put(MapType.SUBDUCTION, new File(INV_DIR, SUBDUCTION_DIR.getName()+"-ba_only-both_fms"+suffix));
-		dirs.put(MapType.SUBDUCTION_INTERFACE, new File(INV_DIR, SUBDUCTION_DIR.getName()+"-ba_only-INTERFACE_only"+suffix));
-		dirs.put(MapType.SUBDUCTION_SLAB, new File(INV_DIR, SUBDUCTION_DIR.getName()+"-ba_only-SLAB_only"+suffix));
+		File combDir = COMBINED_DIR;
+		File crustalDir = CRUSTAL_DIR;
+		File subDir = SUBDUCTION_DIR;
+		
+		suffix = "-updatedGMMs"+suffix;
+		combDir = new File(INV_DIR, "2025_01_17"+combDir.getName().substring(10));
+		crustalDir = new File(INV_DIR, "2025_01_17"+crustalDir.getName().substring(10));
+		subDir = new File(INV_DIR, "2025_01_17"+subDir.getName().substring(10));
+		
+		dirs.put(MapType.COMBINED, new File(INV_DIR, combDir.getName()+"-ba_only"+suffix));
+		dirs.put(MapType.CRUSTAL, new File(INV_DIR, crustalDir.getName()+"-ba_only"+suffix));
+		dirs.put(MapType.SUBDUCTION, new File(INV_DIR, subDir.getName()+"-ba_only-both_fms"+suffix));
+		dirs.put(MapType.SUBDUCTION_INTERFACE, new File(INV_DIR, subDir.getName()+"-ba_only-INTERFACE_only"+suffix));
+		dirs.put(MapType.SUBDUCTION_SLAB, new File(INV_DIR, subDir.getName()+"-ba_only-SLAB_only"+suffix));
 		
 		File texFile = new File(new File(FIGURES_DIR, "hazard_map_disagg"), "disagg_stats.tex");
 		FileWriter texFW = null;

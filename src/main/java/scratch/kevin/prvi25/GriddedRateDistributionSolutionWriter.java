@@ -885,7 +885,7 @@ public class GriddedRateDistributionSolutionWriter {
 		String dirName = outputDir.getName();
 		File localDir = outputDir;
 		
-		File remoteMainDir = new File("/project/scec_608/kmilner/nshm23/batch_inversions");
+		File remoteMainDir = new File("/project2/scec_608/kmilner/fss_inversions");
 		int remoteTotalThreads = 20;
 		int remoteTotalMemGB = 50;
 		String queue = "scec";
@@ -906,7 +906,7 @@ public class GriddedRateDistributionSolutionWriter {
 		List<File> classpath = new ArrayList<>();
 		classpath.add(new File(dirPath+"/opensha-dev-all.jar"));
 		if (mpjWrite instanceof NoMPJSingleNodeShellScriptWriter)
-			classpath.add(new File("/project/scec_608/kmilner/git/opensha/lib/mpj-0.38.jar"));
+			classpath.add(new File("/project2/scec_608/kmilner/git/opensha/lib/mpj-0.38.jar"));
 		
 		mpjWrite.setClasspath(classpath);
 		if (mpjWrite instanceof MPJExpressShellScriptWriter)

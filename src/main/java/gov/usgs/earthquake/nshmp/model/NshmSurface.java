@@ -157,6 +157,10 @@ public class NshmSurface implements CacheEnabledSurface {
 	public double getAveLength() {
 		return delegate.length();
 	}
+	
+  @Override public double getQuickDistance(Location siteLoc) {
+    return calcQuickDistance(siteLoc);
+  }
 
 	// Unnecessary methods for hazard calculations
 
@@ -169,7 +173,6 @@ public class NshmSurface implements CacheEnabledSurface {
 	@Override public FaultTrace getEvenlyDiscritizedUpperEdge() { throw new UnsupportedOperationException(); }
 	@Override public LocationList getEvenlyDiscritizedLowerEdge() { throw new UnsupportedOperationException(); }
 	@Override public double getAveGridSpacing() { throw new UnsupportedOperationException(); }
-	@Override public double getQuickDistance(Location siteLoc) { throw new UnsupportedOperationException(); }
 	@Override public double getAveDipDirection() { throw new UnsupportedOperationException(); }
 	@Override public FaultTrace getUpperEdge() { throw new UnsupportedOperationException(); }
 	@Override public double getFractionOfSurfaceInRegion(Region region) { throw new UnsupportedOperationException(); }

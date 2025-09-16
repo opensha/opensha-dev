@@ -105,7 +105,7 @@ public class BranchAveragedHazardScriptWriter {
 		sigmaTrunc = 3d;
 		
 //		String date = "2025_01_17";
-		String date = "2025_08_01";
+		String date = "2025_09_12";
 		
 //		String baseDirName = date+"-prvi25_crustal_subduction_combined_branches";
 //		String suffix = "ba_only";
@@ -115,17 +115,17 @@ public class BranchAveragedHazardScriptWriter {
 //		String suffix = "ba_only";
 //		String solFileName = "results_PRVI_CRUSTAL_FM_V1p1_branch_averaged_gridded.zip";
 		
-//		String baseDirName = date+"-prvi25_subduction_branches";
-//		// slab (gridded only)
-////		String suffix = "ba_only-SLAB_only";
-////		String solFileName = "results_PRVI_SLAB_ONLY_branch_averaged_gridded.zip";
-////		bgOps = new IncludeBackgroundOption[] { IncludeBackgroundOption.ONLY };
-//		// interface (will do fault + gridded)
-////		String suffix = "ba_only-INTERFACE_only";
-////		String solFileName = "results_PRVI_INTERFACE_ONLY_branch_averaged_gridded.zip";
-//		// both
-//		String suffix = "ba_only-both_fms";
-//		String solFileName = "results_PRVI_SUB_FMs_combined_branch_averaged_gridded.zip";
+		String baseDirName = date+"-prvi25_subduction_branches";
+		// slab (gridded only)
+//		String suffix = "ba_only-SLAB_only";
+//		String solFileName = "results_PRVI_SLAB_ONLY_branch_averaged_gridded.zip";
+//		bgOps = new IncludeBackgroundOption[] { IncludeBackgroundOption.ONLY };
+		// interface (will do fault + gridded)
+//		String suffix = "ba_only-INTERFACE_only";
+//		String solFileName = "results_PRVI_INTERFACE_ONLY_branch_averaged_gridded.zip";
+		// both
+		String suffix = "ba_only-both_fms";
+		String solFileName = "results_PRVI_SUB_FMs_combined_branch_averaged_gridded.zip";
 		
 		
 		// one off tests below
@@ -135,10 +135,10 @@ public class BranchAveragedHazardScriptWriter {
 //		supersampleQuick = true;
 //		String solFileName = "combined_branch_averaged_solution.zip";
 		
-		String baseDirName = date+"-prvi25_crustal_subduction_combined_branches";
-		String suffix = "ba_only-no_sigma_trunc";
-		sigmaTrunc = null;
-		String solFileName = "combined_branch_averaged_solution.zip";
+//		String baseDirName = date+"-prvi25_crustal_subduction_combined_branches";
+//		String suffix = "ba_only-no_sigma_trunc";
+//		sigmaTrunc = null;
+//		String solFileName = "combined_branch_averaged_solution.zip";
 		
 //		region = PRVI25_RegionLoader.loadPRVI_IntermediateModelMapExtents();
 //		gridSpacing = 0.02;
@@ -187,7 +187,7 @@ public class BranchAveragedHazardScriptWriter {
 		File localDir = new File(localMainDir, dirName);
 		Preconditions.checkState(localDir.exists() || localDir.mkdir());
 		
-		File remoteMainDir = new File("/project/scec_608/kmilner/nshm23/batch_inversions");
+		File remoteMainDir = new File("/project2/scec_608/kmilner/fss_inversions");
 		int remoteTotalThreads = 20;
 		int remoteTotalMemGB = 50;
 		String queue = "scec";
@@ -232,7 +232,7 @@ public class BranchAveragedHazardScriptWriter {
 		parallelMPJWrite.setClasspath(classpath);
 		
 		List<File> singleClasspath = new ArrayList<>(classpath);
-		singleClasspath.add(new File("/project/scec_608/kmilner/git/opensha/lib/mpj-0.38.jar"));
+		singleClasspath.add(new File("/project2/scec_608/kmilner/git/opensha/lib/mpj-0.38.jar"));
 		singleMPJWrite.setClasspath(singleClasspath);
 
 		// write the region

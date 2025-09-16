@@ -120,7 +120,7 @@ public class MPJ_WrapperHazardCalcScriptWriter {
 		List<File> classpath = new ArrayList<>();
 		classpath.add(new File(dirPath+"/opensha-dev-all.jar"));
 		if (mpjWrite instanceof NoMPJSingleNodeShellScriptWriter)
-			classpath.add(new File("/project/scec_608/kmilner/git/opensha/lib/mpj-0.38.jar"));
+			classpath.add(new File("/project2/scec_608/kmilner/git/opensha/lib/mpj-0.38.jar"));
 		
 		File localReg = new File(localDir, "gridded_region.json");
 		Feature.write(gridReg.toFeature(), localReg);

@@ -131,7 +131,7 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 		boolean supersample = false;
 		double[] periods = null;
 		
-		File remoteMainDir = new File("/project/scec_608/kmilner/nshm23/batch_inversions");
+		File remoteMainDir = new File("/project2/scec_608/kmilner/fss_inversions");
 		int remoteTotalThreads = 20;
 		int remoteInversionsPerBundle = 1;
 		int remoteTotalMemGB = 50;
@@ -627,41 +627,39 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 		 * PRVI25 logic tree
 		 * TODO (this is a just a marker to find this part quickly, not an actual todo)
 		 */
-//		queue = "scec_hiprio"; // TODO remove
 		
-		List<LogicTreeLevel<? extends LogicTreeNode>> levels = PRVI25_LogicTree.levelsOnFault;
-		dirName += "-prvi25_crustal_branches";
-		double avgNumRups = 50000;
-		gmpes = new AttenRelRef[] { AttenRelRef.USGS_PRVI_ACTIVE };
+//		List<LogicTreeLevel<? extends LogicTreeNode>> levels = PRVI25_LogicTree.levelsOnFault;
+//		dirName += "-prvi25_crustal_branches";
+//		double avgNumRups = 50000;
+//		gmpes = new AttenRelRef[] { AttenRelRef.USGS_PRVI_ACTIVE };
+//		
+//		// random DM sampling
+//		levels = new ArrayList<>(levels);
+//		int origNumLevels = levels.size();
+//		for (int i=levels.size(); --i>=0;)
+//			if (levels.get(i).getNodes().get(0) instanceof PRVI25_CrustalDeformationModels)
+//				levels.remove(i);
+//		Preconditions.checkState(levels.size() == origNumLevels -1);
+//		individualRandomLevels.add(new PRVI25_CrustalRandomlySampledDeformationModelLevel());
+////		samplingBranchCountMultiplier = 5; // 5 for each branch
+//		samplingBranchCountMultiplier = 10; // 10 for each branch
+////		samplingBranchCountMultiplier = 20; // 20 for each branch
+////		samplingBranchCountMultiplier = 50; // 50 for each branch
+//		randSeed *= samplingBranchCountMultiplier;
+//		dirName += "-dmSample";
+//		if (samplingBranchCountMultiplier > 1)
+//			dirName += samplingBranchCountMultiplier+"x";
 		
-		// random DM sampling
-		levels = new ArrayList<>(levels);
-		int origNumLevels = levels.size();
-		for (int i=levels.size(); --i>=0;)
-			if (levels.get(i).getNodes().get(0) instanceof PRVI25_CrustalDeformationModels)
-				levels.remove(i);
-		Preconditions.checkState(levels.size() == origNumLevels -1);
-		individualRandomLevels.add(new PRVI25_CrustalRandomlySampledDeformationModelLevel());
-//		samplingBranchCountMultiplier = 5; // 5 for each branch
-		samplingBranchCountMultiplier = 10; // 10 for each branch
-//		samplingBranchCountMultiplier = 20; // 20 for each branch
-//		samplingBranchCountMultiplier = 50; // 50 for each branch
-		randSeed *= samplingBranchCountMultiplier;
-		dirName += "-dmSample";
-		if (samplingBranchCountMultiplier > 1)
-			dirName += samplingBranchCountMultiplier+"x";
-		
-//		List<LogicTreeLevel<? extends LogicTreeNode>> levels = PRVI25_LogicTree.levelsSubduction;
-//		dirName += "-prvi25_subduction_branches";
-//		double avgNumRups = 10000;
-//		gmpes = new AttenRelRef[] { AttenRelRef.USGS_PRVI_INTERFACE, AttenRelRef.USGS_PRVI_SLAB };
+		List<LogicTreeLevel<? extends LogicTreeNode>> levels = PRVI25_LogicTree.levelsSubduction;
+		dirName += "-prvi25_subduction_branches";
+		double avgNumRups = 10000;
+		gmpes = new AttenRelRef[] { AttenRelRef.USGS_PRVI_INTERFACE, AttenRelRef.USGS_PRVI_SLAB };
 		
 //		forceHazardReg = new GriddedRegion(PRVI25_RegionLoader.loadPRVI_Tight(), 0.05, GriddedRegion.ANCHOR_0_0);
 //		forceHazardReg = new GriddedRegion(PRVI25_RegionLoader.loadPRVI_MapExtents(), 0.1, GriddedRegion.ANCHOR_0_0); // good for quicker tests
 //		forceHazardReg = new GriddedRegion(PRVI25_RegionLoader.loadPRVI_MapExtents(), 0.05, GriddedRegion.ANCHOR_0_0);
 		forceHazardReg = new GriddedRegion(PRVI25_RegionLoader.loadPRVI_MapExtents(), 0.025, GriddedRegion.ANCHOR_0_0); // this is what I use for the paper
 		sigmaTrunc = 3d;
-		supersample = false;
 		
 //		levels = new ArrayList<>(levels);
 //		levels.add(NSHM23_LogicTreeBranch.SUB_SECT_CONSTR);
@@ -947,7 +945,7 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 		List<File> classpath = new ArrayList<>();
 		classpath.add(new File(dirPath+"/opensha-dev-all.jar"));
 		if (mpjWrite instanceof NoMPJSingleNodeShellScriptWriter)
-			classpath.add(new File("/project/scec_608/kmilner/git/opensha/lib/mpj-0.38.jar"));
+			classpath.add(new File("/project2/scec_608/kmilner/git/opensha/lib/mpj-0.38.jar"));
 		
 		File localLogicTree = new File(localDir, "logic_tree.json");
 		logicTree.write(localLogicTree);

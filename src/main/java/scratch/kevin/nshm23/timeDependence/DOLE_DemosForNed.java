@@ -9,7 +9,7 @@ import org.opensha.sha.earthquake.param.HistoricOpenIntervalParam;
 import org.opensha.sha.earthquake.param.ProbabilityModelOptions;
 import org.opensha.sha.earthquake.param.ProbabilityModelParam;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.timeDependence.DOLE_SubsectionMapper;
-import org.opensha.sha.earthquake.rupForecastImpl.nshm23.timeDependence.DOLE_SubsectionMapper.DOLE_MappingAlgorithm;
+import org.opensha.sha.earthquake.rupForecastImpl.nshm23.timeDependence.DOLE_SubsectionMapper.PaleoMappingAlgorithm;
 
 import scratch.UCERF3.erf.FaultSystemSolutionERF;
 
@@ -27,7 +27,7 @@ public class DOLE_DemosForNed {
 //		sol = MergedSolutionCreator.merge(sol1, sol2);
 		
 		// load DOLE data
-		DOLE_SubsectionMapper.mapDOLE(sol.getRupSet().getFaultSectionDataList(), DOLE_MappingAlgorithm.FULL_PARENT, true); // boolean is for verbose
+		DOLE_SubsectionMapper.mapDOLE(sol.getRupSet().getFaultSectionDataList(), PaleoMappingAlgorithm.FULL_PARENT, true); // boolean is for verbose
 		
 		// ERF
 		FaultSystemSolutionERF erf = new FaultSystemSolutionERF(sol);

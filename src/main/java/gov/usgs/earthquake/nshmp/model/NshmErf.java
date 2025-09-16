@@ -169,7 +169,7 @@ public class NshmErf extends AbstractERF {
 
       case ZONE:
         ZoneRuptureSet zrs = (ZoneRuptureSet) ruptureSet;
-        return (grid)
+        return (faults)
             ? pointRuptureSetToSources(zrs, weight, duration)
             : List.of();
 
@@ -188,6 +188,18 @@ public class NshmErf extends AbstractERF {
       case INTERFACE:
         return (subInterface && faults)
             ? ruptureSetToSources(ruptureSet, weight, duration)
+            : List.of();
+
+      case INTERFACE_CLUSTER:
+        ClusterRuptureSet icrs = (ClusterRuptureSet) ruptureSet;
+        return (subInterface && faults)
+            ? clusterRuptureSetToSources(icrs, weight, duration)
+            : List.of();
+
+      case INTERFACE_SYSTEM:
+        SystemRuptureSet isrs = (SystemRuptureSet) ruptureSet;
+        return (faults)
+            ? systemRuptureSetToSources(isrs, weight, duration)
             : List.of();
 
       case SLAB:

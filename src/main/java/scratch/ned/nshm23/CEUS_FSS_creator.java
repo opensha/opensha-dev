@@ -49,7 +49,7 @@ import gov.usgs.earthquake.nshmp.model.NshmSource;
  */
 public class CEUS_FSS_creator {
 	
-	final static boolean D = false;  
+	final static boolean D = true;  
 	
 	 private static final Gson GSON = new GsonBuilder().create();
 	 
@@ -73,6 +73,7 @@ public class CEUS_FSS_creator {
 		 map.put(3062,0.5);	//	more recent;	SSCn (NMN-L: north, extended)
 		 map.put(3071,0.5);	//	more recent;	New Madrid - SSCn (Reelfoot, north)
 		 map.put(3073,0.5);	//	more recent;	SSCn (RFT-L: Reelfoot, extended)
+		 map.put(3610,0.5); //  more recent; 	Meers (USGS)
 		 return map;
 	 }
 	 
@@ -83,7 +84,6 @@ public class CEUS_FSS_creator {
 
 	  * @return
 	  */
-
 	 private static HashMap<Integer,Double> getUniqueSourcesForAlternateFaultModelMap() {
 		 HashMap<Integer,Double> map = new HashMap<Integer,Double>();
 		 map.put(3000,0.5);  // outdated;	New Madrid - USGS (west, north)
@@ -108,6 +108,7 @@ public class CEUS_FSS_creator {
 		 map.put(3043,0.5);  // outdated;	New Madrid - USGS (east)
 		 map.put(2181,0.5);  // outdated;	Cheraw (SSCn)
 		 map.put(3805,0.4);	//	lower wt;	Eastern Rift Margin (South) (meeman-shelby)
+		 map.put(3611,0.5); //  outdated; 	Meers (SSCn, cluster-out)		doesn't extend to include DOLE paleo site
 		 return map;
 	 }
 
@@ -149,6 +150,7 @@ public class CEUS_FSS_creator {
 		list.add(getFaultSection(nshmModelDirPath+"stable-crust/fault/MO/New Madrid/features/New Madrid - USGS (west, north).geojson"));
 		list.add(getFaultSection(nshmModelDirPath+"stable-crust/fault/MO/New Madrid/features/New Madrid - USGS (west, south).geojson"));
 		list.add(getFaultSection(nshmModelDirPath+"stable-crust/fault/OK/Meers/features/Meers.geojson"));
+		list.add(getFaultSection(nshmModelDirPath+"stable-crust/fault/OK/Meers/features/Meers (SSCn).geojson"));
 		list.add(getFaultSection(nshmModelDirPath+"stable-crust/fault/TN/Eastern Rift Margin (North)/features/eastern-rift-margin-north.geojson"));
 		list.add(getFaultSection(nshmModelDirPath+"stable-crust/fault/TN/Eastern Rift Margin (South)/features/crittenden-county.geojson"));
 		list.add(getFaultSection(nshmModelDirPath+"stable-crust/fault/TN/Eastern Rift Margin (South)/features/eastern-rift-margin-south-extension.geojson"));
@@ -218,12 +220,14 @@ public class CEUS_FSS_creator {
 
 		// make parSectID_List
 		ArrayList<Integer> parSectID_List = new ArrayList<Integer>(); // this is NSHM ID for each parent section
+		HashMap<Integer,String> parSecNameFromtID_Map = new HashMap<Integer,String>();
 		if(D) System.out.println("index\tsectID\trake");
 		for(int s=0;s<faultSectionData.size();s++) {
 			GeoJSONFaultSection sect = faultSectionData.get(s);
 			if(!parSectID_List.contains(sect.getSectionId())) {
 				parSectID_List.add(sect.getSectionId());
-				if(D) System.out.println(s+"\t"+sect.getSectionId()+"\t"+sect.getAveRake());
+				parSecNameFromtID_Map.put(sect.getSectionId(),sect.getName());
+				if(D) System.out.println(s+"\t"+sect.getSectionId()+"\t"+sect.getAveRake()+"\t"+sect.getName());
 			}
 			else
 				throw new RuntimeException("section IDs are not unique; duplicate: "+sect.getSectionId());
@@ -234,6 +238,20 @@ public class CEUS_FSS_creator {
 		HashMap<Integer,int[]> srcFltSectsMap = new HashMap<Integer,int[]>(); // the fault section used by each source (same order as above)
 		getSrcIDsAndFaultSectionsLists(srcFltSectsMap, nshmModelDirPath);
 		Set<Integer> srcIDsList = srcFltSectsMap.keySet();  // a list of all the source IDs (no duplicates)
+		
+		// print section(s) for each source
+		for(int src:srcIDsList) {
+			int[] sectArray = srcFltSectsMap.get(src);
+			if(sectArray.length == 1) {
+				System.out.println("Src "+src+" only uses:\t"+parSecNameFromtID_Map.get(sectArray[0])+"\n");
+			} else {
+				System.out.println("Src "+src+" uses:");
+				for(int sect:sectArray)
+					System.out.println("\t"+parSecNameFromtID_Map.get(sect));
+//				System.out.println("\n"+src);
+			}	
+		}
+//		System.exit(0);
 
 		// some tests
 		if(D) System.out.println("number of unique source IDs: "+srcIDsList.size());
@@ -263,19 +281,21 @@ public class CEUS_FSS_creator {
 		
 		
 		// create the ERF
-		NshmErf erf = getNshmERF(nshmModelDirPath);
+		NshmErf erf = getNshmERF(nshmModelDirPath); // this excludes gridded seismicity except for that for fault zones
 	    erf.getTimeSpan().setDuration(1.0);
 	    erf.updateForecast();
 		ArrayList<Integer> floaterSrcID_List = new ArrayList<Integer>();  // these will have a separate FSS
 
 	    if (D) System.out.println("NSHM ERF NumSources: " + erf.getNumSources());
 		ArrayList<Integer> testSrcIDsList = new ArrayList<Integer>();  // a list of all the source IDs (no duplicates)
-	    int numSrcZones=0;
+	    int numSrcZonePtSources=0; // this is all the gridded seismicity sources for the fault source zones
+	    ArrayList<Integer> tempSrcZoneIDs = new ArrayList<Integer>();
 	    for(int s=0;s<erf.getNumSources();s++) {
 	    	NshmSource src = (NshmSource)erf.getSource(s);
-// TODO FIX THIS
-	    	if(srcZoneID_List.contains(src.getNSHM_ID())) { // skip gridded source zones // THIS WON'T WORK WHEN PETER ADD FINITENESS
-	    		numSrcZones+=1;
+	    	if(srcZoneID_List.contains(src.getNSHM_ID())) { // skip fault zone gridded source zones 
+	    		numSrcZonePtSources+=1;
+	    		if(!tempSrcZoneIDs.contains(src.getNSHM_ID()))	    	
+	    			tempSrcZoneIDs.add(src.getNSHM_ID());
 	    		continue;
 	    	}
 	    	boolean noFloaters = areSourceRupSurfacesIdentical(src); // look for ruptures that have area less than the full fault
@@ -289,7 +309,11 @@ public class CEUS_FSS_creator {
 	    }
 
 	    if(D) {
-	    	System.out.println("numSrcZones="+numSrcZones+"\tnumFltSrces="+(erf.getNumSources()-numSrcZones));
+	    	System.out.println("numSrcZonePtSources="+numSrcZonePtSources+"\tnumFltSrces="+(erf.getNumSources()-numSrcZonePtSources));
+	    	System.out.println("numSrcZones="+tempSrcZoneIDs.size());
+	    	System.out.println("tempSrcZoneIDs:");
+	    	for(Integer nameAndID: tempSrcZoneIDs)
+	    		System.out.println("\t"+nameAndID);
 	    	System.out.println("Floater Source IDs:");
 		    for(int id:floaterSrcID_List)
 		    	System.out.println("\t"+id);
@@ -303,7 +327,7 @@ public class CEUS_FSS_creator {
     			throw new RuntimeException("srcIDsList does not contain: "+id);
     	if(D)System.out.println("srcIDsList passed tests");
 
-    	// Compute MFDs for each source
+    	// Compute ERF MFDs for each source
     	HashMap<Integer, SummedMagFreqDist> mfdForSrcIdMap = new HashMap<Integer, SummedMagFreqDist>();
     	HashMap<Integer, Double> rakeForSrcIdMap = new HashMap<Integer, Double>();
     	HashMap<Integer, String> nameForSrcIdMap = new HashMap<Integer, String>();
@@ -347,12 +371,34 @@ public class CEUS_FSS_creator {
 		    }
 	    }
 	    
+		HashMap<Integer,Double> prefSrcWtmap = getUniqueSourcesForPreferredFaultModelMap();
+		HashMap<Integer,Double> altSrcWtmap = getUniqueSourcesForAlternateFaultModelMap();
+		
+		// write out sources for each branch
+		if(D) {
+			System.out.println("Preferred model unique sources (ID, Wt, Name):");
+			for(int src:prefSrcWtmap.keySet())
+				System.out.println("\t"+src+"\t"+prefSrcWtmap.get(src)+"\t"+nameForSrcIdMap.get(src));
+			System.out.println("Alternative model unique sources (ID, Wt, Name):");
+			for(int src:altSrcWtmap.keySet())
+				System.out.println("\t"+src+"\t"+altSrcWtmap.get(src)+"\t"+nameForSrcIdMap.get(src));
+			System.out.println("Sources in both models (ID, Name):");
+			for(int src:srcFltSectsMap.keySet()) {
+				if(prefSrcWtmap.keySet().contains(src) || altSrcWtmap.keySet().contains(src))
+					continue; // skip
+				System.out.println("\t"+src+"\t"+nameForSrcIdMap.get(src));
+			}
+			
+		}
+		
+		
+		
+
+	    
 	    // Make the floater FSSs
 	    for(int srcID:floaterSrcID_List) {
 	    	
 	    	double rateWt = 1.0;
-    		HashMap<Integer,Double> prefSrcWtmap = getUniqueSourcesForPreferredFaultModelMap();
-    		HashMap<Integer,Double> altSrcWtmap = getUniqueSourcesForAlternateFaultModelMap();
     		if (fltModel == FaultModelEnum.PREFERRED) {
 	    		if(prefSrcWtmap.keySet().contains(srcID))  // keep and set rateWt
 	    			rateWt = 1.0/prefSrcWtmap.get(srcID);
@@ -396,7 +442,7 @@ public class CEUS_FSS_creator {
 		    	double val2 = totSrcMFD.getY(i);
 		    	if(val1 == 0.0) {
 		    		if(val2 != 0)
-		    			throw new RuntimeException("PROBLEM: zero in one bu not the other at index "+i+"\n"+fssTotalMFD+"\n"+fssTotalMFD);
+		    			throw new RuntimeException("PROBLEM: zero in one but not the other at index "+i+"\n"+fssTotalMFD+"\n"+fssTotalMFD);
 		    	}
 		    	else {
 		    		double ratio = val1/val2;
@@ -427,8 +473,6 @@ public class CEUS_FSS_creator {
 	    	srcUsedList.add(srcID);
 	    	srcRateWtMap.put(srcID, 1.0);
 	    }
-   		HashMap<Integer,Double> prefSrcWtmap = getUniqueSourcesForPreferredFaultModelMap();
-		HashMap<Integer,Double> altSrcWtmap = getUniqueSourcesForAlternateFaultModelMap();
 		if (fltModel == FaultModelEnum.PREFERRED) {
 			for(int srcID:altSrcWtmap.keySet()) { // remove these
 				if(floaterSrcID_List.contains(srcID)) continue;
@@ -480,6 +524,7 @@ public class CEUS_FSS_creator {
 	    	int sectID = fltSection.getSectionId();
 	    	if(usedFaultSectID_List.contains(sectID)) { 
 		    	fltSection.setParentSectionId(sectID);
+		    	fltSection.setParentSectionName(parSecNameFromtID_Map.get(sectID));
 		    	fltSection.setSectionId(newFltIndex);
 		    	faultSectionDataSubset.add(fltSection);
 		    	newFltIndexMap.put(sectID, newFltIndex);
@@ -573,7 +618,7 @@ public class CEUS_FSS_creator {
 		    	double val2 = erfTotalMFD.getY(i);
 		    	if(val1 == 0.0) {
 		    		if(val2 != 0)
-		    			throw new RuntimeException("PROBLEM: zero in one bu not the other at index "+i+"\n"+fssTotalMFD+"\n"+erfTotalMFD);
+		    			throw new RuntimeException("PROBLEM: zero in one but not the other at index "+i+"\n"+fssTotalMFD+"\n"+erfTotalMFD);
 		    	}
 		    	else {
 		    		double ratio = val1/val2;
@@ -622,14 +667,21 @@ public class CEUS_FSS_creator {
 	 */
 	protected static FaultSystemSolution getFaultSystemSolution(double rateWt, 
 			GeoJSONFaultSection faultSection, NshmErf erf) {
+		
+		if(D) System.out.println("working on floater FSS for "+faultSection.getName());
+
 	
-    	// compute full rup area
+    	// find full rupture area (actually, this is the max rupture area in the ERf)
     	double fullRupArea = 0;
 	    for(int s=0;s<erf.getNumSources();s++) {
 	    	NshmSource src = (NshmSource)erf.getSource(s);
-if(src.getName().equals("Unnamed fault system source")) // temp fix for Peters ID duplicates
+	    	
+// temp fix for Peters ID duplicates; exception test shows it's an 
+// AK problem (never occurs from CEUS), at least with Peters old model; also looks fixed in AK 3.0.0 model?
+if(src.getName().equals("Unnamed fault system source")) { 
+//	throw new RuntimeException("got one here");
 	continue;
-
+}
 	    	if(src.getNSHM_ID() == faultSection.getSectionId()) { 
 		    	for(int r=0;r<src.getNumRuptures();r++) {
 		    		double rupArea = src.getRupture(r).getRuptureSurface().getArea();
@@ -649,6 +701,9 @@ if(src.getName().equals("Unnamed fault system source")) // temp fix for Peters I
     	SummedMagFreqDist mfd_float = getBlankMFD();
 	    for(int s=0;s<erf.getNumSources();s++) {
 	    	NshmSource src = (NshmSource)erf.getSource(s);
+	
+// temp fix for Peters ID duplicates; exception test shows it's an 
+// AK problem (never occurs from CEUS), at least with Peters old model; also looks fixed in AK 3.0.0 model?
 if(src.getName().equals("Unnamed fault system source")) // temp fix for Peters ID duplicates
 	continue;
 
@@ -681,7 +736,7 @@ if(src.getName().equals("Unnamed fault system source")) // temp fix for Peters I
 
 	    aveDeltaMag /= numMag;
 	    double tempRatio = fssTotalMoment/origTotalMoment;
-	    if(D) System.out.println("FSS:\n\tfssTotalMoment="+(float)fssTotalMoment+
+	    if(D) System.out.println("   FSS:\n\tfssTotalMoment="+(float)fssTotalMoment+
 	    		"\n\torigTotalMoment="+(float)origTotalMoment+"\n\tratio="+tempRatio+
 	    		"\n\taveDeltaMag="+(float)aveDeltaMag+"\n\tfullRupArea="+fullRupArea);
 	    
@@ -705,7 +760,6 @@ if(src.getName().equals("Unnamed fault system source")) // temp fix for Peters I
 					"\nmaxFloatMag="+maxFloatMag+ "\nFor "+faultSection.getName());
 		}
 		if(D) {
-			System.out.println("working on floater FSS for "+faultSection.getName());
 			System.out.println("\tParent section length: "+faultSection.getTraceLength());
 			System.out.println("\tSub-section length: "+subSectLen);
 			System.out.println("\tNumSub-sections: "+subsectionList.size());
@@ -1052,9 +1106,14 @@ if(src.getName().equals("Unnamed fault system source")) // temp fix for Peters I
 	
 	public static void main(String[] args) {
 		
-//		String nshmModelDirPath = "/Users/field/nshm-haz_data/oldVersions/nshm-conus-6.0.0/";
-		String nshmModelDirPath = "/Users/field/nshm-haz_data/nshm-conus-6.b.4/";
-		getFaultSystemSolutionList(nshmModelDirPath,FaultModelEnum.BOTH);
+		String nshmModelDirPath = "/Users/field/nshm-haz_data/nshm-conus-6.1.2/";
+		// previous version of above won't work because hard-coded files changed
+
+		ArrayList<FaultSystemSolution> fssList = getFaultSystemSolutionList(nshmModelDirPath,FaultModelEnum.PREFERRED);
+		for(FaultSystemSolution fss:fssList) {
+			for(FaultSection sect:fss.getRupSet().getFaultSectionDataList())
+				System.out.println(sect.getSectionId()+"\t"+sect.getParentSectionId()+"\t"+sect.getName());
+		}
 		
 //	    WC1994_MagLengthRelationship wcMagLength = new WC1994_MagLengthRelationship();
 //	    double mag = 7.15;
@@ -1064,21 +1123,7 @@ if(src.getName().equals("Unnamed fault system source")) // temp fix for Peters I
 //	    System.out.println(wcMagLength.getMedianLength(mag,90));
 
 		
-//		testJsonRead("stable-crust/fault/MO/New Madrid/usgs/center/cluster-out/rupture-set.json");
 		
-		// srcID != sectionID
-//		parseRuptureSetFile("stable-crust/fault/TN/Eastern Rift Margin (South)/crittenden-co/3-eqs/rupture-set.json");
-
-		// srcID=sectionID
-//		parseRuptureSetFile("stable-crust/fault/TN/Eastern Rift Margin (North)/1-eq/rupture-set.json");
-
-
-//		parseClusterSetFile("stable-crust/fault/MO/New Madrid/usgs/west/cluster-in/center-south/cluster-set.json");
-//		testForPeter();
-//		getFaultSystemSolution();
-		
-
-		   
 //	    // write attributes of something
 //	    try {
 //	    	File file = new File("junkRightHere");
@@ -1092,19 +1137,6 @@ if(src.getName().equals("Unnamed fault system source")) // temp fix for Peters I
 
 
 		
-//		File jsonFile = new File(nshmModelDirPath+"stable-crust/fault/CO/Cheraw/features/Cheraw (SSCn).geojson");
-//		Feature feature;
-//		try {
-//			feature = Feature.read(jsonFile);
-//			GeoJSONFaultSection sect = GeoJSONFaultSection.fromNSHMP_HazFeature(feature);
-//			System.out.println(sect.toFeature().toJSON());
-//
-//		} catch (IOException e) {
-//			// TODO Auto-generated catch block
-//			e.printStackTrace();
-//		}
-
-
 	}
 
 }
