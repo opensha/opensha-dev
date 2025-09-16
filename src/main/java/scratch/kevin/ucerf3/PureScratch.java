@@ -250,7 +250,6 @@ import scratch.UCERF3.erf.ETAS.launcher.TriggerRupture;
 import scratch.UCERF3.erf.ETAS.launcher.TriggerRupture.EdgeFault;
 import scratch.UCERF3.griddedSeismicity.AbstractGridSourceProvider;
 import scratch.kevin.nshm23.dmCovarianceTests.RandomDefModSampleLevel;
-import scratch.kevin.pointSources.InvCDF_RJBCorrPointSurface;
 import scratch.kevin.prvi25.figures.PRVI_Paths;
 import scratch.kevin.simulators.RSQSimCatalog;
 import scratch.kevin.simulators.RSQSimCatalog.Catalogs;
@@ -1884,12 +1883,12 @@ public class PureScratch {
 			System.out.println("\tCDF1: "+(float)GaussianDistCalc.getCDF(i));
 			System.out.println("\tCDF2: "+(float)normDist.cumulativeProbability(i));
 		}
-		for (int i=1; i<6; i++) {
-			System.out.println("Sigmas="+i);
-			DiscretizedFunc func = InvCDF_RJBCorrPointSurface.getSigmaSpacedProbs(i);
-			for (Point2D pt : func)
-				System.out.println("\t"+(float)pt.getX()+": "+(float)pt.getY());
-		}
+//		for (int i=1; i<6; i++) {
+//			System.out.println("Sigmas="+i);
+//			DiscretizedFunc func = InvCDF_RJBCorrPointSurface.getSigmaSpacedProbs(i);
+//			for (Point2D pt : func)
+//				System.out.println("\t"+(float)pt.getX()+": "+(float)pt.getY());
+//		}
 	}
 	
 	private static void test301() throws IOException {
@@ -3207,26 +3206,26 @@ public class PureScratch {
 		erf.setSolution(sol);
 		erf.setParameter(IncludeBackgroundParam.NAME, IncludeBackgroundOption.ONLY);
 		erf.updateForecast();
-		for (ProbEqkSource source : erf) {
-			if (source.getTectonicRegionType() != TectonicRegionType.SUBDUCTION_SLAB)
-				continue;
-			double siteDist = source.getMinDistance(site);
-			for (ProbEqkRupture rup : source) {
-				RuptureSurface surf = rup.getRuptureSurface();
-				Preconditions.checkState(surf.getAveLength() == 0d, "Expected len=0, but was %s", (float)surf.getAveLength());
-				double rJB = surf.getDistanceJB(site.getLocation());
-				double rRup = surf.getDistanceRup(site.getLocation());
-				double zTor = surf.getAveRupTopDepth();
-				Preconditions.checkState((float)rJB == (float)siteDist, "rJB=%s but siteDist=%s; type=%s; distCorr=%s",
-						(float)rJB, (float)siteDist, surf.getClass().getName(),
-						surf instanceof PointSurface ? ((PointSurface)surf).getDistanceCorrection() : null);
-				double calcRup = Math.sqrt(rJB*rJB + zTor*zTor);
-				Preconditions.checkState((float)rRup == (float)calcRup, "rRup=%s, expected sqrt(%s^2 + %s^2)=%s; type=%s; distCorr=%s",
-						(float)rRup, (float)rJB, (float)zTor, (float)calcRup, surf.getClass().getName(),
-						surf instanceof PointSurface ? ((PointSurface)surf).getDistanceCorrection() : null);
-			}
-		}
-		System.out.println("All good");
+//		for (ProbEqkSource source : erf) {
+//			if (source.getTectonicRegionType() != TectonicRegionType.SUBDUCTION_SLAB)
+//				continue;
+//			double siteDist = source.getMinDistance(site);
+//			for (ProbEqkRupture rup : source) {
+//				RuptureSurface surf = rup.getRuptureSurface();
+//				Preconditions.checkState(surf.getAveLength() == 0d, "Expected len=0, but was %s", (float)surf.getAveLength());
+//				double rJB = surf.getDistanceJB(site.getLocation());
+//				double rRup = surf.getDistanceRup(site.getLocation());
+//				double zTor = surf.getAveRupTopDepth();
+//				Preconditions.checkState((float)rJB == (float)siteDist, "rJB=%s but siteDist=%s; type=%s; distCorr=%s",
+//						(float)rJB, (float)siteDist, surf.getClass().getName(),
+//						surf instanceof PointSurface ? ((PointSurface)surf).getDistanceCorrection() : null);
+//				double calcRup = Math.sqrt(rJB*rJB + zTor*zTor);
+//				Preconditions.checkState((float)rRup == (float)calcRup, "rRup=%s, expected sqrt(%s^2 + %s^2)=%s; type=%s; distCorr=%s",
+//						(float)rRup, (float)rJB, (float)zTor, (float)calcRup, surf.getClass().getName(),
+//						surf instanceof PointSurface ? ((PointSurface)surf).getDistanceCorrection() : null);
+//			}
+//		}
+//		System.out.println("All good");
 	}
 	
 	private static void test343() throws IOException {
