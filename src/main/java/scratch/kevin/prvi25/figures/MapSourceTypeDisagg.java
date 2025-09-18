@@ -87,10 +87,10 @@ public class MapSourceTypeDisagg {
 		File crustalDir = CRUSTAL_DIR;
 		File subDir = SUBDUCTION_DIR;
 		
-		suffix = "-updatedGMMs"+suffix;
-		combDir = new File(INV_DIR, "2025_01_17"+combDir.getName().substring(10));
-		crustalDir = new File(INV_DIR, "2025_01_17"+crustalDir.getName().substring(10));
-		subDir = new File(INV_DIR, "2025_01_17"+subDir.getName().substring(10));
+//		suffix = "-updatedGMMs"+suffix;
+//		combDir = new File(INV_DIR, "2025_01_17"+combDir.getName().substring(10));
+//		crustalDir = new File(INV_DIR, "2025_01_17"+crustalDir.getName().substring(10));
+//		subDir = new File(INV_DIR, "2025_01_17"+subDir.getName().substring(10));
 		
 		dirs.put(MapType.COMBINED, new File(INV_DIR, combDir.getName()+"-ba_only"+suffix));
 		dirs.put(MapType.CRUSTAL, new File(INV_DIR, crustalDir.getName()+"-ba_only"+suffix));
@@ -183,7 +183,7 @@ public class MapSourceTypeDisagg {
 		for (MapType type : MapType.values()) {
 			File dir = dirs.get(type);
 			File resultsDir = new File(dir, "results");
-			Preconditions.checkState(resultsDir.exists());
+			Preconditions.checkState(resultsDir.exists(), "Doesn't exist: %s", resultsDir.getAbsolutePath());
 			for (IncludeBackgroundOption bgOp : type.bgOps) {
 				File hazardDir = new File(resultsDir, "hazard_"+(float)gridReg.getSpacing()+"deg_grid_seis_"+bgOp.name());
 				Preconditions.checkState(hazardDir.exists());

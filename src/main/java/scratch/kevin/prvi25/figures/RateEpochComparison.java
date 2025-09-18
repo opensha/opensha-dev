@@ -62,6 +62,9 @@ public class RateEpochComparison {
 		double sumNobs1900 = 0d;
 		double sumNobs1973 = 0d;
 		
+		List<UncertainArbDiscFunc> avgMFDs = new ArrayList<>();
+		List<List<UncertainArbDiscFunc>> epochMFDs = new ArrayList<>();
+		
 		PRVI25_SeismicityRegions[] regions = PRVI25_SeismicityRegions.values();
 		for (PRVI25_SeismicityRegions reg : regions) {
 			List<IncrementalMagFreqDist> incrFuncs = new ArrayList<>();
@@ -163,6 +166,9 @@ public class RateEpochComparison {
 			UncertainBoundedIncrMagFreqDist averageBounded = PRVI25_SeismicityRateEpoch.averageUncert(epochBounds, epochWeights);
 			UncertainArbDiscFunc averageCmlBounded = PRVI25_SeismicityRateEpoch.averageUncertCml(epochCmlBounds, epochWeights);
 			
+			avgMFDs.add(averageCmlBounded);
+			epochMFDs.add(epochCmlBounds);
+			
 //			Color avgColor = Color.GRAY;
 			Color avgColor = Colors.tab_purple;
 			UncertainBoundedIncrMagFreqDist boundsCopy = averageBounded.deepClone();
@@ -254,7 +260,7 @@ public class RateEpochComparison {
 //				meanIncrObs.setName(obsName);
 //				incrFuncs.add(meanIncrObs);
 //				incrChars.add(obsChar);
-				meanObsCml.setName(meanIncrObs.getName());
+				meanObsCml.setName(obsName);
 				cmlFuncs.add(meanObsCml);
 				cmlChars.add(obsChar);
 			}
@@ -282,6 +288,41 @@ public class RateEpochComparison {
 		
 		System.out.println("Direct total 1900 Nobs="+(float)sumNobs1900);
 		System.out.println("Direct total 1973 Nobs="+(float)sumNobs1973);
+		
+		double[] regCmlMags = {5d, 6d, 7d, 7.5d, 8d};
+		double[] epochSums = new double[epochs.length];
+		for (int r=0; r<regions.length; r++) {
+			UncertainArbDiscFunc avg = avgMFDs.get(r);
+			List<UncertainArbDiscFunc> byEpoch = epochMFDs.get(r);
+			
+			System.out.println(regions[r].getName());
+			for (double mag : regCmlMags) {
+				int closestIndex = -1;
+				double closestDiff = Double.POSITIVE_INFINITY;
+				for (int i=0; i<avg.size(); i++) {
+					double diff = Math.abs(mag - avg.getX(i));
+					if (diff < closestDiff) {
+						closestDiff = diff;
+						closestIndex = i;
+					}
+				}
+				Preconditions.checkState(closestDiff < 1e-5);
+				double rate = avg.getY(closestIndex);
+				double ri = 1/rate;
+				System.out.println("\tM>"+(float)mag+" rate="+(float)rate+", ri="+(float)ri+" years");
+				if (mag == 5d) {
+					for (int e=0; e<epochs.length; e++) {
+						rate = byEpoch.get(e).getY(closestIndex);
+						System.out.println("\t\t"+epochs[e].getShortName()+": rate="+(float)rate);
+						epochSums[e] += rate;
+					}
+				}
+			}
+		}
+		System.out.println("M>5 sums by epoch:");
+		for (int e=0; e<epochs.length; e++) {
+			System.out.println("\t"+epochs[e].getShortName()+": "+(float)epochSums[e]);
+		}
 	}
 
 }

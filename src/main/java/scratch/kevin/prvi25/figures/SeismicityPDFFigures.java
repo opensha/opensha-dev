@@ -41,6 +41,7 @@ import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_Subduc
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_SubductionSlabMMax;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.util.PRVI25_RegionLoader;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.util.PRVI25_RegionLoader.PRVI25_SeismicityRegions;
+import org.opensha.sha.faultSurface.FaultSection;
 import org.opensha.sha.faultSurface.PointSurface;
 import org.opensha.sha.faultSurface.RuptureSurface;
 import org.opensha.sha.magdist.IncrementalMagFreqDist;
@@ -80,6 +81,9 @@ class SeismicityPDFFigures {
 				"Interface Gridded", PRVI25_SeismicityRegions.CAR_INTERFACE, PRVI25_SeismicityRegions.MUE_INTERFACE);
 		plotPDFs(subOutputDir, "sub_interface_m5", 5, avgDecluster, avgSmooth, fullGrid,
 				"Interface Gridded", PRVI25_SeismicityRegions.CAR_INTERFACE, PRVI25_SeismicityRegions.MUE_INTERFACE);
+		List<? extends FaultSection> interfaceSects = FaultSystemSolution.load(SUBDUCTION_SOL_LARGE).getRupSet().getFaultSectionDataList();
+		plotPDFs(subOutputDir, "sub_interface_m5_sects", 5, avgDecluster, avgSmooth, fullGrid,
+				"Interface Gridded", interfaceSects, PRVI25_SeismicityRegions.CAR_INTERFACE, PRVI25_SeismicityRegions.MUE_INTERFACE);
 		plotPDFs(subOutputDir, "sub_slab_pdf", 0, avgDecluster, avgSmooth, fullGrid,
 				"Intraslab", PRVI25_SeismicityRegions.CAR_INTRASLAB, PRVI25_SeismicityRegions.MUE_INTRASLAB);
 		plotPDFs(subOutputDir, "sub_slab_m5", 5, avgDecluster, avgSmooth, fullGrid,
@@ -122,6 +126,12 @@ class SeismicityPDFFigures {
 	
 	private static void plotPDFs(File outputDir, String prefix, double magForRate, PRVI25_DeclusteringAlgorithms decluster,
 			PRVI25_SeisSmoothingAlgorithms smooth, GriddedRegion gridReg, String name, PRVI25_SeismicityRegions... seisRegs) throws IOException {
+		plotPDFs(outputDir, prefix, magForRate, decluster, smooth, gridReg, name, null, seisRegs);
+	}
+	
+	private static void plotPDFs(File outputDir, String prefix, double magForRate, PRVI25_DeclusteringAlgorithms decluster,
+			PRVI25_SeisSmoothingAlgorithms smooth, GriddedRegion gridReg, String name, List<? extends FaultSection> subSects,
+			PRVI25_SeismicityRegions... seisRegs) throws IOException {
 		if (gridReg == null) {
 			Preconditions.checkState(seisRegs.length == 1);
 			gridReg = new GriddedRegion(seisRegs[0].load(), 0.1, GriddedRegion.ANCHOR_0_0);
@@ -208,6 +218,12 @@ class SeismicityPDFFigures {
 		
 		GeographicMapMaker mapMaker = new GeographicMapMaker(gridReg);
 		mapMaker.setWriteGeoJSON(false);
+		
+		if (subSects != null) {
+			mapMaker.setFaultSections(subSects);
+			mapMaker.setSectOutlineChar(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, Color.DARK_GRAY));
+			mapMaker.setSectTraceChar(new PlotCurveCharacterstics(PlotLineType.SOLID, 3f, Color.DARK_GRAY));
+		}
 		
 		if (!plotRegions.isEmpty())
 			mapMaker.plotInsetRegions(plotRegions, new PlotCurveCharacterstics(PlotLineType.SOLID, 2f, Color.DARK_GRAY), null, 1);

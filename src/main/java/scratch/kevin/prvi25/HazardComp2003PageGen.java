@@ -58,9 +58,9 @@ public class HazardComp2003PageGen {
 	};
 	
 	public static void main(String[] args) throws IOException {
-		String imtName = "PGA";
-		String imtDir = "PGA";
-		double period = 0d;
+//		String imtName = "PGA";
+//		String imtDir = "PGA";
+//		double period = 0d;
 		
 //		String imtName = "0.2s SA";
 //		String imtDir = "SA0P2";
@@ -70,9 +70,9 @@ public class HazardComp2003PageGen {
 //		String imtDir = "SA1P0";
 //		double period = 1d;
 		
-//		String imtName = "5s SA";
-//		String imtDir = "SA5P0";
-//		double period = 5d;
+		String imtName = "5s SA";
+		String imtDir = "SA5P0";
+		double period = 5d;
 		
 //		ReturnPeriods[] rps = ReturnPeriods.values();
 		ReturnPeriods[] rps = { ReturnPeriods.TWO_IN_50, ReturnPeriods.TEN_IN_50 };
