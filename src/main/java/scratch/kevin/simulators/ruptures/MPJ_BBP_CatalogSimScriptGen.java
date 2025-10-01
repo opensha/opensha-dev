@@ -126,10 +126,10 @@ public class MPJ_BBP_CatalogSimScriptGen {
 //		String bbpCopyParentDir = USC_CARC_ScriptWriter.SHARED_SCRATCH_DIR+"/kmilner";
 		String bbpCopyParentDir = null;
 		String nodeGFDir = USC_CARC_ScriptWriter.NODE_TEMP_DIR+"/gfs";
-		File bbpEnvFile = new File("/project/scec_608/kmilner/bbp/bbp_env.sh");
+		File bbpEnvFile = new File("/project2/scec_608/kmilner/bbp/bbp_env.sh");
 //		String sharedScratchDir = "${SCRATCHDIR}";
 		String sharedScratchDir = null;
-		File remoteDir = new File("/project/scec_608/kmilner/bbp/parallel");
+		File remoteDir = new File("/project2/scec_608/kmilner/bbp/parallel");
 		BatchScriptWriter pbsWrite = new USC_CARC_ScriptWriter();
 		List<File> classpath = new ArrayList<>();
 		classpath.add(new File(remoteDir, "opensha-dev-all.jar"));
