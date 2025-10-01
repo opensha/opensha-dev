@@ -3455,7 +3455,9 @@ public class RSQSimCatalog implements XMLSaveable {
 	private static final File[] catalogLocations;
 	static {
 		catalogLocations = new File[] {
-				// USC HPC
+				// USC CARC
+				new File("/project2/scec_608/rsqsim/catalogs/kmilner"),
+				new File("/project2/scec_608/rsqsim/catalogs/shaw"),
 				new File("/project/scec_608/rsqsim/catalogs/kmilner"),
 				new File("/project/scec_608/rsqsim/catalogs/shaw"),
 				new File("/project/scec_608/rsqsim/catalogs/gilchrij"),

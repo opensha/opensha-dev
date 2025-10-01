@@ -3363,13 +3363,29 @@ public class PureScratch {
 		MarkdownUtils.writeHTML(lines, new File("/tmp/md_test.html"));
 	}
 	
+	private static void test347() throws IOException {
+		File sectsFile = new File("/home/kevin/Downloads/WGUEP2_AllFaults_v5_LL_continishWas_IntersectFix_TaperFix.geojson");
+		
+		String[] args = {
+				"--sub-sections",
+				sectsFile.getAbsolutePath(),
+				"--scale",
+				"MEAN_NSHM23",
+				"--preset",
+				"COULOMB",
+				"--output-file",
+				"/tmp/wgup_rup_set.zip"
+		};
+		RuptureSets.main(args);
+	}
+	
 	/**
 	 * @param args
 	 * @throws Exception 
 	 */
 	public static void main(String[] args) throws Exception {
 		try {
-			test346();
+			test347();
 		} catch (Throwable t) {
 			t.printStackTrace();
 			System.exit(1);
