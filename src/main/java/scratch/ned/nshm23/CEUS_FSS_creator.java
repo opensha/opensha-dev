@@ -672,7 +672,7 @@ public class CEUS_FSS_creator {
 
 	
     	// find full rupture area (actually, this is the max rupture area in the ERf)
-    	double fullRupArea = 0;
+    	double fullRupAreaKmsq = 0;
 	    for(int s=0;s<erf.getNumSources();s++) {
 	    	NshmSource src = (NshmSource)erf.getSource(s);
 	    	
@@ -685,8 +685,8 @@ if(src.getName().equals("Unnamed fault system source")) {
 	    	if(src.getNSHM_ID() == faultSection.getSectionId()) { 
 		    	for(int r=0;r<src.getNumRuptures();r++) {
 		    		double rupArea = src.getRupture(r).getRuptureSurface().getArea();
-		    		if(fullRupArea<rupArea)
-		    			fullRupArea=rupArea;
+		    		if(fullRupAreaKmsq<rupArea)
+		    			fullRupAreaKmsq=rupArea;
 		    	}
 	    	}
 	    }
@@ -712,14 +712,14 @@ if(src.getName().equals("Unnamed fault system source")) // temp fix for Peters I
 		    		double mag = src.getRupture(r).getMag();
 		    		int iMag = mfd_full.getClosestXIndex(mag);
 		    		double rate = src.getRupture(r).getProbability();  // rate approx equal to prob
-		    		double rupArea = src.getRupture(r).getRuptureSurface().getArea();
+		    		double rupAreaKmsq = src.getRupture(r).getRuptureSurface().getArea();
 		    		origTotalMoment += MagUtils.magToMoment(mag)*rate;
 		    		fssTotalMoment += MagUtils.magToMoment(mfd_full.getX(iMag))*rate;
 		    		aveDeltaMag += mfd_full.getX(iMag)-mag;
 		    		numMag+=1;
 // System.out.println(mag+"\t"+rupArea);
 
-		    		if(rupArea > 0.99*fullRupArea) {
+		    		if(rupAreaKmsq > 0.99*fullRupAreaKmsq) {
 		    			mfd_full.add(iMag, rate*rateWt);
 		    		}
 		    		else {
@@ -738,7 +738,7 @@ if(src.getName().equals("Unnamed fault system source")) // temp fix for Peters I
 	    double tempRatio = fssTotalMoment/origTotalMoment;
 	    if(D) System.out.println("   FSS:\n\tfssTotalMoment="+(float)fssTotalMoment+
 	    		"\n\torigTotalMoment="+(float)origTotalMoment+"\n\tratio="+tempRatio+
-	    		"\n\taveDeltaMag="+(float)aveDeltaMag+"\n\tfullRupArea="+fullRupArea);
+	    		"\n\taveDeltaMag="+(float)aveDeltaMag+"\n\tfullRupArea="+fullRupAreaKmsq);
 	    
 	    List<List<Integer>> sectionForRups = new ArrayList<>();
 	    ArrayList<Double> magForRupList =new ArrayList<Double>();
@@ -835,8 +835,8 @@ if(src.getName().equals("Unnamed fault system source")) // temp fix for Peters I
 		double[] rupRates = new double[numRups];
 		for(int r=0;r<numRups;r++) {
 			mags[r] = magForRupList.get(r);
-			rupAreas[r] = areaForRupList.get(r);
-			rupLengths[r] = lengthForRupList.get(r);
+			rupAreas[r] = areaForRupList.get(r)*1e6; // convert from km to m squared
+			rupLengths[r] = lengthForRupList.get(r)*1e3; // convert from km to m
 			rupRates[r] = rateForRupList.get(r);
 			rakes[r] = faultSection.getAveRake();
 		}
@@ -890,11 +890,11 @@ if(src.getName().equals("Unnamed fault system source")) // temp fix for Peters I
 	    int r = 0;
 	    for(int srcID:mfdForSrcIdMap.keySet()) {
 	    	ArrayList<Integer> sectForRupList = surfListForSrcIdMap.get(srcID);
-	    	double length = 0;
+	    	double lengthKm = 0;
 	    	double area = 0;
 	    	double rake = faultSectionData.get(sectForRupList.get(0)).getAveRake();  // get rake of first section
 	    	for(int id:sectForRupList) {
-	    		length += faultSectionData.get(id).getTraceLength();
+	    		lengthKm += faultSectionData.get(id).getTraceLength();
 	    		area += faultSectionData.get(id).getArea(false);
 	    		// check that rake is constant across sections
 	    		double tempRake = faultSectionData.get(id).getAveRake();
@@ -911,7 +911,7 @@ if(src.getName().equals("Unnamed fault system source")) // temp fix for Peters I
 	    			mags[r] = mfd.getX(i);
 	    			rupAreas[r] = area;
 	    			rakes[r] = rake;
-	    			rupLengths[r] = length;
+	    			rupLengths[r] = lengthKm*1e3; // convert to meters
 	    			sectionForRups.add(sectForRupList);
 	    			r += 1;		
 	    		}
@@ -1111,8 +1111,14 @@ if(src.getName().equals("Unnamed fault system source")) // temp fix for Peters I
 
 		ArrayList<FaultSystemSolution> fssList = getFaultSystemSolutionList(nshmModelDirPath,FaultModelEnum.PREFERRED);
 		for(FaultSystemSolution fss:fssList) {
-			for(FaultSection sect:fss.getRupSet().getFaultSectionDataList())
-				System.out.println(sect.getSectionId()+"\t"+sect.getParentSectionId()+"\t"+sect.getName());
+			int s=0;
+			for(FaultSection sect:fss.getRupSet().getFaultSectionDataList()) {
+				String magString = "Mags: ";
+				for(int r: fss.getRupSet().getRupturesForSection(s))
+					magString += (float)fss.getRupSet().getMagForRup(r)+", ";
+				System.out.println(sect.getSectionId()+"\t"+sect.getParentSectionId()+"\t"+sect.getName()+"\t"+magString);
+				s+=1;
+			}
 		}
 		
 //	    WC1994_MagLengthRelationship wcMagLength = new WC1994_MagLengthRelationship();

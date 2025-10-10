@@ -17,6 +17,7 @@ import org.opensha.commons.data.CSVFile;
 import org.opensha.commons.eq.MagUtils;
 import org.opensha.commons.geo.Location;
 import org.opensha.commons.geo.LocationList;
+import org.opensha.commons.geo.Region;
 import org.opensha.commons.geo.json.Feature;
 import org.opensha.commons.geo.json.FeatureCollection;
 import org.opensha.commons.geo.json.FeatureProperties;
@@ -159,22 +160,21 @@ if(src.getName().equals("Unnamed fault system source")) // temp fix for Peters I
 			}
 		}
 		
-		if(D) {
-			for(GeoJSONFaultSection fltSect:fltSectList) {
-				
-				FaultSystemSolution fss = CEUS_FSS_creator.getFaultSystemSolution(rateWtFromIdMap.get(fltSect.getSectionId()),fltSect, erf);
-				fssList.add(fss);
+		for(GeoJSONFaultSection fltSect:fltSectList) {
 
+			FaultSystemSolution fss = CEUS_FSS_creator.getFaultSystemSolution(rateWtFromIdMap.get(fltSect.getSectionId()),fltSect, erf);
+			fssList.add(fss);
+			if(D) {
 				double fssMoRate = fss.getTotalFaultSolutionMomentRate();
 				double fssTotRate = fss.getTotalRateForAllFaultSystemRups();
-				
+
 				double moRate = fltSect.calcMomentRate(false);
 				double erfMoRate = erfMoRateMap.get(fltSect.getSectionId());
 				int id = fltSect.getSectionId();
 				if(D) System.out.println(id+"\t"+numSrcForFaultMap.get(id)+" Srces\t"+(float)moRate+"\t"+(float)erfMoRate+
 						"\t"+(float)(moRate/erfMoRate)+"\t"+fltSect.getName()+"\t"+(float)fltSect.getTraceLength());
 			}
-			
+
 		}
 		
 		
@@ -466,6 +466,7 @@ if(src.getName().equals("Unnamed fault system source")) // temp fix for Peters I
 
 		int r=0; // rupIndex
 		//			int testNum=0;
+//System.out.println("Start Test");
 		for(int i=3; i<csvFileGeod.getNumRows(); i++) {
 			if(csvFileGeod.get(i, 0).charAt(0) == '#') // skip these lines {
 				continue;
@@ -489,11 +490,10 @@ if(src.getName().equals("Unnamed fault system source")) // temp fix for Peters I
 				rupLength += sectionList.get(sectIndex).getTraceLength();
 				rupArea += sectionList.get(sectIndex).getArea(false);
 			}
-			rupLengths[r]=rupLength;
-			rupAreas[r]=rupArea;
+			rupLengths[r]=rupLength*1e3; // km to m
+			rupAreas[r]=rupArea; 
 			r+=1;
 		}
-
 		FaultSystemRupSet rupSet = new FaultSystemRupSet(
 				sectionList,
 				sectionForRups,
@@ -538,8 +538,47 @@ if(src.getName().equals("Unnamed fault system source")) // temp fix for Peters I
     				throw new RuntimeException("fssTotalMFD != erfTotalMFD at M="+erfTotalMFD.getX(i)+"; fssTotalMFD="+val1+"; erfTotalMFD="+val2);
 	    	}
 	    	System.out.println("TEST PASSED: fssTotalMFD equals erfTotalMFD");
+	    	
+//	    	// the following verifies that Fairweather North has zero participation rates for nshm-alaska-3.0.1
+//	    	// test Fairweather North 14 area; [-138.76926, 59.66737], [-138.72111, 59.64056]
+//	    	Region f14_region = new Region(new Location(59.66737,-138.76926,0d), new Location(59.64056,-138.72111,0d));
+//	    	
+//	    	for(FaultSection fs:fss.getRupSet().getFaultSectionDataList()) {
+//	    		for(Location loc: fs.getFaultTrace()) {
+//	    			if(f14_region.contains(loc))
+//	    				System.out.println("INSIDE: "+fs.getName());
+//	    		}
+//	    	}
+//	    	double rateFSS_InRegion=0;
+//	    	for(r=0;r<fss.getRupSet().getNumRuptures();r++) {
+//	    		double fractInside=fss.getRupSet().getSurfaceForRupture(r, 1.0).getFractionOfSurfaceInRegion(f14_region);
+//	    		if(fractInside>0)
+//	    			rateFSS_InRegion =+ fss.getRateForRup(r);
+//	    	}
+//	    	double rateERF_InRegion=0;
+//	    	boolean gotOne=false;
+//	    	boolean gotOne2=false;
+//	    	int numERF_FSS_sources=0;
+//	    	for(int s=0;s<erf.getNumSources();s++) {
+//	    		NshmSource src = (NshmSource)erf.getSource(s);
+//	    		if(src.getName().equals("Unnamed fault system source")) {
+//	    			gotOne=true;
+//	    			numERF_FSS_sources+=1;
+//	    			for(r=0;r<src.getNumRuptures();r++) {
+//	    	    		double fractInside=src.getRupture(r).getRuptureSurface().getFractionOfSurfaceInRegion(f14_region);
+//	    	    		if(fractInside>0) {
+//	    	    			gotOne2=true;
+//	    	    			rateERF_InRegion += src.getRupture(r).getMeanAnnualRate(erf.getTimeSpan().getDuration());
+//	    	    		}
+//	    			}
+//	    		}
+//	    	}
+//	    	System.out.println("rateFSS_InRegion="+rateFSS_InRegion);
+//	    	System.out.println("rateERF_InRegion="+rateERF_InRegion+"\t gotOne="+gotOne+"\t gotOne2="+gotOne2);
+//	    	System.out.println("numERF_FSS_sources="+numERF_FSS_sources);
+//	    	System.out.println("fss.getRupSet().getNumRuptures()="+fss.getRupSet().getNumRuptures());
+
 		}
-		
 		return fss;
 	}
 	
@@ -576,9 +615,22 @@ if(src.getName().equals("Unnamed fault system source")) // temp fix for Peters I
 		
 		String nshmModelDirPath = "/Users/field/nshm-haz_data/nshm-alaska-3.0.1/";
 		DeformationModelEnum defModel = DeformationModelEnum.ELLIOT;
-		getFaultSystemSolutionList(nshmModelDirPath, defModel);
+//		DeformationModelEnum defModel = DeformationModelEnum.GEO;
+		ArrayList<FaultSystemSolution> fssList = getFaultSystemSolutionList(nshmModelDirPath, defModel);
+		FaultSystemSolution bigFSS = fssList.get(fssList.size()-1);
+		double[] partRates = bigFSS.calcParticRateForAllSects(0, 10);
+		for(int i=0;i<partRates.length;i++)
+			if(partRates[i]==0.0)
+				System.out.println("Zero rate for sect "+i+"\t"+bigFSS.getRupSet().getFaultSectionData(i).getName());
 
-//		System.exit(0);
+		for(FaultSystemSolution fss:fssList) {
+			for(int r=0; r<fss.getRupSet().getNumRuptures();r++) {
+				if(fss.getRupSet().getAreaForRup(r) == 0) {
+					System.out.println("Area zero for r="+r+"\t"+fss.getInfoString());
+				}
+			}
+		}
+		//		System.exit(0);
 
 		
 //		NshmErf erf = AK_FaultZones_creator.getNshmERF(nshmModelDirPath);
