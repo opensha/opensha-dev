@@ -178,6 +178,77 @@ public class CONUS_TD_ERF_Demo {
 	}
 
 
+	public static FaultSystemSolution getCascadia_FSS(String cascadia_FSS_fileName) {
+
+		// try reading from file
+		if(cascadia_FSS_fileName != null) {
+			File file = new File(cascadia_FSS_fileName);
+			if(file.exists()) {
+				try {
+					return FaultSystemSolution.load(file);
+				} catch (IOException e) {
+					e.printStackTrace();
+				};
+			}
+		}	
+
+		// create FSS
+		String nshmModelDirPath = "/Users/field/nshm-haz_data/nshm-conus-6.1.2/";
+		
+		FaultSystemSolution sol = Cascadia_FSS_creator.getFaultSystemSolution(nshmModelDirPath, Cascadia_FSS_creator.FaultModelEnum.MIDDLE);
+		if(cascadia_FSS_fileName != null) {
+			try {
+				sol.write(new File(cascadia_FSS_fileName));
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+		}
+		return sol;
+	}
+	
+	/**
+	 * This includes cascadia
+	 * @param wus_FSS_fileName
+	 * @return
+	 */
+	public static FaultSystemSolution getWUS_FSS(String wus_FSS_fileName) {
+		
+		FaultSystemSolution sol=null;
+		
+		if(wus_FSS_fileName != null) {
+			File file = new File(wus_FSS_fileName);
+			if(file.exists()) {
+				try {
+					return FaultSystemSolution.load(file);
+				} catch (IOException e) {
+					e.printStackTrace();
+				};
+			}
+		}	
+		
+		// Make from scratch
+		try {
+			//WUS
+			FaultSystemSolution wusSol = FaultSystemSolution.load(new File("/Users/field/nshm-haz_data/results_WUS_FM_v3_branch_averaged_gridded_simplified.zip"));
+			String nshmModelDirPath = "/Users/field/nshm-haz_data/nshm-conus-6.1.2/";
+			// full/merged solution w/ Cascadia
+			sol = MergedSolutionCreator.merge(wusSol, getCascadia_FSS(null));
+		} catch (IOException e) {
+			e.printStackTrace();
+		}		
+		
+		if(wus_FSS_fileName != null) {
+			try {
+				sol.write(new File(wus_FSS_fileName));
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+		}
+		
+		return sol;
+	}
+
+
 	
 	public static FaultSystemSolution getFull_FSS(String full_FSS_fileName) {
 		

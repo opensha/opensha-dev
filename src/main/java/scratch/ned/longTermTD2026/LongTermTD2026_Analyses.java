@@ -278,7 +278,6 @@ System.exit(0);
 	}
 	
 	
-	// getAK_FSS
 
 	/**
 	 * this returns a Alaska (AK) ERF with background seismicity excluded but all other 
@@ -288,6 +287,32 @@ System.exit(0);
 	private static FaultSystemSolutionERF getAK_ERF() {
 		String full_FSS_fileName = "/Users/field/nshm-haz_data/alaska_FSS_test.zip";
 		FaultSystemSolution sol = CONUS_TD_ERF_Demo.getAK_FSS(full_FSS_fileName);		
+		FaultSystemSolutionERF erf = new FaultSystemSolutionERF(sol);
+		erf.getParameter(IncludeBackgroundParam.NAME).setValue(IncludeBackgroundOption.EXCLUDE);
+		return erf;
+	}
+	
+	/**
+	 * this returns a Cascadia ERF with background seismicity excluded but all other 
+	 * parameters set as default; erf.updateForecast()is not called
+	 * @return
+	 */
+	private static FaultSystemSolutionERF getCascadia_ERF() {
+		String full_FSS_fileName = "/Users/field/nshm-haz_data/cascadia_FSS_test.zip";
+		FaultSystemSolution sol = CONUS_TD_ERF_Demo.getCascadia_FSS(full_FSS_fileName);		
+		FaultSystemSolutionERF erf = new FaultSystemSolutionERF(sol);
+		erf.getParameter(IncludeBackgroundParam.NAME).setValue(IncludeBackgroundOption.EXCLUDE);
+		return erf;
+	}
+
+	/**
+	 * this returns a WUS w/ Cascadia ERF with background seismicity excluded but all other 
+	 * parameters set as default; erf.updateForecast()is not called
+	 * @return
+	 */
+	private static FaultSystemSolutionERF getWUS_ERF() {
+		String full_FSS_fileName = "/Users/field/nshm-haz_data/wusWithCascadia_FSS_test.zip";
+		FaultSystemSolution sol = CONUS_TD_ERF_Demo.getWUS_FSS(full_FSS_fileName);		
 		FaultSystemSolutionERF erf = new FaultSystemSolutionERF(sol);
 		erf.getParameter(IncludeBackgroundParam.NAME).setValue(IncludeBackgroundOption.EXCLUDE);
 		return erf;
@@ -379,28 +404,6 @@ System.exit(0);
 
 	}
 	
-	private static void bptSimulationsU3(String dirName, long seed, String timeSinceLastFileName, MagDependentAperiodicityOptions aper) {
-		
-		String fileName="/Users/field/Library/CloudStorage/OneDrive-DOI/Field_Other/CEA_WGCEP/UCERF3/UCERF3-TI/Figures/Fig11_FaultClusterFig/2013_05_10-ucerf3p3-production-10runs_COMPOUND_SOL_FM3_1_MEAN_BRANCH_AVG_SOL.zip";
-		FaultSystemSolutionERF erf = new FaultSystemSolutionERF(fileName);
-		erf.getParameter(IncludeBackgroundParam.NAME).setValue(IncludeBackgroundOption.EXCLUDE);
-		erf.getParameter(ProbabilityModelParam.NAME).setValue(ProbabilityModelOptions.U3_BPT);
-		erf.getParameter(MagDependentAperiodicityParam.NAME).setValue(aper);
-		BPTAveragingTypeOptions aveType = BPTAveragingTypeOptions.AVE_RI_AVE_NORM_TIME_SINCE;
-		erf.setParameter(BPTAveragingTypeParam.NAME, aveType);
-		erf.updateForecast();	
-		ProbabilityModelsCalc testCalc = new ProbabilityModelsCalc(erf);
-		long startTime = System.currentTimeMillis();
-		double numYrs=100000;
-		File parentDir = new File("/Users/field/Library/CloudStorage/OneDrive-DOI/Field_Other/ERF_Coordination/LongTermTD_2026/Analysis/bptSimulationsU3/");
-		if(!parentDir.exists()) 
-			parentDir.mkdir();
-		File outputDir = new File(parentDir,dirName);
-		boolean makePlots=true;
-		testCalc.simulateEvents(timeSinceLastFileName, "outputTimesinceLast.txt", numYrs, outputDir, seed, true, makePlots);
-		double runtimeMin = (double)(System.currentTimeMillis()- startTime)/60000d;
-		System.out.println("runtime (min) = "+(float)runtimeMin);
-	}
 	
 	private static void bptSimulations(FaultSystemSolutionERF erf, double numYrs, File parentDir, 
 			String dirName, long seed, String timeSinceLastFileName, MagDependentAperiodicityOptions aper) {
@@ -442,31 +445,6 @@ System.exit(0);
 		System.out.println("runtime (min) = "+(float)runtimeMin);
 	}
 
-
-	
-	private static void bptSimulationsUS26(String dirName, long seed, String timeSinceLastFileName, MagDependentAperiodicityOptions aper) {
-		
-		FaultSystemSolutionERF erf = getUS26_ERF();
-		erf.getParameter(IncludeBackgroundParam.NAME).setValue(IncludeBackgroundOption.EXCLUDE);
-		erf.getParameter(ProbabilityModelParam.NAME).setValue(ProbabilityModelOptions.U3_BPT);
-		erf.getParameter(MagDependentAperiodicityParam.NAME).setValue(aper);
-		BPTAveragingTypeOptions aveType = BPTAveragingTypeOptions.AVE_RI_AVE_NORM_TIME_SINCE;
-		erf.setParameter(BPTAveragingTypeParam.NAME, aveType);
-		erf.updateForecast();	
-		ProbabilityModelsCalc testCalc = new ProbabilityModelsCalc(erf);
-		long startTime = System.currentTimeMillis();
-		double numYrs=1000;
-		File parentDir = new File("/Users/field/Library/CloudStorage/OneDrive-DOI/Field_Other/ERF_Coordination/LongTermTD_2026/Analysis/bptSimulationsUS26/");
-		if(!parentDir.exists()) 
-			parentDir.mkdir();
-		File outputDir = new File(parentDir,dirName);
-		boolean makePlots=true;
-		testCalc.simulateEvents(timeSinceLastFileName, "outputTimesinceLast.txt", numYrs, outputDir, seed, true, makePlots);
-		double runtimeMin = (double)(System.currentTimeMillis()- startTime)/60000d;
-		System.out.println("runtime (min) = "+(float)runtimeMin);
-	}
-	
-	
 
 	
 	
@@ -714,6 +692,37 @@ System.exit(0);
 
 
 	}
+	
+	
+	public static void junkTest() {
+		int numSections = 2287;
+		double[] simRateArray = new double[numSections];
+		double[] targetRateArray = new double[numSections];
+		try {
+			File dataFile = new File("/Users/field/Library/CloudStorage/OneDrive-DOI/Field_Other/ERF_Coordination/LongTermTD_2026/Analysis/bptSimulationsAK/Run1_100k/magDepSectRates_magBelowAndAbove7pt3.txt");
+			BufferedReader reader = new BufferedReader(scratch.UCERF3.utils.UCERF3_DataUtils.getReader(dataFile.toURL()));
+			reader.readLine(); // skip header
+			int s=0;
+			String line;
+			while ((line = reader.readLine()) != null) {
+				String[] st = StringUtils.split(line,"\t");
+				int sectIndex = Integer.valueOf(st[0]);
+				if(s != sectIndex)
+					throw new RuntimeException("bad index");
+				targetRateArray[s] = Double.valueOf(st[7]);
+				simRateArray[s] = Double.valueOf(st[8]);
+				s+=1;
+			}
+			reader.close();
+		} catch (Exception e) {
+			ExceptionUtils.throwAsRuntimeException(e);
+		}
+		File dir = new File("/Users/field/Library/CloudStorage/OneDrive-DOI/Field_Other/ERF_Coordination/LongTermTD_2026/Analysis/bptSimulationsAK/Run1_100k");
+		ProbModelsPlottingUtils.writeSimOverImposedVsImposedSecPartRates_Plot(dir, targetRateArray, 
+				simRateArray, 10d, 100000d, "Mgt7pt3");
+
+
+	}
 
 
 
@@ -721,28 +730,60 @@ System.exit(0);
 		
 		String rootDir = "/Users/field/Library/CloudStorage/OneDrive-DOI/Field_Other/ERF_Coordination/LongTermTD_2026/Analysis/";
 		
-		//	U3 BPT Simulations
-//		long seed = 836529;
-//		MagDependentAperiodicityOptions aper = MagDependentAperiodicityOptions.MID_VALUES;
-//		FaultSystemSolutionERF erf = getUS26_ERF();
-//		double numYrs=1000;
-//		File parentDir = new File("/Users/field/Library/CloudStorage/OneDrive-DOI/Field_Other/ERF_Coordination/LongTermTD_2026/Analysis/bptSimulationsUS26/");
-//		bptSimulations(erf,numYrs,parentDir, "Run1_1k", seed, rootDir+"poissonSimulationsUS26/Run1/outputTimesinceLast.txt", aper);
-
-//		//	AK BPT Simulations
-		long seed = 836529;
-		MagDependentAperiodicityOptions aper = MagDependentAperiodicityOptions.MID_VALUES;
-		double numYrs=100000;
-		File parentDir = new File("/Users/field/Library/CloudStorage/OneDrive-DOI/Field_Other/ERF_Coordination/LongTermTD_2026/Analysis/bptSimulationsAK/");
-		bptSimulations(getAK_ERF(),numYrs,parentDir, "Run1_100k", seed, rootDir+"poissonSimulationsAK/Run1/outputTimesinceLast.txt", aper);
-
 		
-		// AK Poisson simulations
-//		File parentDir = new File(rootDir+"poissonSimulationsAK/");
+		// WUS w/ Cascadia (Middle branch) Poisson simulations
+		File parentDir = new File(rootDir+"bptSimulationsWUS_withCascadia/");
+		MagDependentAperiodicityOptions aper = MagDependentAperiodicityOptions.ALL_PT5_VALUES;
+		long seed = 984087634;
+		int numYrs = 50000;
+//		bptSimulations(getWUS_ERF(),numYrs,parentDir, "Run1_aper0pt5", seed, rootDir+"poissonSimulationsWUS_withCascadia/Run1/outputTimesinceLast.txt", aper);
+//		bptSimulations(getWUS_ERF(),numYrs,parentDir, "Run2_aper0pt5", seed, rootDir+"bptSimulationsWUS_withCascadia/Run1_aper0pt5/outputTimesinceLast.txt", aper);
+		bptSimulations(getWUS_ERF(),numYrs,parentDir, "Run3_aper0pt5", seed, rootDir+"bptSimulationsWUS_withCascadia/Run2_aper0pt5/outputTimesinceLast.txt", aper);
+		
+		// WUS w/ Cascadia (Middle branch) Poisson simulations
+//		File parentDir = new File(rootDir+"poissonSimulationsWUS_withCascadia/");
 //		long seed = 984087634;
 //		int numYrs = 10000000;
 //		for(int i=1;i<=1;i++) {
-//			poissonSimulations(getAK_ERF(), parentDir, "Run"+i, seed, numYrs);
+//			poissonSimulations(getWUS_ERF(), parentDir, "Run"+i, seed+=i*7836271, numYrs);
+//			seed += 7836271;
+//		}
+
+		
+
+//		// Cascadia (Middle branch) Poisson simulations - THIS DOESN'T WORK BECUASE FULL RUPTURE CAUSES ZERO RATE; IMPLEMENT WITH WUS
+//		File parentDir = new File(rootDir+"bptSimulationsCascadia/");
+//		MagDependentAperiodicityOptions aper = MagDependentAperiodicityOptions.ALL_PT5_VALUES;
+//		long seed = 984087634;
+//		int numYrs = 1000000;
+//		bptSimulations(getCascadia_ERF(),numYrs,parentDir, "Run1", seed, rootDir+"poissonSimulationsCascadia/Run1/outputTimesinceLast.txt", aper);
+
+//		// Cascadia (Middle branch) Poisson simulations
+//		File parentDir = new File(rootDir+"poissonSimulationsCascadia/");
+//		long seed = 984087634;
+//		int numYrs = 10000000;
+//		for(int i=1;i<=1;i++) {
+//			poissonSimulations(getCascadia_ERF(), parentDir, "Run"+i, seed+=i*7836271, numYrs);
+//			seed += 7836271;
+//		}
+
+		
+		//	AK BPT Simulations
+//		long seed = 836529;
+//		MagDependentAperiodicityOptions aper = MagDependentAperiodicityOptions.MID_VALUES;
+//		double numYrs=100000;
+//		File parentDir = new File(rootDir+"bptSimulationsAK/");
+//		bptSimulations(getAK_ERF(),numYrs,parentDir, "Run1_100k", seed, rootDir+"poissonSimulationsAK/Run1/outputTimesinceLast.txt", aper);
+//		bptSimulations(getAK_ERF(),numYrs,parentDir, "Run2_100k", seed, rootDir+"poissonSimulationsAK/Run2/outputTimesinceLast.txt", aper);
+//		bptSimulations(getAK_ERF(),numYrs,parentDir, "Run3_100k", seed, rootDir+"bptSimulationsAK/Run2_100k/outputTimesinceLast.txt",aper);
+//		bptSimulations(getAK_ERF(),numYrs,parentDir, "Run4_100k", seed, rootDir+"bptSimulationsAK/Run3_100k/outputTimesinceLast.txt",aper);
+		
+//		// AK Poisson simulations
+//		File parentDir = new File(rootDir+"poissonSimulationsAK/");
+//		long seed = 984087634-7836271;
+//		int numYrs = 2000000;
+//		for(int i=3;i<=3;i++) {
+//			poissonSimulations(getAK_ERF(), parentDir, "Run"+i, seed+=i*7836271, numYrs);
 //			seed += 7836271;
 //		}
 
@@ -772,6 +813,14 @@ System.exit(0);
 //		}
 
 		
+		//	U3 BPT Simulations - THESE TAKE TOO LONG
+//		long seed = 836529;
+//		MagDependentAperiodicityOptions aper = MagDependentAperiodicityOptions.MID_VALUES;
+//		FaultSystemSolutionERF erf = getUS26_ERF();
+//		double numYrs=1000;
+//		File parentDir = new File("/Users/field/Library/CloudStorage/OneDrive-DOI/Field_Other/ERF_Coordination/LongTermTD_2026/Analysis/bptSimulationsUS26/");
+//		bptSimulations(erf,numYrs,parentDir, "Run1_1k", seed, rootDir+"poissonSimulationsUS26/Run1/outputTimesinceLast.txt", aper);
+
 		
 		// US26 Poisson simulations
 //		File parentDir = new File(rootDir+"poissonSimulationsUS26/");
