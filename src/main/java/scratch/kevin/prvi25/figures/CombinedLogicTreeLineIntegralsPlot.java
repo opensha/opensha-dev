@@ -28,10 +28,10 @@ import scratch.kevin.prvi25.LogicTreeLineIntegralCalc;
 public class CombinedLogicTreeLineIntegralsPlot {
 
 	public static void main(String[] args) throws IOException {
-//		File crustalLIDir = new File(CRUSTAL_DIR, "line_integrals");
-//		File subLIDir = new File(SUBDUCTION_DIR, "line_integrals");
-		File crustalLIDir = new File(new File(INV_DIR, "2025_05_09-prvi25_crustal_branches-dmSample10x"), "line_integrals");
-		File subLIDir = new File(new File(INV_DIR, "2025_05_09-prvi25_subduction_branches"), "line_integrals");
+		File crustalLIDir = new File(CRUSTAL_DIR, "line_integrals");
+		File subLIDir = new File(SUBDUCTION_DIR, "line_integrals");
+//		File crustalLIDir = new File(new File(INV_DIR, "2025_05_09-prvi25_crustal_branches-dmSample10x"), "line_integrals");
+//		File subLIDir = new File(new File(INV_DIR, "2025_05_09-prvi25_subduction_branches"), "line_integrals");
 		File outputDir = new File(FIGURES_DIR, "logic_tree_line_integrals");
 //		File crustalLIDir = new File(new File(INV_DIR, "2025_01_17-prvi25_crustal_branches-dmSample10x"), "line_integrals");
 //		File subLIDir = new File(new File(INV_DIR, "2025_01_17-prvi25_subduction_branches"), "line_integrals");
