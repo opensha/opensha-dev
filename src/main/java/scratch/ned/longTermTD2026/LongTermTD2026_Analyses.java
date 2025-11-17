@@ -18,12 +18,17 @@ import org.apache.commons.math3.stat.descriptive.DescriptiveStatistics;
 import org.jfree.data.Range;
 import org.opensha.commons.data.function.DefaultXY_DataSet;
 import org.opensha.commons.data.function.HistogramFunction;
+import org.opensha.commons.data.function.IntegerPDF_FunctionSampler;
 import org.opensha.commons.data.function.XY_DataSet;
+import org.opensha.commons.eq.MagUtils;
 import org.opensha.commons.gui.plot.GeographicMapMaker;
 import org.opensha.commons.gui.plot.PlotCurveCharacterstics;
 import org.opensha.commons.gui.plot.PlotLineType;
 import org.opensha.commons.gui.plot.PlotSymbol;
 import org.opensha.commons.util.ExceptionUtils;
+import org.opensha.sha.earthquake.ProbEqkRupture;
+import org.opensha.sha.earthquake.ProbEqkSource;
+import org.opensha.sha.earthquake.calc.ERF_Calculator;
 import org.opensha.sha.earthquake.faultSysSolution.FaultSystemRupSet;
 import org.opensha.sha.earthquake.faultSysSolution.FaultSystemSolution;
 import org.opensha.sha.earthquake.param.BPTAveragingTypeOptions;
@@ -42,10 +47,13 @@ import org.opensha.sha.earthquake.rupForecastImpl.nshm23.timeDependence.DOLE_Sub
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.timeDependence.DOLE_SubsectionMapper.PaleoMappingAlgorithm;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.timeDependence.TimeDependentReportPageGen.DataToInclude;
 import org.opensha.sha.faultSurface.FaultSection;
+import org.opensha.sha.magdist.IncrementalMagFreqDist;
+import org.opensha.sha.magdist.SummedMagFreqDist;
 
 import scratch.UCERF3.erf.FaultSystemSolutionERF;
 import scratch.UCERF3.erf.utils.ProbModelsPlottingUtils;
 import scratch.UCERF3.erf.utils.ProbabilityModelsCalc;
+import scratch.ned.nshm23.AleutianArc_FSS_Creator;
 import scratch.ned.nshm23.CONUS_TD_ERF_Demo;
 
 public class LongTermTD2026_Analyses {
@@ -292,6 +300,20 @@ System.exit(0);
 		return erf;
 	}
 	
+	
+	/**
+	 * this returns a Alaska (AK) ERF with background seismicity excluded but all other 
+	 * parameters set as default; erf.updateForecast()is not called
+	 * @return
+	 */
+	private static FaultSystemSolutionERF getAleutianArc_ERF(AleutianArc_FSS_Creator.FaultModelEnum faultMode) {
+		String full_FSS_fileName = "/Users/field/nshm-haz_data/aleutianArc_FSS_test.zip";
+		FaultSystemSolution sol = CONUS_TD_ERF_Demo.getAleutianArc_FSS(full_FSS_fileName, faultMode);		
+		FaultSystemSolutionERF erf = new FaultSystemSolutionERF(sol);
+		erf.getParameter(IncludeBackgroundParam.NAME).setValue(IncludeBackgroundOption.EXCLUDE);
+		return erf;
+	}
+	
 	/**
 	 * this returns a Cascadia ERF with background seismicity excluded but all other 
 	 * parameters set as default; erf.updateForecast()is not called
@@ -310,9 +332,9 @@ System.exit(0);
 	 * parameters set as default; erf.updateForecast()is not called
 	 * @return
 	 */
-	private static FaultSystemSolutionERF getWUS_ERF() {
+	private static FaultSystemSolutionERF getWUS_withCascadia_ERF() {
 		String full_FSS_fileName = "/Users/field/nshm-haz_data/wusWithCascadia_FSS_test.zip";
-		FaultSystemSolution sol = CONUS_TD_ERF_Demo.getWUS_FSS(full_FSS_fileName);		
+		FaultSystemSolution sol = CONUS_TD_ERF_Demo.getWUS_withCascadia_FSS(full_FSS_fileName);		
 		FaultSystemSolutionERF erf = new FaultSystemSolutionERF(sol);
 		erf.getParameter(IncludeBackgroundParam.NAME).setValue(IncludeBackgroundOption.EXCLUDE);
 		return erf;
@@ -397,7 +419,7 @@ System.exit(0);
 		File outputDir = new File("/Users/field/Library/CloudStorage/OneDrive-DOI/Field_Other/ERF_Coordination/LongTermTD_2026/Analysis/OldVsNewSimMethodTest/NewSimMethodResult");
 //		File outputDir=null;
 		boolean makePlots=true;
-		testCalc.simulateEvents(timeSinceLastFileName, null, numYrs, outputDir, seed, true, makePlots);
+		testCalc.simulateEvents(timeSinceLastFileName, null, numYrs, outputDir, seed, true, makePlots, Double.NaN);
 		
 		double runtimeMin = (double)(System.currentTimeMillis()- startTime)/60000d;
 		System.out.println("runtime (min) = "+(float)runtimeMin);
@@ -406,7 +428,8 @@ System.exit(0);
 	
 	
 	private static void bptSimulations(FaultSystemSolutionERF erf, double numYrs, File parentDir, 
-			String dirName, long seed, String timeSinceLastFileName, MagDependentAperiodicityOptions aper) {
+			String dirName, long seed, String timeSinceLastFileName, MagDependentAperiodicityOptions aper,
+			double timeStepYrs) {
 		
 		erf.getParameter(IncludeBackgroundParam.NAME).setValue(IncludeBackgroundOption.EXCLUDE);
 		erf.getParameter(ProbabilityModelParam.NAME).setValue(ProbabilityModelOptions.U3_BPT);
@@ -420,7 +443,7 @@ System.exit(0);
 			parentDir.mkdir();
 		File outputDir = new File(parentDir,dirName);
 		boolean makePlots=true;
-		testCalc.simulateEvents(timeSinceLastFileName, "outputTimesinceLast.txt", numYrs, outputDir, seed, true, makePlots);
+		testCalc.simulateEvents(timeSinceLastFileName, "outputTimesinceLast.txt", numYrs, outputDir, seed, true, makePlots, timeStepYrs);
 		double runtimeMin = (double)(System.currentTimeMillis()- startTime)/60000d;
 		System.out.println("runtime (min) = "+(float)runtimeMin);
 	}
@@ -428,7 +451,7 @@ System.exit(0);
 	
 	
 	private static void poissonSimulations(FaultSystemSolutionERF erf, File parentDir, 
-			String dirName, long seed, int numYrs) {
+			String dirName, long seed, int numYrs, double timeStepYrs) {
 		
 		String timeSinceLastFileName = null;
 		erf.getParameter(ProbabilityModelParam.NAME).setValue(ProbabilityModelOptions.POISSON);
@@ -440,11 +463,363 @@ System.exit(0);
 			parentDir.mkdir();
 		File outputDir = new File(parentDir,dirName);
 		boolean makePlots=true;
-		testCalc.simulateEvents(timeSinceLastFileName, "outputTimesinceLast.txt", numYrs, outputDir, seed, true, makePlots);
+		testCalc.simulateEvents(timeSinceLastFileName, "outputTimesinceLast.txt", numYrs, outputDir, seed, true, makePlots, timeStepYrs);
 		double runtimeMin = (double)(System.currentTimeMillis()- startTime)/60000d;
 		System.out.println("runtime (min) = "+(float)runtimeMin);
 	}
+	
+	/**
+	 * 
+	 */
+	private static void rupPlotsForMultSimulations(String dirName, String runDirPrefix, String runDirSuffix, 
+			int numSims, FaultSystemSolutionERF erf, double simDuration) {
+		
+		File outputDir = new File(dirName+"/StatsPlotsFor"+numSims+"_Runs");
+		if(!outputDir.exists())
+			outputDir.mkdir();
+		
+		// temporarily set the forecast as Poisson, to get long-term rates, & no background 
+		ProbabilityModelOptions probType = (ProbabilityModelOptions)erf.getParameter(ProbabilityModelParam.NAME).getValue();
+		IncludeBackgroundOption includeBackground = (IncludeBackgroundOption)erf.getParameter(IncludeBackgroundParam.NAME).getValue();
+		erf.getParameter(ProbabilityModelParam.NAME).setValue(ProbabilityModelOptions.POISSON);
+		erf.getParameter(IncludeBackgroundParam.NAME).setValue(IncludeBackgroundOption.EXCLUDE);
+		erf.updateForecast();
 
+		// make the target MFD - 
+		SummedMagFreqDist targetMFD=null;
+		targetMFD = ERF_Calculator.getTotalMFD_ForERF(erf, 5.05, 9.95, 50, true);
+		targetMFD.setName("Target MFD");
+		double targetTotMoRate = ERF_Calculator.getTotalMomentRateInRegion(erf, null);
+		double targetTotRate = targetMFD.getTotalIncrRate();
+		double targetMgt6pt7_Rate = targetMFD.getCumRate(6.75);
+		String mfdString = "total rate = "+(float)targetTotRate;
+		mfdString += "\ntotal rate >= 6.7 = "+(float)targetMgt6pt7_Rate;
+		mfdString += "\ntotal MoRate = "+(float)targetTotMoRate;
+		targetMFD.setInfo(mfdString);			
+
+		// reset ERF to original state
+		erf.getParameter(ProbabilityModelParam.NAME).setValue(probType);
+		erf.getParameter(IncludeBackgroundParam.NAME).setValue(includeBackground);
+		erf.updateForecast();
+
+		// MFD & MoRate for simulation
+		double simTotMoRate=0;
+		double simTotRate = 0;
+		double simMgt6pt7_Rate = 0;
+
+		ArrayList<SummedMagFreqDist> simMFD_List = new ArrayList<SummedMagFreqDist>();
+
+		// read file
+		for(int i=1;i<=numSims;i++) {
+			try {
+				SummedMagFreqDist simMFD = new SummedMagFreqDist(5.05,9.95,50);
+
+				File dataFile = new File(dirName+"/"+runDirPrefix+i+runDirSuffix+"/sampledEventsData.txt");
+//				System.out.println(dataFile);
+				
+				BufferedReader reader = new BufferedReader(scratch.UCERF3.utils.UCERF3_DataUtils.getReader(dataFile.toURL()));
+//		        Path filePath = Paths.get("/Users/field/Library/CloudStorage/OneDrive-DOI/Field_Other/ERF_Coordination/LongTermTD_2026/Analysis/bptSimulationsU3/Run"+i+"_100k/obsVsImposedSectionPartRates.txt"); 
+//		        Charset asciiCharset = Charset.forName("US-ASCII");
+//		        BufferedReader reader = Files.newBufferedReader(filePath, asciiCharset);
+
+		        reader.readLine(); // skip header
+				int n=0;
+				String line;
+				while ((line = reader.readLine()) != null) {
+					String[] st = StringUtils.split(line,"\t");
+					int nthRupIndex = Integer.valueOf(st[0]);
+					int fssRupIndex = Integer.valueOf(st[1]);
+					double year = Double.valueOf(st[2]);	
+					long epoch = Long.valueOf(st[3]);	
+					double normRupRI = Double.valueOf(st[4]);	
+					double rupMag = Double.valueOf(st[5]);	
+					double rupArea = Double.valueOf(st[6]);
+					simTotMoRate += MagUtils.magToMoment(rupMag);	
+					simTotRate += 1;
+					if(rupMag>=6.7)
+						simMgt6pt7_Rate += 1;
+					simMFD.addResampledMagRate(rupMag, 1.0, true);
+				}
+				simMFD.scale(1.0/simDuration);
+				simMFD_List.add(simMFD);
+				
+			reader.close();
+			} catch (Exception e) {
+				ExceptionUtils.throwAsRuntimeException(e);
+			}
+		}
+		
+		simTotMoRate/=(simDuration*numSims);
+		simTotRate /= (simDuration*numSims);
+		simMgt6pt7_Rate /= (simDuration*numSims);
+		System.out.println("targetTotMoRate="+(float)targetTotMoRate+"\tsimTotMoRate="+(float)simTotMoRate+
+				"\tratio="+(float)(simTotMoRate/targetTotMoRate));
+		System.out.println("targetTotRate="+(float)targetTotRate+"\tsimTotRate="+(float)simTotRate+
+				"\tratio="+(float)(simTotRate/targetTotRate));
+		System.out.println("rargetMgt6pt7_Rate="+(float)targetMgt6pt7_Rate+"\tsimMgt6pt7_Rate="+(float)simMgt6pt7_Rate+
+				"\tratio="+(float)(simMgt6pt7_Rate/targetMgt6pt7_Rate));
+		
+		// MFDs
+		ProbModelsPlottingUtils.writeMFD_ComprisonPlot(targetMFD, simMFD_List, outputDir);
+
+	}
+
+
+
+	/**
+	 * 
+	 */
+	private static void sectPlotsForMultSimulations(String dirName, String runDirPrefix, String runDirSuffix, 
+			int numSims, FaultSystemSolution sol) {
+		
+		File outputDir = new File(dirName+"/StatsPlotsFor"+numSims+"_Runs");
+		if(!outputDir.exists())
+			outputDir.mkdir();
+		
+		int numSections = 0;
+		ArrayList<double[]> simRateArrayList = new ArrayList<double[]>();
+		ArrayList<double[]> ratioArrayList = new ArrayList<double[]>();
+		double[] targetRateArray=null;
+		String[] sectNameArray=null;
+		double totMeanRatio = 0;
+		for(int i=1;i<=numSims;i++) {
+			try {
+				File dataFile = new File(dirName+"/"+runDirPrefix+i+runDirSuffix+"/obsVsImposedSectionPartRates.txt");
+				System.out.println(dataFile);
+
+				// compute numSections & create arrays if first simulation
+				if(i==1) {
+					BufferedReader reader = new BufferedReader(scratch.UCERF3.utils.UCERF3_DataUtils.getReader(dataFile.toURL()));
+					String line;
+			        reader.readLine(); // skip header
+					while ((line = reader.readLine()) != null)
+						numSections+=1;
+					System.out.println("numSections="+numSections);
+					targetRateArray = new double[numSections];
+					sectNameArray = new String[numSections];
+				}
+				
+				double[] simRateArray = new double[numSections];
+				double[] ratioArray = new double[numSections];
+				BufferedReader reader = new BufferedReader(scratch.UCERF3.utils.UCERF3_DataUtils.getReader(dataFile.toURL()));
+//		        Path filePath = Paths.get("/Users/field/Library/CloudStorage/OneDrive-DOI/Field_Other/ERF_Coordination/LongTermTD_2026/Analysis/bptSimulationsU3/Run"+i+"_100k/obsVsImposedSectionPartRates.txt"); 
+//		        Charset asciiCharset = Charset.forName("US-ASCII");
+//		        BufferedReader reader = Files.newBufferedReader(filePath, asciiCharset);
+
+		        reader.readLine(); // skip header
+				int s=0;
+				String line;
+				while ((line = reader.readLine()) != null) {
+					String[] st = StringUtils.split(line,"\t");
+					int sectIndex = Integer.valueOf(st[0]);
+					targetRateArray[s] = Double.valueOf(st[1]);
+					simRateArray[s] = Double.valueOf(st[2]);
+					double ratio = Double.valueOf(st[3]);
+					ratioArray[s] = ratio;
+					totMeanRatio += ratio;
+					sectNameArray[s] = st[4];
+					if(s != sectIndex)
+						throw new RuntimeException("bad index");
+					s+=1;
+				}
+				simRateArrayList.add(simRateArray);
+				ratioArrayList.add(ratioArray);
+				
+				reader.close();
+			} catch (Exception e) {
+				ExceptionUtils.throwAsRuntimeException(e);
+			}
+		}
+		totMeanRatio /= (numSections*numSims);
+
+		double[] simRateMeanArray = new double[numSections];
+		double[] simRateStdevArray = new double[numSections];
+		double[] simRateStdomArray = new double[numSections];
+		double[] ratioMeanArray = new double[numSections];
+		double[] ratioStdevArray = new double[numSections];
+		double[] ratioStdomArray = new double[numSections];
+		double[] ratioMeanFirstHalf = new double[numSections];
+		double[] ratioMeanLastHalf = new double[numSections];
+//		double[] simNormError = new double[numSections];
+		double[] simFractStdom = new double[numSections];
+
+		double minMeanRatio = Double.MAX_VALUE; // min ave among sections
+		double maxMeanRatio = -Double.MAX_VALUE; // max ave among sections
+		double minMeanRate = Double.MAX_VALUE;
+		double maxFractError = -Double.MAX_VALUE;
+		int indexForMaxFractError=-1;
+		for(int s=0;s<numSections;s++) {
+			DescriptiveStatistics simRateStats = new DescriptiveStatistics();
+			DescriptiveStatistics ratioStats = new DescriptiveStatistics();
+			for(int i=0;i<numSims;i++) {
+				simRateStats.addValue(simRateArrayList.get(i)[s]);
+				ratioStats.addValue(ratioArrayList.get(i)[s]);
+				if(i<numSims/2)
+					ratioMeanFirstHalf[s]+=ratioArrayList.get(i)[s]/((numSims/2)); //*totMeanRatio);
+				else
+					ratioMeanLastHalf[s]+=ratioArrayList.get(i)[s]/((numSims/2)); //*totMeanRatio);
+			}
+			simRateMeanArray[s] = simRateStats.getMean();
+			if(minMeanRate>simRateMeanArray[s]) minMeanRate=simRateMeanArray[s];
+			simRateStdevArray[s] = simRateStats.getStandardDeviation();
+			simRateStdomArray[s] = simRateStdevArray[s]/Math.sqrt(numSims);
+			ratioMeanArray[s] = ratioStats.getMean();
+			if(minMeanRatio>ratioMeanArray[s]) minMeanRatio=ratioMeanArray[s];
+			if(maxMeanRatio<ratioMeanArray[s]) maxMeanRatio=ratioMeanArray[s];
+			ratioStdevArray[s] = ratioStats.getStandardDeviation();
+			ratioStdomArray[s] = ratioStats.getStandardDeviation()/Math.sqrt(numSims);
+//			simNormError[s] = (simRateMeanArray[s]/1.088-targetRateArray[s])/simRateStdomArray[s];
+			simFractStdom[s] = simRateStdomArray[s]/simRateMeanArray[s];
+			if(maxFractError<simFractStdom[s]) {
+				maxFractError=simFractStdom[s];
+				indexForMaxFractError=s;
+			}
+		}
+		
+		System.out.println("minMeanRate="+minMeanRate+"\tN="+(float)minMeanRate*1e6);
+		System.out.println("maxFractStdom="+maxFractError+"\ttargetRate="+targetRateArray[indexForMaxFractError]);
+
+		// following used to verify calculation in Excel
+//		System.out.println("Values for maxFractStdom:");
+//		for(int i=0;i<numSims;i++) {
+//			System.out.println(simRateArrayList.get(i)[indexForMaxFractError]);
+//		}
+		
+		
+		PearsonsCorrelation pCorr = new PearsonsCorrelation();
+		double corrCoeff = pCorr.correlation(ratioMeanFirstHalf, ratioMeanLastHalf);
+		String infoString = "PearsonsCorrelation Coeff for first vs second half = "+corrCoeff;
+		System.out.println(infoString);
+
+		ProbModelsPlottingUtils.writeSimVsImposedRateScatterPlot(ratioMeanFirstHalf, ratioMeanLastHalf, outputDir, "RatioSimFirstHalf_vs_RatioSimLastHalf_SectionPartRates", 
+				"", "RatioSimFirstHalf Sect Part Rate (/yr)", "RatioSimLastHalf Sect Part Rate (/yr)", 0.5,2.0);
+
+
+		ProbModelsPlottingUtils.writeSimVsImposedRateScatterPlot(targetRateArray, simRateMeanArray, outputDir, "aveSimVsImposedSectionPartRates", 
+				"", "Imposed Sect Part Rate (/yr)", "Ave Simulated Sect Part Rate (/yr)", Double.NaN,Double.NaN);
+
+//		ProbModelsPlottingUtils.writeSimVsImposedRateScatterPlot(targetArray, ratioMeanArray, outputDir, "aveSimVsImposedRatioSectionPartRates", 
+//				"", "Imposed Sect Part Rate (/yr)", "AveSimulated/Imposed Sect Part Rate (/yr)", Double.NaN,Double.NaN);
+//		
+		DefaultXY_DataSet ratioFunc = new DefaultXY_DataSet(targetRateArray,ratioMeanArray);
+		ratioFunc.setInfo("minMeanRatio="+(float)minMeanRatio+"\nmaxMeanRatio="+(float)maxMeanRatio);
+		ArrayList<XY_DataSet> funcs = new ArrayList<XY_DataSet>();
+		funcs.add(ratioFunc);
+		ArrayList<PlotCurveCharacterstics> plotChars = new ArrayList<PlotCurveCharacterstics>();
+		plotChars.add(new PlotCurveCharacterstics(PlotSymbol.FILLED_CIRCLE, 0.5f, Color.RED));
+		Range xAxisRange = new Range(1e-5,4e-2);
+		Range yAxisRange = new Range(0,2);
+		boolean logX = true;
+		boolean logY = false;
+		double widthInches = 7.0; // inches
+		double heightInches = 6.0; // inches
+		boolean popupWindow = false;
+		ProbModelsPlottingUtils.writeAndOrPlotFuncs(funcs,plotChars,"","Imposed Sect Part Rate (/yr)","AveSimulated/Imposed Sect Part Rate (/yr)",xAxisRange,yAxisRange,
+				logX,logY,widthInches,heightInches, new File(outputDir,"aveSimVsImposedRatioSectionPartRates"), popupWindow);
+
+		
+		DefaultXY_DataSet normErrorFunc = new DefaultXY_DataSet(targetRateArray,simFractStdom);
+		ArrayList<XY_DataSet> funcs2 = new ArrayList<XY_DataSet>();
+		funcs2.add(normErrorFunc);
+		xAxisRange = new Range(1e-5,4e-2);
+		yAxisRange = null;
+		logX = true;
+		logY = false;
+		widthInches = 7.0; // inches
+		heightInches = 6.0; // inches
+		popupWindow = false;
+		ProbModelsPlottingUtils.writeAndOrPlotFuncs(funcs2,plotChars,"","Imposed Sect Part Rate (/yr)","simFractStdom",xAxisRange,yAxisRange,
+				logX,logY,widthInches,heightInches, new File(outputDir,"simFractStdomVsImposedRatioSectionPartRates"), popupWindow);
+
+		
+		DefaultXY_DataSet ratioVsNormStdomFunc = new DefaultXY_DataSet(simFractStdom,ratioMeanArray);
+		ArrayList<XY_DataSet> funcs3 = new ArrayList<XY_DataSet>();
+		funcs3.add(ratioVsNormStdomFunc);
+		xAxisRange = new Range(0,0.005);
+		yAxisRange = new Range(0.8,1.2);
+		logX = false;
+		logY = false;
+		widthInches = 7.0; // inches
+		heightInches = 6.0; // inches
+		popupWindow = false;
+		ProbModelsPlottingUtils.writeAndOrPlotFuncs(funcs3,plotChars,"","simFractStdom","AveSimulated/Imposed Sect Part Rate (/yr)",xAxisRange,yAxisRange,
+				logX,logY,widthInches,heightInches, new File(outputDir,"simRateRatioVsSimFractStdom"), popupWindow);
+
+		// look only at data with very small fractStdom
+		int num =0;
+		double fractStdomThresh=0.005;
+		for(int s=0;s<simFractStdom.length;s++)
+			if(simFractStdom[s]<fractStdomThresh) num+=1;
+		double[] subsetObsRate = new double[num];
+		double[] subsetTargetRate = new double[num];
+		double[] subsetRatioMeanFirst5 = new double[num];
+		double[] subsetRatioMeanLast5 = new double[num];
+
+		num=0;
+		double aveRatio=0;
+		double wtAveRatio=0;
+		double totWt=0;
+		for(int s=0;s<simFractStdom.length;s++) {
+			if(simFractStdom[s]<fractStdomThresh) {
+				subsetObsRate[num] = simRateMeanArray[s];
+				subsetTargetRate[num] = targetRateArray[s];
+				aveRatio+=subsetObsRate[num]/subsetTargetRate[num];
+				subsetRatioMeanFirst5[num] = ratioMeanFirstHalf[s];
+				subsetRatioMeanLast5[num] = ratioMeanLastHalf[s];
+				num+=1;
+			}
+			wtAveRatio += (simRateMeanArray[s]/targetRateArray[s])/(simFractStdom[s]*simFractStdom[s]);
+			totWt += 1/(simFractStdom[s]*simFractStdom[s]);
+		}
+		aveRatio /= subsetObsRate.length;
+		wtAveRatio /= totWt;
+		System.out.println("Select data are defined as having a simFractStdom less than "+fractStdomThresh);
+		System.out.println("aveRatio for select data: "+aveRatio);
+		System.out.println("wtAveRatio: "+ wtAveRatio);
+		ProbModelsPlottingUtils.writeSimVsImposedRateScatterPlot(subsetTargetRate, subsetObsRate, outputDir, "selectAveSimVsImposedSectionPartRates", 
+				"", "Select Imposed Part Rate (/yr)", "Select Ave Sim Part Rate (/yr)", Double.NaN,Double.NaN);
+
+		ProbModelsPlottingUtils.writeSimVsImposedRateScatterPlot(subsetRatioMeanFirst5, subsetRatioMeanLast5, outputDir, "selectRatioSimFirstHalf_vs_RatioSimLastHalf_SectionPartRates", 
+				"", "Select RatioSimFirstHalf Sect Part Rate (/yr)", "Select RatioSimLastHalf Sect Part Rate (/yr)", 0.5,2.0);
+
+		
+		// make map
+		try {
+			FaultSystemRupSet rupSet = sol.getRupSet();
+			List<? extends FaultSection> subSects = rupSet.getFaultSectionDataList();
+			Color[] sectColorArray = new Color[subSects.size()];
+			GeographicMapMaker mapMaker = new GeographicMapMaker(subSects);
+			mapMaker.setWriteGeoJSON(true);
+			mapMaker.clearSectScalars();
+			
+			List<Color> sectColorList = new ArrayList<>();
+			for (int i=0;i<ratioMeanArray.length;i++) {
+				Color color = ProbModelsPlottingUtils.getRatioMapColor(ratioMeanArray[i]/totMeanRatio, simFractStdom[i]);
+				sectColorList.add(color);
+			}
+			mapMaker.plotSectColors(sectColorList, null, null);
+			mapMaker.setSectNaNChar(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, new Color(0, 0, 255)));
+			mapMaker.plot(outputDir, "sectPartRatioMap", " ");
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		
+		
+		FileWriter sectRates_fw;
+		try {
+			sectRates_fw = new FileWriter(new File(outputDir,"/AveSectionPartRatesData.csv"));
+			sectRates_fw.write("sectID,simRate,targetRate,ratio,simFractStdom,sectName\n");
+			for(int i=0;i<targetRateArray.length;i++) {
+				String sectName = sectNameArray[i].replace(","," ");
+				sectRates_fw.write(i+","+simRateMeanArray[i]+","+targetRateArray[i]+","+ratioMeanArray[i]+","+simFractStdom[i]+","+sectName+"\n");
+			}
+			sectRates_fw.close();
+		} catch (IOException e1) {
+			e1.printStackTrace();
+		}
+
+		System.out.println("totMeanRatio="+totMeanRatio+"\nminMeanSectRatio="+minMeanRatio+"\nmaxMeanSectRatio="+maxMeanRatio);
+	}
 
 	
 	
@@ -729,41 +1104,103 @@ System.exit(0);
 	public static void main(String[] args) {
 		
 		String rootDir = "/Users/field/Library/CloudStorage/OneDrive-DOI/Field_Other/ERF_Coordination/LongTermTD_2026/Analysis/";
-		
-		
-		// WUS w/ Cascadia (Middle branch) Poisson simulations
+				
+		// test run	
 		File parentDir = new File(rootDir+"bptSimulationsWUS_withCascadia/");
-		MagDependentAperiodicityOptions aper = MagDependentAperiodicityOptions.ALL_PT5_VALUES;
 		long seed = 984087634;
-		int numYrs = 50000;
-//		bptSimulations(getWUS_ERF(),numYrs,parentDir, "Run1_aper0pt5", seed, rootDir+"poissonSimulationsWUS_withCascadia/Run1/outputTimesinceLast.txt", aper);
-//		bptSimulations(getWUS_ERF(),numYrs,parentDir, "Run2_aper0pt5", seed, rootDir+"bptSimulationsWUS_withCascadia/Run1_aper0pt5/outputTimesinceLast.txt", aper);
-		bptSimulations(getWUS_ERF(),numYrs,parentDir, "Run3_aper0pt5", seed, rootDir+"bptSimulationsWUS_withCascadia/Run2_aper0pt5/outputTimesinceLast.txt", aper);
+		int nYrs = 500;
+		MagDependentAperiodicityOptions aper = MagDependentAperiodicityOptions.MID_VALUES;
+		bptSimulations(getWUS_withCascadia_ERF(),nYrs,parentDir, "test111725_aperMidVals2", seed, rootDir+"bptSimulationsWUS_withCascadia/Run1_aperMidVals/outputTimesinceLast.txt", aper, Double.NaN);
+
 		
+		
+//		FaultSystemSolutionERF erf = getCascadia_ERF();
+//		erf.updateForecast();
+//		System.out.println("Src Names: "+erf.getNumSources());
+//		for(int s=0;s<erf.getNumSources();s++) {
+//			ProbEqkSource src = erf.getSource(s);
+//			boolean nameBool=src.getName().contains("Cascadia");
+//			System.out.println(s+"\t"+nameBool+"\t"+src.getName());
+//		}
+//		System.exit(0);
+		
+		// Aleution Arc Subduction Poisson simulations
+//		AleutianArc_FSS_Creator.FaultModelEnum faultModel = AleutianArc_FSS_Creator.FaultModelEnum.GEOLOGIC_NARROW;
+//		File parentDir = new File(rootDir+"poissonSimulationsAleutianArc/");
+//		long seed = 984087634;
+//		int numYrs = 10000000;
+//		double timeStepYrs = 5;
+//		poissonSimulations(getAleutianArc_ERF(faultModel), parentDir, "Run1", seed, numYrs, timeStepYrs);
+	
+		// Aleution Arc Subduction BPT simulations
+//		AleutianArc_FSS_Creator.FaultModelEnum faultModel = AleutianArc_FSS_Creator.FaultModelEnum.GEOLOGIC_NARROW;
+//		File parentDir = new File(rootDir+"bptSimulationsAleutianArc/");
+//		MagDependentAperiodicityOptions aper = MagDependentAperiodicityOptions.MID_VALUES;
+//		long seed = 984087634;
+//		int numYrs = 1000000;
+//		double timeStepYrs = 5;
+//	    bptSimulations(getAleutianArc_ERF(faultModel),numYrs,parentDir, "Run1_aperMidVals", seed, rootDir+"poissonSimulationsAleutianArc/Run1/outputTimesinceLast.txt", aper, timeStepYrs);
+		
+		// WUS w/ Cascadia (Middle branch) BPT simulations
+//		File parentDir = new File(rootDir+"bptSimulationsWUS_withCascadia/");
+//		MagDependentAperiodicityOptions aper = MagDependentAperiodicityOptions.ALL_PT5_VALUES;
+//		long seed = 984087634;
+		int numYrs = 50000;
+////		bptSimulations(getWUS_withCascadia_ERF(),numYrs,parentDir, "Run1_aper0pt5", seed, rootDir+"poissonSimulationsWUS_withCascadia/Run1/outputTimesinceLast.txt", aper);
+//		bptSimulations(getWUS_withCascadia_ERF(),numYrs,parentDir, "Run2_aper0pt5", seed, rootDir+"bptSimulationsWUS_withCascadia/Run1_aper0pt5/outputTimesinceLast.txt", aper);
+//		bptSimulations(getWUS_withCascadia_ERF(),numYrs,parentDir, "Run3_aper0pt5", seed, rootDir+"bptSimulationsWUS_withCascadia/Run2_aper0pt5/outputTimesinceLast.txt", aper);
+//		aper = MagDependentAperiodicityOptions.MID_VALUES;
+//		bptSimulations(getWUS_withCascadia_ERF(),numYrs,parentDir, "Run1_aperMidVals", seed, rootDir+"bptSimulationsWUS_withCascadia/Run2_aper0pt5/outputTimesinceLast.txt", aper, Double.NaN);
+//		bptSimulations(getWUS_withCascadia_ERF(),numYrs,parentDir, "Run2_aperMidVals", seed, rootDir+"bptSimulationsWUS_withCascadia/Run1_aperMidVals/outputTimesinceLast.txt", aper, Double.NaN);
+//		bptSimulations(getWUS_withCascadia_ERF(),numYrs,parentDir, "Run3_aperMidVals", seed, rootDir+"bptSimulationsWUS_withCascadia/Run2_aperMidVals/outputTimesinceLast.txt", aper, Double.NaN);
+//		bptSimulations(getWUS_withCascadia_ERF(),numYrs,parentDir, "Run4_aperMidVals", seed, rootDir+"bptSimulationsWUS_withCascadia/Run3_aperMidVals/outputTimesinceLast.txt", aper, Double.NaN);
+//		bptSimulations(getWUS_withCascadia_ERF(),numYrs,parentDir, "Run6_aperMidVals", seed, rootDir+"bptSimulationsWUS_withCascadia/Run5_aperMidVals/outputTimesinceLast.txt", aper, Double.NaN);
+//		bptSimulations(getWUS_withCascadia_ERF(),numYrs,parentDir, "Run7_aperMidVals", seed, rootDir+"bptSimulationsWUS_withCascadia/Run6_aperMidVals/outputTimesinceLast.txt", aper, Double.NaN);
+//		bptSimulations(getWUS_withCascadia_ERF(),numYrs,parentDir, "Run8_aperMidVals", seed, rootDir+"bptSimulationsWUS_withCascadia/Run7_aperMidVals/outputTimesinceLast.txt", aper, Double.NaN);
+//		bptSimulations(getWUS_withCascadia_ERF(),numYrs,parentDir, "Run9_aperMidVals", seed, rootDir+"bptSimulationsWUS_withCascadia/Run8_aperMidVals/outputTimesinceLast.txt", aper, Double.NaN);
+//		bptSimulations(getWUS_withCascadia_ERF(),numYrs,parentDir, "Run10_aperMidVals", seed, rootDir+"bptSimulationsWUS_withCascadia/Run9_aperMidVals/outputTimesinceLast.txt", aper, Double.NaN);
+//		bptSimulations(getWUS_withCascadia_ERF(),numYrs,parentDir, "Run11_aperMidVals", seed, rootDir+"bptSimulationsWUS_withCascadia/Run10_aperMidVals/outputTimesinceLast.txt", aper, Double.NaN);
+//		bptSimulations(getWUS_withCascadia_ERF(),numYrs,parentDir, "Run12_aperMidVals", seed, rootDir+"bptSimulationsWUS_withCascadia/Run11_aperMidVals/outputTimesinceLast.txt", aper, Double.NaN);
+//		bptSimulations(getWUS_withCascadia_ERF(),numYrs,parentDir, "Run14_aperMidVals", seed, rootDir+"bptSimulationsWUS_withCascadia/Run13_aperMidVals/outputTimesinceLast.txt", aper, Double.NaN);
+//		bptSimulations(getWUS_withCascadia_ERF(),numYrs,parentDir, "Run15_aperMidVals", seed, rootDir+"bptSimulationsWUS_withCascadia/Run14_aperMidVals/outputTimesinceLast.txt", aper, Double.NaN);
+//		bptSimulations(getWUS_withCascadia_ERF(),numYrs,parentDir, "Run16_aperMidVals", seed, rootDir+"bptSimulationsWUS_withCascadia/Run15_aperMidVals/outputTimesinceLast.txt", aper, Double.NaN);
+//		bptSimulations(getWUS_withCascadia_ERF(),numYrs,parentDir, "Run17_aperMidVals", seed, rootDir+"bptSimulationsWUS_withCascadia/Run16_aperMidVals/outputTimesinceLast.txt", aper, Double.NaN);
+//		bptSimulations(getWUS_withCascadia_ERF(),numYrs,parentDir, "Run18_aperMidVals", seed, rootDir+"bptSimulationsWUS_withCascadia/Run17_aperMidVals/outputTimesinceLast.txt", aper, Double.NaN);
+//		bptSimulations(getWUS_withCascadia_ERF(),numYrs,parentDir, "Run19_aperMidVals", seed, rootDir+"bptSimulationsWUS_withCascadia/Run18_aperMidVals/outputTimesinceLast.txt", aper, Double.NaN);
+//		bptSimulations(getWUS_withCascadia_ERF(),numYrs,parentDir, "Run20_aperMidVals", seed, rootDir+"bptSimulationsWUS_withCascadia/Run19_aperMidVals/outputTimesinceLast.txt", aper, Double.NaN);
+//		sectPlotsForMultSimulations(rootDir+"bptSimulationsWUS_withCascadia/", "Run", "_aperMidVals", 20, getWUS_withCascadia_ERF().getSolution());
+//		rupPlotsForMultSimulations(rootDir+"bptSimulationsWUS_withCascadia/", "Run", "_aperMidVals", 20, getWUS_withCascadia_ERF(), (double)numYrs);
+
 		// WUS w/ Cascadia (Middle branch) Poisson simulations
 //		File parentDir = new File(rootDir+"poissonSimulationsWUS_withCascadia/");
 //		long seed = 984087634;
-//		int numYrs = 10000000;
-//		for(int i=1;i<=1;i++) {
-//			poissonSimulations(getWUS_ERF(), parentDir, "Run"+i, seed+=i*7836271, numYrs);
-//			seed += 7836271;
+//		int numYrs = 5000000;
+//		for(int i=11;i<=20;i++) {
+//			poissonSimulations(getWUS_withCascadia_ERF(), parentDir, "Run"+i, seed+=i*7836271, numYrs, Double.NaN);
 //		}
+//		sectPlotsForMultSimulations(rootDir+"poissonSimulationsWUS_withCascadia/", "Run", "", 20, getWUS_withCascadia_ERF().getSolution());
 
 		
 
-//		// Cascadia (Middle branch) Poisson simulations - THIS DOESN'T WORK BECUASE FULL RUPTURE CAUSES ZERO RATE; IMPLEMENT WITH WUS
+		// Cascadia (Middle branch) BPT simulations
 //		File parentDir = new File(rootDir+"bptSimulationsCascadia/");
 //		MagDependentAperiodicityOptions aper = MagDependentAperiodicityOptions.ALL_PT5_VALUES;
 //		long seed = 984087634;
-//		int numYrs = 1000000;
-//		bptSimulations(getCascadia_ERF(),numYrs,parentDir, "Run1", seed, rootDir+"poissonSimulationsCascadia/Run1/outputTimesinceLast.txt", aper);
+//		int numYrs = 10000000;
+//		double timeStepYrs = 5;
+////		bptSimulations(getCascadia_ERF(),numYrs,parentDir, "Run1_aper0p5", seed, rootDir+"poissonSimulationsCascadia/Run1/outputTimesinceLast.txt", aper, timeStepYrs);
+////		aper = MagDependentAperiodicityOptions.MID_VALUES;
+////		bptSimulations(getCascadia_ERF(),numYrs,parentDir, "Run1_aperMidVals", seed, rootDir+"poissonSimulationsCascadia/Run1/outputTimesinceLast.txt", aper, timeStepYrs);
+//		aper = MagDependentAperiodicityOptions.ALL_PT2_VALUES;
+//		bptSimulations(getCascadia_ERF(),numYrs,parentDir, "Run1_aper0pt2", seed, rootDir+"poissonSimulationsCascadia/Run1/outputTimesinceLast.txt", aper, timeStepYrs);
 
-//		// Cascadia (Middle branch) Poisson simulations
+		// Cascadia (Middle branch) Poisson simulations
 //		File parentDir = new File(rootDir+"poissonSimulationsCascadia/");
 //		long seed = 984087634;
 //		int numYrs = 10000000;
+//		double timeStepYrs = 5;
 //		for(int i=1;i<=1;i++) {
-//			poissonSimulations(getCascadia_ERF(), parentDir, "Run"+i, seed+=i*7836271, numYrs);
+//			poissonSimulations(getCascadia_ERF(), parentDir, "Run"+i, seed+=i*7836271, numYrs, timeStepYrs);
 //			seed += 7836271;
 //		}
 
@@ -813,7 +1250,7 @@ System.exit(0);
 //		}
 
 		
-		//	U3 BPT Simulations - THESE TAKE TOO LONG
+		//	US26 BPT Simulations - THESE TAKE TOO LONG
 //		long seed = 836529;
 //		MagDependentAperiodicityOptions aper = MagDependentAperiodicityOptions.MID_VALUES;
 //		FaultSystemSolutionERF erf = getUS26_ERF();

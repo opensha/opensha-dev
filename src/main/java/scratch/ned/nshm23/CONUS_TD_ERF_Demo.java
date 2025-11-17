@@ -207,11 +207,44 @@ public class CONUS_TD_ERF_Demo {
 	}
 	
 	/**
+	 *  
+	 * @return
+	 */
+	public static FaultSystemSolution getAleutianArc_FSS(String aleutianArc_FSS_fileName, AleutianArc_FSS_Creator.FaultModelEnum faultModel) {
+
+		// try reading from file
+		if(aleutianArc_FSS_fileName != null) {
+			File file = new File(aleutianArc_FSS_fileName);
+			if(file.exists()) {
+				try {
+					return FaultSystemSolution.load(file);
+				} catch (IOException e) {
+					e.printStackTrace();
+				};
+			}
+		}	
+
+		// create FSS
+		String nshmModelDirPath = "/Users/field/nshm-haz_data/nshm-alaska-3.0.1/";
+		
+		FaultSystemSolution sol = AleutianArc_FSS_Creator.getFaultSystemSolution(nshmModelDirPath, faultModel);
+		if(aleutianArc_FSS_fileName != null) {
+			try {
+				sol.write(new File(aleutianArc_FSS_fileName));
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+		}
+		return sol;
+	}
+
+	
+	/**
 	 * This includes cascadia
 	 * @param wus_FSS_fileName
 	 * @return
 	 */
-	public static FaultSystemSolution getWUS_FSS(String wus_FSS_fileName) {
+	public static FaultSystemSolution getWUS_withCascadia_FSS(String wus_FSS_fileName) {
 		
 		FaultSystemSolution sol=null;
 		
