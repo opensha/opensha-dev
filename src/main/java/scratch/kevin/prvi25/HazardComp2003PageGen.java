@@ -16,6 +16,8 @@ import org.opensha.commons.geo.GriddedRegion;
 import org.opensha.commons.geo.Location;
 import org.opensha.commons.geo.LocationUtils;
 import org.opensha.commons.gui.plot.GeographicMapMaker;
+import org.opensha.commons.gui.plot.PlotCurveCharacterstics;
+import org.opensha.commons.gui.plot.PlotLineType;
 import org.opensha.commons.mapping.gmt.elements.GMT_CPT_Files;
 import org.opensha.commons.util.DataUtils.MinMaxAveTracker;
 import org.opensha.commons.util.MarkdownUtils;
@@ -58,9 +60,9 @@ public class HazardComp2003PageGen {
 	};
 	
 	public static void main(String[] args) throws IOException {
-		String imtName = "PGA";
-		String imtDir = "PGA";
-		double period = 0d;
+//		String imtName = "PGA";
+//		String imtDir = "PGA";
+//		double period = 0d;
 		
 //		String imtName = "0.2s SA";
 //		String imtDir = "SA0P2";
@@ -70,9 +72,9 @@ public class HazardComp2003PageGen {
 //		String imtDir = "SA1P0";
 //		double period = 1d;
 		
-//		String imtName = "5s SA";
-//		String imtDir = "SA5P0";
-//		double period = 5d;
+		String imtName = "5s SA";
+		String imtDir = "SA5P0";
+		double period = 5d;
 		
 //		ReturnPeriods[] rps = ReturnPeriods.values();
 		ReturnPeriods[] rps = { ReturnPeriods.TWO_IN_50, ReturnPeriods.TEN_IN_50 };
@@ -145,6 +147,7 @@ public class HazardComp2003PageGen {
 		DiscretizedFunc[] withSlab03 = add(crustalFault25, crustalGrid25, interface25, slab03);
 		
 		GeographicMapMaker mapMaker = new RupSetMapMaker(List.of(), mapReg);
+		mapMaker.setPoliticalBoundaryChar(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, Color.DARK_GRAY));
 //		mapMaker.setDefaultPlotWidth(1000);
 		
 		Color transparent = new Color(255, 255, 255, 0);

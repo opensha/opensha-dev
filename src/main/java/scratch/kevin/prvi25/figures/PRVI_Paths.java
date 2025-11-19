@@ -4,7 +4,7 @@ import java.io.File;
 
 public class PRVI_Paths {
 	
-	public static final File PAPER_DIR =new File("/home/kevin/Documents/papers/2024_PRVI_ERF/prvi25-erf-paper");
+	public static final File PAPER_DIR =new File("/home/kevin/Documents/papers/2025_PRVI_ERF/prvi25-erf-paper");
 	public static final File FIGURES_DIR =new File(PAPER_DIR, "Figures");
 	
 	public static final File INV_DIR = new File("/data/kevin/nshm23/batch_inversions/");

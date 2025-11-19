@@ -122,6 +122,19 @@ public class TectonicSettingPlot {
 		mapRegAnn.setFont(mapRegFont);
 		mapMaker.addAnnotation(mapRegAnn);
 		
+		Font prviFont = new Font(Font.SANS_SERIF, Font.PLAIN, 16);
+		XYTextAnnotation prAnn = new XYTextAnnotation("Puerto Rico", -66.4, 18.5);
+		prAnn.setTextAnchor(TextAnchor.BOTTOM_CENTER);
+		prAnn.setFont(prviFont);
+		mapMaker.addAnnotation(prAnn);
+		
+//		XYTextAnnotation viAnn = new XYTextAnnotation("USVI", -64.85, 18.4);
+		XYTextAnnotation viAnn = new XYTextAnnotation(" USVI ", -64.8, 17.93);
+		viAnn.setTextAnchor(TextAnchor.BOTTOM_CENTER);
+		viAnn.setFont(prviFont);
+		viAnn.setBackgroundPaint(new Color(255, 255, 255, 180));
+		mapMaker.addAnnotation(viAnn);
+		
 //		PlotCurveCharacterstics interfaceChar = new PlotCurveCharacterstics(PlotLineType.SHORT_DASHED, 5f, Colors.tab_blue.darker());
 //		PlotCurveCharacterstics slabChar = new PlotCurveCharacterstics(PlotLineType.SOLID, 3f, Colors.tab_green);
 		PlotCurveCharacterstics carInterfaceChar = new PlotCurveCharacterstics(PlotLineType.SHORT_DASHED, 5f, Colors.tab_orange);

@@ -70,7 +70,7 @@ public class MultiTectonicParticipationMap {
 //		CPT cpt = GMT_CPT_Files.SEQUENTIAL_OSLO_UNIFORM.instance().rescale(cptMin, cptMax);
 //		CPT cpt = new CPT(cptMin, cptMax, new Color(0, 0, 255, 40), new Color(255, 0, 0, 40));
 		cpt.setBelowMinColor(cpt.getMinColor());
-		cpt.setNanColor(Color.GRAY);
+		cpt.setNanColor(Color.DARK_GRAY);
 		cpt.setPreferredTickInterval(0.5);
 		cpt.setLog10(true);
 		
@@ -277,8 +277,8 @@ public class MultiTectonicParticipationMap {
 			mapMaker.setPlotSectPolysOnTop(true);
 			mapMaker.setReverseSort(false);
 			mapMaker.setAbsoluteSort(false);
-			mapMaker.setSectNaNChar(new PlotCurveCharacterstics(PlotLineType.SOLID, 3f, new Color(160, 160, 160, 140)));
-			mapMaker.setSectTraceChar(new PlotCurveCharacterstics(PlotLineType.SOLID, 1.5f, Color.DARK_GRAY));
+			mapMaker.setSectNaNChar(new PlotCurveCharacterstics(PlotLineType.SOLID, 3f, new Color(100, 100, 100, 140)));
+			mapMaker.setSectTraceChar(new PlotCurveCharacterstics(PlotLineType.SOLID, 1.5f, Color.BLACK));
 			mapMaker.setScalarThickness(4f);
 			mapMaker.setFaultSections(combSects);
 			
@@ -345,7 +345,7 @@ public class MultiTectonicParticipationMap {
 			
 			mapMaker.setRegion(gridMapReg);
 			mapMaker.clearSectScalars();
-			mapMaker.setSectTraceChar(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, Color.DARK_GRAY));
+			mapMaker.setSectTraceChar(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, Color.BLACK));
 			GridSourceList gridProv = combSol.requireModule(GridSourceList.class);
 			GriddedRegion gridReg = gridProv.getGriddedRegion();
 			cpt.setNanColor(Color.WHITE);
