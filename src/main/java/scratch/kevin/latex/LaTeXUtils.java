@@ -5,6 +5,7 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.nio.charset.Charset;
 import java.text.DecimalFormat;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -287,6 +288,138 @@ public class LaTeXUtils {
 		fw.close();
 		Files.move(tmpOutputFile, outputTexFile);
 	}
+	
+	private static List<String> stripCommentBlocks(List<String> lines) {
+		List<String> ret = new ArrayList<>(lines.size());
+		
+		boolean insideComment = false;
+		
+		for (String line : lines) {
+			String trimmed = line.trim();
+			if (insideComment) {
+				if (trimmed.startsWith("\\end{comment}"))
+					insideComment = false;
+			} else if (trimmed.startsWith("\\begin{comment}")) {
+				insideComment = true;
+			} else {
+				ret.add(line);
+			}
+		}
+		
+		return ret;
+	}
+	
+	public static void reorganizeFiguresForSSA(File inputTexFile, File outputDir) throws IOException {
+		Preconditions.checkState(outputDir.exists() || outputDir.mkdir(),
+				"Output dir doesn't exist and could not be created: %s", outputDir.getAbsolutePath());
+		
+		File inputDir = inputTexFile.getParentFile();
+		File outputTexFile = new File(outputDir, inputTexFile.getName());
+		
+		List<String> lines = Files.readLines(inputTexFile, Charset.defaultCharset());
+		lines = stripCommentBlocks(lines);
+		
+		File tmpOutputFile = new File(outputTexFile.getParentFile(), outputTexFile.getName()+".bak");
+		FileWriter fw = new FileWriter(tmpOutputFile, Charset.defaultCharset());
+		
+		String[] extensions = { "pdf", "eps", "ps", "png", "jpg", "jpeg", "gif" };
+		
+		// figure out total figure count
+		int totalNumFigures = 0;
+		for (String line : lines)
+			if (line.trim().startsWith("\\begin{figure}"))
+				totalNumFigures++;
+		System.out.println("Identified "+totalNumFigures+" figures");
+		
+		DecimalFormat numDF = new DecimalFormat((totalNumFigures+"").replaceAll(".", "0"));
+		
+		boolean readingFigure = false;
+		boolean readingSubfigure = false;
+		boolean subfigHasCaption = false;
+		int curFigNum = 1;
+		char curSubfigChar = 'a';
+		int curSubfigNumExtra = 0;
+		for (String line : lines) {
+			String trimmed = line.trim();
+			if (readingFigure) {
+				if (trimmed.startsWith("\\end{figure}")) {
+					System.out.println("DONE with figure "+curFigNum);
+					Preconditions.checkState(!readingSubfigure, "done reading figure but still reading subfigure?");
+					readingFigure = false;
+					curFigNum++;
+					curSubfigChar = 'a';
+				} else if (trimmed.startsWith("\\begin{subfigure}")) {
+					Preconditions.checkState(!readingSubfigure, "already reading a subfigure?");
+					readingSubfigure = true;
+					subfigHasCaption = false;
+				} else if (readingSubfigure && trimmed.startsWith("\\caption")) {
+					subfigHasCaption = true;
+				} else if (trimmed.startsWith("\\end{subfigure}")) {
+					Preconditions.checkState(readingSubfigure, "ending subfigure, but not reading a subfigure?");
+					readingSubfigure = false;
+				} else if (trimmed.startsWith("\\includegraphics")) {
+					int pathStartIndex = line.indexOf('{')+1;
+					Preconditions.checkState(pathStartIndex > 0,
+							"on an includegraphics line but path {} not found; must be on a single line: %s", trimmed);
+					String beforePath = line.substring(0, pathStartIndex);
+					String path = line.substring(pathStartIndex);
+					int pathEndIndex = path.indexOf('}');
+					Preconditions.checkState(pathEndIndex >= 0, "Line doesn't close '}': %s", trimmed);
+					String afterPath = path.substring(pathEndIndex);
+					path = path.substring(0, pathEndIndex);
+					
+					File figInFile = new File(inputDir, path);
+					for (int i=0; !figInFile.exists() && i<extensions.length; i++) {
+						figInFile = new File(inputDir, path+"."+extensions[i]);
+					}
+					Preconditions.checkState(figInFile.exists(),
+							"Figure input file not found: %s. Also tried these extensions: %s", path, extensions);
+					String outName = "figure_"+numDF.format(curFigNum);
+					if (readingSubfigure) {
+						if (subfigHasCaption) {
+							outName += "_"+curSubfigChar;
+							Preconditions.checkState(curSubfigChar != 'z',
+									"Ran out of subfigure letters for figure %s", curFigNum);
+							curSubfigChar++;
+						} else if (path.contains("cpt")) {
+							outName += "_colorscale";
+						} else {
+							outName += "_extra";
+							curSubfigNumExtra++;
+							if (curSubfigNumExtra > 1)
+								outName += "_"+curSubfigNumExtra;
+						}
+					}
+					String inName = figInFile.getName();
+					if (inName.contains(".")) {
+						String ext = inName.substring(inName.lastIndexOf(".")+1);
+						outName += "."+ext;
+					}
+					
+					File figOutFile = new File(outputDir, outName);
+					System.out.println("\t"+path+"\t->\t"+outName);
+					
+					if (outName.endsWith(".pdf"))
+						PdfFirstPageCopier.copyFirstPage(figInFile, figOutFile);
+					else
+						Files.copy(figInFile, figOutFile);
+					
+					String newLine = beforePath+outName+afterPath;
+					fw.write(newLine);
+					fw.write("\n");
+					continue;
+				}
+			} else if (trimmed.startsWith("\\begin{figure}")) {
+				readingFigure = true;
+			}
+			fw.write(line);
+			fw.write("\n");
+		}
+		
+		fw.close();
+		Files.move(tmpOutputFile, outputTexFile);
+		
+	}
 
 	public static void main(String[] args) throws IOException {
 //		String raw = "Special characters: & % $ # _ { } ~ ^ \\ and \\& already escaped.";
@@ -300,11 +433,11 @@ public class LaTeXUtils {
 //		System.out.println(defineValueCommand("SlipRateExample", "\\expnum("+numberExpFormat(3.14)+")", false));
 //		System.out.println(defineValueCommand("SlipRateExample", "\\expnum("+numberExpFormat(3e-10)+")", false));
 		
-		File prviDir = new File("/home/kevin/Documents/papers/2024_PRVI_ERF");
+		File prviDir = new File("/home/kevin/Documents/papers/2025_PRVI_ERF");
 		
 		File mainBranch = new File(prviDir, "prvi25-erf-paper");
-		File initialBranch = new File(prviDir, "initial-bssa-submission");
 		
+//		File initialBranch = new File(prviDir, "initial-bssa-submission");
 //		File refDir = initialBranch;
 //		File inputFile = new File(mainBranch, "submission/original/main_for_diff.tex");
 //		File outputFile = new File(mainBranch, "submission/original/embedded_for_diff.tex");
@@ -315,6 +448,14 @@ public class LaTeXUtils {
 		
 		embedDynvalIncludes(inputFile, refDir, outputFile);
 		embedIncludes(outputFile, refDir, outputFile);
+		
+//		File ssaOutputDir = new File(new File(mainBranch, "submission"), "final-bssa-submission");
+		File ssaOutputDir = new File(prviDir, "final-bssa-submission-tests");
+		Preconditions.checkState(ssaOutputDir.exists() || ssaOutputDir.mkdir(),
+				"SSA output dir doesn't exist and could not be created: %s", ssaOutputDir.getAbsolutePath());
+		reorganizeFiguresForSSA(outputFile, ssaOutputDir);
+		// rename from embedded to just main
+		Files.move(new File(ssaOutputDir, outputFile.getName()), new File(ssaOutputDir, inputFile.getName()));
 	}
 
 }
