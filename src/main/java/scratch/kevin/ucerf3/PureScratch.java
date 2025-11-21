@@ -243,6 +243,7 @@ import scratch.UCERF3.erf.FaultSystemSolutionERF;
 import scratch.UCERF3.erf.ETAS.ETAS_CatalogIO;
 import scratch.UCERF3.erf.ETAS.ETAS_CatalogIO.ETAS_Catalog;
 import scratch.UCERF3.erf.ETAS.ETAS_EqkRupture;
+import scratch.UCERF3.erf.ETAS.ETAS_SimulationMetadata;
 import scratch.UCERF3.erf.ETAS.FaultSystemSolutionERF_ETAS;
 import scratch.UCERF3.erf.ETAS.launcher.ETAS_Config;
 import scratch.UCERF3.erf.ETAS.launcher.ETAS_Launcher;
@@ -3379,13 +3380,29 @@ public class PureScratch {
 		RuptureSets.main(args);
 	}
 	
+	private static void test348() throws IOException {
+		for (ETAS_Catalog catalog : ETAS_CatalogIO.getBinaryCatalogsIterable(
+				new File("/tmp/etas_debug/Start2010_03_18_kCOV1p5/results_complete.bin"), 0)) {
+			ETAS_SimulationMetadata meta = catalog.getSimulationMetadata();
+//			System.out.println("Catalog "+meta.catalogIndex);
+			int rupIndex = 0;
+			for (ETAS_EqkRupture rup : catalog) {
+				if (rup.getParentID() == rup.getID()) {
+					System.out.println("Found a self-parent instance in catalog "+meta);
+					System.out.println("\tRup id="+rup.getID()+" (index="+rupIndex+") has self parent; rirst rup in catalog has id="+catalog.get(0).getID());
+				}
+				rupIndex++;
+			}
+		}
+	}
+	
 	/**
 	 * @param args
 	 * @throws Exception 
 	 */
 	public static void main(String[] args) throws Exception {
 		try {
-			test347();
+			test348();
 		} catch (Throwable t) {
 			t.printStackTrace();
 			System.exit(1);
