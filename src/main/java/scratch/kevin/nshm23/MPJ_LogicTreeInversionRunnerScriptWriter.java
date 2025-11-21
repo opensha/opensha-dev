@@ -1262,6 +1262,9 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 					argz += " --sites-file "+dirPath+"/"+localSitesFile.getName();
 					argz += " --gridded-seis INCLUDE";
 					argz += extraHazardArgs;
+					if (gmpes != null)
+						for (AttenRelRef gmpe : gmpes)
+							argz += " --gmpe "+gmpe.name();
 					argz += " "+MPJTaskCalculator.argumentBuilder().minDispatch(2).maxDispatch(10).threads(remoteTotalThreads).build();
 					script = mpjWrite.buildScript(MPJ_SiteLogicTreeHazardCurveCalc.class.getName(), argz);
 					pbsWrite.writeScript(new File(localDir, "batch_hazard_sites_full_gridded.slurm"), script, mins, nodes, remoteTotalThreads, queue);
