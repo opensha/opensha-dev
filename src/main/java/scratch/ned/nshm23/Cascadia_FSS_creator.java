@@ -11,6 +11,7 @@ import org.opensha.commons.eq.MagUtils;
 import org.opensha.sha.earthquake.faultSysSolution.FaultSystemSolution;
 import org.opensha.sha.earthquake.param.IncludeBackgroundOption;
 import org.opensha.sha.faultSurface.ApproxEvenlyGriddedSurface;
+import org.opensha.sha.faultSurface.FaultSection;
 import org.opensha.sha.faultSurface.GeoJSONFaultSection;
 import org.opensha.sha.magdist.SummedMagFreqDist;
 import org.opensha.sha.util.TectonicRegionType;
@@ -487,7 +488,6 @@ public class Cascadia_FSS_creator {
 		    }
 		    System.out.println("ERF versus fss tests passed!!");
 	    }   
-
 
 		return fss;
 	}

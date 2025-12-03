@@ -149,7 +149,7 @@ public class CONUS_TD_ERF_Demo {
 	}
 	
 	
-	public static FaultSystemSolution getAK_FSS(String alaska_FSS_fileName) {
+	public static FaultSystemSolution getAK_FSS(String alaska_FSS_fileName, AK_FSS_creator.DeformationModelEnum defModel) {
 
 		// try reading from file
 		if(alaska_FSS_fileName != null) {
@@ -165,7 +165,7 @@ public class CONUS_TD_ERF_Demo {
 
 		// create FSS
 		String akModelDirPath = "/Users/field/nshm-haz_data/nshm-alaska-3.0.1/";
-		ArrayList<FaultSystemSolution> ak_fssList = AK_FSS_creator.getFaultSystemSolutionList(akModelDirPath, DeformationModelEnum.GEO);
+		ArrayList<FaultSystemSolution> ak_fssList = AK_FSS_creator.getFaultSystemSolutionList(akModelDirPath, defModel);
 		FaultSystemSolution sol = MergedSolutionCreator.merge(ak_fssList);
 		if(alaska_FSS_fileName != null) {
 			try {
@@ -178,7 +178,7 @@ public class CONUS_TD_ERF_Demo {
 	}
 
 
-	public static FaultSystemSolution getCascadia_FSS(String cascadia_FSS_fileName) {
+	public static FaultSystemSolution getCascadia_FSS(String cascadia_FSS_fileName, Cascadia_FSS_creator.FaultModelEnum faultModel) {
 
 		// try reading from file
 		if(cascadia_FSS_fileName != null) {
@@ -195,7 +195,7 @@ public class CONUS_TD_ERF_Demo {
 		// create FSS
 		String nshmModelDirPath = "/Users/field/nshm-haz_data/nshm-conus-6.1.2/";
 		
-		FaultSystemSolution sol = Cascadia_FSS_creator.getFaultSystemSolution(nshmModelDirPath, Cascadia_FSS_creator.FaultModelEnum.MIDDLE);
+		FaultSystemSolution sol = Cascadia_FSS_creator.getFaultSystemSolution(nshmModelDirPath, faultModel);
 		if(cascadia_FSS_fileName != null) {
 			try {
 				sol.write(new File(cascadia_FSS_fileName));
@@ -244,7 +244,7 @@ public class CONUS_TD_ERF_Demo {
 	 * @param wus_FSS_fileName
 	 * @return
 	 */
-	public static FaultSystemSolution getWUS_withCascadia_FSS(String wus_FSS_fileName) {
+	public static FaultSystemSolution getWUS_withCascadia_FSS(String wus_FSS_fileName, Cascadia_FSS_creator.FaultModelEnum cascaadiaFaultModel) {
 		
 		FaultSystemSolution sol=null;
 		
@@ -265,7 +265,7 @@ public class CONUS_TD_ERF_Demo {
 			FaultSystemSolution wusSol = FaultSystemSolution.load(new File("/Users/field/nshm-haz_data/results_WUS_FM_v3_branch_averaged_gridded_simplified.zip"));
 			String nshmModelDirPath = "/Users/field/nshm-haz_data/nshm-conus-6.1.2/";
 			// full/merged solution w/ Cascadia
-			sol = MergedSolutionCreator.merge(wusSol, getCascadia_FSS(null));
+			sol = MergedSolutionCreator.merge(wusSol, getCascadia_FSS(null, cascaadiaFaultModel));
 		} catch (IOException e) {
 			e.printStackTrace();
 		}		

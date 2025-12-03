@@ -53,8 +53,11 @@ import org.opensha.sha.magdist.SummedMagFreqDist;
 import scratch.UCERF3.erf.FaultSystemSolutionERF;
 import scratch.UCERF3.erf.utils.ProbModelsPlottingUtils;
 import scratch.UCERF3.erf.utils.ProbabilityModelsCalc;
+import scratch.ned.nshm23.AK_FSS_creator;
 import scratch.ned.nshm23.AleutianArc_FSS_Creator;
 import scratch.ned.nshm23.CONUS_TD_ERF_Demo;
+import scratch.ned.nshm23.Cascadia_FSS_creator;
+import scratch.ned.nshm23.AK_FSS_creator.DeformationModelEnum;
 
 public class LongTermTD2026_Analyses {
 	
@@ -292,9 +295,9 @@ System.exit(0);
 	 * parameters set as default; erf.updateForecast()is not called
 	 * @return
 	 */
-	private static FaultSystemSolutionERF getAK_ERF() {
-		String full_FSS_fileName = "/Users/field/nshm-haz_data/alaska_FSS_test.zip";
-		FaultSystemSolution sol = CONUS_TD_ERF_Demo.getAK_FSS(full_FSS_fileName);		
+	private static FaultSystemSolutionERF getAK_ERF(AK_FSS_creator.DeformationModelEnum defMod) {
+		String full_FSS_fileName = "/Users/field/nshm-haz_data/alaska_FSS_"+defMod+"_test.zip";
+		FaultSystemSolution sol = CONUS_TD_ERF_Demo.getAK_FSS(full_FSS_fileName, defMod);		
 		FaultSystemSolutionERF erf = new FaultSystemSolutionERF(sol);
 		erf.getParameter(IncludeBackgroundParam.NAME).setValue(IncludeBackgroundOption.EXCLUDE);
 		return erf;
@@ -306,9 +309,9 @@ System.exit(0);
 	 * parameters set as default; erf.updateForecast()is not called
 	 * @return
 	 */
-	private static FaultSystemSolutionERF getAleutianArc_ERF(AleutianArc_FSS_Creator.FaultModelEnum faultMode) {
-		String full_FSS_fileName = "/Users/field/nshm-haz_data/aleutianArc_FSS_test.zip";
-		FaultSystemSolution sol = CONUS_TD_ERF_Demo.getAleutianArc_FSS(full_FSS_fileName, faultMode);		
+	private static FaultSystemSolutionERF getAleutianArc_ERF(AleutianArc_FSS_Creator.FaultModelEnum faultModel) {
+		String full_FSS_fileName = "/Users/field/nshm-haz_data/aleutianArc_FSS_"+faultModel+"_test.zip";
+		FaultSystemSolution sol = CONUS_TD_ERF_Demo.getAleutianArc_FSS(full_FSS_fileName, faultModel);		
 		FaultSystemSolutionERF erf = new FaultSystemSolutionERF(sol);
 		erf.getParameter(IncludeBackgroundParam.NAME).setValue(IncludeBackgroundOption.EXCLUDE);
 		return erf;
@@ -319,9 +322,12 @@ System.exit(0);
 	 * parameters set as default; erf.updateForecast()is not called
 	 * @return
 	 */
-	private static FaultSystemSolutionERF getCascadia_ERF() {
-		String full_FSS_fileName = "/Users/field/nshm-haz_data/cascadia_FSS_test.zip";
-		FaultSystemSolution sol = CONUS_TD_ERF_Demo.getCascadia_FSS(full_FSS_fileName);		
+	private static FaultSystemSolutionERF getCascadia_ERF(Cascadia_FSS_creator.FaultModelEnum faultModel) {
+		String full_FSS_fileName = "/Users/field/nshm-haz_data/cascadia_FSS_"+faultModel+"_test.zip";
+		FaultSystemSolution sol = CONUS_TD_ERF_Demo.getCascadia_FSS(full_FSS_fileName, faultModel);	
+//		for (FaultSection sect: sol.getRupSet().getFaultSectionDataList()) {
+//			System.out.println("here:\t"+sect.getDateOfLastEvent());
+//		}
 		FaultSystemSolutionERF erf = new FaultSystemSolutionERF(sol);
 		erf.getParameter(IncludeBackgroundParam.NAME).setValue(IncludeBackgroundOption.EXCLUDE);
 		return erf;
@@ -332,9 +338,9 @@ System.exit(0);
 	 * parameters set as default; erf.updateForecast()is not called
 	 * @return
 	 */
-	private static FaultSystemSolutionERF getWUS_withCascadia_ERF() {
-		String full_FSS_fileName = "/Users/field/nshm-haz_data/wusWithCascadia_FSS_test.zip";
-		FaultSystemSolution sol = CONUS_TD_ERF_Demo.getWUS_withCascadia_FSS(full_FSS_fileName);		
+	private static FaultSystemSolutionERF getWUS_withCascadia_ERF(Cascadia_FSS_creator.FaultModelEnum cascadiaFaultModel) {
+		String full_FSS_fileName = "/Users/field/nshm-haz_data/wusWithCascadia_FSS_"+cascadiaFaultModel+"_test.zip";
+		FaultSystemSolution sol = CONUS_TD_ERF_Demo.getWUS_withCascadia_FSS(full_FSS_fileName,cascadiaFaultModel);		
 		FaultSystemSolutionERF erf = new FaultSystemSolutionERF(sol);
 		erf.getParameter(IncludeBackgroundParam.NAME).setValue(IncludeBackgroundOption.EXCLUDE);
 		return erf;
@@ -472,7 +478,10 @@ System.exit(0);
 	 * 
 	 */
 	private static void rupPlotsForMultSimulations(String dirName, String runDirPrefix, String runDirSuffix, 
-			int numSims, FaultSystemSolutionERF erf, double simDuration) {
+			int numSims, FaultSystemSolutionERF erf, double simDuration,
+			MagDependentAperiodicityOptions aper) {
+		
+		String outputInfoString="";
 		
 		File outputDir = new File(dirName+"/StatsPlotsFor"+numSims+"_Runs");
 		if(!outputDir.exists())
@@ -508,6 +517,14 @@ System.exit(0);
 		double simMgt6pt7_Rate = 0;
 
 		ArrayList<SummedMagFreqDist> simMFD_List = new ArrayList<SummedMagFreqDist>();
+		
+		ArrayList<Double> normalizedRupRecurIntervals = new ArrayList<Double>();
+		ArrayList<ArrayList<Double>> normalizedRupRecurIntervalsMagDepList = new ArrayList<ArrayList<Double>>();
+		if(aper != null)
+			for(int i=0;i<aper.getNumAperValues();i++) {
+				normalizedRupRecurIntervalsMagDepList.add(new ArrayList<Double>());
+			}
+
 
 		// read file
 		for(int i=1;i<=numSims;i++) {
@@ -539,6 +556,12 @@ System.exit(0);
 					if(rupMag>=6.7)
 						simMgt6pt7_Rate += 1;
 					simMFD.addResampledMagRate(rupMag, 1.0, true);
+					if(!Double.isNaN(normRupRI)) {
+						normalizedRupRecurIntervals.add(normRupRI);
+						if(aper != null && aper.getNumAperValues()>1)
+							normalizedRupRecurIntervalsMagDepList.get(aper.getAperIndexForRupMag(rupMag)).add(normRupRI);						
+					}
+
 				}
 				simMFD.scale(1.0/simDuration);
 				simMFD_List.add(simMFD);
@@ -552,16 +575,49 @@ System.exit(0);
 		simTotMoRate/=(simDuration*numSims);
 		simTotRate /= (simDuration*numSims);
 		simMgt6pt7_Rate /= (simDuration*numSims);
-		System.out.println("targetTotMoRate="+(float)targetTotMoRate+"\tsimTotMoRate="+(float)simTotMoRate+
-				"\tratio="+(float)(simTotMoRate/targetTotMoRate));
-		System.out.println("targetTotRate="+(float)targetTotRate+"\tsimTotRate="+(float)simTotRate+
-				"\tratio="+(float)(simTotRate/targetTotRate));
-		System.out.println("rargetMgt6pt7_Rate="+(float)targetMgt6pt7_Rate+"\tsimMgt6pt7_Rate="+(float)simMgt6pt7_Rate+
-				"\tratio="+(float)(simMgt6pt7_Rate/targetMgt6pt7_Rate));
+//		System.out.println("targetTotMoRate="+(float)targetTotMoRate+"\tsimTotMoRate="+(float)simTotMoRate+
+//				"\tratio="+(float)(simTotMoRate/targetTotMoRate));
+//		System.out.println("targetTotRate="+(float)targetTotRate+"\tsimTotRate="+(float)simTotRate+
+//				"\tratio="+(float)(simTotRate/targetTotRate));
+//		System.out.println("rargetMgt6pt7_Rate="+(float)targetMgt6pt7_Rate+"\tsimMgt6pt7_Rate="+(float)simMgt6pt7_Rate+
+//				"\tratio="+(float)(simMgt6pt7_Rate/targetMgt6pt7_Rate));
 		
-		// MFDs
+		outputInfoString += "targetTotMoRate="+(float)targetTotMoRate+"\tsimTotMoRate="+(float)simTotMoRate+
+				"\tratio="+(float)(simTotMoRate/targetTotMoRate)+"\n";
+		outputInfoString += "targetTotRate="+(float)targetTotRate+"\tsimTotRate="+(float)simTotRate+
+				"\tratio="+(float)(simTotRate/targetTotRate) +"\n";
+		outputInfoString += "rargetMgt6pt7_Rate="+(float)targetMgt6pt7_Rate+"\tsimMgt6pt7_Rate="+(float)simMgt6pt7_Rate+
+				"\tratio="+(float)(simMgt6pt7_Rate/targetMgt6pt7_Rate) +"\n";
+		
+		// MFD plots
 		ProbModelsPlottingUtils.writeMFD_ComprisonPlot(targetMFD, simMFD_List, outputDir);
-
+		
+		// Norm Rup RI plots
+		double aperVal=Double.NaN;
+		String infoString;
+		if(aper !=null && aper.getNumAperValues()==1)
+			aperVal=aper.getAperValuesArray()[0];	// only one value, so include for comparison
+		infoString = ProbModelsPlottingUtils.writeNormalizedDistPlotWithFits(normalizedRupRecurIntervals, aperVal, 
+				outputDir, "Normalized Rupture RIs", "normalizedRupRecurIntervals");		
+		// now mag-dep:
+		if(aper !=null && aper.getNumAperValues() >1) {
+			for(int i=0;i<aper.getNumAperValues();i++) {
+				String label = aper.getMagDepAperInfoString(i);
+				infoString += ProbModelsPlottingUtils.writeNormalizedDistPlotWithFits(normalizedRupRecurIntervalsMagDepList.get(i), aper.getAperValuesArray()[i], 
+						outputDir, "Norm Rup RIs; "+label, "normRupRecurIntsForMagRange"+i);
+			}
+		}
+		outputInfoString += infoString+"\n";
+//		System.out.println("infoString:\n"+infoString);
+		
+		FileWriter infoFile_fw;
+		try {
+			infoFile_fw = new FileWriter(new File(outputDir,"/INFO_ForRupPlots.txt"));
+			infoFile_fw.write(outputInfoString);
+			infoFile_fw.close();
+		} catch (IOException e1) {
+			e1.printStackTrace();
+		}
 	}
 
 
@@ -572,6 +628,8 @@ System.exit(0);
 	private static void sectPlotsForMultSimulations(String dirName, String runDirPrefix, String runDirSuffix, 
 			int numSims, FaultSystemSolution sol) {
 		
+		String outputInfoString="";
+		
 		File outputDir = new File(dirName+"/StatsPlotsFor"+numSims+"_Runs");
 		if(!outputDir.exists())
 			outputDir.mkdir();
@@ -581,7 +639,7 @@ System.exit(0);
 		ArrayList<double[]> ratioArrayList = new ArrayList<double[]>();
 		double[] targetRateArray=null;
 		String[] sectNameArray=null;
-		double totMeanRatio = 0;
+		double totMeanRatio = 0, minSectRatio=Double.MAX_VALUE, maxSectRatio=0;
 		for(int i=1;i<=numSims;i++) {
 			try {
 				File dataFile = new File(dirName+"/"+runDirPrefix+i+runDirSuffix+"/obsVsImposedSectionPartRates.txt");
@@ -594,7 +652,8 @@ System.exit(0);
 			        reader.readLine(); // skip header
 					while ((line = reader.readLine()) != null)
 						numSections+=1;
-					System.out.println("numSections="+numSections);
+//					System.out.println("numSections="+numSections);
+					outputInfoString+="numSections="+numSections+"\n";
 					targetRateArray = new double[numSections];
 					sectNameArray = new String[numSections];
 				}
@@ -631,6 +690,8 @@ System.exit(0);
 			}
 		}
 		totMeanRatio /= (numSections*numSims);
+		outputInfoString+="totMeanRatio="+totMeanRatio+"\n";
+
 
 		double[] simRateMeanArray = new double[numSections];
 		double[] simRateStdevArray = new double[numSections];
@@ -648,6 +709,8 @@ System.exit(0);
 		double minMeanRate = Double.MAX_VALUE;
 		double maxFractError = -Double.MAX_VALUE;
 		int indexForMaxFractError=-1;
+		HistogramFunction ratioHist = new HistogramFunction(0d,2d,51);
+		HistogramFunction ratioHistWted = new HistogramFunction(0d,2d,21);
 		for(int s=0;s<numSections;s++) {
 			DescriptiveStatistics simRateStats = new DescriptiveStatistics();
 			DescriptiveStatistics ratioStats = new DescriptiveStatistics();
@@ -674,11 +737,25 @@ System.exit(0);
 				maxFractError=simFractStdom[s];
 				indexForMaxFractError=s;
 			}
+			if(minSectRatio>ratioMeanArray[s]) minSectRatio=ratioMeanArray[s];
+			if(maxSectRatio<ratioMeanArray[s]) maxSectRatio=ratioMeanArray[s];
+			ratioHist.add(ratioMeanArray[s], 1.0);
+			ratioHistWted.add(ratioMeanArray[s], ratioMeanArray[s]/ratioStdomArray[s]);
 		}
+		ratioHist.normalizeBySumOfY_Vals();
+		ratioHistWted.normalizeBySumOfY_Vals();
+//		System.out.println("minMeanRate="+minMeanRate+"\tN="+(float)minMeanRate*1e6);
+//		System.out.println("maxFractStdom="+maxFractError+"\ttargetRate="+targetRateArray[indexForMaxFractError]);
+//		System.out.println("minSectRatio="+minSectRatio+"\nmaxSectRatio="+maxSectRatio);
+//		System.out.println("ratioHist:\n"+ratioHist);
+//		System.out.println("ratioHistWted:\n"+ratioHistWted);
 		
-		System.out.println("minMeanRate="+minMeanRate+"\tN="+(float)minMeanRate*1e6);
-		System.out.println("maxFractStdom="+maxFractError+"\ttargetRate="+targetRateArray[indexForMaxFractError]);
-
+		outputInfoString+="minMeanRate="+minMeanRate+"\tN="+(float)minMeanRate*1e6+"\n";
+		outputInfoString+="maxFractStdom="+maxFractError+"\ttargetRate="+targetRateArray[indexForMaxFractError]+"\n";
+		outputInfoString+="minSectRatio="+minSectRatio+"\nmaxSectRatio="+maxSectRatio+"\n";
+		outputInfoString+="\nratioHist:\n"+ratioHist+"\n";
+		outputInfoString+="\nratioHistWted:\n"+ratioHistWted+"\n";
+				
 		// following used to verify calculation in Excel
 //		System.out.println("Values for maxFractStdom:");
 //		for(int i=0;i<numSims;i++) {
@@ -688,8 +765,7 @@ System.exit(0);
 		
 		PearsonsCorrelation pCorr = new PearsonsCorrelation();
 		double corrCoeff = pCorr.correlation(ratioMeanFirstHalf, ratioMeanLastHalf);
-		String infoString = "PearsonsCorrelation Coeff for first vs second half = "+corrCoeff;
-		System.out.println(infoString);
+		outputInfoString += "PearsonsCorrelation Coeff for first vs second half = "+corrCoeff+"\n";
 
 		ProbModelsPlottingUtils.writeSimVsImposedRateScatterPlot(ratioMeanFirstHalf, ratioMeanLastHalf, outputDir, "RatioSimFirstHalf_vs_RatioSimLastHalf_SectionPartRates", 
 				"", "RatioSimFirstHalf Sect Part Rate (/yr)", "RatioSimLastHalf Sect Part Rate (/yr)", 0.5,2.0);
@@ -717,6 +793,26 @@ System.exit(0);
 		ProbModelsPlottingUtils.writeAndOrPlotFuncs(funcs,plotChars,"","Imposed Sect Part Rate (/yr)","AveSimulated/Imposed Sect Part Rate (/yr)",xAxisRange,yAxisRange,
 				logX,logY,widthInches,heightInches, new File(outputDir,"aveSimVsImposedRatioSectionPartRates"), popupWindow);
 
+		
+		ArrayList<XY_DataSet> histFuncs = new ArrayList<XY_DataSet>();
+		ratioHist.setInfo("mean="+(float)ratioHist.computeMean());
+		histFuncs.add(ratioHist);
+		ArrayList<PlotCurveCharacterstics> histPlotChars = new ArrayList<PlotCurveCharacterstics>();
+		histPlotChars.add(new PlotCurveCharacterstics(PlotLineType.HISTOGRAM, 1f, Color.GRAY));
+		ProbModelsPlottingUtils.writeAndOrPlotFuncs(
+				histFuncs, 
+				histPlotChars, 
+				"",
+				"Section Ratio",
+				"PDF",
+				new Range(0.5,1.5),
+				new Range(0,1.1*ratioHist.getMaxY()),
+				false,
+				false,
+				4d,
+				3d,
+				new File(outputDir,"sectRateRatiosHistogram"), 
+				false);
 		
 		DefaultXY_DataSet normErrorFunc = new DefaultXY_DataSet(targetRateArray,simFractStdom);
 		ArrayList<XY_DataSet> funcs2 = new ArrayList<XY_DataSet>();
@@ -773,9 +869,13 @@ System.exit(0);
 		}
 		aveRatio /= subsetObsRate.length;
 		wtAveRatio /= totWt;
-		System.out.println("Select data are defined as having a simFractStdom less than "+fractStdomThresh);
-		System.out.println("aveRatio for select data: "+aveRatio);
-		System.out.println("wtAveRatio: "+ wtAveRatio);
+//		System.out.println("Select data are defined as having a simFractStdom less than "+fractStdomThresh);
+//		System.out.println("aveRatio for select data: "+aveRatio);
+//		System.out.println("wtAveRatio: "+ wtAveRatio);
+		outputInfoString += "Select data are defined as having a simFractStdom less than "+fractStdomThresh+"\n";
+		outputInfoString += "aveRatio for select data: "+aveRatio+"\n";
+		outputInfoString += "wtAveRatio: "+ wtAveRatio+"\n";
+
 		ProbModelsPlottingUtils.writeSimVsImposedRateScatterPlot(subsetTargetRate, subsetObsRate, outputDir, "selectAveSimVsImposedSectionPartRates", 
 				"", "Select Imposed Part Rate (/yr)", "Select Ave Sim Part Rate (/yr)", Double.NaN,Double.NaN);
 
@@ -794,9 +894,11 @@ System.exit(0);
 			
 			List<Color> sectColorList = new ArrayList<>();
 			for (int i=0;i<ratioMeanArray.length;i++) {
+//				Color color = ProbModelsPlottingUtils.getRatioMapColor(ratioMeanArray[i], simFractStdom[i]);
 				Color color = ProbModelsPlottingUtils.getRatioMapColor(ratioMeanArray[i]/totMeanRatio, simFractStdom[i]);
 				sectColorList.add(color);
 			}
+			outputInfoString+="\nRatio values in sectPartRatioMap are corrected by totMeanRatio\n\n";
 			mapMaker.plotSectColors(sectColorList, null, null);
 			mapMaker.setSectNaNChar(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, new Color(0, 0, 255)));
 			mapMaker.plot(outputDir, "sectPartRatioMap", " ");
@@ -804,8 +906,15 @@ System.exit(0);
 			e.printStackTrace();
 		}
 		
+		// make map scale
+		ProbModelsPlottingUtils.plotScaleForSectRatioWithUncert(outputDir);
+		
+//		System.out.println("totMeanRatio="+totMeanRatio+"\nminMeanSectRatio="+minMeanRatio+"\nmaxMeanSectRatio="+maxMeanRatio);
+		outputInfoString += "totMeanRatio="+totMeanRatio+"\nminMeanSectRatio="+minMeanRatio+"\nmaxMeanSectRatio="+maxMeanRatio+"\n";
+
 		
 		FileWriter sectRates_fw;
+		FileWriter infoFile_fw;
 		try {
 			sectRates_fw = new FileWriter(new File(outputDir,"/AveSectionPartRatesData.csv"));
 			sectRates_fw.write("sectID,simRate,targetRate,ratio,simFractStdom,sectName\n");
@@ -814,11 +923,15 @@ System.exit(0);
 				sectRates_fw.write(i+","+simRateMeanArray[i]+","+targetRateArray[i]+","+ratioMeanArray[i]+","+simFractStdom[i]+","+sectName+"\n");
 			}
 			sectRates_fw.close();
+			
+			infoFile_fw = new FileWriter(new File(outputDir,"/INFO_ForSectPlots.txt"));
+			infoFile_fw.write(outputInfoString);
+			infoFile_fw.close();
+
 		} catch (IOException e1) {
 			e1.printStackTrace();
 		}
 
-		System.out.println("totMeanRatio="+totMeanRatio+"\nminMeanSectRatio="+minMeanRatio+"\nmaxMeanSectRatio="+maxMeanRatio);
 	}
 
 	
@@ -1105,15 +1218,18 @@ System.exit(0);
 		
 		String rootDir = "/Users/field/Library/CloudStorage/OneDrive-DOI/Field_Other/ERF_Coordination/LongTermTD_2026/Analysis/";
 				
-		// test run	
-		File parentDir = new File(rootDir+"bptSimulationsWUS_withCascadia/");
-		long seed = 984087634;
-		int nYrs = 500;
-		MagDependentAperiodicityOptions aper = MagDependentAperiodicityOptions.MID_VALUES;
-		bptSimulations(getWUS_withCascadia_ERF(),nYrs,parentDir, "test111725_aperMidVals2", seed, rootDir+"bptSimulationsWUS_withCascadia/Run1_aperMidVals/outputTimesinceLast.txt", aper, Double.NaN);
+//	    for (FaultSection sect : getCascadia_ERF(Cascadia_FSS_creator.FaultModelEnum.ALL).getSolution().getRupSet().getFaultSectionDataList()) {
+//			System.out.println("here:\t"+sect.getName()+"\t"+sect.getParentSectionId());
+//	    }
+//	    for (FaultSection sect : getAleutianArc_ERF(AleutianArc_FSS_Creator.FaultModelEnum.ALL).getSolution().getRupSet().getFaultSectionDataList()) {
+//			System.out.println("here:\t"+sect.getName()+"\t"+sect.getParentSectionId());
+//	    }
 
-		
-		
+
+
+
+		System.exit(0);
+			
 //		FaultSystemSolutionERF erf = getCascadia_ERF();
 //		erf.updateForecast();
 //		System.out.println("Src Names: "+erf.getNumSources());
@@ -1147,38 +1263,39 @@ System.exit(0);
 //		long seed = 984087634;
 		int numYrs = 50000;
 ////		bptSimulations(getWUS_withCascadia_ERF(),numYrs,parentDir, "Run1_aper0pt5", seed, rootDir+"poissonSimulationsWUS_withCascadia/Run1/outputTimesinceLast.txt", aper);
-//		bptSimulations(getWUS_withCascadia_ERF(),numYrs,parentDir, "Run2_aper0pt5", seed, rootDir+"bptSimulationsWUS_withCascadia/Run1_aper0pt5/outputTimesinceLast.txt", aper);
-//		bptSimulations(getWUS_withCascadia_ERF(),numYrs,parentDir, "Run3_aper0pt5", seed, rootDir+"bptSimulationsWUS_withCascadia/Run2_aper0pt5/outputTimesinceLast.txt", aper);
-//		aper = MagDependentAperiodicityOptions.MID_VALUES;
-//		bptSimulations(getWUS_withCascadia_ERF(),numYrs,parentDir, "Run1_aperMidVals", seed, rootDir+"bptSimulationsWUS_withCascadia/Run2_aper0pt5/outputTimesinceLast.txt", aper, Double.NaN);
-//		bptSimulations(getWUS_withCascadia_ERF(),numYrs,parentDir, "Run2_aperMidVals", seed, rootDir+"bptSimulationsWUS_withCascadia/Run1_aperMidVals/outputTimesinceLast.txt", aper, Double.NaN);
-//		bptSimulations(getWUS_withCascadia_ERF(),numYrs,parentDir, "Run3_aperMidVals", seed, rootDir+"bptSimulationsWUS_withCascadia/Run2_aperMidVals/outputTimesinceLast.txt", aper, Double.NaN);
-//		bptSimulations(getWUS_withCascadia_ERF(),numYrs,parentDir, "Run4_aperMidVals", seed, rootDir+"bptSimulationsWUS_withCascadia/Run3_aperMidVals/outputTimesinceLast.txt", aper, Double.NaN);
-//		bptSimulations(getWUS_withCascadia_ERF(),numYrs,parentDir, "Run6_aperMidVals", seed, rootDir+"bptSimulationsWUS_withCascadia/Run5_aperMidVals/outputTimesinceLast.txt", aper, Double.NaN);
-//		bptSimulations(getWUS_withCascadia_ERF(),numYrs,parentDir, "Run7_aperMidVals", seed, rootDir+"bptSimulationsWUS_withCascadia/Run6_aperMidVals/outputTimesinceLast.txt", aper, Double.NaN);
-//		bptSimulations(getWUS_withCascadia_ERF(),numYrs,parentDir, "Run8_aperMidVals", seed, rootDir+"bptSimulationsWUS_withCascadia/Run7_aperMidVals/outputTimesinceLast.txt", aper, Double.NaN);
-//		bptSimulations(getWUS_withCascadia_ERF(),numYrs,parentDir, "Run9_aperMidVals", seed, rootDir+"bptSimulationsWUS_withCascadia/Run8_aperMidVals/outputTimesinceLast.txt", aper, Double.NaN);
-//		bptSimulations(getWUS_withCascadia_ERF(),numYrs,parentDir, "Run10_aperMidVals", seed, rootDir+"bptSimulationsWUS_withCascadia/Run9_aperMidVals/outputTimesinceLast.txt", aper, Double.NaN);
-//		bptSimulations(getWUS_withCascadia_ERF(),numYrs,parentDir, "Run11_aperMidVals", seed, rootDir+"bptSimulationsWUS_withCascadia/Run10_aperMidVals/outputTimesinceLast.txt", aper, Double.NaN);
-//		bptSimulations(getWUS_withCascadia_ERF(),numYrs,parentDir, "Run12_aperMidVals", seed, rootDir+"bptSimulationsWUS_withCascadia/Run11_aperMidVals/outputTimesinceLast.txt", aper, Double.NaN);
-//		bptSimulations(getWUS_withCascadia_ERF(),numYrs,parentDir, "Run14_aperMidVals", seed, rootDir+"bptSimulationsWUS_withCascadia/Run13_aperMidVals/outputTimesinceLast.txt", aper, Double.NaN);
-//		bptSimulations(getWUS_withCascadia_ERF(),numYrs,parentDir, "Run15_aperMidVals", seed, rootDir+"bptSimulationsWUS_withCascadia/Run14_aperMidVals/outputTimesinceLast.txt", aper, Double.NaN);
-//		bptSimulations(getWUS_withCascadia_ERF(),numYrs,parentDir, "Run16_aperMidVals", seed, rootDir+"bptSimulationsWUS_withCascadia/Run15_aperMidVals/outputTimesinceLast.txt", aper, Double.NaN);
-//		bptSimulations(getWUS_withCascadia_ERF(),numYrs,parentDir, "Run17_aperMidVals", seed, rootDir+"bptSimulationsWUS_withCascadia/Run16_aperMidVals/outputTimesinceLast.txt", aper, Double.NaN);
-//		bptSimulations(getWUS_withCascadia_ERF(),numYrs,parentDir, "Run18_aperMidVals", seed, rootDir+"bptSimulationsWUS_withCascadia/Run17_aperMidVals/outputTimesinceLast.txt", aper, Double.NaN);
-//		bptSimulations(getWUS_withCascadia_ERF(),numYrs,parentDir, "Run19_aperMidVals", seed, rootDir+"bptSimulationsWUS_withCascadia/Run18_aperMidVals/outputTimesinceLast.txt", aper, Double.NaN);
-//		bptSimulations(getWUS_withCascadia_ERF(),numYrs,parentDir, "Run20_aperMidVals", seed, rootDir+"bptSimulationsWUS_withCascadia/Run19_aperMidVals/outputTimesinceLast.txt", aper, Double.NaN);
-//		sectPlotsForMultSimulations(rootDir+"bptSimulationsWUS_withCascadia/", "Run", "_aperMidVals", 20, getWUS_withCascadia_ERF().getSolution());
-//		rupPlotsForMultSimulations(rootDir+"bptSimulationsWUS_withCascadia/", "Run", "_aperMidVals", 20, getWUS_withCascadia_ERF(), (double)numYrs);
+//		bptSimulations(getWUS_withCascadia_ERF(Cascadia_FSS_creator.FaultModelEnum.MIDDLE),numYrs,parentDir, "Run2_aper0pt5", seed, rootDir+"bptSimulationsWUS_withCascadia/Run1_aper0pt5/outputTimesinceLast.txt", aper);
+//		bptSimulations(getWUS_withCascadia_ERF(Cascadia_FSS_creator.FaultModelEnum.MIDDLE),numYrs,parentDir, "Run3_aper0pt5", seed, rootDir+"bptSimulationsWUS_withCascadia/Run2_aper0pt5/outputTimesinceLast.txt", aper);
+		MagDependentAperiodicityOptions aper = MagDependentAperiodicityOptions.MID_VALUES;
+//		bptSimulations(getWUS_withCascadia_ERF(Cascadia_FSS_creator.FaultModelEnum.MIDDLE),numYrs,parentDir, "Run1_aperMidVals", seed, rootDir+"bptSimulationsWUS_withCascadia/Run2_aper0pt5/outputTimesinceLast.txt", aper, Double.NaN);
+//		bptSimulations(getWUS_withCascadia_ERF(Cascadia_FSS_creator.FaultModelEnum.MIDDLE),numYrs,parentDir, "Run2_aperMidVals", seed, rootDir+"bptSimulationsWUS_withCascadia/Run1_aperMidVals/outputTimesinceLast.txt", aper, Double.NaN);
+//		bptSimulations(getWUS_withCascadia_ERF(Cascadia_FSS_creator.FaultModelEnum.MIDDLE),numYrs,parentDir, "Run3_aperMidVals", seed, rootDir+"bptSimulationsWUS_withCascadia/Run2_aperMidVals/outputTimesinceLast.txt", aper, Double.NaN);
+//		bptSimulations(getWUS_withCascadia_ERF(Cascadia_FSS_creator.FaultModelEnum.MIDDLE),numYrs,parentDir, "Run4_aperMidVals", seed, rootDir+"bptSimulationsWUS_withCascadia/Run3_aperMidVals/outputTimesinceLast.txt", aper, Double.NaN);
+//		bptSimulations(getWUS_withCascadia_ERF(Cascadia_FSS_creator.FaultModelEnum.MIDDLE),numYrs,parentDir, "Run6_aperMidVals", seed, rootDir+"bptSimulationsWUS_withCascadia/Run5_aperMidVals/outputTimesinceLast.txt", aper, Double.NaN);
+//		bptSimulations(getWUS_withCascadia_ERF(Cascadia_FSS_creator.FaultModelEnum.MIDDLE),numYrs,parentDir, "Run7_aperMidVals", seed, rootDir+"bptSimulationsWUS_withCascadia/Run6_aperMidVals/outputTimesinceLast.txt", aper, Double.NaN);
+//		bptSimulations(getWUS_withCascadia_ERF(Cascadia_FSS_creator.FaultModelEnum.MIDDLE),numYrs,parentDir, "Run8_aperMidVals", seed, rootDir+"bptSimulationsWUS_withCascadia/Run7_aperMidVals/outputTimesinceLast.txt", aper, Double.NaN);
+//		bptSimulations(getWUS_withCascadia_ERF(Cascadia_FSS_creator.FaultModelEnum.MIDDLE),numYrs,parentDir, "Run9_aperMidVals", seed, rootDir+"bptSimulationsWUS_withCascadia/Run8_aperMidVals/outputTimesinceLast.txt", aper, Double.NaN);
+//		bptSimulations(getWUS_withCascadia_ERF(Cascadia_FSS_creator.FaultModelEnum.MIDDLE),numYrs,parentDir, "Run10_aperMidVals", seed, rootDir+"bptSimulationsWUS_withCascadia/Run9_aperMidVals/outputTimesinceLast.txt", aper, Double.NaN);
+//		bptSimulations(getWUS_withCascadia_ERF(Cascadia_FSS_creator.FaultModelEnum.MIDDLE),numYrs,parentDir, "Run11_aperMidVals", seed, rootDir+"bptSimulationsWUS_withCascadia/Run10_aperMidVals/outputTimesinceLast.txt", aper, Double.NaN);
+//		bptSimulations(getWUS_withCascadia_ERF(Cascadia_FSS_creator.FaultModelEnum.MIDDLE),numYrs,parentDir, "Run12_aperMidVals", seed, rootDir+"bptSimulationsWUS_withCascadia/Run11_aperMidVals/outputTimesinceLast.txt", aper, Double.NaN);
+//		bptSimulations(getWUS_withCascadia_ERF(Cascadia_FSS_creator.FaultModelEnum.MIDDLE),numYrs,parentDir, "Run14_aperMidVals", seed, rootDir+"bptSimulationsWUS_withCascadia/Run13_aperMidVals/outputTimesinceLast.txt", aper, Double.NaN);
+//		bptSimulations(getWUS_withCascadia_ERF(Cascadia_FSS_creator.FaultModelEnum.MIDDLE),numYrs,parentDir, "Run15_aperMidVals", seed, rootDir+"bptSimulationsWUS_withCascadia/Run14_aperMidVals/outputTimesinceLast.txt", aper, Double.NaN);
+//		bptSimulations(getWUS_withCascadia_ERF(Cascadia_FSS_creator.FaultModelEnum.MIDDLE),numYrs,parentDir, "Run16_aperMidVals", seed, rootDir+"bptSimulationsWUS_withCascadia/Run15_aperMidVals/outputTimesinceLast.txt", aper, Double.NaN);
+//		bptSimulations(getWUS_withCascadia_ERF(Cascadia_FSS_creator.FaultModelEnum.MIDDLE),numYrs,parentDir, "Run17_aperMidVals", seed, rootDir+"bptSimulationsWUS_withCascadia/Run16_aperMidVals/outputTimesinceLast.txt", aper, Double.NaN);
+//		bptSimulations(getWUS_withCascadia_ERF(Cascadia_FSS_creator.FaultModelEnum.MIDDLE),numYrs,parentDir, "Run18_aperMidVals", seed, rootDir+"bptSimulationsWUS_withCascadia/Run17_aperMidVals/outputTimesinceLast.txt", aper, Double.NaN);
+//		bptSimulations(getWUS_withCascadia_ERF(Cascadia_FSS_creator.FaultModelEnum.MIDDLE),numYrs,parentDir, "Run19_aperMidVals", seed, rootDir+"bptSimulationsWUS_withCascadia/Run18_aperMidVals/outputTimesinceLast.txt", aper, Double.NaN);
+//		bptSimulations(getWUS_withCascadia_ERF(Cascadia_FSS_creator.FaultModelEnum.MIDDLE),numYrs,parentDir, "Run20_aperMidVals", seed, rootDir+"bptSimulationsWUS_withCascadia/Run19_aperMidVals/outputTimesinceLast.txt", aper, Double.NaN);
+//		sectPlotsForMultSimulations(rootDir+"bptSimulationsWUS_withCascadia/", "Run", "_aperMidVals", 20, getWUS_withCascadia_ERF(Cascadia_FSS_creator.FaultModelEnum.MIDDLE).getSolution());
+		rupPlotsForMultSimulations(rootDir+"bptSimulationsWUS_withCascadia/", "Run", "_aperMidVals", 20, getWUS_withCascadia_ERF(Cascadia_FSS_creator.FaultModelEnum.MIDDLE), (double)numYrs, aper);
 
 		// WUS w/ Cascadia (Middle branch) Poisson simulations
 //		File parentDir = new File(rootDir+"poissonSimulationsWUS_withCascadia/");
 //		long seed = 984087634;
 //		int numYrs = 5000000;
 //		for(int i=11;i<=20;i++) {
-//			poissonSimulations(getWUS_withCascadia_ERF(), parentDir, "Run"+i, seed+=i*7836271, numYrs, Double.NaN);
+//			poissonSimulations(getWUS_withCascadia_ERF(Cascadia_FSS_creator.FaultModelEnum.MIDDLE), parentDir, "Run"+i, seed+=i*7836271, numYrs, Double.NaN);
 //		}
-//		sectPlotsForMultSimulations(rootDir+"poissonSimulationsWUS_withCascadia/", "Run", "", 20, getWUS_withCascadia_ERF().getSolution());
+//		sectPlotsForMultSimulations(rootDir+"poissonSimulationsWUS_withCascadia/", "Run", "", 20, getWUS_withCascadia_ERF(Cascadia_FSS_creator.FaultModelEnum.MIDDLE).getSolution());
+//		rupPlotsForMultSimulations(rootDir+"poissonSimulationsWUS_withCascadia/", "Run", "", 20, getWUS_withCascadia_ERF(Cascadia_FSS_creator.FaultModelEnum.MIDDLE), (double)5000000, null);
 
 		
 
@@ -1209,18 +1326,19 @@ System.exit(0);
 //		long seed = 836529;
 //		MagDependentAperiodicityOptions aper = MagDependentAperiodicityOptions.MID_VALUES;
 //		double numYrs=100000;
+//		AK_FSS_creator.DeformationModelEnum defMod = DeformationModelEnum.GEO;
 //		File parentDir = new File(rootDir+"bptSimulationsAK/");
-//		bptSimulations(getAK_ERF(),numYrs,parentDir, "Run1_100k", seed, rootDir+"poissonSimulationsAK/Run1/outputTimesinceLast.txt", aper);
-//		bptSimulations(getAK_ERF(),numYrs,parentDir, "Run2_100k", seed, rootDir+"poissonSimulationsAK/Run2/outputTimesinceLast.txt", aper);
-//		bptSimulations(getAK_ERF(),numYrs,parentDir, "Run3_100k", seed, rootDir+"bptSimulationsAK/Run2_100k/outputTimesinceLast.txt",aper);
-//		bptSimulations(getAK_ERF(),numYrs,parentDir, "Run4_100k", seed, rootDir+"bptSimulationsAK/Run3_100k/outputTimesinceLast.txt",aper);
+//		bptSimulations(getAK_ERF(defMod),numYrs,parentDir, "Run1_100k", seed, rootDir+"poissonSimulationsAK/Run1/outputTimesinceLast.txt", aper);
+//		bptSimulations(getAK_ERF(defMod),numYrs,parentDir, "Run2_100k", seed, rootDir+"poissonSimulationsAK/Run2/outputTimesinceLast.txt", aper);
+//		bptSimulations(getAK_ERF(defMod),numYrs,parentDir, "Run3_100k", seed, rootDir+"bptSimulationsAK/Run2_100k/outputTimesinceLast.txt",aper);
+//		bptSimulations(getAK_ERF(defMod),numYrs,parentDir, "Run4_100k", seed, rootDir+"bptSimulationsAK/Run3_100k/outputTimesinceLast.txt",aper);
 		
 //		// AK Poisson simulations
 //		File parentDir = new File(rootDir+"poissonSimulationsAK/");
 //		long seed = 984087634-7836271;
 //		int numYrs = 2000000;
 //		for(int i=3;i<=3;i++) {
-//			poissonSimulations(getAK_ERF(), parentDir, "Run"+i, seed+=i*7836271, numYrs);
+//			poissonSimulations(getAK_ERF(defMod), parentDir, "Run"+i, seed+=i*7836271, numYrs);
 //			seed += 7836271;
 //		}
 

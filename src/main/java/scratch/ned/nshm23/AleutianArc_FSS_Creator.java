@@ -513,8 +513,8 @@ public class AleutianArc_FSS_Creator {
 //		String nshmModelDirPath = "/Users/field/nshm-haz_data/nshm-alaska-main_Jan10_2024/"; // old & not longer works
 		
 		String nshmModelDirPath = "/Users/field/nshm-haz_data/nshm-alaska-3.0.1/";
-//		getFaultSystemSolution(nshmModelDirPath, FaultModelEnum.ALL);
-		getFaultSystemSolution(nshmModelDirPath, FaultModelEnum.GEODETIC);
+		getFaultSystemSolution(nshmModelDirPath, FaultModelEnum.ALL);
+//		getFaultSystemSolution(nshmModelDirPath, FaultModelEnum.GEODETIC);
 //		getFaultSystemSolution(nshmModelDirPath, FaultModelEnum.GEOLOGIC_NARROW);
 //		getFaultSystemSolution(nshmModelDirPath, FaultModelEnum.GEOLOGIC_WIDE);
 		
