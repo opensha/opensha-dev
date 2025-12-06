@@ -1333,7 +1333,7 @@ System.exit(0);
 //		bptSimulations(getAK_ERF(defMod),numYrs,parentDir, "Run3_100k", seed, rootDir+"bptSimulationsAK/Run2_100k/outputTimesinceLast.txt",aper);
 //		bptSimulations(getAK_ERF(defMod),numYrs,parentDir, "Run4_100k", seed, rootDir+"bptSimulationsAK/Run3_100k/outputTimesinceLast.txt",aper);
 		
-//		// AK Poisson simulations
+		// AK Poisson simulations
 //		File parentDir = new File(rootDir+"poissonSimulationsAK/");
 //		long seed = 984087634-7836271;
 //		int numYrs = 2000000;

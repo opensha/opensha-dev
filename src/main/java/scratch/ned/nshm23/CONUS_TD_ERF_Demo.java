@@ -164,7 +164,8 @@ public class CONUS_TD_ERF_Demo {
 		}	
 
 		// create FSS
-		String akModelDirPath = "/Users/field/nshm-haz_data/nshm-alaska-3.0.1/";
+	//	String akModelDirPath = "/Users/field/nshm-haz_data/nshm-alaska-3.0.1/";
+		String akModelDirPath = "/Users/field/nshm-haz_data/nshm-alaska-3.1-maint/";
 		ArrayList<FaultSystemSolution> ak_fssList = AK_FSS_creator.getFaultSystemSolutionList(akModelDirPath, defModel);
 		FaultSystemSolution sol = MergedSolutionCreator.merge(ak_fssList);
 		if(alaska_FSS_fileName != null) {

@@ -613,7 +613,8 @@ if(src.getName().equals("Unnamed fault system source")) // temp fix for Peters I
 
 	public static void main(String[] args) {
 		
-		String nshmModelDirPath = "/Users/field/nshm-haz_data/nshm-alaska-3.0.1/";
+//		String nshmModelDirPath = "/Users/field/nshm-haz_data/nshm-alaska-3.0.1/";	
+		String nshmModelDirPath = "/Users/field/nshm-haz_data/nshm-alaska-3.1-maint/";
 		DeformationModelEnum defModel = DeformationModelEnum.ELLIOT;
 //		DeformationModelEnum defModel = DeformationModelEnum.GEO;
 		ArrayList<FaultSystemSolution> fssList = getFaultSystemSolutionList(nshmModelDirPath, defModel);
