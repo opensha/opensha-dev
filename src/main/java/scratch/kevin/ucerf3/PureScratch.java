@@ -3396,6 +3396,17 @@ public class PureScratch {
 		}
 	}
 	
+	private static void test349() throws IOException {
+		ScalarIMR imr = AttenRelRef.CB_2008.get();
+		
+		imr.setParamDefaults();
+		
+		ParameterList visible = new ParameterList();
+		for (Parameter<?> param : imr.getOtherParams())
+			if (param.isEditorBuilt() && param.getEditor().isVisible())
+				visible.addParameter(param);
+	}
+	
 	/**
 	 * @param args
 	 * @throws Exception 

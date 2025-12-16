@@ -55,6 +55,8 @@ public class GriddedMFDWriter {
 		
 		EvenlyDiscretizedFunc refMFD = FaultSysTools.initEmptyMFD(5.01, 8.55);
 		
+		File assocFile = null;
+		
 		FaultSystemSolution refSol = FaultSystemSolution.load(new File(solDir, "results_WUS_FM_v3_branch_averaged_gridded.zip"));
 		
 //		File outputFile = new File("/tmp/nshm23_wus_gridded_mfds.csv");
@@ -96,8 +98,8 @@ public class GriddedMFDWriter {
 //		File outputFile = new File("/tmp/nshm23_wus_gridded_mfds_b1_seg_classic.csv");
 //		FaultSystemSolution sol = FaultSystemSolution.load(new File(baPairSolDir, "SupraB_SupraB1.0_SegModel_Classic.zip"));
 		
-		SolutionLogicTree gridSLT = SolutionLogicTree.load(new File(solDir, "results_gridded_branches.zip"));
-		FaultSystemSolution sol = refSol;
+//		SolutionLogicTree gridSLT = SolutionLogicTree.load(new File(solDir, "results_gridded_branches.zip"));
+//		FaultSystemSolution sol = refSol;
 		
 //		File outputFile = new File("/tmp/nshm23_wus_gridded_mfds_rate_high.csv");
 //		sol.setGridSourceProvider(getAverageGridProv(gridSLT, NSHM23_RegionalSeismicity.HIGH));
@@ -111,13 +113,15 @@ public class GriddedMFDWriter {
 //		File outputFile = new File("/tmp/nshm23_wus_gridded_mfds_smooth_adaptive.csv");
 //		sol.setGridSourceProvider(getAverageGridProv(gridSLT, NSHM23_SeisSmoothingAlgorithms.ADAPTIVE));
 		
-		File outputFile = new File("/tmp/nshm23_wus_gridded_mfds_smooth_fixed.csv");
-		sol.setGridSourceProvider(getAverageGridProv(gridSLT, NSHM23_SeisSmoothingAlgorithms.FIXED));
+//		File outputFile = new File("/tmp/nshm23_wus_gridded_mfds_smooth_fixed.csv");
+//		sol.setGridSourceProvider(getAverageGridProv(gridSLT, NSHM23_SeisSmoothingAlgorithms.FIXED));
 		
-//		File outputFile = new File("/tmp/ucerf3_gridded_mfds.csv");
-//		refSol = null;
-//		reg = new CaliforniaRegions.RELM_TESTING();
-//		FaultSystemSolution sol = FaultSystemSolution.load(new File("/home/kevin/OpenSHA/nshm23/batch_inversions/2021_11_30-u3_branches-orig_calcs-5h/results_FM3_1_branch_averaged.zip"));
+		File outputFile = new File("/tmp/ucerf3_gridded_mfds.csv");
+		refSol = null;
+		reg = new CaliforniaRegions.RELM_TESTING();
+		gridReg = new CaliforniaRegions.RELM_TESTING_GRIDDED();
+		FaultSystemSolution sol = FaultSystemSolution.load(new File("/home/kevin/OpenSHA/nshm23/batch_inversions/2021_11_30-u3_branches-orig_calcs-5h/results_FM3_1_branch_averaged.zip"));
+		assocFile = new File("/tmp/ucerf3_gridded_fault_associations.csv");
 		
 		FaultGridAssociations assoc = sol.getRupSet().getModule(FaultGridAssociations.class);
 		if (assoc == null) {
@@ -125,6 +129,98 @@ public class GriddedMFDWriter {
 				assoc = refSol.getRupSet().requireModule(FaultGridAssociations.class);
 			else if (outputFile.getName().contains("ucerf3"))
 				assoc = FaultPolyMgr.loadSerializedUCERF3(FaultModels.FM3_1);
+		}
+		
+
+		if (assocFile != null) {
+			// write out associations
+			
+			double[] gridMinAvgSupraMags = new double[gridReg.getNodeCount()];
+			double[] gridMinOverallSupraMags = new double[gridReg.getNodeCount()];
+			double[] gridMaxAvgSupraMags = new double[gridReg.getNodeCount()];
+			double[] gridMaxOverallSupraMags = new double[gridReg.getNodeCount()];
+			for (int i=0; i<gridMinAvgSupraMags.length; i++) {
+				// intialize all 4 arrays to NaN
+				gridMinAvgSupraMags[i] = Double.NaN;
+				gridMinOverallSupraMags[i] = Double.NaN;
+				gridMaxAvgSupraMags[i] = Double.NaN;
+				gridMaxOverallSupraMags[i] = Double.NaN;
+			}
+			
+			FaultSystemRupSet rupSet = sol.getRupSet();
+			
+			GridSourceProvider gridSources = sol.getGridSourceProvider();
+
+			RupMFDsModule rupMFDs = sol.requireModule(RupMFDsModule.class);
+			double totalMappedRate = 0d;
+			for (int rupIndex=0; rupIndex<rupSet.getNumRuptures(); rupIndex++) {
+				DiscretizedFunc rupMFD = rupMFDs.getRuptureMFD(rupIndex);
+				if (rupMFD == null)
+					rupMFD = new LightFixedXFunc(new double[] {rupSet.getMagForRup(rupIndex)}, new double[] {sol.getRateForRup(rupIndex)});
+				List<Integer> rupSects = rupSet.getSectionsIndicesForRup(rupIndex);
+				double avgMag = rupSet.getMagForRup(rupIndex);
+				for (int s=0; s<rupSects.size(); s++) {
+					int sectIndex = rupSects.get(s);
+//					double nuclFract = sectAreas.get(s)/totArea;
+					Map<Integer, Double> sectAssoc = assoc.getNodeFractions(sectIndex);
+					for (int gridIndex : sectAssoc.keySet()) {
+//						double fract = sectAssoc.get(gridIndex)*nuclFract;
+						int mappedIndex = gridReg.indexForLocation(gridSources.getLocation(gridIndex));
+						if (mappedIndex < 0)
+							// outside of region
+							continue;
+						if (Double.isNaN(gridMinAvgSupraMags[mappedIndex])) {
+							// first time hitting this cell
+							gridMinAvgSupraMags[mappedIndex] = Double.POSITIVE_INFINITY;
+							gridMinOverallSupraMags[mappedIndex] = Double.POSITIVE_INFINITY;
+							gridMaxAvgSupraMags[mappedIndex] = Double.NEGATIVE_INFINITY;
+							gridMaxOverallSupraMags[mappedIndex] = Double.NEGATIVE_INFINITY;
+						}
+						gridMinAvgSupraMags[mappedIndex] = Math.min(gridMinAvgSupraMags[mappedIndex], avgMag);
+						gridMaxAvgSupraMags[mappedIndex] = Math.max(gridMaxAvgSupraMags[mappedIndex], avgMag);
+						for (Point2D pt : rupMFD) {
+							if (pt.getY() == 0d)
+								continue;
+							gridMinOverallSupraMags[mappedIndex] = Math.min(gridMinOverallSupraMags[mappedIndex], pt.getX());
+							gridMaxOverallSupraMags[mappedIndex] = Math.max(gridMaxOverallSupraMags[mappedIndex], pt.getX());
+						}
+					}
+				}
+			}
+
+			CSVFile<String> csv = new CSVFile<>(false);
+			List<String> header = new ArrayList<>();
+			header.add("Grid Index");
+			header.add("Latitude");
+			header.add("Longitude");
+			header.add("Fraction associated with fault(s)");
+			header.add("Min branch-averaged supra-seis magnitude");
+			header.add("Max branch-averaged supra-seis magnitude");
+			header.add("Min overall supra-seis magnitude");
+			header.add("Max overall supra-seis magnitude");
+			header.add("Associated subsection name(s)");
+			csv.addLine(header);
+
+			for (int i=0; i<gridMaxAvgSupraMags.length; i++) {
+				if (Double.isFinite(gridMaxAvgSupraMags[i])) {
+					List<String> line = new ArrayList<>();
+					line.add(i+"");
+					Location loc = gridReg.getLocation(i);
+					line.add((float)loc.lat+"");
+					line.add((float)loc.lon+"");
+					int origIndex = assoc.getRegion().indexForLocation(loc);
+					line.add((float)assoc.getNodeFraction(origIndex)+"");
+					line.add((float)gridMinAvgSupraMags[i]+"");
+					line.add((float)gridMaxAvgSupraMags[i]+"");
+					line.add((float)gridMinOverallSupraMags[i]+"");
+					line.add((float)gridMaxOverallSupraMags[i]+"");
+					for (int s : assoc.getSectionFracsOnNode(origIndex).keySet())
+						line.add(rupSet.getFaultSectionData(s).getSectionName());
+					csv.addLine(line);
+				}
+			}
+
+			csv.writeToFile(assocFile);
 		}
 		
 		CSVFile<String> csv = buildForSolution(refSol, sol, assoc, gridReg, refMFD);

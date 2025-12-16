@@ -23,6 +23,7 @@ import java.util.concurrent.TimeUnit;
 
 import org.apache.commons.math3.util.Precision;
 import org.jfree.data.Range;
+import org.opensha.commons.calc.GaussianDistCalc;
 import org.opensha.commons.data.CSVFile;
 import org.opensha.commons.data.Site;
 import org.opensha.commons.data.function.ArbitrarilyDiscretizedFunc;
@@ -112,7 +113,9 @@ public class BayAreaRegionalGroundMotionCalc {
 		AttenRelRef gmmRef = AttenRelRef.BSSA_2014;
 		AttenRelRef empGMMRef = gmmRef;
 //		empGMMRef = AttenRelRef.WRAPPED_BSSA_2014;
-		AttenRelRef hazMapGMMRef = AttenRelRef.USGS_NSHM23_ACTIVE_SF;
+//		AttenRelRef hazMapGMMRef = AttenRelRef.USGS_NSHM23_ACTIVE_SF;
+		AttenRelRef hazMapGMMRef = AttenRelRef.BSSA_2014;
+		boolean hazardMapUseBasin = false;
 		double period = 0d;
 		String perSuffix = "pga";
 		String perLabel = "PGA (g)";
@@ -129,8 +132,9 @@ public class BayAreaRegionalGroundMotionCalc {
 		double catalogDefaultRake = Double.NaN;
 		double gridMinMag = 3.5d;
 		double[] epiMinMags = {3.5d, 4d};
-		boolean doEventMapCalc = false;
+		boolean doEventMapCalc = true;
 		boolean doHazardMapCalc = true;
+		boolean doHazardMapSanityCalc = true;
 		
 //		File outputDir = new File(mainOutputDir, "nshm23_catalog");
 //		File catalogFile = new File(mainOutputDir, "nshm23_cat_M4_1967.csv");
@@ -165,7 +169,8 @@ public class BayAreaRegionalGroundMotionCalc {
 		FixedDistanceCutoffFilter filter = filters.getFilterInstance(FixedDistanceCutoffFilter.class);
 		filter.setMaxDistance(300d);
 		
-		Region reg = LocalRegions.CONUS_SF_BAY.load();
+//		Region reg = LocalRegions.CONUS_SF_BAY.load();
+		Region reg = new Region(new Location(37.7, -122.55), new Location(37.8, -122.45));
 		GriddedRegion gridReg = new GriddedRegion(reg, 0.02, GriddedRegion.ANCHOR_0_0);
 		System.out.println("Region has "+gridReg.getNodeCount()+" nodes");
 		
@@ -243,12 +248,15 @@ public class BayAreaRegionalGroundMotionCalc {
 		
 		CSVFile<String> sitesCSV = new CSVFile<>(true);
 		sitesCSV.addLine("Site index", "Latitude", "Longitude", "Vs30 (m/s)", "phi at r=0");
+		double[] sitePhis = new double[sites.size()];
 		for (int i=0; i<sites.size(); i++) {
 			Site site = sites.get(i);
 			gmm.setSite(site);
 			ScalarGroundMotion gm = gmm.getGroundMotion();
+			double phi = gm.phi();
 			sitesCSV.addLine(i+"", (float)site.getLocation().lat+"", (float)site.getLocation().lon+"",
-					((Double)site.getParameter(Vs30_Param.NAME).getValue()).floatValue()+"", (float)gm.phi()+"");
+					((Double)site.getParameter(Vs30_Param.NAME).getValue()).floatValue()+"", (float)phi+"");
+			sitePhis[i] = phi;
 		}
 		sitesCSV.writeToFile(new File(outputDir, "sites_and_phi_"+perSuffix+".csv"));
 		
@@ -521,7 +529,7 @@ public class BayAreaRegionalGroundMotionCalc {
 				nuclCSV.addLine(line);
 			}
 			nuclCSV.writeToFile(new File(outputDir, "nucleation_rates.csv"));
-			System.exit(0);
+//			System.exit(0);
 		} else {
 			keptEvents = new ArrayList<>();
 			keptFractsInReg = new ArrayList<>();
@@ -586,15 +594,20 @@ public class BayAreaRegionalGroundMotionCalc {
 		eventsCSV.addLine("Event ID", "Magnitude", "Annual Rate", "Annual Nucleation Rate", "tau");
 		double sumRate = 0d;
 		double sumNuclRate = 0d;
+		double[] eventRates = new double[keptEvents.size()];
+		double[] eventTaus = new double[keptEvents.size()];
 		for (int n=0; n<keptEvents.size(); n++) {
 			ProbEqkRupture rup = keptEvents.get(n);
 			gmm.setEqkRupture(rup);
 			ScalarGroundMotion gm = gmm.getGroundMotion();
 			double rate = rup.getMeanAnnualRate(1d);
+			eventRates[n] = rate;
 			double nuclRate = rate * keptFractsInReg.get(n);
 			sumRate += rate;
 			sumNuclRate += nuclRate;
-			eventsCSV.addLine(n+"", (float)rup.getMag()+"", rate+"", nuclRate+"", (float)gm.tau()+"");
+			double tau = gm.tau();
+			eventsCSV.addLine(n+"", (float)rup.getMag()+"", rate+"", nuclRate+"", (float)tau+"");
+			eventTaus[n] = tau;
 			
 			if (curBundle == null) {
 				curBundle = new ArrayList<>();
@@ -780,7 +793,9 @@ public class BayAreaRegionalGroundMotionCalc {
 			
 			List<DiscretizedFunc> siteCurves = new ArrayList<>();
 			
-			for (Site site : basinSites) {
+			List<Site> mySites = hazardMapUseBasin ? basinSites : sites;
+			
+			for (Site site : mySites) {
 				MapCalcCallable calc;
 				if (mapFutures.size() == calcThreads) {
 					// wait on a previous future
@@ -812,38 +827,18 @@ public class BayAreaRegionalGroundMotionCalc {
 					System.out.println(" "+siteCurves.size());
 			}
 			System.out.println(" "+siteCurves.size());
-			Preconditions.checkState(siteCurves.size() == basinSites.size());
-			List<String> header = new ArrayList<>();
-			header.addAll(List.of("Index", "Latitude", "Longitude", "Vs30 (m/s)", "Z1.0 (m)", "Z2.5 (km)"));
-			for (Point2D pt : xVals)
-				header.add((float)pt.getX()+"");
-			CSVFile<String> mapCSV = new CSVFile<>(true);
-			mapCSV.addLine(header);
-			for (int s=0; s<basinSites.size(); s++) {
-				Site site = basinSites.get(s);
-				List<String> line = new ArrayList<>(header.size());
-				line.add(s+"");
-				line.add((float)site.getLocation().lat+"");
-				line.add((float)site.getLocation().lon+"");
-				line.add(site.getParameter(Double.class, Vs30_Param.NAME).getValue().floatValue()+"");
-				Double z1 = site.getParameter(Double.class, DepthTo1pt0kmPerSecParam.NAME).getValue();
-				Double z25 = site.getParameter(Double.class, DepthTo2pt5kmPerSecParam.NAME).getValue();
-				if (z1 == null)
-					line.add("NaN");
-				else
-					line.add(z1.floatValue()+"");
-				if (z25 == null)
-					line.add("NaN");
-				else
-					line.add(z25.floatValue()+"");
-				DiscretizedFunc curve = siteCurves.get(s);
-				for (Point2D pt : curve)
-					line.add(pt.getY()+"");
-				mapCSV.addLine(line);
-			}
-			mapCSV.writeToFile(new File(outputDir, "site_hazard_curves.csv"));
+			CSVFile<String> mapCSV = buildHazardMapCSV(xVals, siteCurves, mySites);
+			String fileName = "site_hazard_curves_"+hazMapGMMRef.name();
+			if (hazardMapUseBasin)
+				fileName += "_with_basin";
+			else
+				fileName += "_no_basin";
+			mapCSV.writeToFile(new File(outputDir, fileName+".csv"));
 			System.out.println("DONE with site curves");
 		}
+		
+		if (doHazardMapSanityCalc)
+			Preconditions.checkState(doEventMapCalc, "Can only do hazard sanity when event map is enabled");
 		
 		if (doEventMapCalc) {
 			List<CalcCallable> calls = new ArrayList<>();
@@ -863,6 +858,16 @@ public class BayAreaRegionalGroundMotionCalc {
 			Stopwatch calcWatch = Stopwatch.createUnstarted();
 			Stopwatch mapWatch = Stopwatch.createUnstarted();
 			Stopwatch ioWatch = Stopwatch.createUnstarted();
+			
+			List<DiscretizedFunc> siteRateCurves = null;
+			if (doHazardMapSanityCalc) {
+				siteRateCurves = new ArrayList<>(sites.size());
+				for (int s=0; s<sites.size(); s++) {
+					DiscretizedFunc curve = xVals.deepClone();
+					curve.scale(0d);
+					siteRateCurves.add(curve);
+				}
+			}
 			
 			double millisToMinutes = 1d/(1000d*60d);
 			
@@ -888,8 +893,27 @@ public class BayAreaRegionalGroundMotionCalc {
 				SiteResult[] combResults = new SiteResult[sites.size()];
 				for (Future<List<SiteResult>> future : futures) {
 					try {
-						for (SiteResult result : future.get())
+						for (SiteResult result : future.get()) {
 							combResults[result.siteIndex] = result;
+							if (doHazardMapSanityCalc) {
+								for (int e=0; e<idBundle.size(); e++) {
+									int eventID = idBundle.get(e);
+									double rate = eventRates[eventID];
+									double mu = result.muValues[e];
+									double tau = eventTaus[eventID];
+									double phi = sitePhis[result.siteIndex];
+									double sigma = Math.sqrt(phi*phi + tau*tau);
+									DiscretizedFunc curve = siteRateCurves.get(result.siteIndex);
+									for (int x=0; x<xVals.size(); x++) {
+										double lnX = Math.log(xVals.getX(x));
+										double standRandVariable = (lnX - mu)/sigma;
+										double cdf = GaussianDistCalc.getCDF(standRandVariable);
+										double exceedRate = (1d-cdf)*rate;
+										curve.set(x, curve.getY(x) + exceedRate);
+									}
+								}
+							}
+						}
 					} catch (Exception e) {
 						throw ExceptionUtils.asRuntimeException(e);
 					}
@@ -983,9 +1007,48 @@ public class BayAreaRegionalGroundMotionCalc {
 					+pDF.format(calcMins/totalMins)+" calculating; "
 					+pDF.format(mapMins/totalMins)+" building maps; "
 					+pDF.format(ioMins/totalMins)+" blocking I/O");
+			
+			if (doHazardMapSanityCalc) {
+				CSVFile<String> mapCSV = buildHazardMapCSV(xVals, siteRateCurves, sites);
+				mapCSV.writeToFile(new File(outputDir, "site_hazard_curves_from_maps.csv"));
+			}
 		}
 		
 		exec.shutdown();
+	}
+
+	public static CSVFile<String> buildHazardMapCSV(DiscretizedFunc xVals, List<DiscretizedFunc> siteCurves,
+			List<Site> mySites) {
+		Preconditions.checkState(siteCurves.size() == mySites.size());
+		List<String> header = new ArrayList<>();
+		header.addAll(List.of("Index", "Latitude", "Longitude", "Vs30 (m/s)", "Z1.0 (m)", "Z2.5 (km)"));
+		for (Point2D pt : xVals)
+			header.add((float)pt.getX()+"");
+		CSVFile<String> mapCSV = new CSVFile<>(true);
+		mapCSV.addLine(header);
+		for (int s=0; s<mySites.size(); s++) {
+			Site site = mySites.get(s);
+			List<String> line = new ArrayList<>(header.size());
+			line.add(s+"");
+			line.add((float)site.getLocation().lat+"");
+			line.add((float)site.getLocation().lon+"");
+			line.add(site.getParameter(Double.class, Vs30_Param.NAME).getValue().floatValue()+"");
+			Double z1 = site.getParameter(Double.class, DepthTo1pt0kmPerSecParam.NAME).getValue();
+			Double z25 = site.getParameter(Double.class, DepthTo2pt5kmPerSecParam.NAME).getValue();
+			if (z1 == null)
+				line.add("NaN");
+			else
+				line.add(z1.floatValue()+"");
+			if (z25 == null)
+				line.add("NaN");
+			else
+				line.add(z25.floatValue()+"");
+			DiscretizedFunc curve = siteCurves.get(s);
+			for (Point2D pt : curve)
+				line.add(pt.getY()+"");
+			mapCSV.addLine(line);
+		}
+		return mapCSV;
 	}
 	
 	private static void setPeriod(ScalarIMR gmm, double period) {

@@ -8,6 +8,9 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
+import org.opensha.commons.geo.Location;
+import org.opensha.commons.geo.LocationUtils;
+import org.opensha.commons.geo.Region;
 import org.opensha.commons.hpc.JavaShellScriptWriter;
 import org.opensha.commons.hpc.mpj.FastMPJShellScriptWriter;
 import org.opensha.commons.hpc.mpj.MPJExpressShellScriptWriter;
@@ -15,6 +18,9 @@ import org.opensha.commons.hpc.mpj.FastMPJShellScriptWriter.Device;
 import org.opensha.commons.hpc.pbs.BatchScriptWriter;
 import org.opensha.commons.hpc.pbs.StampedeScriptWriter;
 import org.opensha.commons.hpc.pbs.USC_CARC_ScriptWriter;
+import org.opensha.commons.util.DataUtils.MinMaxAveTracker;
+import org.opensha.sha.simulators.SimulatorElement;
+import org.opensha.sha.simulators.parsers.RSQSimFileReader;
 import org.opensha.sha.simulators.srf.RSQSimSRFGenerator.SRFInterpolationMode;
 
 import com.google.common.base.Preconditions;
@@ -24,6 +30,7 @@ import edu.usc.kmilner.mpj.taskDispatch.MPJTaskCalculator;
 import scratch.kevin.bbp.BBP_Module.Method;
 import scratch.kevin.bbp.BBP_Module.VelocityModel;
 import scratch.kevin.bbp.BBP_Site;
+import scratch.kevin.simulators.RSQSimCatalog;
 
 public class MPJ_BBP_CatalogSimScriptGen {
 
@@ -41,12 +48,13 @@ public class MPJ_BBP_CatalogSimScriptGen {
 //		String catalogDirName = "rundir5597_crustal_corupture";
 //		String catalogDirName = "rundir5775_subduction";
 //		String catalogDirName = "rundir5775_crustal";
-		String catalogDirName = "rundir5895";
+//		String catalogDirName = "rundir5895";
+		String catalogDirName = "rundir6711";
 		
 //		int skipYears = 20000;
-		int skipYears = 10000;
+//		int skipYears = 10000;
 //		int skipYears = 5000;
-//		int skipYears = 2000;
+		int skipYears = 2000;
 //		int skipYears = 0;
 //		int skipYears = 65000;
 		
@@ -54,8 +62,18 @@ public class MPJ_BBP_CatalogSimScriptGen {
 		double maxDist = 300d;
 		
 //		double griddedSpacing = 1d;
-//		double griddedSpacing = 0.5;
-		double griddedSpacing = 0.2;
+		double griddedSpacing = 0.5;
+//		double griddedSpacing = 0.2;
+		
+//		double minMag = 0d;
+//		double minMag = 5;
+//		double minMag = 6;
+		double minMag = 6.5;
+//		double minMag = 7;
+		
+		int minMappedSubSects = 2;
+		double sectAreaFract = 0.5;
+		minMag = 6;
 		
 		// init all to false
 		boolean standardSites = false;
@@ -67,6 +85,8 @@ public class MPJ_BBP_CatalogSimScriptGen {
 		boolean griddedSoCalSites = false;
 		boolean griddedNZSites = false;
 		boolean nzStandardSites = false;
+		boolean griddedSyntheticSites = false;
+		String catGeomDefaultName = "zfault_Deepen.in";
 		
 		// CA
 //		Integer utmZone = null;
@@ -76,11 +96,11 @@ public class MPJ_BBP_CatalogSimScriptGen {
 //		VelocityModel vm = VelocityModel.LA_BASIN_500;
 		
 		// NSHM23-wUS
-		Integer utmZone = null;
-		Character utmBand = null;
-		griddedWUSSites = true;
-//		VelocityModel vm = VelocityModel.LA_BASIN_863; // uncomment only if you need the old 863
-		VelocityModel vm = VelocityModel.LA_BASIN_500;
+//		Integer utmZone = null;
+//		Character utmBand = null;
+//		griddedWUSSites = true;
+////		VelocityModel vm = VelocityModel.LA_BASIN_863; // uncomment only if you need the old 863
+//		VelocityModel vm = VelocityModel.LA_BASIN_500;
 		
 		// NZ
 //		Integer utmZone = 59;
@@ -97,15 +117,13 @@ public class MPJ_BBP_CatalogSimScriptGen {
 //		VelocityModel vm = VelocityModel.CENTRAL_JAPAN;
 ////		VelocityModel vm = VelocityModel.LA_BASIN_500;
 		
-//		double minMag = 0d;
-//		double minMag = 5;
-//		double minMag = 6;
-		double minMag = 6.5;
-//		double minMag = 7;
-		
-		int minMappedSubSects = 2;
-		double sectAreaFract = 0.5;
-		minMag = 6;
+		// synthetic
+		Integer utmZone = 11;
+		Character utmBand = 'N';
+		griddedSyntheticSites = true;
+//		VelocityModel vm = VelocityModel.LA_BASIN_863; // uncomment only if you need the old 863
+		VelocityModel vm = VelocityModel.LA_BASIN_500;
+		minMappedSubSects = 0;
 		
 		int numRG = 0;
 //		double minMag = 7;
@@ -194,6 +212,8 @@ public class MPJ_BBP_CatalogSimScriptGen {
 			jobName += "-griddedSitesNZ";
 		if (griddedWUSSites)
 			jobName += "-griddedSitesWUS";
+		if (griddedSyntheticSites)
+			jobName += "-griddedSyntheticSites";
 		Preconditions.checkArgument(!(griddedSoCalSites && griddedCASites));
 		
 		if (griddedSpacing != 1d && jobName.contains("gridded"))
@@ -224,6 +244,29 @@ public class MPJ_BBP_CatalogSimScriptGen {
 			sites.addAll(RSQSimBBP_Config.getNZStandardSites());
 		if (griddedNZSites)
 			sites.addAll(RSQSimBBP_Config.getNZGriddedSites(griddedSpacing));
+		if (griddedSyntheticSites) {
+			// load the input file
+			File catDir = RSQSimCatalog.locateCatalog(catalogDirName, catGeomDefaultName);
+			Preconditions.checkState(catDir != null);
+			File geomFile = new File(catDir, catGeomDefaultName);
+			System.out.println("Reading geometry from "+geomFile.getAbsolutePath());
+			Preconditions.checkState(geomFile.exists());
+			List<SimulatorElement> geom = RSQSimFileReader.readGeometryFile(geomFile, utmZone, utmBand);
+			MinMaxAveTracker latTrack = new MinMaxAveTracker();
+			MinMaxAveTracker lonTrack = new MinMaxAveTracker();
+			for (SimulatorElement elem : geom) {
+				Location center = elem.getCenterLocation();
+				latTrack.addValue(center.lat);
+				lonTrack.addValue(center.lon);
+			}
+			System.out.println("Geometry span: lat="+latTrack+"\tlon="+lonTrack);
+			Location botLeft = new Location(latTrack.getMin(), lonTrack.getMin());
+			Location topRight = new Location(latTrack.getMax(), lonTrack.getMax());
+			botLeft = LocationUtils.location(botLeft, 5d*Math.PI/4d, maxDist);
+			topRight = LocationUtils.location(topRight, Math.PI/4d, maxDist);
+			Region bufferedRegion = new Region(botLeft, topRight);
+			sites.addAll(RSQSimBBP_Config.getGriddedSites(bufferedRegion, griddedSpacing));
+		}
 		
 		Preconditions.checkState(!sites.isEmpty());
 		
