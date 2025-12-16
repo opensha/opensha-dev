@@ -173,10 +173,16 @@ public class DefModelSampleLineIntegralsPlot {
 				
 				String plotPrefix = prefix+"_"+components[c].name();
 				if (individual) {
+					DiscretizedFunc exLegendFunc = new ArbitrarilyDiscretizedFunc();
+					exLegendFunc.set(1000d, 0d);
+					exLegendFunc.setName(randIndexes.size()+" random examples (assorted colors)");
+					funcs.add(exLegendFunc);
+					chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1.5f, Color.DARK_GRAY));
+					
 					plotPrefix += "_indv";
 					for (int i=0; i<randIndexes.size(); i++) {
 						DiscretizedFunc func = randIntegralsList.get(randIndexes.get(i))[c];
-						func.setName(i == 0 ? randIndexes.size()+" random examples" : null);
+						func.setName(null);
 						funcs.add(func);
 						chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1.5f,
 								randColorCPT == null ? Color.BLACK : randColorCPT.get(i % randColorCPT.size()).minColor));

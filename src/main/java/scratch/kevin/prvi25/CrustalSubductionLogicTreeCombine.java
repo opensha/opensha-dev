@@ -217,7 +217,7 @@ public class CrustalSubductionLogicTreeCombine extends AbstractLogicTreeCombiner
 		
 		File crustalSiteFile = new File(crustalDir, siteHazardFileName);
 		File subductionSiteFile = new File(subductionDir, siteHazardFileName);
-		if (!cmd.hasOption("no-curves") && crustalHazardDir.exists() && subductionHazardDir.exists() && !averageEither) {
+		if (!cmd.hasOption("no-curves") && crustalSiteFile.exists() && subductionSiteFile.exists() && !averageEither) {
 			System.out.println("Will combine site hazard curves");
 			File sitesOutputFile = new File(outputDir, siteHazardFileName);
 			if (REVERSE)

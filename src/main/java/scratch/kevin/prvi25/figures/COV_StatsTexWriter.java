@@ -36,7 +36,7 @@ public class COV_StatsTexWriter {
 		inputDirs.add(outputDir);
 		names.add("ERF");
 		texPrefixes.add("");
-		gridSpacings.add(0.1);
+		gridSpacings.add(0.025);
 		
 		inputDirs.add(new File(outputDir, "gmm_csvs"));
 		names.add("GMM");

@@ -30,8 +30,10 @@ import scratch.kevin.prvi25.figures.PRVI_SubductionSubSectPlots;
 public class PRVI_SubductionTestRupSetBuilder {
 
 	public static void main(String[] args) throws IOException {
-		PRVI25_SubductionFaultModels fm = PRVI25_SubductionFaultModels.PRVI_SUB_FM_LARGE;
-//		PRVI25_SubductionFaultModels fm = PRVI25_SubductionFaultModels.PRVI_SUB_FM_SMALL;
+//		PRVI25_SubductionFaultModels fm = PRVI25_SubductionFaultModels.PRVI_SUB_FM_LARGE;
+//		String fm_add = "";
+		PRVI25_SubductionFaultModels fm = PRVI25_SubductionFaultModels.PRVI_SUB_FM_SMALL;
+		String fm_add = "_small";
 		PRVI25_SubductionDeformationModels dm = PRVI25_SubductionDeformationModels.FULL;
 		
 //		File outputDir = new File("/home/kevin/Documents/papers/2024_PRVI_Subduction/figures/fault_model");
@@ -66,9 +68,9 @@ public class PRVI_SubductionTestRupSetBuilder {
 			System.out.println("\tLower trace: depth="+depthStr(lower)+"; strike="+oneDigit.format(lower.getAveStrike()));
 		}
 		mapMaker = new GeographicMapMaker(PRVI_SubductionSubSectPlots.plotReg, subSects);
-		mapMaker.plot(outputDir, "subduction_subsections", "PRVI Subduction Fault Model");
+		mapMaker.plot(outputDir, "subduction_subsections"+fm_add, "PRVI Subduction Fault Model");
 		
-		rupSet.write(new File(outputDir, "subduction_rup_set_"+dm.getFilePrefix()+".zip"));
+		rupSet.write(new File(outputDir, "subduction_rup_set"+fm_add+"_"+dm.getFilePrefix()+".zip"));
 		
 		double minMag = Double.POSITIVE_INFINITY;
 		double maxMag = Double.NEGATIVE_INFINITY;
@@ -92,14 +94,14 @@ public class PRVI_SubductionTestRupSetBuilder {
 		
 		// now write surface debug GeoJSON
 		List<Feature> features = new ArrayList<>();
-		features.addAll(FeatureCollection.read(new File(outputDir, "subduction_subsections.geojson")).features);
+		features.addAll(FeatureCollection.read(new File(outputDir, "subduction_subsections"+fm_add+".geojson")).features);
 		for (FaultSection sect : rupSet.getFaultSectionDataList()) {
 			MultiPoint geom = new MultiPoint(sect.getFaultSurface(15d, false, false).getEvenlyDiscritizedListOfLocsOnSurface());
 			Feature points = new Feature(geom, new FeatureProperties());
 			features.add(points);
 		}
 		
-		FeatureCollection.write(new FeatureCollection(features), new File(outputDir, "subduction_subsection_points.geojson"));
+		FeatureCollection.write(new FeatureCollection(features), new File(outputDir, "subduction_subsection_points"+fm_add+".geojson"));
 	}
 	
 	private static String depthStr(FaultTrace trace) {

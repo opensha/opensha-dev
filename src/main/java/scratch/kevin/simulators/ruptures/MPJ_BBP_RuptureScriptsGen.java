@@ -195,10 +195,10 @@ class MPJ_BBP_RuptureScriptsGen {
 //			String bbpCopyParentDir = USC_CARC_ScriptWriter.SHARED_SCRATCH_DIR+"/kmilner";
 			bbpCopyParentDir = null;
 			nodeGFDir = USC_CARC_ScriptWriter.NODE_TEMP_DIR+"/gfs";
-			bbpEnvFile = new File("/project/scec_608/kmilner/bbp/bbp_env.sh");
+			bbpEnvFile = new File("/project2/scec_608/kmilner/bbp/bbp_env.sh");
 //			String sharedScratchDir = "${SCRATCHDIR}";
 			sharedScratchDir = null;
-			remoteDir = new File("/project/scec_608/kmilner/bbp/parallel");
+			remoteDir = new File("/project2/scec_608/kmilner/bbp/parallel");
 			pbsWrite = new USC_CARC_ScriptWriter();
 //			List<File> classpath = new ArrayList<>();
 //			classpath.add(new File(remoteDir, "opensha-dev-all.jar"));
