@@ -22,12 +22,14 @@ import org.opensha.sha.earthquake.param.BackgroundRupType;
 import org.opensha.sha.earthquake.param.IncludeBackgroundOption;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.util.NSHM23_RegionLoader;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.util.PRVI25_RegionLoader;
+import org.opensha.sha.faultSurface.utils.PointSurfaceBuilder;
 import org.opensha.sha.faultSurface.utils.ptSrcCorr.PointSourceDistanceCorrections;
 import org.opensha.sha.imr.AttenRelRef;
 
 import com.google.common.base.Preconditions;
 
 import edu.usc.kmilner.mpj.taskDispatch.MPJTaskCalculator;
+import scratch.kevin.pointSources.paperFigs2026.CalcPaths;
 
 public class PointSourceBranchAveragedHazardScriptWriter {
 
@@ -38,7 +40,6 @@ public class PointSourceBranchAveragedHazardScriptWriter {
 		boolean linkFromBase = true;
 		Double vs30 = null;
 		Double sigmaTrunc = null;
-		double gridSpacing = 0.1;
 		boolean supersample = false;
 		boolean supersampleQuick = false;
 		boolean supersampleFinite = false;
@@ -55,8 +56,6 @@ public class PointSourceBranchAveragedHazardScriptWriter {
 		
 		Integer forceMaxDispatch = null;
 		
-		Region region = NSHM23_RegionLoader.loadFullConterminousWUS();
-		
 		String forceOutputName = null;
 		String baseDirName = "2024_02_02-nshm23_branches-WUS_FM_v3";
 		
@@ -65,8 +64,11 @@ public class PointSourceBranchAveragedHazardScriptWriter {
 		String solFileName = "results_WUS_FM_v3_branch_averaged_gridded.zip";
 		gmms = new AttenRelRef[] {AttenRelRef.USGS_NSHM23_ACTIVE};
 //		gmms = new AttenRelRef[] {AttenRelRef.NGAWest_2014_AVG_NOIDRISS};
-		region = new Region(new Location(36, -120), new Location(39, -117)); gridSpacing = 0.02; forceOutputName += "-zoom";
-//		region = new Region(new Location(37, -119), new Location(37.6, -118.4)); gridSpacing = 0.01; forceOutputName += "-tiny_zoom";
+		
+//		GriddedRegion gridReg = CalcPaths.FULL_GRID_REG;
+		GriddedRegion gridReg = CalcPaths.ZOOM_GRID_REG; forceOutputName += "-zoom";
+//		GriddedRegion gridReg = new GriddedRegion(new Region(new Location(37, -119), new Location(37.6, -118.4)),
+//				0.01, GriddedRegion.ANCHOR_0_0); forceOutputName += "-tiny_zoom";
 		sigmaTrunc = 3d;
 		supersample = true;
 		supersampleFinite = true; // only applies if supersample == true
@@ -81,27 +83,119 @@ public class PointSourceBranchAveragedHazardScriptWriter {
 //		bgRupType = BackgroundRupType.FINITE;
 //		bgFiniteNum = 20;
 		
+//		forceOutputName += "-finite_1x_along";
+//		pointFiniteMinMag = 5d;
+//		bgRupType = BackgroundRupType.FINITE;
+//		bgFiniteNum = 1;
+//		extraGridArgs = "--point-finite-sample-along-strike --point-finite-sample-down-dip";
+		
+//		forceOutputName += "-finite_1x_along_alt_rand";
+//		pointFiniteMinMag = 5d;
+//		bgRupType = BackgroundRupType.FINITE;
+//		bgFiniteNum = 1;
+//		extraGridArgs = "--point-finite-sample-along-strike --point-finite-sample-down-dip "
+//				+ "-D"+PointSurfaceBuilder.GLOBAL_SEED_PROP_NAME+"="+System.currentTimeMillis();
+		
+//		forceOutputName += "-finite_2x_along";
+//		pointFiniteMinMag = 5d;
+//		bgRupType = BackgroundRupType.FINITE;
+//		bgFiniteNum = 2;
+//		extraGridArgs = "--point-finite-sample-along-strike --point-finite-sample-down-dip";
+		
+//		forceOutputName += "-finite_2x_along_alt_rand";
+//		pointFiniteMinMag = 5d;
+//		bgRupType = BackgroundRupType.FINITE;
+//		bgFiniteNum = 2;
+//		extraGridArgs = "--point-finite-sample-along-strike --point-finite-sample-down-dip "
+//				+ "-D"+PointSurfaceBuilder.GLOBAL_SEED_PROP_NAME+"="+System.currentTimeMillis();
+		
 //		forceOutputName += "-finite_20x_along";
 //		pointFiniteMinMag = 5d;
 //		bgRupType = BackgroundRupType.FINITE;
 //		bgFiniteNum = 20;
 //		extraGridArgs = "--point-finite-sample-along-strike --point-finite-sample-down-dip";
 		
+//		forceOutputName += "-finite_40x_along";
+//		pointFiniteMinMag = 5d;
+//		bgRupType = BackgroundRupType.FINITE;
+//		bgFiniteNum = 40;
+//		extraGridArgs = "--point-finite-sample-along-strike --point-finite-sample-down-dip";
+		
+//		forceOutputName += "-finite_50x_along";
+//		pointFiniteMinMag = 5d;
+//		bgRupType = BackgroundRupType.FINITE;
+//		bgFiniteNum = 50;
+//		extraGridArgs = "--point-finite-sample-along-strike --point-finite-sample-down-dip "
+//				+ "-D"+PointSurfaceBuilder.GLOBAL_SEED_PROP_NAME+"="+System.currentTimeMillis();
+		
+//		forceOutputName += "-finite_100x_along";
+//		pointFiniteMinMag = 5d;
+//		bgRupType = BackgroundRupType.FINITE;
+//		bgFiniteNum = 100;
+//		extraGridArgs = "--point-finite-sample-along-strike --point-finite-sample-down-dip "
+//				+ "-D"+PointSurfaceBuilder.GLOBAL_SEED_PROP_NAME+"="+System.currentTimeMillis();
+		
 //		forceOutputName += "-average_spinning";
 //		pointFiniteMinMag = 5d;
 //		bgRupType = BackgroundRupType.POINT;
 //		distCorr = PointSourceDistanceCorrections.AVERAGE_SPINNING;
+		
+//		forceOutputName += "-average_spinning_m6";
+//		pointFiniteMinMag = 6d;
+//		bgRupType = BackgroundRupType.POINT;
+//		distCorr = PointSourceDistanceCorrections.AVERAGE_SPINNING;
+		
+//		forceOutputName += "-average_spinning_along";
+//		pointFiniteMinMag = 5d;
+//		bgRupType = BackgroundRupType.POINT;
+//		distCorr = PointSourceDistanceCorrections.AVERAGE_SPINNING_ALONG;
 		
 //		forceOutputName += "-five_pt_spinning";
 //		pointFiniteMinMag = 5d;
 //		bgRupType = BackgroundRupType.POINT;
 //		distCorr = PointSourceDistanceCorrections.FIVE_POINT_SPINNING_DIST;
 		
+//		forceOutputName += "-five_pt_spinning_along";
+//		forceOutputName += "-evenly_spaced_dist";
+//		pointFiniteMinMag = 5d;
+//		bgRupType = BackgroundRupType.POINT;
+//		distCorr = PointSourceDistanceCorrections.FIVE_POINT_SPINNING_DIST_ALONG;
+		
+//		forceOutputName += "-five_pt_spinning_along";
+//		forceOutputName += "-m4";
+//		pointFiniteMinMag = 5d;
+//		bgRupType = BackgroundRupType.POINT;
+//		distCorr = PointSourceDistanceCorrections.FIVE_POINT_SPINNING_DIST_ALONG;
+//		extraGridArgs = "--point-min-mag 4";
+		
 		forceOutputName += "-five_pt_spinning_along";
-		forceOutputName += "-evenly_spaced_dist";
+		forceOutputName += "-m3";
 		pointFiniteMinMag = 5d;
 		bgRupType = BackgroundRupType.POINT;
 		distCorr = PointSourceDistanceCorrections.FIVE_POINT_SPINNING_DIST_ALONG;
+		extraGridArgs = "--point-min-mag 3";
+		
+//		forceOutputName += "-five_pt_spinning_along";
+//		forceOutputName += "-alt_grid_depths";
+//		pointFiniteMinMag = 5d;
+//		bgRupType = BackgroundRupType.POINT;
+//		distCorr = PointSourceDistanceCorrections.FIVE_POINT_SPINNING_DIST_ALONG;
+//		linkFromBase = false;
+//		solFileName = "results_WUS_FM_v3_branch_averaged_gridded_mod_grid_depths.zip";
+		
+//		forceOutputName += "-five_pt_spinning_along";
+//		forceOutputName += "-alt_wc_lengths";
+//		pointFiniteMinMag = 5d;
+//		bgRupType = BackgroundRupType.POINT;
+//		distCorr = PointSourceDistanceCorrections.FIVE_POINT_SPINNING_DIST_ALONG;
+//		linkFromBase = false;
+//		solFileName = "results_WUS_FM_v3_branch_averaged_gridded_mod_wc_lengths.zip";
+		
+//		forceOutputName += "-five_pt_spinning_along";
+//		pointFiniteMinMag = 5d;
+//		supersample = false;
+//		bgRupType = BackgroundRupType.POINT;
+//		distCorr = PointSourceDistanceCorrections.FIVE_POINT_SPINNING_DIST_ALONG;
 		
 //		pointFiniteMinMag = 5d;
 		forceMaxDispatch = 100;
@@ -110,10 +204,6 @@ public class PointSourceBranchAveragedHazardScriptWriter {
 		
 		boolean noMFDs = false;
 		
-		GriddedRegion gridReg = new GriddedRegion(
-				region, gridSpacing, GriddedRegion.ANCHOR_0_0);
-//		GriddedRegion gridReg = new GriddedRegion(
-//				PRVI25_RegionLoader.loadPRVI_ModelBroad(), gridSpacing, GriddedRegion.ANCHOR_0_0);
 		System.out.println("Region has "+gridReg.getNodeCount()+" nodes");
 		
 		String dirName = forceOutputName == null ? baseDirName : forceOutputName;
