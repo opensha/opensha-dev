@@ -17,6 +17,7 @@ import org.apache.commons.math3.stat.correlation.PearsonsCorrelation;
 import org.apache.commons.math3.stat.descriptive.DescriptiveStatistics;
 import org.jfree.data.Range;
 import org.opensha.commons.data.function.DefaultXY_DataSet;
+import org.opensha.commons.data.function.EvenlyDiscretizedFunc;
 import org.opensha.commons.data.function.HistogramFunction;
 import org.opensha.commons.data.function.IntegerPDF_FunctionSampler;
 import org.opensha.commons.data.function.XY_DataSet;
@@ -55,6 +56,7 @@ import scratch.UCERF3.erf.utils.ProbModelsPlottingUtils;
 import scratch.UCERF3.erf.utils.ProbabilityModelsCalc;
 import scratch.ned.nshm23.AK_FSS_creator;
 import scratch.ned.nshm23.AleutianArc_FSS_Creator;
+import scratch.ned.nshm23.CEUS_FSS_creator;
 import scratch.ned.nshm23.CONUS_TD_ERF_Demo;
 import scratch.ned.nshm23.Cascadia_FSS_creator;
 import scratch.ned.nshm23.AK_FSS_creator.DeformationModelEnum;
@@ -282,14 +284,13 @@ System.exit(0);
 	 */
 	private static FaultSystemSolutionERF getCEUS_ERF() {
 		String full_FSS_fileName = "/Users/field/nshm-haz_data/ceus_FSS_test.zip";
-		FaultSystemSolution sol = CONUS_TD_ERF_Demo.getCEUS_FSS(full_FSS_fileName);		
+		FaultSystemSolution sol = CONUS_TD_ERF_Demo.getCEUS_FSS(full_FSS_fileName,CEUS_FSS_creator.FaultModelEnum.PREFERRED);		
 		FaultSystemSolutionERF erf = new FaultSystemSolutionERF(sol);
 		erf.getParameter(IncludeBackgroundParam.NAME).setValue(IncludeBackgroundOption.EXCLUDE);
 		return erf;
 	}
-	
-	
 
+	
 	/**
 	 * this returns a Alaska (AK) ERF with background seismicity excluded but all other 
 	 * parameters set as default; erf.updateForecast()is not called
@@ -352,9 +353,9 @@ System.exit(0);
 	 * parameters set as default; erf.updateForecast()is not called
 	 * @return
 	 */
-	private static FaultSystemSolutionERF getUS26_ERF() {
-		String full_FSS_fileName = "/Users/field/nshm-haz_data/full_FSS_test.zip";
-		FaultSystemSolution sol = CONUS_TD_ERF_Demo.getFull_FSS(full_FSS_fileName);		
+	private static FaultSystemSolutionERF getFullPrefUS26_ERF() {
+		String full_FSS_fileName = "/Users/field/nshm-haz_data/fullPrefUS_FSS.zip";
+		FaultSystemSolution sol = CONUS_TD_ERF_Demo.getPreferredFull_FSS(full_FSS_fileName);		
 		FaultSystemSolutionERF erf = new FaultSystemSolutionERF(sol);
 		erf.getParameter(IncludeBackgroundParam.NAME).setValue(IncludeBackgroundOption.EXCLUDE);
 		return erf;
@@ -364,8 +365,8 @@ System.exit(0);
 
 		long currentTimeEpoch = System.currentTimeMillis();
 		String dateString = new java.text.SimpleDateFormat("MM_dd_yyyy").format(new java.util.Date (currentTimeEpoch)); // Epoch in seconds, remove '*1000' for milliseconds
-		String full_FSS_fileName = "/Users/field/nshm-haz_data/full_FSS_test.zip";
-		FaultSystemSolution sol = CONUS_TD_ERF_Demo.getFull_FSS(full_FSS_fileName);		
+		String full_FSS_fileName = "/Users/field/nshm-haz_data/fullPrefUS_FSS.zip";
+		FaultSystemSolution sol = CONUS_TD_ERF_Demo.getPreferredFull_FSS(full_FSS_fileName);		
 		
 		File tdMainDir = new File("/Users/field/markdown/nshm23_time_dependence_"+dateString);
 
@@ -640,10 +641,20 @@ System.exit(0);
 		double[] targetRateArray=null;
 		String[] sectNameArray=null;
 		double totMeanRatio = 0, minSectRatio=Double.MAX_VALUE, maxSectRatio=0;
+
+		ArrayList<HistogramFunction> aveSectNormRI_HistList = new ArrayList<HistogramFunction>();
+		int maxHistSize=0;
 		for(int i=1;i<=numSims;i++) {
+			
+			// section RI histograms
+			HistogramFunction hist = readFirstFuncFromTxtFile(dirName+"/"+runDirPrefix+i+runDirSuffix+"/plots/normalizedSectRecurIntervals.txt", 0.05,0.10);
+			aveSectNormRI_HistList.add(hist);
+			if(maxHistSize<hist.size())
+				maxHistSize=hist.size();
+
 			try {
 				File dataFile = new File(dirName+"/"+runDirPrefix+i+runDirSuffix+"/obsVsImposedSectionPartRates.txt");
-				System.out.println(dataFile);
+//				System.out.println(dataFile);
 
 				// compute numSections & create arrays if first simulation
 				if(i==1) {
@@ -882,6 +893,68 @@ System.exit(0);
 		ProbModelsPlottingUtils.writeSimVsImposedRateScatterPlot(subsetRatioMeanFirst5, subsetRatioMeanLast5, outputDir, "selectRatioSimFirstHalf_vs_RatioSimLastHalf_SectionPartRates", 
 				"", "Select RatioSimFirstHalf Sect Part Rate (/yr)", "Select RatioSimLastHalf Sect Part Rate (/yr)", 0.5,2.0);
 
+		
+//		Make aveSectNormRI_Hist plot
+		HistogramFunction aveSectNormRI_Hist = new HistogramFunction(0.05,maxHistSize,0.10);
+		for(HistogramFunction hist:aveSectNormRI_HistList) {
+			for(int n=0;n<hist.size();n++)
+				aveSectNormRI_Hist.add(n,hist.getY(n)/(double)numSims);
+		}
+//		System.out.println("maxHistSize="+maxHistSize);
+//		System.out.println(aveSectNormRI_Hist);
+		ArrayList<EvenlyDiscretizedFunc> funcList = new ArrayList<EvenlyDiscretizedFunc>();
+		funcList.add(aveSectNormRI_Hist);
+		// now make the list of best-fit functions for the plot
+		funcList.addAll(ProbModelsPlottingUtils.getRenewalModelFunctionFitsToDist(aveSectNormRI_Hist));
+		aveSectNormRI_Hist.setName("Norm Sect RI Dist");
+		String info = "ObsMean, ObsCOV, bestFitBPTmean, bestFitBPTaper, bestFitWeibullmean, bestFitWeibullAper\n"+
+				(float)aveSectNormRI_Hist.computeMean()+", "+(float)aveSectNormRI_Hist.computeCOV();
+		EvenlyDiscretizedFunc bptDist = (EvenlyDiscretizedFunc)funcList.get(1);
+		info += ", "+bptDist.getInfo().split("\n")[1];
+		EvenlyDiscretizedFunc weibullDist = (EvenlyDiscretizedFunc)funcList.get(3);
+		info += ", "+weibullDist.getInfo().split("\n")[1];
+		aveSectNormRI_Hist.setInfo(info);
+		ProbModelsPlottingUtils.writeNormalizedDistPlotWithFits(funcList, outputDir, "Ave Normalized Section RIs", 
+				"aveSectNormRI_Hist");
+
+		//make hazard rate plot
+		EvenlyDiscretizedFunc hazardRate = getHazardRateFuncFromPDF(aveSectNormRI_Hist);
+		ArrayList<XY_DataSet> hazRatefuncs = new ArrayList<XY_DataSet>();
+		plotChars = new ArrayList<PlotCurveCharacterstics>();
+		for(HistogramFunction hist:aveSectNormRI_HistList) {
+			hazRatefuncs.add(getHazardRateFuncFromPDF(hist));
+			plotChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, Color.PINK));
+		}
+		hazRatefuncs.add(hazardRate);
+		plotChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 2f, Color.RED));
+		//BPT & Weibull tests
+		HistogramFunction bptHist =new HistogramFunction(bptDist.getMinX(),bptDist.size(), bptDist.getDelta());
+		for(int i=0;i<bptHist.size();i++)
+			bptHist.set(i,bptDist.getY(i));
+		bptHist.setInfo(bptDist.getInfo());
+		bptHist.setName(bptDist.getName());
+		hazRatefuncs.add(getHazardRateFuncFromPDF(bptHist));
+		HistogramFunction weibullHist =new HistogramFunction(weibullDist.getMinX(),weibullDist.size(), weibullDist.getDelta());
+		for(int i=0;i<weibullDist.size();i++)
+			weibullHist.set(i,weibullDist.getY(i));
+		weibullHist.setInfo(weibullDist.getInfo());
+		weibullHist.setName(weibullDist.getName());
+		hazRatefuncs.add(getHazardRateFuncFromPDF(weibullHist));
+		plotChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, Color.BLACK));
+		plotChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, Color.GREEN));
+		String xAxisLabel = "Norm Time Since Last (yrs)";
+		String yAxisLabel = "Hazard Rate";
+		xAxisRange = new Range(0, 5);
+		yAxisRange = new Range(0, 5);
+		logX = false;
+		logY = false;
+		widthInches = 7; // inches
+		heightInches = 6; // inches
+		popupWindow = false;
+		ProbModelsPlottingUtils.writeAndOrPlotFuncs(hazRatefuncs,plotChars,"",xAxisLabel,yAxisLabel,xAxisRange,yAxisRange,
+				logX,logY,widthInches,heightInches, new File(outputDir,"aveSectHazardRateFunc"), popupWindow);
+
+		
 		
 		// make map
 		try {
@@ -1211,13 +1284,82 @@ System.exit(0);
 
 
 	}
+	
+	/**
+	 * The number of points in the function can be variable
+	 * @param fileName
+	 * @param startX
+	 * @param deltaX
+	 * @return
+	 */
+	private static HistogramFunction readFirstFuncFromTxtFile(String fileName, double startX, double deltaX) {
+		HistogramFunction hist = null;
+		try {
+			File dataFile = new File(fileName);
+			
+			String lineMarker = "Data[x,y]:";
+			boolean foundIt = false;
+			ArrayList<Double> yValsList = new ArrayList<Double>();
+			int numX = 0;
+			
+//			System.out.println("Reading file "+fileName);
+			
+			double testX = startX;
+			
+			BufferedReader reader = new BufferedReader(scratch.UCERF3.utils.UCERF3_DataUtils.getReader(dataFile.toURL()));
+			String line;
+			while ((line = reader.readLine()) != null) {
+				if(!foundIt || line.contains(lineMarker)) {
+					if(line.contains(lineMarker)) {
+//						System.out.println("FOUND IT");
+						foundIt=true;
+					}
+					continue;
+				}
+				String[] st = line.trim().split("\\s+");
+				if(st.length == 2) {
+					numX+=1;
+					double ratioX = testX/Double.valueOf(st[0]);
+					if( ratioX<0.9999 || ratioX> 1.0001)
+						throw new RuntimeException("Problem with x-axis values");
+					yValsList.add(Double.valueOf(st[1]));
+//					System.out.println(Double.valueOf(st[0])+", "+Double.valueOf(st[1]));
+					testX += deltaX;					
+				}
+				else
+					break;
+			}
+			if(numX != yValsList.size())
+				throw new RuntimeException("Problem with number of x-axis values");
+			hist = new HistogramFunction(startX,numX,deltaX);
+			for(int i=0;i<yValsList.size();i++)
+				hist.set(i,yValsList.get(i));
+//			System.out.println(hist);
 
+		} catch (Exception e) {
+			ExceptionUtils.throwAsRuntimeException(e);
+		}
+		return hist;
+	}
+
+
+	public static EvenlyDiscretizedFunc getHazardRateFuncFromPDF(HistogramFunction pdf) {
+		HistogramFunction cdf = pdf.getCumulativeDistFunctionWithHalfBinOffset();
+		cdf.scale(1.0/cdf.getMaxY());
+		EvenlyDiscretizedFunc hazardRate = pdf.deepClone();
+		for(int i=0;i<hazardRate.size();i++)
+			hazardRate.set(i,pdf.getY(i)/(1.0-cdf.getInterpolatedY(pdf.getX(i))));
+		return hazardRate;
+	}
 
 
 	public static void main(String[] args) {
 		
 		String rootDir = "/Users/field/Library/CloudStorage/OneDrive-DOI/Field_Other/ERF_Coordination/LongTermTD_2026/Analysis/";
-				
+			
+		generateDOLE_ReportPages();
+		System.exit(0);
+
 //	    for (FaultSection sect : getCascadia_ERF(Cascadia_FSS_creator.FaultModelEnum.ALL).getSolution().getRupSet().getFaultSectionDataList()) {
 //			System.out.println("here:\t"+sect.getName()+"\t"+sect.getParentSectionId());
 //	    }
@@ -1225,11 +1367,20 @@ System.exit(0);
 //			System.out.println("here:\t"+sect.getName()+"\t"+sect.getParentSectionId());
 //	    }
 
-
-
-
-		System.exit(0);
-			
+//		//TEMP
+//		HistogramFunction pdf =readFirstFuncFromTxtFile(rootDir+"bptSimulationsWUS_withCascadia/Run2_aperMidVals/plots/normalizedSectRecurIntervals.txt", 0.05,0.10);
+//		System.out.println(pdf);
+//		HistogramFunction cdf = pdf.getCumulativeDistFunctionWithHalfBinOffset();
+//		cdf.scale(1.0/cdf.getMaxY());
+//		System.out.println(cdf);
+//		EvenlyDiscretizedFunc hazardRate = pdf.deepClone();
+//		for(int i=0;i<hazardRate.size();i++)
+//			hazardRate.set(i,pdf.getY(i)/(1.0-cdf.getInterpolatedY(hazardRate.getX(i))));
+//		System.out.println(hazardRate);
+//		System.exit(0);
+		
+		
+		
 //		FaultSystemSolutionERF erf = getCascadia_ERF();
 //		erf.updateForecast();
 //		System.out.println("Src Names: "+erf.getNumSources());
@@ -1284,8 +1435,8 @@ System.exit(0);
 //		bptSimulations(getWUS_withCascadia_ERF(Cascadia_FSS_creator.FaultModelEnum.MIDDLE),numYrs,parentDir, "Run18_aperMidVals", seed, rootDir+"bptSimulationsWUS_withCascadia/Run17_aperMidVals/outputTimesinceLast.txt", aper, Double.NaN);
 //		bptSimulations(getWUS_withCascadia_ERF(Cascadia_FSS_creator.FaultModelEnum.MIDDLE),numYrs,parentDir, "Run19_aperMidVals", seed, rootDir+"bptSimulationsWUS_withCascadia/Run18_aperMidVals/outputTimesinceLast.txt", aper, Double.NaN);
 //		bptSimulations(getWUS_withCascadia_ERF(Cascadia_FSS_creator.FaultModelEnum.MIDDLE),numYrs,parentDir, "Run20_aperMidVals", seed, rootDir+"bptSimulationsWUS_withCascadia/Run19_aperMidVals/outputTimesinceLast.txt", aper, Double.NaN);
-//		sectPlotsForMultSimulations(rootDir+"bptSimulationsWUS_withCascadia/", "Run", "_aperMidVals", 20, getWUS_withCascadia_ERF(Cascadia_FSS_creator.FaultModelEnum.MIDDLE).getSolution());
-		rupPlotsForMultSimulations(rootDir+"bptSimulationsWUS_withCascadia/", "Run", "_aperMidVals", 20, getWUS_withCascadia_ERF(Cascadia_FSS_creator.FaultModelEnum.MIDDLE), (double)numYrs, aper);
+		sectPlotsForMultSimulations(rootDir+"bptSimulationsWUS_withCascadia/", "Run", "_aperMidVals", 20, getWUS_withCascadia_ERF(Cascadia_FSS_creator.FaultModelEnum.MIDDLE).getSolution());
+//		rupPlotsForMultSimulations(rootDir+"bptSimulationsWUS_withCascadia/", "Run", "_aperMidVals", 20, getWUS_withCascadia_ERF(Cascadia_FSS_creator.FaultModelEnum.MIDDLE), (double)numYrs, aper);
 
 		// WUS w/ Cascadia (Middle branch) Poisson simulations
 //		File parentDir = new File(rootDir+"poissonSimulationsWUS_withCascadia/");
@@ -1442,9 +1593,6 @@ System.exit(0);
 //		test_nthRupState();
 		
 //		makeTestTD_CalculationFiles();
-		
-//		generateDOLE_ReportPages();
-
 
 	}
 

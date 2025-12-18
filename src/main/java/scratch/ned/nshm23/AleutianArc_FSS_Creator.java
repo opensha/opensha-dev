@@ -26,7 +26,7 @@ public class AleutianArc_FSS_Creator {
 	
 	 public enum FaultModelEnum {
 		 ALL(1.0), 
-		 GEODETIC(0.167), // = 0.167 from Fig 9 of report
+		 GEODETIC(0.167), // = 0.167 from Fig 9 of report;c onfirmed by Peter in Nov 17, 2025 eamil
 		 GEOLOGIC_NARROW(0.4165), // (1-0.167)/2
 		 GEOLOGIC_WIDE(0.4165) ;  // 
 //		 GEODETIC(0.0666), // = 0.2/3.0

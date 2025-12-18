@@ -41,7 +41,10 @@ import scratch.ned.nshm23.CEUS_FSS_creator.FaultModelEnum;
  */
 public class CONUS_TD_ERF_Demo {
 	
-	
+//	String nshmAK_ModelDirPath = "/Users/field/nshm-haz_data/nshm-alaska-3.0.1/";
+	public static String nshmAK_ModelDirPath = "/Users/field/nshm-haz_data/nshm-alaska-3.1-maint/";
+	public static String nshmCONUS_ModelDirPath = "/Users/field/nshm-haz_data/nshm-conus-6.1.2/";
+
 	
 	/**
 	 * This confirms that the implied sum of rates for the ERF rups for each FSS source 
@@ -120,7 +123,7 @@ public class CONUS_TD_ERF_Demo {
 		System.out.println(numLowProbRups+" Ruptures have prob<1e-15 (out of "+numRups+ ", which is "+(float)perc+"%)");
 	}
 
-	public static FaultSystemSolution getCEUS_FSS(String ceus_FSS_fileName) {
+	public static FaultSystemSolution getCEUS_FSS(String ceus_FSS_fileName, CEUS_FSS_creator.FaultModelEnum faultModel) {
 
 		// try reading from file
 		if(ceus_FSS_fileName != null) {
@@ -135,8 +138,7 @@ public class CONUS_TD_ERF_Demo {
 		}	
 
 		// create FSS
-		String nshmModelDirPath = "/Users/field/nshm-haz_data/nshm-conus-6.1.2/";
-		ArrayList<FaultSystemSolution>  ceusSolList = CEUS_FSS_creator.getFaultSystemSolutionList(nshmModelDirPath,CEUS_FSS_creator.FaultModelEnum.PREFERRED);
+		ArrayList<FaultSystemSolution>  ceusSolList = CEUS_FSS_creator.getFaultSystemSolutionList(nshmCONUS_ModelDirPath,faultModel);
 		FaultSystemSolution sol = MergedSolutionCreator.merge(ceusSolList.get(0), ceusSolList.get(1));
 		if(ceus_FSS_fileName != null) {
 			try {
@@ -164,9 +166,7 @@ public class CONUS_TD_ERF_Demo {
 		}	
 
 		// create FSS
-	//	String akModelDirPath = "/Users/field/nshm-haz_data/nshm-alaska-3.0.1/";
-		String akModelDirPath = "/Users/field/nshm-haz_data/nshm-alaska-3.1-maint/";
-		ArrayList<FaultSystemSolution> ak_fssList = AK_FSS_creator.getFaultSystemSolutionList(akModelDirPath, defModel);
+		ArrayList<FaultSystemSolution> ak_fssList = AK_FSS_creator.getFaultSystemSolutionList(nshmAK_ModelDirPath, defModel);
 		FaultSystemSolution sol = MergedSolutionCreator.merge(ak_fssList);
 		if(alaska_FSS_fileName != null) {
 			try {
@@ -193,10 +193,8 @@ public class CONUS_TD_ERF_Demo {
 			}
 		}	
 
-		// create FSS
-		String nshmModelDirPath = "/Users/field/nshm-haz_data/nshm-conus-6.1.2/";
-		
-		FaultSystemSolution sol = Cascadia_FSS_creator.getFaultSystemSolution(nshmModelDirPath, faultModel);
+		// create FSS		
+		FaultSystemSolution sol = Cascadia_FSS_creator.getFaultSystemSolution(nshmCONUS_ModelDirPath, faultModel);
 		if(cascadia_FSS_fileName != null) {
 			try {
 				sol.write(new File(cascadia_FSS_fileName));
@@ -226,9 +224,7 @@ public class CONUS_TD_ERF_Demo {
 		}	
 
 		// create FSS
-		String nshmModelDirPath = "/Users/field/nshm-haz_data/nshm-alaska-3.0.1/";
-		
-		FaultSystemSolution sol = AleutianArc_FSS_Creator.getFaultSystemSolution(nshmModelDirPath, faultModel);
+		FaultSystemSolution sol = AleutianArc_FSS_Creator.getFaultSystemSolution(nshmAK_ModelDirPath, faultModel);
 		if(aleutianArc_FSS_fileName != null) {
 			try {
 				sol.write(new File(aleutianArc_FSS_fileName));
@@ -259,18 +255,13 @@ public class CONUS_TD_ERF_Demo {
 				};
 			}
 		}	
-		
+
 		// Make from scratch
-		try {
-			//WUS
-			FaultSystemSolution wusSol = FaultSystemSolution.load(new File("/Users/field/nshm-haz_data/results_WUS_FM_v3_branch_averaged_gridded_simplified.zip"));
-			String nshmModelDirPath = "/Users/field/nshm-haz_data/nshm-conus-6.1.2/";
-			// full/merged solution w/ Cascadia
-			sol = MergedSolutionCreator.merge(wusSol, getCascadia_FSS(null, cascaadiaFaultModel));
-		} catch (IOException e) {
-			e.printStackTrace();
-		}		
-		
+		//WUS
+		FaultSystemSolution wusSol = getWUS_FSS(null);
+		// full/merged solution w/ Cascadia
+		sol = MergedSolutionCreator.merge(wusSol, getCascadia_FSS(null, cascaadiaFaultModel));
+
 		if(wus_FSS_fileName != null) {
 			try {
 				sol.write(new File(wus_FSS_fileName));
@@ -278,13 +269,55 @@ public class CONUS_TD_ERF_Demo {
 				e.printStackTrace();
 			}
 		}
-		
 		return sol;
 	}
 
 
+	/**
+	 * @param wus_FSS_fileName
+	 * @return
+	 */
+	public static FaultSystemSolution getWUS_FSS(String wus_FSS_fileName) {
+		FaultSystemSolution wusSol=null;
+		if(wus_FSS_fileName != null) {
+			File file = new File(wus_FSS_fileName);
+			if(file.exists()) {
+				try {
+					return FaultSystemSolution.load(file);
+				} catch (IOException e) {
+					e.printStackTrace();
+				};
+			}
+		}	
+		
+		// Make from scratch
+		try {
+			//WUS
+			wusSol = FaultSystemSolution.load(new File("/Users/field/nshm-haz_data/results_WUS_FM_v3_branch_averaged_gridded_simplified.zip"));
+		} catch (IOException e) {
+			e.printStackTrace();
+		}		
+		
+		if(wus_FSS_fileName != null) {
+			try {
+				wusSol.write(new File(wus_FSS_fileName));
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+		}
+		return wusSol;
+	}
+
 	
-	public static FaultSystemSolution getFull_FSS(String full_FSS_fileName) {
+	public static FaultSystemSolution getPreferredFull_FSS(String fullPref_FSS_fileName) {
+		return getFull_FSS(fullPref_FSS_fileName, Cascadia_FSS_creator.FaultModelEnum.MIDDLE,
+				CEUS_FSS_creator.FaultModelEnum.PREFERRED, AK_FSS_creator.DeformationModelEnum.GEO,
+				AleutianArc_FSS_Creator.FaultModelEnum.GEOLOGIC_WIDE);
+	}
+	
+	public static FaultSystemSolution getFull_FSS(String full_FSS_fileName, Cascadia_FSS_creator.FaultModelEnum cascaadiaFaultModel,
+			CEUS_FSS_creator.FaultModelEnum ceusFaultModel, AK_FSS_creator.DeformationModelEnum akDefModel,
+			AleutianArc_FSS_Creator.FaultModelEnum alArcFaultModel) {
 		
 		FaultSystemSolution sol=null;
 		
@@ -300,17 +333,20 @@ public class CONUS_TD_ERF_Demo {
 		}	
 		
 		// Make from scratch
-		try {
+//		try {
 			//WUS
-			FaultSystemSolution wusSol = FaultSystemSolution.load(new File("/Users/field/nshm-haz_data/results_WUS_FM_v3_branch_averaged_gridded_simplified.zip"));
-			String nshmModelDirPath = "/Users/field/nshm-haz_data/nshm-conus-6.1.2/";
+//			FaultSystemSolution wusSol = FaultSystemSolution.load(new File("/Users/field/nshm-haz_data/results_WUS_FM_v3_branch_averaged_gridded_simplified.zip"));
+			FaultSystemSolution wusSol = getWUS_withCascadia_FSS(null,cascaadiaFaultModel);
 			// CEUS
-			ArrayList<FaultSystemSolution>  ceusSolList = CEUS_FSS_creator.getFaultSystemSolutionList(nshmModelDirPath,CEUS_FSS_creator.FaultModelEnum.PREFERRED);
+//			ArrayList<FaultSystemSolution>  ceusSolList = CEUS_FSS_creator.getFaultSystemSolutionList(nshmCONUS_ModelDirPath,ceusFaultModel);
+			FaultSystemSolution  ceusSol = getCEUS_FSS(null, ceusFaultModel);
 			// AK
-			String akModelDirPath = "/Users/field/nshm-haz_data/nshm-alaska-3.0.1/";
-			ArrayList<FaultSystemSolution> ak_fssList = AK_FSS_creator.getFaultSystemSolutionList(akModelDirPath, DeformationModelEnum.GEO);
-			FaultSystemSolution solAK = MergedSolutionCreator.merge(ak_fssList);
+//			ArrayList<FaultSystemSolution> ak_fssList = AK_FSS_creator.getFaultSystemSolutionList(nshmAK_ModelDirPath, akDefModel);
+//			FaultSystemSolution solAK = MergedSolutionCreator.merge(ak_fssList);
+			FaultSystemSolution solAK = getAK_FSS(null, akDefModel);
 			
+			FaultSystemSolution akArcSol = getAleutianArc_FSS(null, alArcFaultModel);
+
 //			// DEBUG null parent names
 //			int n=0;
 //			for(FaultSection sect:solAK.getRupSet().getFaultSectionDataList())
@@ -323,7 +359,7 @@ public class CONUS_TD_ERF_Demo {
 			
 
 			// full/merged solution
-			sol = MergedSolutionCreator.merge(wusSol, ceusSolList.get(0), ceusSolList.get(1), solAK);
+			sol = MergedSolutionCreator.merge(wusSol, ceusSol, solAK, akArcSol);
 
 //			System.out.println("Testing rup areas for each region:");
 //			testRupAreas(wusSol);
@@ -333,13 +369,13 @@ public class CONUS_TD_ERF_Demo {
 //			System.out.println("Testing rup areas for merged sol:");
 //			testRupAreas(sol);
 			
-			System.out.println("wusSol\t"+wusSol.getRupSet().getMagForRup(0)+"\t"+wusSol.getRupSet().getAreaForRup(0));
-			System.out.println("ceusSolList\t"+ceusSolList.get(0).getRupSet().getMagForRup(0)+"\t"+ceusSolList.get(0).getRupSet().getAreaForRup(0));
-			System.out.println("ak_fssList\t"+ak_fssList.get(0).getRupSet().getMagForRup(0)+"\t"+ak_fssList.get(0).getRupSet().getAreaForRup(0));
+//			System.out.println("wusSol\t"+wusSol.getRupSet().getMagForRup(0)+"\t"+wusSol.getRupSet().getAreaForRup(0));
+//			System.out.println("ceusSolList\t"+ceusSolList.get(0).getRupSet().getMagForRup(0)+"\t"+ceusSolList.get(0).getRupSet().getAreaForRup(0));
+//			System.out.println("ak_fssList\t"+ak_fssList.get(0).getRupSet().getMagForRup(0)+"\t"+ak_fssList.get(0).getRupSet().getAreaForRup(0));
 
-		} catch (IOException e) {
-			e.printStackTrace();
-		}		
+//		} catch (IOException e) {
+//			e.printStackTrace();
+//		}		
 		
 		if(full_FSS_fileName != null) {
 			try {
@@ -372,7 +408,9 @@ public class CONUS_TD_ERF_Demo {
 
 	public static void main(String[] args) throws IOException {
 	
-		getFull_FSS(null);
+		getFull_FSS(null, Cascadia_FSS_creator.FaultModelEnum.MIDDLE,
+				CEUS_FSS_creator.FaultModelEnum.PREFERRED, AK_FSS_creator.DeformationModelEnum.GEO,
+				AleutianArc_FSS_Creator.FaultModelEnum.GEOLOGIC_WIDE);
 		
 //		testRupAreas(getFull_FSS("/Users/field/nshm-haz_data/full_FSS_test.zip"));		
 
