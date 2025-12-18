@@ -23,6 +23,7 @@ import org.opensha.sha.earthquake.rupForecastImpl.prvi25.PRVI25_InvConfigFactory
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_LogicTree;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_SubductionFaultModels;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_SubductionScalingRelationships;
+import org.opensha.sha.faultSurface.FaultSection;
 
 import com.google.common.base.Preconditions;
 
@@ -119,7 +120,11 @@ public class RupSetStatsTexWriter {
 					avgRupSet, avgBranch, cRups);
 			double myMaxMin = 0d;
 			double myMinMin = Double.POSITIVE_INFINITY;
+			double mueMaxMin = 0d;
+			double mueMinMin = Double.POSITIVE_INFINITY;
+			double mueMax = 0d;
 			for (int s=0; s<avgRupSet.getNumSections(); s++) {
+				FaultSection sect = avgRupSet.getFaultSectionData(s);
 				double mMin, mMax;
 				if (exclusion == null) {
 					mMin = avgRupSet.getMinMagForSection(s);
@@ -143,6 +148,11 @@ public class RupSetStatsTexWriter {
 				momentWeightedSectMmax += moment*mMax;
 				myMaxMin = Math.max(myMaxMin, mMin);
 				myMinMin = Math.min(myMinMin, mMin);
+				if (sect.getParentSectionName().contains("Muertos")) {
+					mueMaxMin = Math.max(myMaxMin, mMin);
+					mueMinMin = Math.min(myMinMin, mMin);
+					mueMax = Math.max(mueMax, mMax);
+				}
 			}
 			if (avgScaleBranches.size() == 1) {
 				fw.write(LaTeXUtils.defineValueCommand(texPrefix+"NumRups", groupedIntDF.format(avgRupSet.getNumRuptures()))+"\n");
@@ -152,6 +162,9 @@ public class RupSetStatsTexWriter {
 				if (avgBranch.hasValue(PRVI25_SubductionFaultModels.class)) {
 					fw.write(LaTeXUtils.defineValueCommand(texPrefix+"AvgGridMinMmax", magDF.format(myMinMin-0.1))+"\n");
 					fw.write(LaTeXUtils.defineValueCommand(texPrefix+"AvgGridMaxMmax", magDF.format(myMaxMin-0.1))+"\n");
+					fw.write(LaTeXUtils.defineValueCommand(texPrefix+"MueAvgSectMinMmin", magDF.format(mueMinMin))+"\n");
+					fw.write(LaTeXUtils.defineValueCommand(texPrefix+"MueAvgSectMaxMmin", magDF.format(mueMaxMin))+"\n");
+					fw.write(LaTeXUtils.defineValueCommand(texPrefix+"MueAvgSectMmax", magDF.format(mueMax))+"\n");
 				}
 			}
 		}
