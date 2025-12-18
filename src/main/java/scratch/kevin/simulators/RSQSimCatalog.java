@@ -832,7 +832,12 @@ public class RSQSimCatalog implements XMLSaveable {
 				NSHM23_FaultModels.WUS_FM_v3, NSHM23_DeformationModels.AVERAGE),
 		BRUCE_6283("rundir6283", "Bruce 6283", "Bruce Shaw", cal(2025, 7, 7),
 				"WUS; shearRatePos+.01*Tec0; sigmaFracPin=0.5-2; delta=2.0km, sigma0=100, b=.008, alpha=0;  Tec0=1e-9 NS",
-				NSHM23_FaultModels.WUS_FM_v3, NSHM23_DeformationModels.AVERAGE);
+				NSHM23_FaultModels.WUS_FM_v3, NSHM23_DeformationModels.AVERAGE),
+		BRUCE_6711("rundir6711", "Bruce 6711", "Bruce Shaw", cal(2025, 11, 20),
+				"RoughSystem, nstrands=32, alphaRough=.02, iseed=45, deltax=.57km, sigma0=100, bdeep=.013 bshallow=.003, "
+				+ "alpha=0.1, hload=hst=3, nfhigh=2.0, nflow=0.5, dynamic, fromRemote loaded",
+				11, 'N');
+		
 		
 		private String dirName;
 		private RSQSimCatalog catalog;
@@ -3455,7 +3460,9 @@ public class RSQSimCatalog implements XMLSaveable {
 	private static final File[] catalogLocations;
 	static {
 		catalogLocations = new File[] {
-				// USC HPC
+				// USC CARC
+				new File("/project2/scec_608/rsqsim/catalogs/kmilner"),
+				new File("/project2/scec_608/rsqsim/catalogs/shaw"),
 				new File("/project/scec_608/rsqsim/catalogs/kmilner"),
 				new File("/project/scec_608/rsqsim/catalogs/shaw"),
 				new File("/project/scec_608/rsqsim/catalogs/gilchrij"),
@@ -3495,7 +3502,7 @@ public class RSQSimCatalog implements XMLSaveable {
 		Arrays.sort(cats, new CatEnumDateComparator());
 		// new catalogs
 //		GregorianCalendar minDate = cal(2021, 10, 1);
-		GregorianCalendar minDate = cal(2025, 6, 25);
+		GregorianCalendar minDate = cal(2025, 9, 1);
 		for (Catalogs cat : cats) {
 		// specific catalog
 //		GregorianCalendar minDate = cal(2000, 1, 1);

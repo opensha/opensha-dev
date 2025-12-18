@@ -324,11 +324,12 @@ public class RateModelComparison {
 			double sum = rates.stream().mapToDouble(D->D).sum();
 			Preconditions.checkState(rates.size()==regions.length);
 			System.out.println("\tSum: "+(float)sum);
+			String magStr = is1973 ? "M≥5" : "M≥6";
 			for (int r=0; r<regions.length; r++) {
 				String name = regionNames.get(r);
 				
 				double rate = rates.get(r);
-				System.out.println("\t"+name+" M>5 rate:\t"+(float)rate+" ("+pDF.format(rate/sum)+")");
+				System.out.println("\t"+name+" "+magStr+" rate:\t"+(float)rate+" ("+pDF.format(rate/sum)+")");
 			}
 			System.out.println();
 		}

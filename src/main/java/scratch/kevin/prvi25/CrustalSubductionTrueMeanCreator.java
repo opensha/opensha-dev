@@ -130,7 +130,17 @@ public class CrustalSubductionTrueMeanCreator {
 				GridSourceList subductionGridded = subductionSol.requireModule(GridSourceList.class);
 				CombinedRupSetMappings mappings = combined.getRupSet().requireModule(CombinedRupSetMappings.class);
 				crustalGridded = GridSourceList.remapAssociations(crustalGridded, mappings.getInnerSectMappings());
-				subductionGridded = GridSourceList.remapAssociations(subductionGridded, mappings.getOuterSectMappings());
+				Map<Integer, Integer> subductionMappings = new HashMap<>(mappings.getOuterSectMappings());
+				// add slab IDs
+				Preconditions.checkState(!subductionMappings.containsKey(
+						PRVI25_GridSourceBuilder.CAR_SLAB_ASSOC_ID));
+				Preconditions.checkState(!subductionMappings.containsKey(
+						PRVI25_GridSourceBuilder.MUE_SLAB_ASSOC_ID));
+				subductionMappings.put(PRVI25_GridSourceBuilder.CAR_SLAB_ASSOC_ID,
+						PRVI25_GridSourceBuilder.CAR_SLAB_ASSOC_ID);
+				subductionMappings.put(PRVI25_GridSourceBuilder.MUE_SLAB_ASSOC_ID,
+						PRVI25_GridSourceBuilder.MUE_SLAB_ASSOC_ID);
+				subductionGridded = GridSourceList.remapAssociations(subductionGridded, subductionMappings);
 				combined.setGridSourceProvider(GridSourceList.combine(subductionGridded, crustalGridded));
 			}
 			

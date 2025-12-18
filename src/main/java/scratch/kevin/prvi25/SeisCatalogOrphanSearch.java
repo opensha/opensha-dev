@@ -46,7 +46,8 @@ public class SeisCatalogOrphanSearch {
 	public static void main(String[] args) throws IOException {
 		File mainDir = new File("/home/kevin/OpenSHA/prvi25/seis_catalogs");
 		
-		File dir = new File(mainDir, PRVI25_CrustalSeismicityRate.RATE_DATE);
+		File dir = new File(mainDir, "2025_07_17");
+//		File dir = new File(mainDir, PRVI25_CrustalSeismicityRate.RATE_DATE);
 		boolean filterByCrustalReg = true;
 		boolean remapORtoSlab = true;
 		File catFile = new File(dir, "pmmx_071725_c2-separatedAveraged_v2.csv");
@@ -58,6 +59,25 @@ public class SeisCatalogOrphanSearch {
 				if (!plotRegion.contains(fullCatalog.get(i).loc))
 					fullCatalog.remove(i);
 		}
+		
+		DecimalFormat pDF = new DecimalFormat("0.0%");
+		DecimalFormat oDF = new DecimalFormat("0.#");
+		DecimalFormat twoDF = new DecimalFormat("0.00");
+		
+		System.out.println("Slab M>7 events:");
+		for (EventRecord rec : fullCatalog) {
+			if (rec.magnitude >= 7d && rec.year >= 1900 && rec.probSlab > 0d) {
+				System.out.println(rec.year+" M"+twoDF.format(rec.magnitude)+": "+pDF.format(rec.probSlab/100d)+" "+rec.slabReg.toUpperCase()+" intraslab\n\n"+rec);
+			}
+		}
+		LocationList detailedBorder = new LocationList();
+		Location marLoc = new Location(14.944, -61.274);
+		System.out.println("2007 Martinique distance: "+oDF.format(
+				plotRegion.distanceToLocation(marLoc)
+//				plotRegion.getBorder().minDistToLine(marLoc)
+				)+" km");
+		System.exit(0);
+		
 		if (remapORtoSlab) {
 			double remappedToMue = 0;
 			double remappedToCar = 0;
@@ -186,9 +206,6 @@ public class SeisCatalogOrphanSearch {
 		System.out.println(numBadSumInFiles+"/"+eventsToRegions.size()+" events are mapped to a region they're not contained in");
 		System.out.println("Regional missing event counts:");
 		CPT probCPT = GMT_CPT_Files.SEQUENTIAL_NAVIA_UNIFORM.instance().rescale(0d, 1d).trim(0d, 0.9).rescale(0d, 1d);
-		DecimalFormat pDF = new DecimalFormat("0.0%");
-		DecimalFormat oDF = new DecimalFormat("0.#");
-		DecimalFormat twoDF = new DecimalFormat("0.00");
 		
 		GeographicMapMaker mapMaker = new GeographicMapMaker(plotRegion);
 		mapMaker.setWriteGeoJSON(false);

@@ -12,7 +12,7 @@ apply from: '../opensha/build-common.gradle'
 
 dependencies {
 
-    api "ghsc:nshmp-lib:1.7.14"
+    api "ghsc:nshmp-lib:1.7.15"
     
     implementation 'org.apache.pdfbox:pdfbox:2.0.6'
     implementation 'org.apache.commons:commons-collections4:4.1'

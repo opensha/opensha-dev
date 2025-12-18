@@ -243,6 +243,7 @@ import scratch.UCERF3.erf.FaultSystemSolutionERF;
 import scratch.UCERF3.erf.ETAS.ETAS_CatalogIO;
 import scratch.UCERF3.erf.ETAS.ETAS_CatalogIO.ETAS_Catalog;
 import scratch.UCERF3.erf.ETAS.ETAS_EqkRupture;
+import scratch.UCERF3.erf.ETAS.ETAS_SimulationMetadata;
 import scratch.UCERF3.erf.ETAS.FaultSystemSolutionERF_ETAS;
 import scratch.UCERF3.erf.ETAS.launcher.ETAS_Config;
 import scratch.UCERF3.erf.ETAS.launcher.ETAS_Launcher;
@@ -3302,13 +3303,117 @@ public class PureScratch {
 		
 	}
 	
+	private static void test346() throws IOException {
+		String[] headings = {
+				"## My Anchor",
+				"## My    Anchor",
+				"## My Other Anchor",
+				"## My Symbol &ge; Anchor",
+				"## Mayagüez PR"
+		};
+		
+		List<String> lines = new ArrayList<>();
+		
+		lines.add("# My Title");
+		lines.add("");
+		int tocIndex = lines.size();
+		lines.add("");
+		
+		int subHeadingCount = 0;
+		
+		// write each heading once
+		for (String heading : headings) {
+			lines.add(heading);
+			lines.add("");
+			lines.add("This is subheading count "+(subHeadingCount++));
+			lines.add("");
+			for (int i=0; i<10; i++) {
+				lines.add(".");
+				lines.add("");
+			}
+		}
+		
+		// do it again
+		for (String heading : headings) {
+			lines.add(heading);
+			lines.add("");
+			lines.add("This is subheading count "+(subHeadingCount++));
+			lines.add("");
+			for (int i=0; i<10; i++) {
+				lines.add(".");
+				lines.add("");
+			}
+		}
+		
+		// now write each out twice in a row
+		for (String heading : headings) {
+			for (int n=0; n<2; n++) {
+				lines.add(heading);
+				lines.add("");
+				lines.add("This is subheading count "+(subHeadingCount++));
+				lines.add("");
+				for (int i=0; i<10; i++) {
+					lines.add(".");
+					lines.add("");
+				}
+			}
+		}
+		
+		lines.addAll(tocIndex, MarkdownUtils.buildTOC(lines, 1));
+		
+		MarkdownUtils.writeHTML(lines, new File("/tmp/md_test.html"));
+	}
+	
+	private static void test347() throws IOException {
+		File sectsFile = new File("/home/kevin/Downloads/WGUEP2_AllFaults_v5_LL_continishWas_IntersectFix_TaperFix.geojson");
+		
+		String[] args = {
+				"--sub-sections",
+				sectsFile.getAbsolutePath(),
+				"--scale",
+				"MEAN_NSHM23",
+				"--preset",
+				"COULOMB",
+				"--output-file",
+				"/tmp/wgup_rup_set.zip"
+		};
+		RuptureSets.main(args);
+	}
+	
+	private static void test348() throws IOException {
+		for (ETAS_Catalog catalog : ETAS_CatalogIO.getBinaryCatalogsIterable(
+				new File("/tmp/etas_debug/Start2010_03_18_kCOV1p5/results_complete.bin"), 0)) {
+			ETAS_SimulationMetadata meta = catalog.getSimulationMetadata();
+//			System.out.println("Catalog "+meta.catalogIndex);
+			int rupIndex = 0;
+			for (ETAS_EqkRupture rup : catalog) {
+				if (rup.getParentID() == rup.getID()) {
+					System.out.println("Found a self-parent instance in catalog "+meta);
+					System.out.println("\tRup id="+rup.getID()+" (index="+rupIndex+") has self parent; rirst rup in catalog has id="+catalog.get(0).getID());
+				}
+				rupIndex++;
+			}
+		}
+	}
+	
+	private static void test349() throws IOException {
+		ScalarIMR imr = AttenRelRef.CB_2008.get();
+		
+		imr.setParamDefaults();
+		
+		ParameterList visible = new ParameterList();
+		for (Parameter<?> param : imr.getOtherParams())
+			if (param.isEditorBuilt() && param.getEditor().isVisible())
+				visible.addParameter(param);
+	}
+	
 	/**
 	 * @param args
 	 * @throws Exception 
 	 */
 	public static void main(String[] args) throws Exception {
 		try {
-			test344();
+			test348();
 		} catch (Throwable t) {
 			t.printStackTrace();
 			System.exit(1);
