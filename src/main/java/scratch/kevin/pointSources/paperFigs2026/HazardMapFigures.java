@@ -81,6 +81,10 @@ public class HazardMapFigures {
 		compAdd(comparisons, Models.SPINNING_DIST_5X_UNCENTERED, Models.FINITE_50X_UNCENTERED);
 		compAdd(comparisons, Models.SPINNING_DIST_5X_UNCENTERED, Models.FINITE_100X_UNCENTERED);
 		
+		// alt random tests
+		compAdd(comparisons, Models.FINITE_1X_UNCENTERED, Models.FINITE_1X_UNCENTERED_ALT);
+		compAdd(comparisons, Models.FINITE_2X_UNCENTERED, Models.FINITE_2X_UNCENTERED_ALT);
+		
 		// modeling choice comparisons
 		// M3 vs M4
 		compAdd(comparisons, Models.SPINNING_DIST_5X_UNCENTERED_M3, Models.SPINNING_DIST_5X_UNCENTERED_M4);
