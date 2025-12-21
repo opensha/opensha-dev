@@ -26,13 +26,13 @@ public class RewriteAltMagLength {
 	 * log L = (M - b)/a
 	 * L = 10^((M - b)/a)
 	 */
-	static final Function<GriddedRuptureProperties, Double> LEONARD =
+	public static final Function<GriddedRuptureProperties, Double> LEONARD =
 			P -> Math.pow(10.0, (P.magnitude - (P.dip < 90 ? 4.24 : 4.17))/1.67);
 	
 	/**
 	 * WC 94 RLD (subsurface rupture length) formula
 	 */
-	static final Function<GriddedRuptureProperties, Double> WC94_RLD =
+	public static final Function<GriddedRuptureProperties, Double> WC94_RLD =
 			P -> Math.pow(10.0,-2.44+0.59*P.magnitude);
 
 	public static void main(String[] args) throws IOException {
