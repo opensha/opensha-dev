@@ -168,20 +168,27 @@ public class PointSourceBranchAveragedHazardScriptWriter {
 //		distCorr = PointSourceDistanceCorrections.FIVE_POINT_SPINNING_DIST_ALONG;
 //		extraGridArgs = "--point-min-mag 4";
 		
-		forceOutputName += "-five_pt_spinning_along";
-		forceOutputName += "-m3";
-		pointFiniteMinMag = 5d;
-		bgRupType = BackgroundRupType.POINT;
-		distCorr = PointSourceDistanceCorrections.FIVE_POINT_SPINNING_DIST_ALONG;
-		extraGridArgs = "--point-min-mag 3";
-		
 //		forceOutputName += "-five_pt_spinning_along";
-//		forceOutputName += "-alt_grid_depths";
+//		forceOutputName += "-m3.5";
 //		pointFiniteMinMag = 5d;
 //		bgRupType = BackgroundRupType.POINT;
 //		distCorr = PointSourceDistanceCorrections.FIVE_POINT_SPINNING_DIST_ALONG;
-//		linkFromBase = false;
-//		solFileName = "results_WUS_FM_v3_branch_averaged_gridded_mod_grid_depths.zip";
+//		extraGridArgs = "--point-min-mag 3.5";
+		
+//		forceOutputName += "-five_pt_spinning_along";
+//		forceOutputName += "-m3";
+//		pointFiniteMinMag = 5d;
+//		bgRupType = BackgroundRupType.POINT;
+//		distCorr = PointSourceDistanceCorrections.FIVE_POINT_SPINNING_DIST_ALONG;
+//		extraGridArgs = "--point-min-mag 3";
+		
+		forceOutputName += "-five_pt_spinning_along";
+		forceOutputName += "-alt_grid_depths";
+		pointFiniteMinMag = 5d;
+		bgRupType = BackgroundRupType.POINT;
+		distCorr = PointSourceDistanceCorrections.FIVE_POINT_SPINNING_DIST_ALONG;
+		linkFromBase = false;
+		solFileName = "results_WUS_FM_v3_branch_averaged_gridded_mod_grid_depths.zip";
 		
 //		forceOutputName += "-five_pt_spinning_along";
 //		forceOutputName += "-alt_wc_lengths";
@@ -190,6 +197,31 @@ public class PointSourceBranchAveragedHazardScriptWriter {
 //		distCorr = PointSourceDistanceCorrections.FIVE_POINT_SPINNING_DIST_ALONG;
 //		linkFromBase = false;
 //		solFileName = "results_WUS_FM_v3_branch_averaged_gridded_mod_wc_lengths.zip";
+
+//		forceOutputName += "-five_pt_spinning_along";
+//		forceOutputName += "-alt_leonard_lengths";
+//		pointFiniteMinMag = 5d;
+//		bgRupType = BackgroundRupType.POINT;
+//		distCorr = PointSourceDistanceCorrections.FIVE_POINT_SPINNING_DIST_ALONG;
+//		linkFromBase = false;
+//		solFileName = "results_WUS_FM_v3_branch_averaged_gridded_mod_leonard_lengths.zip";
+
+//		forceOutputName += "-five_pt_spinning_along";
+//		forceOutputName += "-proposed_grid_mods";
+//		pointFiniteMinMag = 5d;
+//		bgRupType = BackgroundRupType.POINT;
+//		distCorr = PointSourceDistanceCorrections.FIVE_POINT_SPINNING_DIST_ALONG;
+//		linkFromBase = false;
+//		solFileName = "results_WUS_FM_v3_branch_averaged_gridded_mod_proposed.zip";
+
+//		forceOutputName += "-five_pt_spinning_along";
+//		forceOutputName += "-proposed_grid_mods-m3.5";
+//		pointFiniteMinMag = 5d;
+//		bgRupType = BackgroundRupType.POINT;
+//		distCorr = PointSourceDistanceCorrections.FIVE_POINT_SPINNING_DIST_ALONG;
+//		linkFromBase = false;
+//		solFileName = "results_WUS_FM_v3_branch_averaged_gridded_mod_proposed.zip";
+//		extraGridArgs = "--point-min-mag 3.5";
 		
 //		forceOutputName += "-five_pt_spinning_along";
 //		pointFiniteMinMag = 5d;

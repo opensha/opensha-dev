@@ -28,12 +28,14 @@ import org.opensha.commons.gui.plot.GeographicMapMaker;
 import org.opensha.commons.gui.plot.PlotCurveCharacterstics;
 import org.opensha.commons.gui.plot.PlotLineType;
 import org.opensha.commons.mapping.gmt.elements.GMT_CPT_Files;
+import org.opensha.commons.util.DataUtils;
 import org.opensha.commons.util.cpt.CPT;
 import org.opensha.sha.earthquake.faultSysSolution.util.SolHazardMapCalc.ReturnPeriods;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_FaultModels;
 import org.opensha.sha.faultSurface.FaultSection;
 
 import com.google.common.base.Preconditions;
+import com.google.common.primitives.Doubles;
 
 import scratch.kevin.latex.LaTeXUtils;
 import scratch.kevin.pointSources.paperFigs2026.CalcPaths.Models;
@@ -44,7 +46,7 @@ public class HazardMapFigures {
 		double[] periods = { 0d, 1d };
 		ReturnPeriods[] rps = { ReturnPeriods.TWO_IN_50 };
 		
-		double texPeriod = 0d;
+		double[] texPeriods = { 0d, 1d };
 		ReturnPeriods texRP = ReturnPeriods.TWO_IN_50;
 		
 		boolean replot = false;
@@ -140,15 +142,18 @@ public class HazardMapFigures {
 		
 		for (int p=0; p<periods.length; p++) {
 			String perPrefix, perLabel, perUnits;
+			String perTexPrefix;
 			if (periods[p] == 0d) {
 				perPrefix = "pga";
 				perLabel = "PGA";
 				perUnits = "(g)";
+				perTexPrefix = "PGA";
 			} else {
 				perPrefix = (float)periods[p]+"s";
 				perLabel = (float)periods[p]+"s SA";
 				perUnits = "(g)";
 				Preconditions.checkState(periods[p] == 1d);
+				perTexPrefix = "SAOne";
 			}
 			
 			for (ReturnPeriods rp : rps) {
@@ -184,13 +189,13 @@ public class HazardMapFigures {
 				
 				FileWriter texFW = null;
 				boolean plotMaps = false;
-				if (periods[p] == texPeriod && rp == texRP) {
+				if (Doubles.contains(texPeriods, periods[p]) && rp == texRP) {
 					plotMaps = true;
 					texFW = new FileWriter(new File(subDir, "hazard_change_stats.tex"));
 				}
 				
 				CSVFile<String> compCSV = new CSVFile<>(true);
-				compCSV.addLine("Model", "Comparison Model", "Mean Change", "Mean Absolute Change", "Maximum Change");
+				compCSV.addLine("Model", "Comparison Model", "Mean Change", "Mean Absolute Change", "Median Absolute Change", "Maximum Change");
 				
 				for (int i=0; i<models.length; i++) {
 					Models model = models[i];
@@ -225,6 +230,7 @@ public class HazardMapFigures {
 							GriddedGeoDataSet zoomPDiff = null;
 							double mean = stats.mean;
 							double meanAbs = stats.meanAbs;
+							double medianAbs = stats.medianAbs;
 							double maxSigned = stats.maxSigned;
 							if (zoomMaps[i] != null && zoomMaps[compIndex] != null) {
 								zoomPDiff = pDiff(zoomMaps[i], zoomMaps[compIndex]);
@@ -237,7 +243,9 @@ public class HazardMapFigures {
 							
 //							System.out.println("\t\t"+stats);
 							System.out.println("\t\tmean="+twoDigitsDF.format(mean)
-								+"%;\tmeanAbs="+twoDigitsDF.format(meanAbs)+"%;\tmaxSigned="+twoDigitsDF.format(maxSigned)+"%");
+								+"%;\tmeanAbs="+twoDigitsDF.format(meanAbs)
+								+"%;\tmedianAbs="+twoDigitsDF.format(medianAbs)
+								+"%;\tmaxSigned="+twoDigitsDF.format(maxSigned)+"%");
 							
 							if (plotMaps) {
 								String prefix = model.name()+"_vs_"+comp.name();
@@ -255,18 +263,20 @@ public class HazardMapFigures {
 							}
 							
 							compCSV.addLine(model.getName(), comp.getName(), twoDigitsDF.format(mean)+"%",
-									twoDigitsDF.format(meanAbs)+"%", twoDigitsDF.format(maxSigned)+"%");
+									twoDigitsDF.format(meanAbs)+"%", twoDigitsDF.format(medianAbs)+"%", twoDigitsDF.format(maxSigned)+"%");
 							
 							if (texFW != null) {
-								String texPrefix = model.texName+"Vs"+comp.texName;
+								String texPrefix = model.texName+"Vs"+comp.texName+perTexPrefix;
 								texFW.write(LaTeXUtils.defineValueCommand(texPrefix+"Mean", twoDigitsDF.format(mean)+"%")+"\n");
 								texFW.write(LaTeXUtils.defineValueCommand(texPrefix+"MeanAbs", twoDigitsDF.format(meanAbs)+"%")+"\n");
+								texFW.write(LaTeXUtils.defineValueCommand(texPrefix+"MedianAbs", twoDigitsDF.format(medianAbs)+"%")+"\n");
 								texFW.write(LaTeXUtils.defineValueCommand(texPrefix+"Max", twoDigitsDF.format(maxSigned)+"%")+"\n");
 								
 								if (model == Models.AS_PUBLISHED && comp == REF_MODEL) {
 									// add extra rounded values
 									texFW.write(LaTeXUtils.defineValueCommand(texPrefix+"MeanRounded", roundedDF.format(mean)+"%")+"\n");
 									texFW.write(LaTeXUtils.defineValueCommand(texPrefix+"MeanAbsRounded", roundedDF.format(meanAbs)+"%")+"\n");
+									texFW.write(LaTeXUtils.defineValueCommand(texPrefix+"MedianAbsRounded", roundedDF.format(medianAbs)+"%")+"\n");
 									texFW.write(LaTeXUtils.defineValueCommand(texPrefix+"MaxRounded", roundedDF.format(maxSigned)+"%")+"\n");
 								}
 							}
@@ -339,6 +349,7 @@ public class HazardMapFigures {
 		
 		public final double mean;
 		public final double meanAbs;
+		public final double medianAbs;
 		public final double maxSigned;
 		public final int numFinite;
 		
@@ -349,12 +360,15 @@ public class HazardMapFigures {
 			double largest = 0;
 			double largestAbs = 0d;
 			
+			List<Double> absVals = new ArrayList<>(pDiff.size());
+			
 			for (int i=0; i<pDiff.size(); i++) {
 				double val = pDiff.get(i);
 				if (Double.isFinite(val)) {
 					numFinite++;
 					sum += val;
 					double absVal = Math.abs(val);
+					absVals.add(absVal);
 					sumAbs += absVal;
 					if (absVal > largestAbs) {
 						largestAbs = absVal;
@@ -366,6 +380,7 @@ public class HazardMapFigures {
 			
 			mean = sum/(double)numFinite;
 			meanAbs = sumAbs/(double)numFinite;
+			medianAbs = DataUtils.median(Doubles.toArray(absVals));
 			maxSigned = largest;
 			this.numFinite = numFinite;
 		}

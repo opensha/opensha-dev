@@ -67,22 +67,16 @@ public class RewriteMagDepthProps {
 				List<GriddedRupture> ret = new ArrayList<>(orig.size());
 				for (GriddedRupture rup : orig) {
 					GriddedRuptureProperties props = rup.properties;
-					if (props.magnitude > 5d && props.magnitude < 6.5) {
-						// need to convert
-						double mag = props.magnitude;
-						double dipRad = Math.toRadians(props.dip);
-//						double depth = (float)mag <= 6.5f ? 5d : 1d;
-						double depth = Interpolate.findY(5d, 5d, 6.5d, 1d, mag);
-						double length = WC94.getMedianLength(mag);
-						double aspectWidth = length / 1.5;
-						double ddWidth = (14.0 - depth) / Math.sin(dipRad);
-						ddWidth = Math.min(aspectWidth, ddWidth);
-						double lower = depth + ddWidth * Math.sin(dipRad);
-						props = new GriddedRuptureProperties(mag, props.rake, props.dip,
-								props.strike, props.strikeRange, depth, lower, props.length,
-								Double.NaN, Double.NaN, tectonicRegionType);
-						rup = new GriddedRupture(rup.gridIndex, rup.location, props, rup.rate, rup.associatedSections, rup.associatedSectionFracts);
-					}
+					double mag = props.magnitude;
+					double dipRad = Math.toRadians(props.dip);
+					double length = WC94.getMedianLength(mag);
+					double[] depths = calcDepths(mag, length, dipRad);
+					double upper = depths[0];
+					double lower = depths[1];
+					props = new GriddedRuptureProperties(mag, props.rake, props.dip,
+							props.strike, props.strikeRange, upper, lower, props.length,
+							Double.NaN, Double.NaN, tectonicRegionType);
+					rup = new GriddedRupture(rup.gridIndex, rup.location, props, rup.rate, rup.associatedSections, rup.associatedSectionFracts);
 					ret.add(rup);
 				}
 				return ret;
@@ -93,6 +87,41 @@ public class RewriteMagDepthProps {
 		
 		// don't copy unkonwn files
 		sol.write(ArchiveOutput.getDefaultOutput(outputSol, sol.getArchive().getInput()), false);
+	}
+	private static final double zCenter = 5d;	// km
+	private static final double zTopMin = 1d;	// km
+	private static final double zBotMax = 14d;	// km
+	private static final double maxVertThickness = zBotMax - zTopMin;	// 13 km
+	
+	public static double[] calcDepths(double mag, double length, double dipRad) {
+		// Same aspect control as before
+		double aspectWidthDD = length / 1.5;	// down-dip width (km)
+
+		// Cap by maximum possible down-dip width given seismogenic thickness
+		double sinDip = Math.sin(dipRad);
+		double maxWidthDD = maxVertThickness / sinDip;
+		double ddWidth = Math.min(aspectWidthDD, maxWidthDD);
+
+		// Convert to vertical thickness (km)
+		double vertThickness = ddWidth * sinDip;
+
+		// Center vertically at 5 km
+		double upper = zCenter - 0.5 * vertThickness;
+		double lower = zCenter + 0.5 * vertThickness;
+
+		// Enforce saturation bounds by shifting the interval if needed.
+		// (Keep thickness fixed unless it exceeds the max thickness.)
+		if (vertThickness >= maxVertThickness) {
+			upper = zTopMin;
+			lower = zBotMax;
+		} else if (upper < zTopMin) {
+			upper = zTopMin;
+			lower = upper + vertThickness;
+		} else if (lower > zBotMax) {
+			lower = zBotMax;
+			upper = lower - vertThickness;
+		}
+		return new double[] {upper, lower};
 	}
 
 }
