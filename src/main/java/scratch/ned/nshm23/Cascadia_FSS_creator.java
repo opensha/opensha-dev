@@ -9,6 +9,7 @@ import java.util.Set;
 
 import org.opensha.commons.eq.MagUtils;
 import org.opensha.sha.earthquake.faultSysSolution.FaultSystemSolution;
+import org.opensha.sha.earthquake.faultSysSolution.modules.RupSetTectonicRegimes;
 import org.opensha.sha.earthquake.param.IncludeBackgroundOption;
 import org.opensha.sha.faultSurface.ApproxEvenlyGriddedSurface;
 import org.opensha.sha.faultSurface.FaultSection;
@@ -382,6 +383,14 @@ public class Cascadia_FSS_creator {
 	    FaultSystemSolution fss = CEUS_FSS_creator.getFaultSystemSolution(mfdForSrcIdMap, 
 	    		translatedSurfListForSrcIdMap, faultSectionList);
 	    
+//	    Set tectonic region type
+	    TectonicRegionType[] trForRupArray = new TectonicRegionType[fss.getRupSet().getNumRuptures()];
+	    for(int t=0;t<trForRupArray.length;t++)
+		    trForRupArray[t] = TectonicRegionType.SUBDUCTION_INTERFACE;
+	    RupSetTectonicRegimes tectonicRegimes = new RupSetTectonicRegimes(fss.getRupSet(),trForRupArray);
+	    fss.getRupSet().addModule(tectonicRegimes);
+
+	    
 	    if(D) { // test participation mfds for each fault section
 	    	
 	    	// for FSS:
@@ -497,11 +506,15 @@ public class Cascadia_FSS_creator {
 	public static void main(String[] args) {
 		String nshmModelDirPath = "/Users/field/nshm-haz_data/nshm-conus-6.1.2/";
 		
+		ArrayList<GeoJSONFaultSection> sectList = getFaultSectionList(nshmModelDirPath, FaultModelEnum.ALL);
+		for(GeoJSONFaultSection fltSect:sectList)
+			System.out.println(fltSect.getName()+"\t"+fltSect.getSectionId());
+
 		
-		getFaultSystemSolution(nshmModelDirPath, FaultModelEnum.ALL);
-		getFaultSystemSolution(nshmModelDirPath, FaultModelEnum.TOP);
-		getFaultSystemSolution(nshmModelDirPath, FaultModelEnum.MIDDLE);
-		getFaultSystemSolution(nshmModelDirPath, FaultModelEnum.BOTTOM);
+//		getFaultSystemSolution(nshmModelDirPath, FaultModelEnum.ALL);
+//		getFaultSystemSolution(nshmModelDirPath, FaultModelEnum.TOP);
+//		getFaultSystemSolution(nshmModelDirPath, FaultModelEnum.MIDDLE);
+//		getFaultSystemSolution(nshmModelDirPath, FaultModelEnum.BOTTOM);
 		
 //		GeoJSONFaultSection sect = CEUS_FSS_creator.getFaultSection(nshmModelDirPath+"subduction/interface/Cascadia/features/Cascadia 1-1 (middle).geojson");
 //		System.out.println("OrigAveUpperDepth = "+sect.getOrigAveUpperDepth());

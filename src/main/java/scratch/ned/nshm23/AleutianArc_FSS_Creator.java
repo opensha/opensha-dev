@@ -8,7 +8,9 @@ import java.util.List;
 import java.util.Set;
 
 import org.opensha.commons.eq.MagUtils;
+import org.opensha.sha.earthquake.faultSysSolution.FaultSystemRupSet;
 import org.opensha.sha.earthquake.faultSysSolution.FaultSystemSolution;
+import org.opensha.sha.earthquake.faultSysSolution.modules.RupSetTectonicRegimes;
 import org.opensha.sha.earthquake.param.IncludeBackgroundOption;
 import org.opensha.sha.faultSurface.ApproxEvenlyGriddedSurface;
 import org.opensha.sha.faultSurface.GeoJSONFaultSection;
@@ -398,6 +400,13 @@ public class AleutianArc_FSS_Creator {
 	    FaultSystemSolution fss = CEUS_FSS_creator.getFaultSystemSolution(mfdForSrcIdMap, 
 	    		translatedSurfListForSrcIdMap, faultSectionList);
 	    
+//	    Set tectonic region type
+	    TectonicRegionType[] trForRupArray = new TectonicRegionType[fss.getRupSet().getNumRuptures()];
+	    for(int t=0;t<trForRupArray.length;t++)
+		    trForRupArray[t] = TectonicRegionType.SUBDUCTION_INTERFACE;
+	    RupSetTectonicRegimes tectonicRegimes = new RupSetTectonicRegimes(fss.getRupSet(),trForRupArray);
+	    fss.getRupSet().addModule(tectonicRegimes);
+	    
 	    if(D) { // test participation mfds for each fault section
 	    	
 	    	// for FSS:
@@ -511,12 +520,27 @@ public class AleutianArc_FSS_Creator {
 
 	public static void main(String[] args) {
 //		String nshmModelDirPath = "/Users/field/nshm-haz_data/nshm-alaska-main_Jan10_2024/"; // old & not longer works
-		
-		String nshmModelDirPath = "/Users/field/nshm-haz_data/nshm-alaska-3.0.1/";
-		getFaultSystemSolution(nshmModelDirPath, FaultModelEnum.ALL);
+
+		String nshmModelDirPath = "/Users/field/nshm-haz_data/nshm-alaska-3.1-maint/";
+
+//		ArrayList<GeoJSONFaultSection> sectList = getFaultSectionList(nshmModelDirPath, FaultModelEnum.ALL);
+//		for(GeoJSONFaultSection fltSect:sectList) {
+//			System.out.println(fltSect.getName()+"\t"+fltSect.getSectionId());
+//			if(fltSect.getSectionId() ==4871) 
+//				System.out.println(fltSect.getFaultTrace());
+//		}
+
+//		getFaultSystemSolution(nshmModelDirPath, FaultModelEnum.ALL);		
 //		getFaultSystemSolution(nshmModelDirPath, FaultModelEnum.GEODETIC);
 //		getFaultSystemSolution(nshmModelDirPath, FaultModelEnum.GEOLOGIC_NARROW);
-//		getFaultSystemSolution(nshmModelDirPath, FaultModelEnum.GEOLOGIC_WIDE);
+		FaultSystemSolution fss =getFaultSystemSolution(nshmModelDirPath, FaultModelEnum.GEOLOGIC_WIDE);
+		
+	    RupSetTectonicRegimes tectonicRegimesTest = fss.getRupSet().getModule(RupSetTectonicRegimes.class);
+	    System.out.println("numRups: "+fss.getRupSet().getNumRuptures());
+	    System.out.println("size: "+tectonicRegimesTest.getSet().size());
+	    for(int r=0;r<fss.getRupSet().getNumRuptures();r++)
+	    	System.out.println(r+"\t"+tectonicRegimesTest.get(r));
+
 		
 		
 		// THIS IS HOW PETER CREATES THE SURFACE (FROM gov.usgs.earthquake.nshmp.model.InterfaceSource.InterfaceSource(Builder))

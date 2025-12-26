@@ -50,6 +50,7 @@ import org.opensha.sha.earthquake.rupForecastImpl.nshm23.timeDependence.TimeDepe
 import org.opensha.sha.faultSurface.FaultSection;
 import org.opensha.sha.magdist.IncrementalMagFreqDist;
 import org.opensha.sha.magdist.SummedMagFreqDist;
+import org.opensha.sha.util.TectonicRegionType;
 
 import scratch.UCERF3.erf.FaultSystemSolutionERF;
 import scratch.UCERF3.erf.utils.ProbModelsPlottingUtils;
@@ -358,6 +359,7 @@ System.exit(0);
 		FaultSystemSolution sol = CONUS_TD_ERF_Demo.getPreferredFull_FSS(full_FSS_fileName);		
 		FaultSystemSolutionERF erf = new FaultSystemSolutionERF(sol);
 		erf.getParameter(IncludeBackgroundParam.NAME).setValue(IncludeBackgroundOption.EXCLUDE);
+
 		return erf;
 	}
 	
@@ -365,7 +367,7 @@ System.exit(0);
 
 		long currentTimeEpoch = System.currentTimeMillis();
 		String dateString = new java.text.SimpleDateFormat("MM_dd_yyyy").format(new java.util.Date (currentTimeEpoch)); // Epoch in seconds, remove '*1000' for milliseconds
-		String full_FSS_fileName = "/Users/field/nshm-haz_data/fullPrefUS_FSS.zip";
+		String full_FSS_fileName = "/Users/field/nshm-haz_data/fullPref_US_FSS.zip";
 		FaultSystemSolution sol = CONUS_TD_ERF_Demo.getPreferredFull_FSS(full_FSS_fileName);		
 		
 		File tdMainDir = new File("/Users/field/markdown/nshm23_time_dependence_"+dateString);
@@ -1357,7 +1359,23 @@ System.exit(0);
 		
 		String rootDir = "/Users/field/Library/CloudStorage/OneDrive-DOI/Field_Other/ERF_Coordination/LongTermTD_2026/Analysis/";
 			
-		generateDOLE_ReportPages();
+		FaultSystemSolutionERF erf = getFullPrefUS26_ERF();
+//		FaultSystemSolutionERF erf = getAleutianArc_ERF(AleutianArc_FSS_Creator.FaultModelEnum.GEOLOGIC_NARROW);
+//		FaultSystemSolutionERF erf = getCascadia_ERF(Cascadia_FSS_creator.FaultModelEnum.MIDDLE);
+//		FaultSystemSolutionERF erf = getCEUS_ERF();
+
+		
+		erf.updateForecast();
+		ArrayList<TectonicRegionType> trTypesList = new ArrayList<TectonicRegionType>();
+		for(int s=0;s<erf.getNumSources();s++) {
+			if(erf.getSource(s).getTectonicRegionType() ==null)
+				System.out.println("null found");
+			if(!trTypesList.contains(erf.getSource(s).getTectonicRegionType()))
+				trTypesList.add(erf.getSource(s).getTectonicRegionType());
+		}
+		System.out.println("list here:\n"+trTypesList);
+
+//		generateDOLE_ReportPages();
 		System.exit(0);
 
 //	    for (FaultSection sect : getCascadia_ERF(Cascadia_FSS_creator.FaultModelEnum.ALL).getSolution().getRupSet().getFaultSectionDataList()) {

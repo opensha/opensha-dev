@@ -25,6 +25,7 @@ import org.opensha.sha.earthquake.ProbEqkSource;
 import org.opensha.sha.earthquake.calc.ERF_Calculator;
 import org.opensha.sha.earthquake.faultSysSolution.FaultSystemRupSet;
 import org.opensha.sha.earthquake.faultSysSolution.FaultSystemSolution;
+import org.opensha.sha.earthquake.faultSysSolution.modules.RupSetTectonicRegimes;
 import org.opensha.sha.earthquake.param.IncludeBackgroundOption;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_ScalingRelationships;
 import org.opensha.sha.faultSurface.FaultSection;
@@ -181,6 +182,17 @@ if(src.getName().equals("Unnamed fault system source")) // temp fix for Peters I
 		
 		// GET BIG FSS
 		fssList.add(getBigFSS(nshmModelDirPath,defModel,erf));
+		
+		// Set tectonic region type for each
+		for(int s=0;s<fssList.size();s++) {
+			FaultSystemSolution fss = fssList.get(s);
+		    TectonicRegionType[] trForRupArray = new TectonicRegionType[fss.getRupSet().getNumRuptures()];
+		    for(int t=0;t<trForRupArray.length;t++)
+			    trForRupArray[t] = TectonicRegionType.ACTIVE_SHALLOW;
+		    RupSetTectonicRegimes tectonicRegimes = new RupSetTectonicRegimes(fss.getRupSet(),trForRupArray);
+		    fss.getRupSet().addModule(tectonicRegimes);
+		}
+
 		
 		return fssList;
 	}

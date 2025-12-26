@@ -20,6 +20,7 @@ import org.opensha.commons.geo.json.Feature;
 import org.opensha.sha.earthquake.ProbEqkSource;
 import org.opensha.sha.earthquake.faultSysSolution.FaultSystemRupSet;
 import org.opensha.sha.earthquake.faultSysSolution.FaultSystemSolution;
+import org.opensha.sha.earthquake.faultSysSolution.modules.RupSetTectonicRegimes;
 import org.opensha.sha.earthquake.param.IncludeBackgroundOption;
 import org.opensha.sha.faultSurface.FaultSection;
 import org.opensha.sha.faultSurface.GeoJSONFaultSection;
@@ -648,10 +649,19 @@ public class CEUS_FSS_creator {
 		    }
 		    System.out.println("ERF versus bigFSS tests passed!!");
 	    }   
-
 	    
 		fssList.add(bigFSS);
 		
+		// Set tectonic region type for each
+		for(int s=0;s<fssList.size();s++) {
+			FaultSystemSolution fss = fssList.get(s);
+		    TectonicRegionType[] trForRupArray = new TectonicRegionType[fss.getRupSet().getNumRuptures()];
+		    for(int t=0;t<trForRupArray.length;t++)
+			    trForRupArray[t] = TectonicRegionType.STABLE_SHALLOW;
+		    RupSetTectonicRegimes tectonicRegimes = new RupSetTectonicRegimes(fss.getRupSet(),trForRupArray);
+		    fss.getRupSet().addModule(tectonicRegimes);
+		}
+
 		return fssList;
 	}
 	

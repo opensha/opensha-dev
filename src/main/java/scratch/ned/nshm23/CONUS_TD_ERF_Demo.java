@@ -13,6 +13,7 @@ import org.opensha.sha.earthquake.faultSysSolution.FaultSystemRupSet;
 import org.opensha.sha.earthquake.faultSysSolution.FaultSystemSolution;
 import org.opensha.sha.earthquake.faultSysSolution.erf.BaseFaultSystemSolutionERF;
 import org.opensha.sha.earthquake.faultSysSolution.modules.RupMFDsModule;
+import org.opensha.sha.earthquake.faultSysSolution.modules.RupSetTectonicRegimes;
 import org.opensha.sha.earthquake.faultSysSolution.util.MergedSolutionCreator;
 import org.opensha.sha.earthquake.param.HistoricOpenIntervalParam;
 import org.opensha.sha.earthquake.param.MagDependentAperiodicityOptions;
@@ -26,7 +27,7 @@ import org.opensha.sha.earthquake.rupForecastImpl.nshm23.timeDependence.DOLE_Sub
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.timeDependence.TimeDependentReportPageGen;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.timeDependence.TimeDependentReportPageGen.DataToInclude;
 import org.opensha.sha.faultSurface.FaultSection;
-
+import org.opensha.sha.util.TectonicRegionType;
 
 import scratch.UCERF3.analysis.FaultSysSolutionERF_Calc;
 import scratch.UCERF3.erf.FaultSystemSolutionERF;
@@ -140,6 +141,7 @@ public class CONUS_TD_ERF_Demo {
 		// create FSS
 		ArrayList<FaultSystemSolution>  ceusSolList = CEUS_FSS_creator.getFaultSystemSolutionList(nshmCONUS_ModelDirPath,faultModel);
 		FaultSystemSolution sol = MergedSolutionCreator.merge(ceusSolList.get(0), ceusSolList.get(1));
+
 		if(ceus_FSS_fileName != null) {
 			try {
 				sol.write(new File(ceus_FSS_fileName));
