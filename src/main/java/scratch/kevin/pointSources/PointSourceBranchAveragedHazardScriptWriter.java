@@ -29,7 +29,7 @@ import org.opensha.sha.imr.AttenRelRef;
 import com.google.common.base.Preconditions;
 
 import edu.usc.kmilner.mpj.taskDispatch.MPJTaskCalculator;
-import scratch.kevin.pointSources.paperFigs2026.CalcPaths;
+import scratch.kevin.pointSources.paperFigs2026.ConstantsAndSettings;
 
 public class PointSourceBranchAveragedHazardScriptWriter {
 
@@ -43,7 +43,6 @@ public class PointSourceBranchAveragedHazardScriptWriter {
 		boolean supersample = false;
 		boolean supersampleQuick = false;
 		boolean supersampleFinite = false;
-		boolean quickGridded = false;
 		
 		double[] periods = { 0d, 1d };
 		AttenRelRef[] gmms = null;
@@ -66,7 +65,7 @@ public class PointSourceBranchAveragedHazardScriptWriter {
 //		gmms = new AttenRelRef[] {AttenRelRef.NGAWest_2014_AVG_NOIDRISS};
 		
 //		GriddedRegion gridReg = CalcPaths.FULL_GRID_REG;
-		GriddedRegion gridReg = CalcPaths.ZOOM_GRID_REG; forceOutputName += "-zoom";
+		GriddedRegion gridReg = ConstantsAndSettings.ZOOM_GRID_REG; forceOutputName += "-zoom";
 //		GriddedRegion gridReg = new GriddedRegion(new Region(new Location(37, -119), new Location(37.6, -118.4)),
 //				0.01, GriddedRegion.ANCHOR_0_0); forceOutputName += "-tiny_zoom";
 		sigmaTrunc = 3d;
@@ -186,7 +185,7 @@ public class PointSourceBranchAveragedHazardScriptWriter {
 		forceOutputName += "-alt_grid_depths";
 		pointFiniteMinMag = 5d;
 		bgRupType = BackgroundRupType.POINT;
-		distCorr = PointSourceDistanceCorrections.FIVE_POINT_SPINNING_DIST_ALONG;
+		distCorr = PointSourceDistanceCorrections.FIVE_POINT_SPINNING_DIST;
 		linkFromBase = false;
 		solFileName = "results_WUS_FM_v3_branch_averaged_gridded_mod_grid_depths.zip";
 		
@@ -387,8 +386,6 @@ public class PointSourceBranchAveragedHazardScriptWriter {
 			}
 			if (sigmaTrunc != null)
 				argz += " --gmm-sigma-trunc-one-sided "+sigmaTrunc.floatValue();
-			if (quickGridded && bgOp != IncludeBackgroundOption.EXCLUDE)
-				argz += " --quick-grid-calc";
 			argz += " "+dispatchArgs;
 			
 			File jobFile = new File(localDir, "batch_hazard_"+bgOp.name()+".slurm");

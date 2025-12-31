@@ -61,7 +61,7 @@ public class GriddedHazardSingleSiteComparison {
 //		PointSourceDistanceCorrections corrType = PointSourceDistanceCorrections.FIVE_POINT_RJB_DIST_ALONG;
 //		PointSourceDistanceCorrections corrType = PointSourceDistanceCorrections.SUPERSAMPLING_0p1_FIVE_POINT_RJB_DIST;
 //		PointSourceDistanceCorrections corrType = PointSourceDistanceCorrections.SUPERSAMPLING_0p1_TWENTY_POINT_RJB_DIST;
-		PointSourceDistanceCorrections corrType = PointSourceDistanceCorrections.AVERAGE_SPINNING;
+		PointSourceDistanceCorrections corrType = PointSourceDistanceCorrections.AVERAGE_SPINNING_CENTERED;
 //		GridCellSupersamplingSettings ssSettings = GridCellSupersamplingSettings.DEFAULT;
 		GridCellSupersamplingSettings ssSettings = null;
 		PointSourceDistanceCorrections compCorrType = PointSourceDistanceCorrections.NONE;

@@ -167,7 +167,7 @@ public class DippingFaultTests {
 //		boolean randDAS = false;
 //		int numRand = 1;
 		
-		PointSourceDistanceCorrection distCorr = PointSourceDistanceCorrections.FIVE_POINT_SPINNING_DIST_ALONG.get();
+		PointSourceDistanceCorrection distCorr = PointSourceDistanceCorrections.FIVE_POINT_SPINNING_DIST.get();
 		boolean randDD = true;
 		boolean randDAS = true;
 		int numRand = 11;

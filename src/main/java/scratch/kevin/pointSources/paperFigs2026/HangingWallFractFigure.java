@@ -24,12 +24,15 @@ import org.opensha.sha.faultSurface.RectangularSurface;
 import org.opensha.sha.faultSurface.utils.PointSurfaceBuilder;
 import org.opensha.sha.util.FocalMech;
 
+import com.google.common.base.Preconditions;
+
 import net.mahdilamb.colormap.Colors;
 
 public class HangingWallFractFigure {
 
 	public static void main(String[] args) throws IOException {
-		File outputDir = new File("C:\\Users\\kmilner\\Downloads");
+		File outputDir = new File(ConstantsAndSettings.FIGURES_DIR, "hw_fract");
+		Preconditions.checkState(outputDir.exists() || outputDir.mkdir());
 		
 		EvenlyDiscretizedFunc distances = new EvenlyDiscretizedFunc(0d, 100d, 101);
 		

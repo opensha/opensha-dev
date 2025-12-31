@@ -1,6 +1,6 @@
 package scratch.kevin.pointSources.paperFigs2026;
 
-import static scratch.kevin.pointSources.paperFigs2026.CalcPaths.*;
+import static scratch.kevin.pointSources.paperFigs2026.ConstantsAndSettings.*;
 
 import java.awt.Color;
 import java.io.BufferedReader;
@@ -38,7 +38,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.primitives.Doubles;
 
 import scratch.kevin.latex.LaTeXUtils;
-import scratch.kevin.pointSources.paperFigs2026.CalcPaths.Models;
+import scratch.kevin.pointSources.paperFigs2026.ConstantsAndSettings.Models;
 
 public class HazardMapFigures {
 
@@ -59,46 +59,59 @@ public class HazardMapFigures {
 		Map<Models, List<Models>> comparisons = new HashMap<>();
 		
 		Models[] models = Models.values();
+		Models prevModel = null;
 		for (Models model : models) {
-			if (model != REF_MODEL) {
-				List<Models> comps = new ArrayList<>();
-				comps.add(REF_MODEL);
-				comparisons.put(model, comps);
+			if (model != REF_FINITE_MODEL && model.ordinal() <= PROPOSED_DIST_CORR_MODEL.ordinal())
+				// this is a distance correction/point surface representation test
+				// include a comparison with our reference model
+				compAdd(comparisons, model, REF_FINITE_MODEL);
+			if (model.ordinal() > PROPOSED_DIST_CORR_MODEL.ordinal()) {
+				// this is a further grid property test
+				// include a reference with original grid props, but proposed dist corr
+				compAdd(comparisons, model, PROPOSED_DIST_CORR_MODEL);
+				if (prevModel != PROPOSED_DIST_CORR_MODEL)
+					// also add the incremental change from just this compared to the previous
+					compAdd(comparisons, model, prevModel);
 			}
+			prevModel = model;
 		}
 		
-		// + improved Rrup and Rx
-		compAdd(comparisons, Models.SPINNING_AVG_M6, Models.AS_PUBLISHED);
-		// + lower magnitude-threshold
-		compAdd(comparisons, Models.SPINNING_AVG, Models.SPINNING_AVG_M6);
-		// + uncentered
-		compAdd(comparisons, Models.SPINNING_AVG_UNCENTERED, Models.SPINNING_AVG);
-
-		// effect of multiple realizations
-		compAdd(comparisons, Models.FINITE_20X_CENTERED, Models.SPINNING_AVG);
-		// effect of uncentering
-		compAdd(comparisons, Models.FINITE_20X_UNCENTERED, Models.FINITE_20X_CENTERED);
+		// published vs full proposed
+		compAdd(comparisons, Models.AS_PUBLISHED, PROPOSED_FULL_MODEL);
 		
-		// new model vs higher resolution
-		compAdd(comparisons, Models.SPINNING_DIST_5X_UNCENTERED, Models.FINITE_50X_UNCENTERED);
-		compAdd(comparisons, Models.SPINNING_DIST_5X_UNCENTERED, Models.FINITE_100X_UNCENTERED);
+		// alt random and realization count tests
+		compAdd(comparisons, Models.FINITE_1X_UNCENTERED, Models.FINITE_1X_UNCENTERED_ALT_RAND);
+		compAdd(comparisons, Models.FINITE_2X_UNCENTERED, Models.FINITE_2X_UNCENTERED_ALT_RAND);
+		compAdd(comparisons, Models.FINITE_20X_UNCENTERED, Models.FINITE_100X_UNCENTERED);
 		
-		// alt random tests
-		compAdd(comparisons, Models.FINITE_1X_UNCENTERED, Models.FINITE_1X_UNCENTERED_ALT);
-		compAdd(comparisons, Models.FINITE_2X_UNCENTERED, Models.FINITE_2X_UNCENTERED_ALT);
-		
-		// modeling choice comparisons
-		// M3 vs M4
-		compAdd(comparisons, Models.SPINNING_DIST_5X_UNCENTERED_M3, Models.SPINNING_DIST_5X_UNCENTERED_M4);
-		compAdd(comparisons, Models.SPINNING_DIST_5X_UNCENTERED_M3, Models.SPINNING_DIST_5X_UNCENTERED);
-		// M4 vs M5
-		compAdd(comparisons, Models.SPINNING_DIST_5X_UNCENTERED_M4, Models.SPINNING_DIST_5X_UNCENTERED);
-		// alt depth profile (interpolated, not shelved)
-		compAdd(comparisons, Models.SPINNING_DIST_5X_UNCENTERED_ALT_DEPTH, Models.SPINNING_DIST_5X_UNCENTERED);
-		// alt WC94 lengths
-		compAdd(comparisons, Models.SPINNING_DIST_5X_UNCENTERED_ALT_LENGTH, Models.SPINNING_DIST_5X_UNCENTERED);
-		// no SS
-		compAdd(comparisons, Models.SPINNING_DIST_5X_UNCENTERED_NO_SS, Models.SPINNING_DIST_5X_UNCENTERED);
+//		// + improved Rrup and Rx
+//		compAdd(comparisons, Models.SPINNING_AVG_M6, Models.AS_PUBLISHED);
+//		// + lower magnitude-threshold
+//		compAdd(comparisons, Models.SPINNING_AVG, Models.SPINNING_AVG_M6);
+//		// + uncentered
+//		compAdd(comparisons, Models.SPINNING_AVG_UNCENTERED, Models.SPINNING_AVG);
+//
+//		// effect of multiple realizations
+//		compAdd(comparisons, Models.FINITE_20X_CENTERED, Models.SPINNING_AVG);
+//		// effect of uncentering
+//		compAdd(comparisons, Models.FINITE_20X_UNCENTERED, Models.FINITE_20X_CENTERED);
+//		
+//		// new model vs higher resolution
+//		compAdd(comparisons, Models.SPINNING_DIST_5X_UNCENTERED, Models.FINITE_50X_UNCENTERED);
+//		compAdd(comparisons, Models.SPINNING_DIST_5X_UNCENTERED, Models.FINITE_100X_UNCENTERED);
+//		
+//		// modeling choice comparisons
+//		// M3 vs M4
+//		compAdd(comparisons, Models.SPINNING_DIST_5X_UNCENTERED_M3, Models.SPINNING_DIST_5X_UNCENTERED_M4);
+//		compAdd(comparisons, Models.SPINNING_DIST_5X_UNCENTERED_M3, Models.SPINNING_DIST_5X_UNCENTERED);
+//		// M4 vs M5
+//		compAdd(comparisons, Models.SPINNING_DIST_5X_UNCENTERED_M4, Models.SPINNING_DIST_5X_UNCENTERED);
+//		// alt depth profile (interpolated, not shelved)
+//		compAdd(comparisons, Models.SPINNING_DIST_5X_UNCENTERED_ALT_DEPTH, Models.SPINNING_DIST_5X_UNCENTERED);
+//		// alt WC94 lengths
+//		compAdd(comparisons, Models.SPINNING_DIST_5X_UNCENTERED_ALT_LENGTH, Models.SPINNING_DIST_5X_UNCENTERED);
+//		// no SS
+//		compAdd(comparisons, Models.SPINNING_DIST_5X_UNCENTERED_NO_SS, Models.SPINNING_DIST_5X_UNCENTERED);
 		
 		ZipFile[] modelZips = new ZipFile[models.length];
 		ZipFile[] modelZoomZips = new ZipFile[models.length];
@@ -272,7 +285,7 @@ public class HazardMapFigures {
 								texFW.write(LaTeXUtils.defineValueCommand(texPrefix+"MedianAbs", twoDigitsDF.format(medianAbs)+"%")+"\n");
 								texFW.write(LaTeXUtils.defineValueCommand(texPrefix+"Max", twoDigitsDF.format(maxSigned)+"%")+"\n");
 								
-								if (model == Models.AS_PUBLISHED && comp == REF_MODEL) {
+								if (model == Models.AS_PUBLISHED && comp == REF_FINITE_MODEL) {
 									// add extra rounded values
 									texFW.write(LaTeXUtils.defineValueCommand(texPrefix+"MeanRounded", roundedDF.format(mean)+"%")+"\n");
 									texFW.write(LaTeXUtils.defineValueCommand(texPrefix+"MeanAbsRounded", roundedDF.format(meanAbs)+"%")+"\n");

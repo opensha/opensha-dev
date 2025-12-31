@@ -283,7 +283,7 @@ public class PointSourceHazardComparison {
 				return buildFiniteRectSource(builder, mfd, aveRake, aveDip, isSupersample ? 5 : 20);
 			}
 		},
-		AVERAGE("Spinning Average", "Average", false, PointSourceDistanceCorrections.AVERAGE_SPINNING) {
+		AVERAGE("Spinning Average", "Average", false, PointSourceDistanceCorrections.AVERAGE_SPINNING_CENTERED) {
 			@Override
 			public ProbEqkSource buildSource(Location centerLoc, IncrementalMagFreqDist mfd, double aveRake,
 					double aveDip, boolean isSupersample, Random r) {
@@ -292,7 +292,7 @@ public class PointSourceHazardComparison {
 						new NSHM23_WUS_FiniteRuptureConverter());
 			}
 		},
-		AVERAGE_ALONG("Spinning Average (sample along)", "Average (sample along)", false, PointSourceDistanceCorrections.AVERAGE_SPINNING_ALONG) {
+		AVERAGE_ALONG("Spinning Average (sample along)", "Average (sample along)", false, PointSourceDistanceCorrections.AVERAGE_SPINNING) {
 			@Override
 			public ProbEqkSource buildSource(Location centerLoc, IncrementalMagFreqDist mfd, double aveRake,
 					double aveDip, boolean isSupersample, Random r) {
@@ -301,7 +301,7 @@ public class PointSourceHazardComparison {
 						new NSHM23_WUS_FiniteRuptureConverter());
 			}
 		},
-		FIVE_POINT_DIST("5-pt Distribution", "5-pt dist", false, PointSourceDistanceCorrections.FIVE_POINT_SPINNING_DIST) {
+		FIVE_POINT_DIST("5-pt Distribution", "5-pt dist", false, PointSourceDistanceCorrections.FIVE_POINT_SPINNING_DIST_CENTERED) {
 			@Override
 			public ProbEqkSource buildSource(Location centerLoc, IncrementalMagFreqDist mfd, double aveRake,
 					double aveDip, boolean isSupersample, Random r) {
@@ -310,7 +310,7 @@ public class PointSourceHazardComparison {
 						new NSHM23_WUS_FiniteRuptureConverter());
 			}
 		},
-		FIVE_POINT_DIST_ALONG("5-pt Distribution (sample along)", "5-pt dist (sample along)", false, PointSourceDistanceCorrections.FIVE_POINT_SPINNING_DIST_ALONG) {
+		FIVE_POINT_DIST_ALONG("5-pt Distribution (sample along)", "5-pt dist (sample along)", false, PointSourceDistanceCorrections.FIVE_POINT_SPINNING_DIST) {
 			@Override
 			public ProbEqkSource buildSource(Location centerLoc, IncrementalMagFreqDist mfd, double aveRake,
 					double aveDip, boolean isSupersample, Random r) {
@@ -319,7 +319,7 @@ public class PointSourceHazardComparison {
 						new NSHM23_WUS_FiniteRuptureConverter());
 			}
 		},
-		FIVE_POINT_DIST_ALONG_BETTER_DEPTHS("5-pt Distribution (sample along) better depths", "5-pt dist (sample along, better depths)", false, PointSourceDistanceCorrections.FIVE_POINT_SPINNING_DIST_ALONG) {
+		FIVE_POINT_DIST_ALONG_BETTER_DEPTHS("5-pt Distribution (sample along) better depths", "5-pt dist (sample along, better depths)", false, PointSourceDistanceCorrections.FIVE_POINT_SPINNING_DIST) {
 			@Override
 			public ProbEqkSource buildSource(Location centerLoc, IncrementalMagFreqDist mfd, double aveRake,
 					double aveDip, boolean isSupersample, Random r) {
@@ -328,7 +328,7 @@ public class PointSourceHazardComparison {
 						new NSHMFiveCentRuptureConverter());
 			}
 		},
-		TWENTY_POINT_DIST("20-pt Distribution", "20-pt dist", false, PointSourceDistanceCorrections.TWENTY_POINT_SPINNING_DIST) {
+		TWENTY_POINT_DIST("20-pt Distribution", "20-pt dist", false, PointSourceDistanceCorrections.TWENTY_POINT_SPINNING_DIST_CENTERED) {
 			@Override
 			public ProbEqkSource buildSource(Location centerLoc, IncrementalMagFreqDist mfd, double aveRake,
 					double aveDip, boolean isSupersample, Random r) {
@@ -337,7 +337,7 @@ public class PointSourceHazardComparison {
 						new NSHM23_WUS_FiniteRuptureConverter());
 			}
 		},
-		TWENTY_POINT_DIST_ALONG("20-pt Distribution (sample along)", "20-pt dist (sample along)", false, PointSourceDistanceCorrections.TWENTY_POINT_SPINNING_DIST_ALONG) {
+		TWENTY_POINT_DIST_ALONG("20-pt Distribution (sample along)", "20-pt dist (sample along)", false, PointSourceDistanceCorrections.TWENTY_POINT_SPINNING_DIST) {
 			@Override
 			public ProbEqkSource buildSource(Location centerLoc, IncrementalMagFreqDist mfd, double aveRake,
 					double aveDip, boolean isSupersample, Random r) {
