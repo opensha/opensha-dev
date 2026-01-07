@@ -35,6 +35,8 @@ import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_FaultM
 import org.opensha.sha.faultSurface.FaultSection;
 
 import com.google.common.base.Preconditions;
+import com.google.common.collect.HashBasedTable;
+import com.google.common.collect.Table;
 import com.google.common.primitives.Doubles;
 
 import scratch.kevin.latex.LaTeXUtils;
@@ -58,6 +60,8 @@ public class HazardMapFigures {
 		
 		Map<Models, List<Models>> comparisons = new HashMap<>();
 		
+		Table<Models, Models, String> compLabels = HashBasedTable.create();
+		
 		Models[] models = Models.values();
 		Models prevModel = null;
 		for (Models model : models) {
@@ -65,11 +69,11 @@ public class HazardMapFigures {
 				// this is a distance correction/point surface representation test
 				// include a comparison with our reference model
 				compAdd(comparisons, model, REF_FINITE_MODEL);
-			if (model.ordinal() > PROPOSED_DIST_CORR_MODEL.ordinal()) {
+			if (model.ordinal() >= PROPOSED_DIST_CORR_MODEL.ordinal()) {
 				// this is a further grid property test
 				// include a reference with original grid props, but proposed dist corr
-				compAdd(comparisons, model, PROPOSED_DIST_CORR_MODEL);
-				if (prevModel != PROPOSED_DIST_CORR_MODEL)
+				compAdd(comparisons, model, PROPOSED_FULL_MODEL);
+				if (prevModel != PROPOSED_FULL_MODEL)
 					// also add the incremental change from just this compared to the previous
 					compAdd(comparisons, model, prevModel);
 			}
@@ -83,6 +87,11 @@ public class HazardMapFigures {
 		compAdd(comparisons, Models.FINITE_1X_UNCENTERED, Models.FINITE_1X_UNCENTERED_ALT_RAND);
 		compAdd(comparisons, Models.FINITE_2X_UNCENTERED, Models.FINITE_2X_UNCENTERED_ALT_RAND);
 		compAdd(comparisons, Models.FINITE_20X_UNCENTERED, Models.FINITE_100X_UNCENTERED);
+		
+		compAdd(comparisons, PROPOSED_DIST_CORR_MODEL, Models.AS_PUBLISHED);
+		compLabels.put(PROPOSED_DIST_CORR_MODEL, Models.AS_PUBLISHED, "Proposed corrections");
+		compAdd(comparisons, PROPOSED_FULL_MODEL, Models.AS_PUBLISHED);
+		compLabels.put(PROPOSED_FULL_MODEL, Models.AS_PUBLISHED, "Proposed properties & corrections");
 		
 //		// + improved Rrup and Rx
 //		compAdd(comparisons, Models.SPINNING_AVG_M6, Models.AS_PUBLISHED);
@@ -255,15 +264,17 @@ public class HazardMapFigures {
 							CPT cpt = Math.abs(maxSigned) > maxForTight ? pDiffCPT : pDiffTightCPT;
 							
 //							System.out.println("\t\t"+stats);
-							System.out.println("\t\tmean="+twoDigitsDF.format(mean)
-								+"%;\tmeanAbs="+twoDigitsDF.format(meanAbs)
-								+"%;\tmedianAbs="+twoDigitsDF.format(medianAbs)
-								+"%;\tmaxSigned="+twoDigitsDF.format(maxSigned)+"%");
+							System.out.println("\t\tmean="+twoDF.format(mean)
+								+"%;\tmeanAbs="+twoDF.format(meanAbs)
+								+"%;\tmedianAbs="+twoDF.format(medianAbs)
+								+"%;\tmaxSigned="+twoDF.format(maxSigned)+"%");
 							
 							if (plotMaps) {
 								String prefix = model.name()+"_vs_"+comp.name();
 //								String label = model.getName()+" vs "+comp.getName()+", "+mapDiffLabel;
 								String label = mapDiffLabel;
+								if (compLabels.contains(model, comp))
+									label = compLabels.get(model, comp)+", "+label;
 								
 								if (replot || !new File(mapCompDir, prefix+".pdf").exists()) {
 									mapMaker.plotXYZData(pDiff, cpt, label);
@@ -275,17 +286,17 @@ public class HazardMapFigures {
 								}
 							}
 							
-							compCSV.addLine(model.getName(), comp.getName(), twoDigitsDF.format(mean)+"%",
-									twoDigitsDF.format(meanAbs)+"%", twoDigitsDF.format(medianAbs)+"%", twoDigitsDF.format(maxSigned)+"%");
+							compCSV.addLine(model.getName(), comp.getName(), twoDF.format(mean)+"%",
+									twoDF.format(meanAbs)+"%", twoDF.format(medianAbs)+"%", twoDF.format(maxSigned)+"%");
 							
 							if (texFW != null) {
 								String texPrefix = model.texName+"Vs"+comp.texName+perTexPrefix;
-								texFW.write(LaTeXUtils.defineValueCommand(texPrefix+"Mean", twoDigitsDF.format(mean)+"%")+"\n");
-								texFW.write(LaTeXUtils.defineValueCommand(texPrefix+"MeanAbs", twoDigitsDF.format(meanAbs)+"%")+"\n");
-								texFW.write(LaTeXUtils.defineValueCommand(texPrefix+"MedianAbs", twoDigitsDF.format(medianAbs)+"%")+"\n");
-								texFW.write(LaTeXUtils.defineValueCommand(texPrefix+"Max", twoDigitsDF.format(maxSigned)+"%")+"\n");
+								texFW.write(LaTeXUtils.defineValueCommand(texPrefix+"Mean", oneDF.format(mean)+"%")+"\n");
+								texFW.write(LaTeXUtils.defineValueCommand(texPrefix+"MeanAbs", oneDF.format(meanAbs)+"%")+"\n");
+								texFW.write(LaTeXUtils.defineValueCommand(texPrefix+"MedianAbs", oneDF.format(medianAbs)+"%")+"\n");
+								texFW.write(LaTeXUtils.defineValueCommand(texPrefix+"Max", oneDF.format(maxSigned)+"%")+"\n");
 								
-								if (model == Models.AS_PUBLISHED && comp == REF_FINITE_MODEL) {
+								if (model == Models.AS_PUBLISHED && (comp == REF_FINITE_MODEL || comp == PROPOSED_FULL_MODEL)) {
 									// add extra rounded values
 									texFW.write(LaTeXUtils.defineValueCommand(texPrefix+"MeanRounded", roundedDF.format(mean)+"%")+"\n");
 									texFW.write(LaTeXUtils.defineValueCommand(texPrefix+"MeanAbsRounded", roundedDF.format(meanAbs)+"%")+"\n");
@@ -356,7 +367,8 @@ public class HazardMapFigures {
 	}
 
 	private static DecimalFormat roundedDF = new DecimalFormat("0");
-	private static DecimalFormat twoDigitsDF = new DecimalFormat("0.00");
+	private static DecimalFormat oneDF = new DecimalFormat("0.0");
+	private static DecimalFormat twoDF = new DecimalFormat("0.00");
 	
 	private static class DiffStats {
 		
@@ -399,7 +411,7 @@ public class HazardMapFigures {
 		}
 		
 		public String toString() {
-			return "mean="+twoDigitsDF.format(mean)+"%;\tmeanAbs="+twoDigitsDF.format(meanAbs)+"%;\tmaxSigned="+twoDigitsDF.format(maxSigned)+"%";
+			return "mean="+twoDF.format(mean)+"%;\tmeanAbs="+twoDF.format(meanAbs)+"%;\tmaxSigned="+twoDF.format(maxSigned)+"%";
 		}
 	}
 	
@@ -409,7 +421,8 @@ public class HazardMapFigures {
 			comps = new ArrayList<>(1);
 			comparisons.put(from, comps);
 		}
-		comps.add(to);
+		if (!comps.contains(to))
+			comps.add(to);
 	}
 
 }

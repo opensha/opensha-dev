@@ -2,6 +2,7 @@ package scratch.kevin.pointSources.paperFigs2026;
 
 import java.awt.Color;
 import java.awt.Font;
+import java.awt.geom.Path2D;
 import java.awt.geom.Point2D;
 import java.io.File;
 import java.io.FileWriter;
@@ -16,14 +17,16 @@ import java.util.function.Supplier;
 
 import org.apache.commons.math3.stat.StatUtils;
 import org.apache.commons.math3.util.Precision;
+import org.jfree.chart.annotations.XYAnnotation;
 import org.jfree.chart.annotations.XYTextAnnotation;
 import org.jfree.chart.plot.CombinedDomainXYPlot;
+import org.jfree.chart.plot.DatasetRenderingOrder;
 import org.jfree.chart.plot.XYPlot;
 import org.jfree.chart.ui.RectangleAnchor;
 import org.jfree.chart.ui.TextAnchor;
 import org.jfree.data.Range;
 import org.opensha.commons.calc.magScalingRelations.MagLengthRelationship;
-import org.opensha.commons.calc.magScalingRelations.magScalingRelImpl.Leonard2010_MagLengthRelationship;
+import org.opensha.commons.calc.magScalingRelations.magScalingRelImpl.WC1994_MagLengthRelationship;
 import org.opensha.commons.data.Site;
 import org.opensha.commons.data.WeightedList;
 import org.opensha.commons.data.WeightedValue;
@@ -44,6 +47,7 @@ import org.opensha.commons.gui.plot.PlotSpec;
 import org.opensha.commons.gui.plot.PlotSymbol;
 import org.opensha.commons.gui.plot.PlotUtils;
 import org.opensha.commons.util.DataUtils.MinMaxAveTracker;
+import org.opensha.commons.util.cpt.CPT;
 import org.opensha.sha.calc.RuptureExceedProbCalculator;
 import org.opensha.sha.earthquake.EqkRupture;
 import org.opensha.sha.faultSurface.PointSurface;
@@ -104,14 +108,16 @@ public class SpinningFaultExceedanceFigures {
 		switch (mech) {
 		case STRIKE_SLIP:
 			mag = 7.05d;
-			ml = Leonard2010_MagLengthRelationship.STRIKE_SLIP;
+			ml = new WC1994_MagLengthRelationship();
+//			ml = Leonard2010_MagLengthRelationship.STRIKE_SLIP;
 			prefix = "m7_ss";
 			label = "M7.05, Strike-Slip";
 			texLabel = "MSevenSS";
 			break;
 		case REVERSE:
 			mag = 7.05d;
-			ml = Leonard2010_MagLengthRelationship.DIP_SLIP;
+			ml = new WC1994_MagLengthRelationship();
+//			ml = Leonard2010_MagLengthRelationship.DIP_SLIP;
 			prefix = "m7_rev";
 			label = "M7.05, Reverse";
 			texLabel = "MSevenRev";
@@ -157,6 +163,7 @@ public class SpinningFaultExceedanceFigures {
 		int numCenteredCalcSurfs = 36000;
 		int numUncenteredCalcSurfs = numCenteredCalcSurfs*100;
 		int numPlotSurfs = 36;
+		int outlineMapSurfCount = 360*2;
 		EvenlyDiscretizedFunc log10DiscrXVals =  new EvenlyDiscretizedFunc(Math.log10(imlRange.getLowerBound()),
 				Math.log10(imlRange.getUpperBound()), 100);
 		DiscretizedFunc xVals = new ArbitrarilyDiscretizedFunc();
@@ -170,34 +177,34 @@ public class SpinningFaultExceedanceFigures {
 		
 		List<PointSourceDistanceCorrection> corrs = new ArrayList<>();
 		List<String> corrLabels = new ArrayList<>();
-		List<Color> corrColors = new ArrayList<>();
+		List<PlotCurveCharacterstics> corrChars = new ArrayList<>();
 		
 		PointSourceDistanceCorrection nshm23Corr = PointSourceDistanceCorrections.NSHM_2013.get();
-		String nshm23Name = "NSHM23 As Published";
+		String nshm23Name = "NSHM23 as-published";
 		PointSourceDistanceCorrection averageCorr = PointSourceDistanceCorrections.AVERAGE_SPINNING_CENTERED.get();
-		String averageName = "Average Centered";
+		String averageName = "Average centered";
 		DistanceDistributionCorrection proposedCorr = (DistanceDistributionCorrection)
 				PointSourceDistanceCorrections.FIVE_POINT_SPINNING_DIST.get();
 		
+		float avgThickness = 4f;
+		
 		corrs.add(nshm23Corr);
 		corrLabels.add(nshm23Name);
-		corrColors.add(Colors.tab_brown);
+		corrChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, avgThickness, Colors.tab_brown));
 		
 		corrs.add(averageCorr);
-		corrLabels.add(averageName+" Correction");
-		corrColors.add(Colors.tab_orange);
+		corrLabels.add(averageName+" correction");
+		corrChars.add(new PlotCurveCharacterstics(PlotLineType.DASHED, avgThickness, Colors.tab_orange));
 		
 		corrs.add(PointSourceDistanceCorrections.FIVE_POINT_SPINNING_DIST.get());
-		corrLabels.add("Proposed Correction");
-		corrColors.add(Colors.tab_purple);
+		corrLabels.add("Proposed correction");
+		corrChars.add(new PlotCurveCharacterstics(PlotLineType.DASHED, avgThickness, Colors.tab_purple));
 		
 		Location gridLoc = new Location(0d, 0d);
 		
+		System.out.println("Grid location: "+gridLoc);
+		
 		EqkRupture rup = new EqkRupture(mag, rake, null, null);
-
-		DecimalFormat oDF = new DecimalFormat("0.#");
-		DecimalFormat oneDF = new DecimalFormat("0.0");
-		DecimalFormat twoDF = new DecimalFormat("0.00");
 		
 		String imlAxisLabel;
 		String perPrefix;
@@ -216,11 +223,42 @@ public class SpinningFaultExceedanceFigures {
 		surfBuilder.fractionalDAS(0.5d);
 		surfBuilder.fractionalHypocentralDepth(0.5d);
 		PointSurface ptSurf = surfBuilder.buildPointSurface();
+		
+		texFW.write("% Rupture properties\n");
+		texFW.write(LaTeXUtils.defineValueCommand(texLabel+"Length", oDF.format(length))+"\n");
+		texFW.write(LaTeXUtils.defineValueCommand(texLabel+"Dip", oDF.format(dip))+"\n");
+		texFW.write(LaTeXUtils.defineValueCommand(texLabel+"Ztor", oDF.format(upperDepth))+"\n");
+		texFW.write(LaTeXUtils.defineValueCommand(texLabel+"Zbot", oDF.format(lowerDepth))+"\n");
+		texFW.write(LaTeXUtils.defineValueCommand(texLabel+"DDW", oDF.format(ptSurf.getAveWidth()))+"\n");
+		texFW.write(LaTeXUtils.defineValueCommand(texLabel+"HorzWidth", oDF.format(ptSurf.getAveHorizontalWidth()))+"\n");
+		texFW.write("\n");
+		
 		RectangularSurface[] centeredCalcSurfs = surfBuilder.buildRandRectSurfaces(numCenteredCalcSurfs);
 		RectangularSurface[] plotSurfs = surfBuilder.buildRandRectSurfaces(numPlotSurfs);
+		RectangularSurface[] centeredMapOutlineSurfs = surfBuilder.buildRandRectSurfaces(outlineMapSurfCount);
 		
 		surfBuilder.sampleDASs().sampleHypocentralDepths();
 		RectangularSurface[] uncenteredCalcSurfs = surfBuilder.buildRandRectSurfaces(numUncenteredCalcSurfs);
+		
+		surfBuilder.das(0d).fractionalHypocentralDepth(0.5);
+		RectangularSurface[] extremeUncenteredSurfs = surfBuilder.buildRandRectSurfaces(outlineMapSurfCount);
+		
+		// examples
+		surfBuilder.fractionalDAS(0.5).fractionalHypocentralDepth(0.5);
+		RectangularSurface[] centeredExampleSurfs;
+		if (mech == FocalMech.STRIKE_SLIP) {
+			centeredExampleSurfs = surfBuilder.buildRandRectSurfaces(9);
+		} else {
+			centeredExampleSurfs = new RectangularSurface[] {
+					surfBuilder.strike(-45d).buildRectSurface(),
+					surfBuilder.strike(45d).buildRectSurface(),
+			};
+		}
+		
+		surfBuilder.das(10d).hypocentralDepth(5d).strike(-15);
+		texFW.write(LaTeXUtils.defineValueCommand(texLabel+"UncenteredExampleDAS", "10")+"\n");
+		texFW.write(LaTeXUtils.defineValueCommand(texLabel+"UncenteredExampleZHyp", "5")+"\n");
+		RectangularSurface uncenteredExampleSurf = surfBuilder.buildRectSurface();
 		
 		ScalarIMR gmm0 = gmmRef.get();
 		
@@ -229,6 +267,8 @@ public class SpinningFaultExceedanceFigures {
 			double distance = distances[d];
 			System.out.println("Calculating for "+distance+" km");
 			Location siteLoc = LocationUtils.location(gridLoc, 0d, distance);
+			
+			System.out.println("\tSite location: "+siteLoc);
 			
 			Site site = new Site(siteLoc);
 			site.addParameterList(gmm0.getSiteParams());
@@ -266,7 +306,7 @@ public class SpinningFaultExceedanceFigures {
 			
 			XY_DataSet fakeMinMax = new DefaultXY_DataSet();
 			fakeMinMax.set(1e-10, 2000);
-			fakeMinMax.setName("Uncentered Range");
+			fakeMinMax.setName("Uncentered range");
 			Color polyColor = new Color(0, 0, 0, 40);
 			funcs.add(fakeMinMax);
 			chars.add(new PlotCurveCharacterstics(PlotSymbol.FILLED_SQUARE, 4f, polyColor));
@@ -277,7 +317,7 @@ public class SpinningFaultExceedanceFigures {
 				for (int i=0; i<plotSurfs.length; i++) {
 					DiscretizedFunc func = plotExceedProbs[i];
 					if (i == 0)
-						func.setName("Centered Individual");
+						func.setName("Centered individual");
 					funcs.add(func);
 					chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, Color.GRAY));
 				}
@@ -305,15 +345,13 @@ public class SpinningFaultExceedanceFigures {
 //				}
 //			}
 			
-			float avgThickness = 4f;
-			
 			DiscretizedFunc centeredAvg = average(centeredExceedProbs);
-			centeredAvg.setName("Centered Average");
+			centeredAvg.setName("Centered average");
 			funcs.add(centeredAvg);
 			chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, avgThickness, Colors.tab_blue));
 			
 			DiscretizedFunc uncenteredAvg = average(uncenteredExceedProbs);
-			uncenteredAvg.setName("Uncentered Average");
+			uncenteredAvg.setName("Uncentered average");
 			funcs.add(uncenteredAvg);
 			chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, avgThickness, Color.BLACK));
 			
@@ -324,7 +362,7 @@ public class SpinningFaultExceedanceFigures {
 						siteLoc, ptSurf, TectonicRegionType.ACTIVE_SHALLOW, mag, distance);
 				System.out.println("Distances for "+corr);
 				for (WeightedValue<SurfaceDistances> corrDist : corrDists)
-					System.out.println("\tweight="+oDF.format(corrDist.weight)+"; "+corrDist.value);
+					System.out.println("\tweight="+(float)corrDist.weight+"; "+corrDist.value);
 				
 				// calculate distance corrected
 				rup.setRuptureSurface(ptSurf.getDistancedProtected(corr, TectonicRegionType.ACTIVE_SHALLOW, mag));
@@ -334,7 +372,7 @@ public class SpinningFaultExceedanceFigures {
 					corrExceedProbs.set(xVals.getX(i), logXVals.getY(i));
 				corrExceedProbs.setName(corrLabels.get(c));
 				funcs.add(corrExceedProbs);
-				chars.add(new PlotCurveCharacterstics(PlotLineType.DASHED, avgThickness, corrColors.get(c)));
+				chars.add(corrChars.get(c));
 			}
 			
 			PlotSpec plot = new PlotSpec(funcs, chars, label, imlAxisLabel, "Exceedance Probability");
@@ -391,6 +429,90 @@ public class SpinningFaultExceedanceFigures {
 			funcs.add(uncenteredPoly);
 			chars.add(new PlotCurveCharacterstics(PlotLineType.POLYGON_SOLID, 1f, polyColor));
 //			chars.add(new PlotCurveCharacterstics(PlotSymbol.FILLED_CIRCLE, 3f, Color.GRAY));
+			
+			// failed experiment: contours
+//			if (mech != FocalMech.STRIKE_SLIP) {
+//				Path2D poly2d = buildPolygon(uncenteredPoly);
+//				EvenlyDiscretizedFunc distGridding = new EvenlyDiscretizedFunc(distRange.getLowerBound(), distRange.getUpperBound(), 50);
+//				EvenlyDiscrXYZ_DataSet uncenteredInterpXYZ = new EvenlyDiscrXYZ_DataSet(
+//						distGridding.size(), distGridding.size(), distGridding.getMinX(), distGridding.getMinX(),
+//						distGridding.getDelta());
+//				// mask outside of our polygon
+//				for (int i=0; i<uncenteredInterpXYZ.size(); i++)
+//					if (!poly2d.contains(uncenteredInterpXYZ.getPoint(i)))
+//						uncenteredInterpXYZ.set(i, Double.NaN);
+//				// interpolate
+//				System.out.println("Interpolating Rrup vs Rjb data");
+//				ScatterInterpolator.interpolateXYDensity(uncenteredRupVsJB, uncenteredInterpXYZ, 1, 1d, 0);
+//				// set NaNs to zero
+//				for (int i=0; i<uncenteredInterpXYZ.size(); i++)
+//					if (Double.isNaN(uncenteredInterpXYZ.get(i)))
+//						uncenteredInterpXYZ.set(i, 0d);
+//				uncenteredInterpXYZ.scale(1d/uncenteredInterpXYZ.getSumZ());
+//				System.out.println("Interpolated data:");
+//				for (int y=uncenteredInterpXYZ.getNumY(); --y>=0;) {
+//					for (int x=0; x<uncenteredInterpXYZ.getNumX(); x++)
+//						System.out.print(" "+(float)uncenteredInterpXYZ.get(x, y));
+//					System.out.println();
+//				}
+//				
+////				EvenlyDiscretizedFunc interpLevels = HistogramFunction.getEncompassingHistogram(
+////						0.01, uncenteredInterpXYZ.getMaxZ()*0.9, uncenteredInterpXYZ.getMaxZ()*0.9/5d);
+////				double[] levels = new double[interpLevels.size()];
+////				for (int i=0; i<levels.length; i++)
+////					levels[i] = interpLevels.getX(i);
+////				
+////				System.out.println("Contour levels:");
+////				for (double level : levels)
+////					System.out.print(" "+(float)level);
+////				System.out.println();
+////				double[] levels = { 0.01d, 0.05d, 0.1d };
+//				EvenlyDiscretizedFunc invCDF = new EvenlyDiscretizedFunc(-10d, 0d, 100); // log10 units
+//				for (int i=0; i<uncenteredInterpXYZ.size(); i++) {
+//					double z = uncenteredInterpXYZ.get(i);
+//					if (z > 0) {
+//						double logZ = Math.log10(z);
+//						for (int j=0; j<invCDF.size(); j++) {
+//							if (logZ >= invCDF.getX(j))
+//								invCDF.add(j, z);
+//							else
+//								break;
+//						}
+//					}
+//				}
+//				for (int i=0; i<invCDF.size(); i++)
+//					invCDF.set(i, 1d - invCDF.getY(i));
+//				System.out.println("Inv CDF:\n"+invCDF);
+//				double[] massFracts = {0.05, 0.1, 0.2, 0.5};
+//				List<Double> levels = new ArrayList<>();
+//				System.out.println("Contour levels:");
+//				for (double massFract : massFracts) {
+//					if (massFract < invCDF.getY(0) || massFract > invCDF.getY(invCDF.size()-1))
+//						continue;
+//					double level = Math.pow(10, invCDF.getFirstInterpolatedX(massFract));
+//					System.out.println("\t"+(float)massFract+" -> "+(float)level);
+//					levels.add(level);
+//				}
+//				
+//				if (!levels.isEmpty()) {
+//					System.out.println("Contouring Rrup vs Rjb data");
+//					Map<Double, List<XY_DataSet>> contours = XYZContourGenerator.contours(uncenteredInterpXYZ, Doubles.toArray(levels), false);
+//					List<Double> contourLevels = new ArrayList<>(contours.keySet());
+//					Collections.sort(contourLevels);
+//					PlotCurveCharacterstics contourChar = new PlotCurveCharacterstics(PlotLineType.POLYGON_SOLID, 1f, transColor(polyColor, 40));
+//					int contourCount = 0;
+//					for (double level : contourLevels) {
+//						for (XY_DataSet contour : contours.get(level)) {
+//							if (contourCount == 0)
+//								System.out.println("Contour0:\n"+contour);
+//							contourCount++;
+//							funcs.add(contour);
+//							chars.add(contourChar);
+//						}
+//					}
+//					System.out.println("Done with "+contourCount+" contours");
+//				}
+//			}
 			
 			if (mech != FocalMech.STRIKE_SLIP) {
 				centeredRupVsJB_fw = thin(centeredRupVsJB_fw, 0.1);
@@ -468,59 +590,55 @@ public class SpinningFaultExceedanceFigures {
 					+", Rrup="+oneDF.format(nshmDists.getDistanceRup()));
 			
 			String distTexPrefix = texLabel+texDistPrefixes[d];
+			texFW.write("% "+oDF.format(distance)+"km surface distances\n");
 			texFW.write(LaTeXUtils.defineValueCommand(distTexPrefix+"NSHMJB", oneDF.format(nshmDists.getDistanceJB()))+"\n");
 			texFW.write(LaTeXUtils.defineValueCommand(distTexPrefix+"NSHMRup", oneDF.format(nshmDists.getDistanceRup()))+"\n");
 			
+			MinMaxAveTracker jbCenteredRange = calcJBRange(centeredDists);
+			MinMaxAveTracker rupCenteredRange = calcRupRange(centeredDists);
+			MinMaxAveTracker jbUncenteredRange = calcJBRange(uncenteredDists);
+			MinMaxAveTracker rupUncenteredRange = calcRupRange(uncenteredDists);
+			
+			rangeTexDefine(texFW, distTexPrefix+"CenteredJB", jbCenteredRange);
+			rangeTexDefine(texFW, distTexPrefix+"CenteredRup", rupCenteredRange);
+			rangeTexDefine(texFW, distTexPrefix+"UncenteredJB", jbUncenteredRange);
+			rangeTexDefine(texFW, distTexPrefix+"UncenteredRup", rupUncenteredRange);
 			if (mech == FocalMech.STRIKE_SLIP) {
-				MinMaxAveTracker jbRange = calcJBRange(centeredDists);
-				MinMaxAveTracker rupRange = calcRupRange(centeredDists);
-				texFW.write(LaTeXUtils.defineValueCommand(distTexPrefix+"CenteredJB", oneDF.format(jbRange.getAverage()))+"\n");
-				texFW.write(LaTeXUtils.defineValueCommand(distTexPrefix+"CenteredRup", oneDF.format(rupRange.getAverage()))+"\n");
-				distAnns.add("Centered: avg. Rjb="+oneDF.format(jbRange.getAverage())+", Rrup="+oneDF.format(rupRange.getAverage()));
+				distAnns.add("Centered: avg. Rjb="+oneDF.format(jbCenteredRange.getAverage())+", Rrup="+oneDF.format(rupCenteredRange.getAverage()));
 //				distAnns.add("  Rjb ∈ ["+oneDF.format(jbRange.getMin())+", "+oneDF.format(jbRange.getMax())+"]");
 //				distAnns.add("  Rrup ∈ ["+oneDF.format(rupRange.getMin())+", "+oneDF.format(rupRange.getMax())+"]");
-				jbRange = calcJBRange(uncenteredDists);
-				rupRange = calcRupRange(uncenteredDists);
-				texFW.write(LaTeXUtils.defineValueCommand(distTexPrefix+"UncenteredJB", oneDF.format(jbRange.getAverage()))+"\n");
-				texFW.write(LaTeXUtils.defineValueCommand(distTexPrefix+"UncenteredRup", oneDF.format(rupRange.getAverage()))+"\n");
-				distAnns.add("Uncentered: avg. Rjb="+oneDF.format(jbRange.getAverage())+", Rrup="+oneDF.format(rupRange.getAverage()));
-				distAnns.add("  Rjb ∈ ["+oneDF.format(jbRange.getMin())+", "+oneDF.format(jbRange.getMax())+"]");
-				distAnns.add("  Rrup ∈ ["+oneDF.format(rupRange.getMin())+", "+oneDF.format(rupRange.getMax())+"]");
+				distAnns.add("Uncentered: avg. Rjb="+oneDF.format(jbUncenteredRange.getAverage())+", Rrup="+oneDF.format(rupUncenteredRange.getAverage()));
+				distAnns.add("  Rjb ∈ ["+oneDF.format(jbUncenteredRange.getMin())+", "+oneDF.format(jbUncenteredRange.getMax())+"]");
+				distAnns.add("  Rrup ∈ ["+oneDF.format(rupUncenteredRange.getMin())+", "+oneDF.format(rupUncenteredRange.getMax())+"]");
 			} else {
-				MinMaxAveTracker jbRange = calcJBRange(centeredDists);
-				MinMaxAveTracker rupRange = calcRupRange(centeredDists);
-				double hwJB = calcJBRange(centeredDists, true).getAverage();
-				double hwRup = calcRupRange(centeredDists, true).getAverage();
-				double fwJB = calcJBRange(centeredDists, false).getAverage();
-				double fwRup = calcRupRange(centeredDists, false).getAverage();
-				texFW.write(LaTeXUtils.defineValueCommand(distTexPrefix+"CenteredFWJB", oneDF.format(fwJB))+"\n");
-				texFW.write(LaTeXUtils.defineValueCommand(distTexPrefix+"CenteredFWRup", oneDF.format(fwRup))+"\n");
-				texFW.write(LaTeXUtils.defineValueCommand(distTexPrefix+"CenteredHWJB", oneDF.format(hwJB))+"\n");
-				texFW.write(LaTeXUtils.defineValueCommand(distTexPrefix+"CenteredHWRup", oneDF.format(hwRup))+"\n");
-				distAnns.add("Centered:");
-				distAnns.add("  FW avg. Rjb="+oneDF.format(fwJB)+", Rrup="+oneDF.format(fwRup));
-				distAnns.add("  HW avg. Rjb="+oneDF.format(hwJB)+", Rrup="+oneDF.format(hwRup));
-//				distAnns.add("  Rjb ∈ ["+oneDF.format(jbRange.getMin())+", "+oneDF.format(jbRange.getMax())+"]");
-//				distAnns.add("  Rrup ∈ ["+oneDF.format(rupRange.getMin())+", "+oneDF.format(rupRange.getMax())+"]");
-				jbRange = calcJBRange(uncenteredDists);
-				rupRange = calcRupRange(uncenteredDists);
-				hwJB = calcJBRange(uncenteredDists, true).getAverage();
-				hwRup = calcRupRange(uncenteredDists, true).getAverage();
-				fwJB = calcJBRange(uncenteredDists, false).getAverage();
-				fwRup = calcRupRange(uncenteredDists, false).getAverage();
-				texFW.write(LaTeXUtils.defineValueCommand(distTexPrefix+"UncenteredFWJB", oneDF.format(fwJB))+"\n");
-				texFW.write(LaTeXUtils.defineValueCommand(distTexPrefix+"UncenteredFWRup", oneDF.format(fwRup))+"\n");
-				texFW.write(LaTeXUtils.defineValueCommand(distTexPrefix+"UncenteredHWJB", oneDF.format(hwJB))+"\n");
-				texFW.write(LaTeXUtils.defineValueCommand(distTexPrefix+"UncenteredHWRup", oneDF.format(hwRup))+"\n");
-				distAnns.add("Uncentered:");
-				distAnns.add("  FW avg. Rjb="+oneDF.format(fwJB)+", Rrup="+oneDF.format(fwRup));
-				distAnns.add("  HW avg. Rjb="+oneDF.format(hwJB)+", Rrup="+oneDF.format(hwRup));
-				distAnns.add("  Rjb ∈ ["+oneDF.format(jbRange.getMin())+", "+oneDF.format(jbRange.getMax())+"]");
-				distAnns.add("  Rrup ∈ ["+oneDF.format(rupRange.getMin())+", "+oneDF.format(rupRange.getMax())+"]");
-				double hwFract = calcHWFract(uncenteredDists);
-				distAnns.add("  HW fract: "+twoDF.format(hwFract));
-				texFW.write(LaTeXUtils.defineValueCommand(distTexPrefix+"UncenteredHWFract", twoDF.format(hwFract))+"\n");
+				for (boolean centered : new boolean[] {true, false}) {
+					SurfaceDistances[] myDists = centered ? centeredDists : uncenteredDists;
+					MinMaxAveTracker myHWJBRange = calcJBRange(myDists, true);
+					MinMaxAveTracker myHWRupRange = calcRupRange(myDists, true);
+					MinMaxAveTracker myFWJBRange = calcJBRange(myDists, false);
+					MinMaxAveTracker myFWRupRange = calcRupRange(myDists, false);
+					String myPrefix = distTexPrefix + (centered ? "Centered" : "Uncentered");
+					rangeTexDefine(texFW, myPrefix+"HWJB", myHWJBRange);
+					rangeTexDefine(texFW, myPrefix+"HWRup", myHWRupRange);
+					rangeTexDefine(texFW, myPrefix+"FWJB", myFWJBRange);
+					rangeTexDefine(texFW, myPrefix+"FWRup", myFWRupRange);
+					double hwFract = calcHWFract(myDists);
+					texFW.write(LaTeXUtils.defineValueCommand(myPrefix+"HWFract", twoDF.format(hwFract))+"\n");
+					if (centered)
+						distAnns.add("Centered:");
+					else
+						distAnns.add("Uncentered:");
+					distAnns.add("  FW avg. Rjb="+oneDF.format(myFWJBRange.getAverage())+", Rrup="+oneDF.format(myFWRupRange.getAverage()));
+					distAnns.add("  HW avg. Rjb="+oneDF.format(myHWJBRange.getAverage())+", Rrup="+oneDF.format(myHWRupRange.getAverage()));
+					if (!centered) {
+						distAnns.add("  Rjb ∈ ["+oneDF.format(jbUncenteredRange.getMin())+", "+oneDF.format(jbUncenteredRange.getMax())+"]");
+						distAnns.add("  Rrup ∈ ["+oneDF.format(rupUncenteredRange.getMin())+", "+oneDF.format(rupUncenteredRange.getMax())+"]");
+						distAnns.add("  HW fract: "+twoDF.format(hwFract));
+					}
+				}
+				
 			}
+			texFW.write("\n");
 			
 			Font labelFont = new Font(Font.SANS_SERIF, Font.PLAIN, 20);
 			for (String str : distAnns) {
@@ -617,7 +735,7 @@ public class SpinningFaultExceedanceFigures {
 			PlotUtils.setXTick(gp, tick);
 			PlotUtils.setYTick(gp, tick);
 			
-			PlotUtils.writePlots(outputDir, prefix+"_"+perPrefix+"_"+oDF.format(distance)+"km_rrup_vs_jb",
+			PlotUtils.writePlots(outputDir, prefix+"_"+oDF.format(distance)+"km_rrup_vs_jb",
 					gp, 800, 900, true, true, false);
 			
 			// mow median GM vs comparable
@@ -926,6 +1044,313 @@ public class SpinningFaultExceedanceFigures {
 				}
 				PlotUtils.writePlots(outputDir, sortPrefix, gp, 800, 900, true, true, false);
 			}
+			
+			// map plot
+			funcs = new ArrayList<>();
+			chars = new ArrayList<>();
+			
+			double minY = -0.25*length;
+			double maxY = Math.max(distance, length);
+//			double maxX = Math.max(0.25*maxY, ptSurf.getAveHorizontalWidth()/2d);
+			double maxX = 0.5*maxY;
+			double buffer = Math.max(1d, 0.05*maxY);
+			double halfBuffer = 0.5*buffer;
+			Range xRange = new Range(-(maxX+halfBuffer), maxX+halfBuffer);
+			Range yRange = new Range(minY-buffer, maxY+buffer);
+			
+			DefaultXY_DataSet gridLocXY = new DefaultXY_DataSet();
+			gridLocXY.set(projectLoc(gridLoc, gridLoc));
+			gridLocXY.setName("Grid source location");
+			funcs.add(gridLocXY);
+			chars.add(new PlotCurveCharacterstics(PlotSymbol.FILLED_CIRCLE, 6f, Color.BLACK));
+			
+			DefaultXY_DataSet siteLocXY = new DefaultXY_DataSet();
+			siteLocXY.set(projectLoc(gridLoc, siteLoc));
+			siteLocXY.setName("Site location ("+oDF.format(distance)+" km away)");
+			funcs.add(siteLocXY);
+			chars.add(new PlotCurveCharacterstics(PlotSymbol.FILLED_INV_TRIANGLE, 6f, Colors.tab_red));
+			
+			// average Rjb annotations
+			double centeredAvgJB = jbCenteredRange.getAverage();
+			double uncenteredAvgJB = jbUncenteredRange.getAverage();
+			
+			List<XYAnnotation> anns = new ArrayList<>();
+			if (centeredAvgJB > 10d) {
+				double siteToGridAz = LocationUtils.azimuthRad(siteLoc, gridLoc);
+				Point2D sitePt = siteLocXY.get(0);
+				double jbDeltaX = 0.04*xRange.getLength();
+				
+				for (boolean centered : new boolean[] {true,false}) {
+					double avgJB = centered ? centeredAvgJB : uncenteredAvgJB;
+					Point2D jbPt = projectLoc(gridLoc, LocationUtils.location(siteLoc, siteToGridAz, avgJB));
+					Preconditions.checkState((float)sitePt.getX() == (float)jbPt.getX(), "This assumes site and grid loc have same x");
+					
+					double x = sitePt.getX();
+					double offsetX = x + jbDeltaX;
+					if (!centered)
+						offsetX += jbDeltaX;
+					
+					double annOffset = 0.2*jbDeltaX;
+					annX = offsetX + annOffset;
+					TextAnchor anchor = TextAnchor.BASELINE_CENTER;
+					annY = 0.5*(sitePt.getY() + jbPt.getY());
+//					TextAnchor anchor = TextAnchor.BASELINE_RIGHT;
+//					annY = jbPt.getY();
+					
+//					String text = centered ? "Centered" : "Uncentered";
+//					text += " avg. Rjb="+oDF.format(avgJB);
+					String text = oDF.format(avgJB)+" km";
+					
+					XYTextAnnotation jbAnn = new XYTextAnnotation(text, annX, annY);
+					jbAnn.setTextAnchor(anchor);
+					jbAnn.setRotationAnchor(anchor);
+					jbAnn.setRotationAngle(0.5*Math.PI);
+					jbAnn.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 16));
+					jbAnn.setBackgroundPaint(new Color(255, 255, 255, 60));
+					anns.add(jbAnn);
+					
+					DefaultXY_DataSet jbXY = new DefaultXY_DataSet();
+					jbXY.set(sitePt);
+					jbXY.set(offsetX, sitePt.getY());
+					jbXY.set(offsetX, jbPt.getY());
+					jbXY.set(jbPt);
+					funcs.add(jbXY);
+					chars.add(new PlotCurveCharacterstics(centered ? PlotLineType.SOLID : PlotLineType.SHORT_DASHED, 1f, Color.BLACK));
+				}
+			}
+			
+			int exampleInsertIndex = funcs.size();
+
+			PlotCurveCharacterstics centeredTraceChar = new PlotCurveCharacterstics(PlotLineType.SOLID, 4f, Colors.tab_blue);
+			if (mech == FocalMech.STRIKE_SLIP) {
+				boolean first = true;
+				for (RectangularSurface surf : centeredExampleSurfs) {
+
+					DefaultXY_DataSet xy = new DefaultXY_DataSet();
+					for (Point2D pt : projectLocList(gridLoc, surf.getUpperEdge(), false))
+						xy.set(pt);
+					if (first) {
+						xy.setName("Example centered surfaces");
+						first = false;
+					}
+
+					funcs.add(xy);
+					chars.add(centeredTraceChar);
+				}
+			} else {
+				boolean firstFW = true;
+				boolean firstHW = true;
+				PlotCurveCharacterstics outlineChar = new PlotCurveCharacterstics(
+						PlotLineType.SOLID, 1f, centeredTraceChar.getColor());
+//						PlotLineType.SOLID, 1f, Color.DARK_GRAY);
+				
+				PlotCurveCharacterstics fwTraceChar = new PlotCurveCharacterstics(
+						centeredTraceChar.getLineType(), centeredTraceChar.getLineWidth(), Colors.tab_lightblue);
+				PlotCurveCharacterstics fwOutlineChar = new PlotCurveCharacterstics(
+						outlineChar.getLineType(), outlineChar.getLineWidth(), fwTraceChar.getColor());
+//						outlineChar.getLineType(), outlineChar.getLineWidth(), Color.DARK_GRAY);
+				boolean[] hws = new boolean[centeredExampleSurfs.length];
+				int numHW = 0;
+				int numFW = 0;
+				for (int s=0; s<centeredExampleSurfs.length; s++) {
+					hws[s] = centeredExampleSurfs[s].getDistanceX(siteLoc) >= 0d;
+					if (hws[s])
+						numHW++;
+					else
+						numFW++;
+				}
+				// traces frist
+				for (int s=0; s<centeredExampleSurfs.length; s++) {
+					DefaultXY_DataSet traceXY = new DefaultXY_DataSet();
+					for (Point2D pt : projectLocList(gridLoc, centeredExampleSurfs[s].getUpperEdge(), false))
+						traceXY.set(pt);
+					funcs.add(traceXY);
+					if (hws[s]) {
+						// hanging wall
+						if (firstHW) {
+							if (numHW > 1)
+								traceXY.setName("Example centered HW surfaces");
+							else
+								traceXY.setName("Example centered HW surface");
+						}
+						firstHW = false;
+						chars.add(centeredTraceChar);
+					} else {
+						// foot wall
+						if (numFW > 1)
+							traceXY.setName("Example centered FW surfaces");
+						else
+							traceXY.setName("Example centered FW surface");
+						firstFW = false;
+						chars.add(fwTraceChar);
+					}
+				}
+				// now outlines
+				for (int s=0; s<centeredExampleSurfs.length; s++) {
+					DefaultXY_DataSet outlineXY = new DefaultXY_DataSet();
+					for (Point2D pt : projectLocList(gridLoc, centeredExampleSurfs[s].getPerimeter(), true))
+						outlineXY.set(pt);
+					funcs.add(outlineXY);
+					if (hws[s]) {
+						// hanging wall
+						firstHW = false;
+						chars.add(outlineChar);
+//						addTransOutlineFuncs(funcs, chars, gridLoc, mapPlotSurfs[s], outlineChar.getColor(), outlineChar.getLineWidth(), minOutlineAlpha);
+					} else {
+						// foot wall
+						firstFW = false;
+						chars.add(fwOutlineChar);
+//						addTransOutlineFuncs(funcs, chars, gridLoc, mapPlotSurfs[s], fwOutlineChar.getColor(), fwOutlineChar.getLineWidth(), minOutlineAlpha);
+					}
+				}
+			}
+			
+			// example uncentered
+			DefaultXY_DataSet traceXY = new DefaultXY_DataSet();
+			for (Point2D pt : projectLocList(gridLoc, uncenteredExampleSurf.getUpperEdge(), false))
+				traceXY.set(pt);
+			
+			PlotCurveCharacterstics uncenteredExampleChar = new PlotCurveCharacterstics(
+					PlotLineType.SOLID, centeredTraceChar.getLineWidth(), Color.DARK_GRAY);
+			funcs.add(exampleInsertIndex, traceXY);
+			chars.add(exampleInsertIndex, uncenteredExampleChar);
+			
+			// now add label here
+			DefaultXY_DataSet fakeTrace = new DefaultXY_DataSet();
+			fakeTrace.set(-1000d, -100d);
+			fakeTrace.setName("Example uncentered surface");
+			funcs.add(fakeTrace);
+			chars.add(uncenteredExampleChar);
+			
+			if (mech != FocalMech.STRIKE_SLIP) {
+				DefaultXY_DataSet outlineXY = new DefaultXY_DataSet();
+				for (Point2D pt : projectLocList(gridLoc, uncenteredExampleSurf.getPerimeter(), true))
+					outlineXY.set(pt);
+				
+				funcs.add(exampleInsertIndex, outlineXY);
+				chars.add(exampleInsertIndex, new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, Color.DARK_GRAY));
+			}
+			
+			// spin the centered surfaces
+			Color centeredHWColor = overWhite(transColor(Colors.tab_blue, 80));
+			Color centeredFWColor = overWhite(transColor(Colors.tab_lightblue, 80));
+			if (mech == FocalMech.STRIKE_SLIP) {
+				// simple, no hw/fw
+				DefaultXY_DataSet xyCircle = new DefaultXY_DataSet();
+				for (RectangularSurface surf : centeredMapOutlineSurfs)
+					xyCircle.set(projectLoc(gridLoc, surf.getLastLocOnUpperEdge()));
+				DefaultXY_DataSet fakeCircleXY = new DefaultXY_DataSet();
+				fakeCircleXY.setName("Centered range");
+				fakeCircleXY.set(-100d, -100d);
+				funcs.add(fakeCircleXY);
+				chars.add(new PlotCurveCharacterstics(PlotSymbol.FILLED_CIRCLE, 6f, centeredHWColor));
+				funcs.add(xyCircle);
+				chars.add(new PlotCurveCharacterstics(PlotLineType.POLYGON_SOLID, 1f, centeredHWColor));
+			} else {
+				boolean[] hws = new boolean[centeredMapOutlineSurfs.length];
+				for (int i=0; i<centeredMapOutlineSurfs.length; i++)
+					hws[i] = centeredMapOutlineSurfs[i].getDistanceX(siteLoc) >= 0d;
+				List<List<RectangularSurface>> hwBundles = new ArrayList<>();
+				List<List<RectangularSurface>> fwBundles = new ArrayList<>();
+				boolean curHW = false;
+				List<RectangularSurface> curBundle = null;
+				for (int i=0; i<centeredMapOutlineSurfs.length; i++) {
+					if (curBundle == null || curHW != hws[i]) {
+						if (curBundle != null) {
+							// close out the previous one with this one to fill the gap
+							curBundle.add(centeredMapOutlineSurfs[i]);
+							if (curHW)
+								hwBundles.add(curBundle);
+							else
+								fwBundles.add(curBundle);
+						}
+						curBundle = new ArrayList<>();
+						curHW = hws[i];
+					}
+					curBundle.add(centeredMapOutlineSurfs[i]);
+				}
+				if (curHW == hws[0] && curBundle.size() < centeredMapOutlineSurfs.length) {
+					// we can stitch the last one with the first one
+					if (curHW)
+						hwBundles.get(0).addAll(0, curBundle);
+					else
+						fwBundles.get(0).addAll(0, curBundle);
+				} else {
+					// still stitch to the first one to close the gap
+					curBundle.add(centeredMapOutlineSurfs[0]);
+					if (curHW) {
+						hwBundles.add(curBundle);
+					} else {
+						fwBundles.add(curBundle);
+					}
+				}
+				for (boolean hw : new boolean[] {true,false}) {
+					List<List<RectangularSurface>> bundles = hw ? hwBundles : fwBundles;
+					Color color = hw ? centeredHWColor : centeredFWColor;
+					
+					if (bundles.isEmpty())
+						continue;
+					
+					for (int i=0; i<bundles.size(); i++) {
+						DefaultXY_DataSet xyCircle = new DefaultXY_DataSet();
+						for (RectangularSurface surf : bundles.get(i)) {
+							// use middle because we're showing the strike range, not the upper edge range
+							double horzWidth = surf.getAveHorizontalWidth();
+							double dipDirRad = Math.toRadians(surf.getAveDipDirection());
+							Location traceEndLocLoc = surf.getLastLocOnUpperEdge();
+							Location centerEndLoc = LocationUtils.location(traceEndLocLoc, dipDirRad, 0.5*horzWidth);
+							// but need to push it further out to match how far away the trace is
+							double traceDist = LocationUtils.horzDistance(gridLoc, traceEndLocLoc);
+							double centerDist = LocationUtils.horzDistance(gridLoc, centerEndLoc);
+							if (traceDist > centerDist) {
+								double centerAz = LocationUtils.azimuthRad(gridLoc, centerEndLoc);
+								centerEndLoc = LocationUtils.location(centerEndLoc, centerAz, traceDist-centerDist);
+							}
+							xyCircle.set(projectLoc(gridLoc, centerEndLoc));
+//							xyCircle.set(projectLoc(gridLoc, surf.getLastLocOnUpperEdge()));
+						}
+						xyCircle.set(projectLoc(gridLoc, gridLoc));
+						xyCircle.set(xyCircle.get(0));
+						if (i == 0) {
+							DefaultXY_DataSet fakeCircleXY = new DefaultXY_DataSet();
+							if (hw)
+								fakeCircleXY.setName("Centered HW strike range");
+							else
+								fakeCircleXY.setName("Centered FW strike range");
+							fakeCircleXY.set(-100d, -100d);
+							funcs.add(fakeCircleXY);
+							chars.add(new PlotCurveCharacterstics(PlotSymbol.FILLED_CIRCLE, 6f, color));
+						}
+						funcs.add(xyCircle);
+						chars.add(new PlotCurveCharacterstics(PlotLineType.POLYGON_SOLID, 1f, color));
+					}
+				}
+			}
+			
+			// now spin the most extreme uncentered surfaces
+			DefaultXY_DataSet xyCircle = new DefaultXY_DataSet();
+			for (RectangularSurface surf : extremeUncenteredSurfs)
+				xyCircle.set(projectLoc(gridLoc, surf.getLastLocOnUpperEdge()));
+			DefaultXY_DataSet fakeCircleXY = new DefaultXY_DataSet();
+			fakeCircleXY.setName("Uncentered range");
+			fakeCircleXY.set(-100d, -100d);
+			funcs.add(fakeCircleXY);
+			chars.add(new PlotCurveCharacterstics(PlotSymbol.FILLED_CIRCLE, 6f, polyColor));
+			funcs.add(xyCircle);
+			chars.add(new PlotCurveCharacterstics(PlotLineType.POLYGON_SOLID, 1f, polyColor));
+			
+			plot = new PlotSpec(funcs, chars, label, "X (km)", "Y (km)");
+			plot.setLegendInset(true);
+			plot.setPlotAnnotations(anns);
+			
+			gp.setRenderingOrder(DatasetRenderingOrder.REVERSE);
+			
+			gp.drawGraphPanel(plot, false, false, xRange, yRange);
+			
+			PlotUtils.setXTick(gp, 5d);
+			PlotUtils.setYTick(gp, 5d);
+			
+			PlotUtils.writePlots(outputDir, prefix+"_"+oDF.format(distance)+"km_map", gp, 800, false, true, true, false);
 		}
 		
 		plots.get(0).setLegendInset(RectangleAnchor.BOTTOM_LEFT);
@@ -943,6 +1368,10 @@ public class SpinningFaultExceedanceFigures {
 		
 		texFW.close();
 	}
+
+	private static DecimalFormat oDF = new DecimalFormat("0.#");
+	private static DecimalFormat oneDF = new DecimalFormat("0.0");
+	private static DecimalFormat twoDF = new DecimalFormat("0.00");
 	
 	private static SurfaceDistances[] calcDists(Location siteLoc, RectangularSurface[] surfs) {
 		List<CompletableFuture<SurfaceDistances>> futures = new ArrayList<>(surfs.length);
@@ -1190,6 +1619,105 @@ public class SpinningFaultExceedanceFigures {
 				poly.set(polyDiscr.getX(i), binMaxs[i]);
 		poly.set(poly.get(0));
 		return poly;
+	}
+	
+	private static Point2D projectLoc(Location refLoc, Location loc) {
+		if (LocationUtils.areSimilar(refLoc, loc))
+			return new Point2D.Double(0d, 0d);
+		Location refUp = new Location(refLoc.getLatitude()+1d, refLoc.getLongitude());
+		Location refDown = new Location(refLoc.getLatitude()-1d, refLoc.getLongitude());
+		double x = LocationUtils.distanceToLine(refDown, refUp, loc);
+		
+		Location refLeft = new Location(refLoc.getLatitude(), refLoc.getLongitude()-1d);
+		Location refRight = new Location(refLoc.getLatitude(), refLoc.getLongitude()+1d);
+		double y = LocationUtils.distanceToLine(refRight, refLeft, loc);
+		return new Point2D.Double(x, y);
+	}
+	
+	private static List<Point2D> projectLocList(Location refLoc, List<Location> locs, boolean connect) {
+		List<Point2D> ret = new ArrayList<>(connect ? locs.size()+1 : locs.size());
+		
+		for (Location loc : locs)
+			ret.add(projectLoc(refLoc, loc));
+		if (connect)
+			ret.add(ret.get(0));
+		
+		return ret;
+	}
+	
+	private static void addTransOutlineFuncs(List<XY_DataSet> funcs, List<PlotCurveCharacterstics> chars,
+			Location refLoc, RectangularSurface surf, Color surfaceColor, float thickness, int minAlpha) {
+		// draw forward and reverse edges
+		int steps = 20;
+		Color transColor = new Color(surfaceColor.getRed(), surfaceColor.getGreen(), surfaceColor.getBlue(), minAlpha);
+		CPT transCPT = new CPT(0d,  (double)steps-1d, surfaceColor, transColor);
+		
+		double horzWidth = surf.getAveHorizontalWidth();
+		double widthEach = horzWidth/steps;
+		double dipDirRad = Math.toRadians(surf.getAveDipDirection());
+		for (boolean forward : new boolean[] {false,true}) {
+			Location top = forward ? surf.getLastLocOnUpperEdge() : surf.getFirstLocOnUpperEdge();
+			for (int step=0; step<steps; step++) {
+				Location bottom = LocationUtils.location(top, dipDirRad, widthEach);
+				
+				DefaultXY_DataSet xy = new DefaultXY_DataSet();
+				xy.set(projectLoc(refLoc, top));
+				xy.set(projectLoc(refLoc, bottom));
+				
+				funcs.add(xy);
+				chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, thickness, transCPT.getColor((double)step)));
+				
+				top = bottom;
+			}
+		}
+		
+		// now add bottom edge
+		DefaultXY_DataSet xy = new DefaultXY_DataSet();
+		xy.set(projectLoc(refLoc, LocationUtils.location(surf.getFirstLocOnUpperEdge(), dipDirRad, horzWidth)));
+		xy.set(projectLoc(refLoc, LocationUtils.location(surf.getLastLocOnUpperEdge(), dipDirRad, horzWidth)));
+		
+		funcs.add(xy);
+		chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, thickness, transColor));
+	}
+	
+	private static Color transColor(Color color, int alpha) {
+		return new Color(color.getRed(), color.getGreen(), color.getBlue(), alpha);
+	}
+	
+	public static Color overWhite(Color rgba) {
+		float a = rgba.getAlpha() / 255f;
+
+		int r = Math.round(rgba.getRed()   * a + 255f * (1f - a));
+		int g = Math.round(rgba.getGreen() * a + 255f * (1f - a));
+		int b = Math.round(rgba.getBlue()  * a + 255f * (1f - a));
+
+		return new Color(r, g, b);
+	}
+	
+	private static void rangeTexDefine(FileWriter texFW, String prefix, MinMaxAveTracker track) throws IOException {
+		texFW.write(LaTeXUtils.defineValueCommand(prefix+"Avg", oneDF.format(track.getAverage()))+"\n");
+		texFW.write(LaTeXUtils.defineValueCommand(prefix+"Min", oneDF.format(track.getMin()))+"\n");
+		texFW.write(LaTeXUtils.defineValueCommand(prefix+"Max", oneDF.format(track.getMax()))+"\n");
+	}
+	
+	public static Path2D buildPolygon(XY_DataSet xy) {
+		Path2D polygon = new Path2D.Double();
+		boolean firstPoint = true;
+
+		for (Point2D pt : xy) {
+			if (firstPoint) {
+				polygon.moveTo(pt.getX(), pt.getY());
+				firstPoint = false;
+			} else {
+				polygon.lineTo(pt.getX(), pt.getY());
+			}
+		}
+
+		// Ensure the polygon is closed
+		if (xy.size() > 2) {
+			polygon.closePath();
+		}
+		return polygon;
 	}
 
 }

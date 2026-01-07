@@ -36,11 +36,11 @@ public class HangingWallFractFigure {
 		
 		EvenlyDiscretizedFunc distances = new EvenlyDiscretizedFunc(0d, 100d, 101);
 		
-		double mag = 7d;
+		double mag = 7.05d;
 		FocalMech mech = FocalMech.REVERSE;
 		MagLengthRelationship ml = Leonard2010_MagLengthRelationship.DIP_SLIP;
 		String prefix = "m7_rev_hw_fract";
-		String label = "M7, Reverse";
+		String label = "M7.05, Reverse";
 
 		double rake = mech.rake();
 		double dip = mech.dip();
