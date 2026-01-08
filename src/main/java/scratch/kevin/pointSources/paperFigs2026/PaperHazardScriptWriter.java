@@ -129,7 +129,8 @@ public class PaperHazardScriptWriter {
 				inputSol.setGridSourceProvider(modGridded);
 			}
 			
-			boolean[] zooms = model.finiteNum < 50 ? new boolean[] {false,true} : new boolean[] {false};
+//			boolean[] zooms = model.finiteNum < 50 ? new boolean[] {false,true} : new boolean[] {false};
+			boolean[] zooms = {false, true};
 			
 			for (boolean zoom : zooms) {
 				File localDir = zoom ? model.zoomMapDir : model.mapDir;
