@@ -263,7 +263,7 @@ public class LongTermTD2026_Analyses {
 //				if(maxRatio<ratio) maxRatio=ratio;	
 				
 				String line = s+","+testRate+","+probGainTest+","+erf.getSource(s).getNumRuptures()+
-						","+probCalc.u3_ProgGainForRupInfoString+"\n";
+						","+probCalc.u3_ProbGainForRupInfoString+"\n";
 				fw.write(line); 
 				
 			}
@@ -400,7 +400,7 @@ public class LongTermTD2026_Analyses {
 //				if(maxRatio<ratio) maxRatio=ratio;	
 				
 				String line = s+","+testRate+","+probGainTest+","+erf.getSource(s).getNumRuptures()+
-						","+probCalc.u3_ProgGainForRupInfoString+"\n";
+						","+probCalc.u3_ProbGainForRupInfoString+"\n";
 				fw.write(line); 
 				
 			}
@@ -1592,9 +1592,8 @@ public class LongTermTD2026_Analyses {
 	
 	private static void tempTestPrefBlendCalc() {
 		try {
-			File dataFile1 = new File("/Users/field/markdown/nshm23_time_dependence_01_05_2026/TD_PrefBlendTestFiles/rupTestFile.csv");
-//			File dataFile1 = new File("/Users/field/markdown/nshm23_time_dependence_12_28_2025/TD_PrefBlendTestFiles/rupTestFile.csv");
-			File dataFile2 = new File("/Users/field/markdown/nshm23_time_dependence_12_28_2025/TD_PrefBlendTestFiles_Before/rupTestFile.csv");
+			File dataFile1 = new File("/Users/field/markdown/nshm23_time_dependence_01_07_2026_before/TD_PrefBlendTestFiles/rupTestFile.csv");
+			File dataFile2 = new File("/Users/field/markdown/nshm23_time_dependence_01_07_2026/TD_PrefBlendTestFiles/rupTestFile.csv");
 			
 			BufferedReader reader1 = new BufferedReader(scratch.UCERF3.utils.UCERF3_DataUtils.getReader(dataFile1.toURL()));
 			BufferedReader reader2 = new BufferedReader(scratch.UCERF3.utils.UCERF3_DataUtils.getReader(dataFile2.toURL()));
@@ -1649,7 +1648,7 @@ public class LongTermTD2026_Analyses {
 	private static void tempTestTD_CalcFiles() {
 		try {
 			File dataFile1 = new File("/Users/field/markdown/nshm23_time_dependence_01_07_2026/TD_TestFiles/rupTestFile.csv");
-			File dataFile2 = new File("/Users/field/markdown/nshm23_time_dependence_09_27_2025/TD_TestFiles/rupTestFile.csv");
+			File dataFile2 = new File("/Users/field/markdown/nshm23_time_dependence_01_07_2026_before/TD_TestFiles/rupTestFile.csv");
 			
 			
 			BufferedReader reader1 = new BufferedReader(scratch.UCERF3.utils.UCERF3_DataUtils.getReader(dataFile1.toURL()));
@@ -1734,10 +1733,10 @@ public class LongTermTD2026_Analyses {
 //		System.out.println("maxNumRups = "+maxNumRups);
 		
 		// Use these to test changes:
-	//	testOldVsNewSimulationMethod(); // I commented out running the old simulation in this method
+		testOldVsNewSimulationMethod(); // I commented out running the old simulation in this method
 //		makeTestTD_CalculationFiles();
 //		tempTestTD_CalcFiles();
-	//	tempTestPrefBlendCalculationFiles();
+//		tempTestPrefBlendCalculationFiles();
 //		tempTestPrefBlendCalc();
 		
 //		tempMakeTestTD_CalculationFilesForSingleSource();
