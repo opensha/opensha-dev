@@ -46,7 +46,7 @@ public class ConstantsAndSettings {
 	public static final File ORIG_SOL_DIR = new File(INV_DIR, "2024_02_02-nshm23_branches-WUS_FM_v3");
 	public static final File ORIG_SOL_FILE = new File(ORIG_SOL_DIR, "results_WUS_FM_v3_branch_averaged_gridded.zip");
 	
-	public static final Models REF_FINITE_MODEL = Models.FINITE_20X_UNCENTERED;
+	public static final Models REF_FINITE_MODEL = Models.FINITE_100X_UNCENTERED;
 	public static final Models PROPOSED_DIST_CORR_MODEL = Models.SPINNING_DIST_5X_UNCENTERED;
 	public static final Models PROPOSED_FULL_MODEL = Models.SPINNING_DIST_5X_UNCENTERED_MOD_ZTOR_LEN_M3p5;
 	
@@ -80,13 +80,16 @@ public class ConstantsAndSettings {
 		FINITE_20X_CENTERED("Finite ruptures (20x), centered", "FiniteCenteredTwenty",
 				5d, 20, false, 5d, true, null,
 				"finite-20x-centered-m5"),
-		// Reference to compare point source calculations
+		FINITE_100X_CENTERED("Finite ruptures (100x), centered", "FiniteCenteredHundred",
+				5d, 100, false, 5d, true, null,
+				"finite-100x-centered-m5"),
 		FINITE_20X_UNCENTERED("Finite ruptures (20x), uncentered", "FiniteUncenteredTwenty",
 				5d, 20, true, 5d, true, null,
 				"finite-20x-uncentered-m5"),
 		FINITE_50X_UNCENTERED("Finite ruptures (50x), uncentered", "FiniteUncenteredFifty",
 				5d, 50, true, 5d, true, null,
 				"finite-50x-uncentered-m5"),
+		// Reference to compare point source calculations
 		FINITE_100X_UNCENTERED("Finite ruptures (100x), uncentered", "FiniteUncenteredHundred",
 				5d, 100, true, 5d, true, null,
 				"finite-100x-uncentered-m5"),
