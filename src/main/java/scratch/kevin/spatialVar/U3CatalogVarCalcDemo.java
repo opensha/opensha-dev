@@ -76,7 +76,10 @@ public class U3CatalogVarCalcDemo {
 		}
 		
 		System.out.println("Initializing spatial correlation matrices");
-		SpatialVarCalc varCalc = new SpatialVarCalc(new double[] {period}, sites);
+		List<Location> siteLocs = new ArrayList<>(sites.size());
+		for (Site site : sites)
+			siteLocs.add(site.getLocation());
+		SpatialVarCalc varCalc = new SpatialVarCalc(new double[] {period}, siteLocs);
 		
 		// compute random fields for each rupture. set phi to 1 here, we'll rescale to actual event phi later
 		System.out.println("Computing "+catalog.size()+" random fields");
