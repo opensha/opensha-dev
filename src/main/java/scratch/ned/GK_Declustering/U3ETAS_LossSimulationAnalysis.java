@@ -2691,7 +2691,7 @@ int cat =0;
 		
 		LognormalDistCalc logNormCalc = new LognormalDistCalc();
 //		logNormCalc.setAll(mean, cov, delta, numPoints*5);
-		logNormCalc.setAllParameters(mean, cov, delta, numPoints*5, 1d, 0d); // numPoints multiplied by 5 to get the right computed mean
+		logNormCalc.setAllParameters(mean, cov, delta, numPoints*5); // numPoints multiplied by 5 to get the right computed mean
 		EvenlyDiscretizedFunc logNormEvenPDF = logNormCalc.getPDF();
 		logNormEvenPDF.setName("logNormEvenPDF");
 //		System.out.println("totalDensityCheck="+logNormEvenPDF.calcSumOfY_Vals()*logNormEvenPDF.getDelta());

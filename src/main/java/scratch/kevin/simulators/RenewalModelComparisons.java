@@ -128,8 +128,8 @@ public class RenewalModelComparisons {
 	private static EvenlyDiscretizedFunc calcBPT(double mean, double max, double cov, double distSpacing) {
 		BPT_DistCalc dist = new BPT_DistCalc();
 		int numPoints = (int)(max/distSpacing+0.5);
-		dist.setAll(mean, cov, distSpacing, numPoints, distSpacing);
-		return dist.getCondProbFunc();
+		dist.setAll(mean, cov, distSpacing, numPoints);
+		return dist.getCondProbFunc(distSpacing);
 //		return dist.getPDF();
 	}
 	
