@@ -34,6 +34,8 @@ public class ExampleRupSourceFileWriter {
 		
 		File mainOutputDir = new File("/home/kevin/CyberShake/nshm23_scaling");
 		
+		boolean creepReduced = true;
+		
 		List<? extends FaultSection> allSubSects = rupSet.getFaultSectionDataList();
 		
 		Map<Integer, List<FaultSection>> groupedByParent = allSubSects.stream()
@@ -72,19 +74,22 @@ public class ExampleRupSourceFileWriter {
 //		sectAbbrevs.add("CC");
 //		sectIDs.add(FaultSectionUtils.findParentSectionID(allSubSects, "Andreas", "Coachella"));
 		
-//		File outputDir = new File(mainOutputDir, "northridge");
-//		Preconditions.checkState(outputDir.exists() || outputDir.mkdir());
-//		
-//		sectAbbrevs.add("NR");
-//		sectIDs.add(189);
-//		singleSect = groupedByParent.get(sectIDs.get(0)).get(0);
-		
-		File outputDir = new File(mainOutputDir, "compton");
+		File outputDir = new File(mainOutputDir, "northridge");
 		Preconditions.checkState(outputDir.exists() || outputDir.mkdir());
 		
-		sectAbbrevs.add("CMPT");
-		sectIDs.add(FaultSectionUtils.findParentSectionID(allSubSects, "Compton"));
+		sectAbbrevs.add("NR");
+		sectIDs.add(189);
 		singleSect = groupedByParent.get(sectIDs.get(0)).get(0);
+		
+//		File outputDir = new File(mainOutputDir, "compton");
+//		Preconditions.checkState(outputDir.exists() || outputDir.mkdir());
+//		
+//		sectAbbrevs.add("CMPT");
+//		sectIDs.add(FaultSectionUtils.findParentSectionID(allSubSects, "Compton"));
+//		singleSect = groupedByParent.get(sectIDs.get(0)).get(0);
+		
+		
+		
 		
 		for (int i=0; i<sectAbbrevs.size(); i++) {
 			String sectName = sectAbbrevs.get(i);
@@ -189,7 +194,7 @@ public class ExampleRupSourceFileWriter {
 			int rupIndex = rupIndexes.get(r);
 			String name = rupNames.get(r);
 			
-			BBP_PlanarSurface bbpSurf = planarEquivalentSurface(rupSet, rupIndex);
+			BBP_PlanarSurface bbpSurf = planarEquivalentSurface(rupSet, rupIndex, creepReduced);
 			
 			double hypoAlong = 0.5*bbpSurf.getLength();
 			double hypoDown = 0.5*bbpSurf.getWidth();
@@ -203,6 +208,7 @@ public class ExampleRupSourceFileWriter {
 				totOrigArea += sect.getArea(false);	// sq-m
 			}
 			double origDDW = totOrigArea / length;
+			System.out.println(name+" ("+rupIndex+"):\tA="+(float)area+"; L="+(float)length+"; W="+(float)width+"; origW="+(float)origDDW);
 			double aveRake = rupSet.getAveRakeForRup(rupIndex);
 //			mags[r] = scale.getMag(rupAreas[r], rupLengths[r], rupAreas[r]/rupLengths[r], origDDW, rakes[r]);
 			
@@ -222,8 +228,8 @@ public class ExampleRupSourceFileWriter {
 		}
 	}
 	
-	public static BBP_PlanarSurface planarEquivalentSurface(FaultSystemRupSet rupSet, int rupIndex) {
-		RuptureSurface surf = rupSet.getSurfaceForRupture(rupIndex, 1d);
+	public static BBP_PlanarSurface planarEquivalentSurface(FaultSystemRupSet rupSet, int rupIndex, boolean creepReduced) {
+		RuptureSurface surf = rupSet.getSurfaceForRupture(rupIndex, 1d, creepReduced);
 		
 		Location firstLoc = surf.getFirstLocOnUpperEdge();
 		Location lastLoc = surf.getLastLocOnUpperEdge();
