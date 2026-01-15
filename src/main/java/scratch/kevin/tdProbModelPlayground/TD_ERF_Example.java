@@ -1,12 +1,16 @@
 package scratch.kevin.tdProbModelPlayground;
 
+import java.awt.BorderLayout;
 import java.io.File;
 import java.io.IOException;
 
 import javax.swing.JFrame;
+import javax.swing.JOptionPane;
+import javax.swing.JPanel;
 
 import org.opensha.commons.param.ParameterList;
 import org.opensha.commons.param.editor.impl.ParameterListEditor;
+import org.opensha.commons.param.impl.ButtonParameter;
 import org.opensha.sha.earthquake.ProbEqkSource;
 import org.opensha.sha.earthquake.faultSysSolution.FaultSystemSolution;
 import org.opensha.sha.earthquake.faultSysSolution.erf.td.AperiodicityModels;
@@ -74,9 +78,15 @@ public class TD_ERF_Example {
 		if (modelParams.containsParameter(RenewalModels.PARAM_NAME))
 			modelParams.setValue(RenewalModels.PARAM_NAME, RenewalModels.BPT);
 		
-		// sanity checks
+		showGUI(erf);
+	}
+	
+	private static void updateForecast(TimeDepFaultSystemSolutionERF erf) {
 		erf.updateForecast();
 		
+		// extra sanity checks
+		FaultSystemSolution sol = erf.getSolution();
+		FSS_ProbabilityModel probModel = erf.getProbabilityModel();
 		long startTimeMillis = erf.getTimeSpan().getStartTimeInMillis();
 		double duration = erf.getTimeSpan().getDuration();
 		for (int sourceID=0; sourceID<erf.getNumFaultSystemSources(); sourceID++) {
@@ -87,8 +97,6 @@ public class TD_ERF_Example {
 					"Source %s is empty! fssIndex=%s, rate=%s, included=%s, probGain=%s",
 					sourceID, fssIndex, (double)sol.getRateForRup(fssIndex), erf.isRuptureIncluded(fssIndex), (double)probGain);
 		}
-		
-		showGUI(erf);
 	}
 	
 	private static void showGUI(TimeDepFaultSystemSolutionERF erf) {
@@ -97,8 +105,23 @@ public class TD_ERF_Example {
 		ParameterListEditor editor = new ParameterListEditor(paramList);
 		editor.setTitle(erf.getName()+" Parameters");
 		
+		ButtonParameter updateForecastButton = new ButtonParameter(null, "Update Forecast");
+		updateForecastButton.addParameterChangeListener(e->{
+			try {
+				updateForecast(erf);
+			} catch (Exception e1) {
+				e1.printStackTrace();
+				JOptionPane.showMessageDialog(editor, e1.getMessage(),
+						"Error updating forecast", JOptionPane.ERROR_MESSAGE);
+			}
+		});
+		
+		JPanel panel = new JPanel(new BorderLayout());
+		panel.add(editor, BorderLayout.CENTER);
+		panel.add(updateForecastButton.getEditor().getComponent(), BorderLayout.SOUTH);
+		
 		JFrame frame = new JFrame();
-		frame.setContentPane(editor);
+		frame.setContentPane(panel);
 		frame.setSize(600, 1000);
 		frame.setLocationRelativeTo(null);
 		frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
