@@ -146,84 +146,11 @@ public class ToyRuptureSetBuilder {
 		System.out.println("Original had "+origRupSet.getNumRuptures());
 		System.out.println("New has "+rupSet.getNumRuptures());
 		
-		SubSectStiffnessCalculator stiffnessCalc = rsConfig.getStiffnessCalc();
-		
-		List<AggregatedStiffnessCalculator> calcs = new ArrayList<>();
-		List<String> calcPrefixes = new ArrayList<>();
-		
-		calcs.add(new AggregatedStiffnessCalculator(StiffnessType.CFF, stiffnessCalc, true,
-				AggregationMethod.FLATTEN, AggregationMethod.SUM, AggregationMethod.SUM, AggregationMethod.SUM));
-		calcPrefixes.add("cff_sum");
-		
-		calcs.add(new AggregatedStiffnessCalculator(StiffnessType.CFF, stiffnessCalc, true,
-				AggregationMethod.FLATTEN, AggregationMethod.NUM_POSITIVE, AggregationMethod.SUM, AggregationMethod.NORM_BY_COUNT));
-		calcPrefixes.add("cff_fraction_positive");
-		
-		System.out.println("Have "+subSects.size()+" sub-sections");
-		
-		for (int c=0; c<calcs.size(); c++) {
-			AggregatedStiffnessCalculator calc = calcs.get(c);
-			String prefix = calcPrefixes.get(c);
-			
-			System.out.println("Doing "+prefix);
-
-			double[][] full = new double[subSects.size()][subSects.size()];
-			double[][] average = new double[subSects.size()][subSects.size()];
-			double[][] max = new double[subSects.size()][subSects.size()];
-			
-			for (int s1=0; s1<subSects.size(); s1++) {
-				for (int s2=0; s2<subSects.size(); s2++) {
-					if (s1 == s2)
-						full[s1][s2] = Double.NaN;
-					else
-						full[s1][s2] = calc.calc(List.of(subSects.get(s1)), List.of(subSects.get(s2)));
-				}
-			}
-			
-			for (int s1=0; s1<subSects.size(); s1++) {
-				for (int s2=s1; s2<subSects.size(); s2++) {
-					average[s1][s2] = 0.5*(full[s1][s2] + full[s2][s1]);
-					average[s2][s1] = average[s1][s2];
-					max[s1][s2] = Math.max(full[s1][s2], full[s2][s1]);
-					max[s2][s1] = max[s1][s2];
-				}
-			}
-
-			writeMatrix(full, new File(outputDir, prefix+".csv"));
-			writeMatrix(average, new File(outputDir, prefix+"_symmetrical_avg.csv"));
-			writeMatrix(max, new File(outputDir, prefix+"_symmetrical_max.csv"));
-		}
+		InputFileBuilder.writeStiffness(outputDir, rupSet, rsConfig.getStiffnessCalc());
 		
 		// now write the actual ruptures
-		writeRuptures(rupSet.getSectionIndicesForAllRups(), new File(outputDir, "orig_ruptures.csv"), subSects.size());
+		writeRuptures(origRupSet.getSectionIndicesForAllRups(), new File(outputDir, "orig_ruptures.csv"), subSects.size());
 		writeRuptures(rupSet.getSectionIndicesForAllRups(), new File(outputDir, "exhaustive_ruptures.csv"), subSects.size());
-	}
-	
-	private static void writeMatrix(double[][] mat, File file) throws IOException {
-		BufferedOutputStream bout = new BufferedOutputStream(new FileOutputStream(file));
-		CSVWriter writer = new CSVWriter(bout, true);
-		
-		List<String> header = new ArrayList<>(mat[0].length+1);
-		header.add("");
-		for (int i=0; i<mat[0].length; i++)
-			header.add(i+"");
-		writer.write(header);
-		
-		for (int i=0; i<mat.length; i++) {
-			List<String> line = new ArrayList<>(mat[i].length+1);
-			line.add(i+"");
-			for (int j=0; j<mat[i].length; j++) {
-				if (i == j)
-					line.add("");
-				else
-					line.add((float)mat[i][j]+"");
-			}
-			writer.write(line);
-		}
-		
-		writer.flush();
-		
-		bout.close();
 	}
 	
 	private static void writeRuptures(List<List<Integer>> rups, File file, int numSects) throws IOException {
