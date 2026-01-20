@@ -82,6 +82,9 @@ public class TD_ERF_Example {
 	}
 	
 	private static void updateForecast(TimeDepFaultSystemSolutionERF erf) {
+		System.out.println("Full ERF metadata string:\t"+erf.getAdjustableParameterList().getParameterListMetadataString());
+		System.out.println("Prob model metadata string:\t"+erf.getAdjustableParameterList().getParameter(
+				TimeDepFaultSystemSolutionERF.PROB_MODEL_PARAM_NAME).getValue().toString());
 		erf.updateForecast();
 		
 		// extra sanity checks
