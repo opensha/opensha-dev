@@ -88,17 +88,19 @@ public class TD_ERF_Example {
 		erf.updateForecast();
 		
 		// extra sanity checks
-		FaultSystemSolution sol = erf.getSolution();
 		FSS_ProbabilityModel probModel = erf.getProbabilityModel();
-		long startTimeMillis = erf.getTimeSpan().getStartTimeInMillis();
-		double duration = erf.getTimeSpan().getDuration();
-		for (int sourceID=0; sourceID<erf.getNumFaultSystemSources(); sourceID++) {
-			ProbEqkSource source = erf.getSource(sourceID);
-			int fssIndex = erf.getFltSysRupIndexForSource(sourceID);
-			double probGain = probModel.getProbabilityGain(fssIndex, startTimeMillis, duration);
-			Preconditions.checkState(source.getNumRuptures() > 0,
-					"Source %s is empty! fssIndex=%s, rate=%s, included=%s, probGain=%s",
-					sourceID, fssIndex, (double)sol.getRateForRup(fssIndex), erf.isRuptureIncluded(fssIndex), (double)probGain);
+		if (!(probModel instanceof FSS_ProbabilityModel.Poisson)) {
+			FaultSystemSolution sol = erf.getSolution();
+			long startTimeMillis = erf.getTimeSpan().getStartTimeInMillis();
+			double duration = erf.getTimeSpan().getDuration();
+			for (int sourceID=0; sourceID<erf.getNumFaultSystemSources(); sourceID++) {
+				ProbEqkSource source = erf.getSource(sourceID);
+				int fssIndex = erf.getFltSysRupIndexForSource(sourceID);
+				double probGain = probModel.getProbabilityGain(fssIndex, startTimeMillis, duration);
+				Preconditions.checkState(source.getNumRuptures() > 0,
+						"Source %s is empty! fssIndex=%s, rate=%s, included=%s, probGain=%s",
+						sourceID, fssIndex, (double)sol.getRateForRup(fssIndex), erf.isRuptureIncluded(fssIndex), (double)probGain);
+			}
 		}
 	}
 	
