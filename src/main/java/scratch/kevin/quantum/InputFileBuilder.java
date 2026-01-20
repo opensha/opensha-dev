@@ -35,6 +35,7 @@ import org.opensha.sha.earthquake.faultSysSolution.reports.ReportPageGen;
 import org.opensha.sha.earthquake.faultSysSolution.reports.ReportPageGen.PlotLevel;
 import org.opensha.sha.earthquake.faultSysSolution.ruptures.plausibility.impl.prob.Shaw07JumpDistProb;
 import org.opensha.sha.earthquake.faultSysSolution.ruptures.util.ConnectivityCluster;
+import org.opensha.sha.earthquake.faultSysSolution.ruptures.util.GeoJSONFaultReader;
 import org.opensha.sha.earthquake.faultSysSolution.util.FaultSectionUtils;
 import org.opensha.sha.earthquake.faultSysSolution.util.FaultSysTools;
 import org.opensha.sha.earthquake.faultSysSolution.util.SubSectionBuilder;
@@ -331,6 +332,9 @@ public class InputFileBuilder {
 
 	public static FaultSystemSolution writeTestFiles(File outputDir, FaultSystemRupSet rupSet,
 			SubSectStiffnessCalculator stiffnessCalc, String name) throws IOException {
+		// write out GeoJSON
+		GeoJSONFaultReader.writeFaultSections(new File(outputDir, FaultSystemRupSet.SECTS_FILE_NAME), rupSet.getFaultSectionDataList());
+		
 		// write out a-priori connectivity estimates
 		System.out.println("\tBuilding estimated connection coeffs");
 		GRParticRateEstimator estimator = new GRParticRateEstimator(rupSet, 0.5, REF_BRANCH.requireValue(NSHM23_SegmentationModels.class).getModel(rupSet, null));
