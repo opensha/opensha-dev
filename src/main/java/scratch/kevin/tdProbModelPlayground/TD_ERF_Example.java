@@ -78,6 +78,13 @@ public class TD_ERF_Example {
 		if (modelParams.containsParameter(RenewalModels.PARAM_NAME))
 			modelParams.setValue(RenewalModels.PARAM_NAME, RenewalModels.BPT);
 		
+		// try setting the probability model to a value previously retrieved; make sure the enum updates in the GUI
+		FSS_ProbabilityModels currentChoice = erf.getProbabilityModelChoice();
+		probModel = erf.getProbabilityModel();
+		erf.setProbabilityModelChoice(FSS_ProbabilityModels.POISSON);
+		erf.setCustomProbabilityModel(probModel);
+		Preconditions.checkState(erf.getProbabilityModelChoice() == currentChoice);
+		
 		showGUI(erf);
 	}
 	
