@@ -86,7 +86,10 @@ public class HazardMapFigures {
 		// alt random and realization count tests
 		compAdd(comparisons, Models.FINITE_1X_UNCENTERED, Models.FINITE_1X_UNCENTERED_ALT_RAND);
 		compAdd(comparisons, Models.FINITE_2X_UNCENTERED, Models.FINITE_2X_UNCENTERED_ALT_RAND);
-		compAdd(comparisons, Models.FINITE_20X_UNCENTERED, Models.FINITE_100X_UNCENTERED);
+		compAdd(comparisons, Models.FINITE_5X_UNCENTERED, Models.FINITE_5X_UNCENTERED_ALT_RAND);
+		compAdd(comparisons, Models.FINITE_20X_UNCENTERED, Models.FINITE_20X_UNCENTERED_ALT_RAND);
+		compAdd(comparisons, Models.FINITE_50X_UNCENTERED, Models.FINITE_50X_UNCENTERED_ALT_RAND);
+		compAdd(comparisons, Models.FINITE_100X_UNCENTERED, Models.FINITE_100X_UNCENTERED_ALT_RAND);
 		
 		compAdd(comparisons, PROPOSED_DIST_CORR_MODEL, Models.AS_PUBLISHED);
 		compLabels.put(PROPOSED_DIST_CORR_MODEL, Models.AS_PUBLISHED, "Proposed corrections");
