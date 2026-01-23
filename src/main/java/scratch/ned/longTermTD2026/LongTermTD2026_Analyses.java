@@ -26,12 +26,22 @@ import org.opensha.commons.gui.plot.GeographicMapMaker;
 import org.opensha.commons.gui.plot.PlotCurveCharacterstics;
 import org.opensha.commons.gui.plot.PlotLineType;
 import org.opensha.commons.gui.plot.PlotSymbol;
+import org.opensha.commons.param.ParameterList;
 import org.opensha.commons.util.ExceptionUtils;
 import org.opensha.sha.earthquake.ProbEqkRupture;
 import org.opensha.sha.earthquake.ProbEqkSource;
 import org.opensha.sha.earthquake.calc.ERF_Calculator;
 import org.opensha.sha.earthquake.faultSysSolution.FaultSystemRupSet;
 import org.opensha.sha.earthquake.faultSysSolution.FaultSystemSolution;
+import org.opensha.sha.earthquake.faultSysSolution.erf.td.AperiodicityModel;
+import org.opensha.sha.earthquake.faultSysSolution.erf.td.AperiodicityModels;
+import org.opensha.sha.earthquake.faultSysSolution.erf.td.FSS_ProbabilityModel;
+import org.opensha.sha.earthquake.faultSysSolution.erf.td.FSS_ProbabilityModels;
+import org.opensha.sha.earthquake.faultSysSolution.erf.td.HistoricalOpenInterval;
+import org.opensha.sha.earthquake.faultSysSolution.erf.td.RenewalModels;
+import org.opensha.sha.earthquake.faultSysSolution.erf.td.TimeDepFaultSystemSolutionERF;
+import org.opensha.sha.earthquake.faultSysSolution.erf.td.UCERF3_ProbabilityModel;
+import org.opensha.sha.earthquake.faultSysSolution.erf.td.WG02_ProbabilityModel;
 import org.opensha.sha.earthquake.param.BPTAveragingTypeOptions;
 import org.opensha.sha.earthquake.param.BPTAveragingTypeParam;
 import org.opensha.sha.earthquake.param.HistoricOpenIntervalParam;
@@ -126,7 +136,211 @@ public class LongTermTD2026_Analyses {
 	}
 
 	
-	private static void makeTestTD_CalculationFiles() {
+	private static void makeTestTD_CalculationFiles(boolean matchU3_Calcs) {
+		
+		long currentTimeEpoch = System.currentTimeMillis();
+		String dateString = new java.text.SimpleDateFormat("MM_dd_yyyy").format(new java.util.Date (currentTimeEpoch)); // Epoch in seconds, remove '*1000' for milliseconds
+		File outputDir1 = new File("/Users/field/markdown/nshm23_time_dependence_"+dateString);
+		if(!outputDir1.exists()) outputDir1.mkdir();
+		System.out.println(!outputDir1.exists()+"\t"+outputDir1);
+		String fileName = "TD_TestFiles";
+		if(matchU3_Calcs)
+			fileName += "_matchU3";
+// TEST No Interpolation
+//		fileName = "TD_TestFiles_noInterpolation";
+// TEST No Interpolation and U3 ProbDistsDiscr
+//		fileName = "TD_TestFiles_noInterpAndU3_ProbModDiscr";
+// TEST U3 CDF integration discr
+//		fileName = "TD_TestFiles_U3_CDF_IntegrationDisc";
+// TEST increase CDF disc by factor of ten
+//		fileName = "TD_TestFiles_IncreaseCDF_IntgrationDiscrBy10";
+
+		File outputDir2 = new File(outputDir1,fileName);
+		if(!outputDir2.exists()) outputDir2.mkdir();
+		System.out.println(!outputDir2.exists()+"\t"+outputDir2);
+
+		String fssFileName = "results_WUS_FM_v3_branch_averaged_gridded_simplified.zip";
+		int startYear = 2025;
+		int openIntYear = 1875;
+		double forecastDurationYears = 50;
+		
+		String stringForReadmeFile =
+				"This directory contains a verification files for long-term time-dependent "+
+				"calculations for the following settings:\n\n"+
+				"Only Historic Rupture DOLE data (no paleoseismic)\n" +
+				"Fault System Solution filename = "+fssFileName+"\n"+
+				"Start Year = "+startYear+"\n" +
+				"Forecast Duration = "+forecastDurationYears+" years\n"+
+				"Open Interval Year = "+openIntYear+"\n\n";
+		
+		// get solution
+		FaultSystemSolution sol = null;
+		try {
+			sol = FaultSystemSolution.load(new File("/Users/field/nshm-haz_data/"+fssFileName));
+			// set historical rup DOLE
+			FaultSystemRupSet rupSet = sol.getRupSet();
+			List<? extends FaultSection> subSects = rupSet.getFaultSectionDataList();
+			List<PaleoDOLE_Data> paleoDataList = new ArrayList<PaleoDOLE_Data>();
+			List<HistoricalRupture> histRupDataList = DOLE_SubsectionMapper.loadHistRups();			
+			DOLE_SubsectionMapper.mapDOLE(subSects, histRupDataList, paleoDataList, PaleoMappingAlgorithm.NEIGHBORING_SECTS, false);
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		
+		
+		TimeDepFaultSystemSolutionERF erf = new TimeDepFaultSystemSolutionERF();
+		
+		erf.setSolution(sol);
+		
+		// set to a value from the enum:
+//		erf.setProbabilityModelChoice(FSS_ProbabilityModels.POISSON);
+//		erf.setProbabilityModelChoice(FSS_ProbabilityModels.WG02);
+		erf.setProbabilityModelChoice(FSS_ProbabilityModels.UCERF3_METHOD);
+		
+		FSS_ProbabilityModel probModel = erf.getProbabilityModel();
+		
+		if (probModel instanceof UCERF3_ProbabilityModel) {
+			UCERF3_ProbabilityModel u3ProbModel = (UCERF3_ProbabilityModel)probModel;
+			// setting by enum is prefferred
+			u3ProbModel.setAperiodicityModelChoice(AperiodicityModels.UCERF3_MIDDLE);
+			
+			if(matchU3_Calcs) {  // diescretizations in old ProbabilityModelCalc to match U3
+				u3ProbModel.setProbDistsDiscretization(9, 18001, false);
+				u3ProbModel.setIntegrationNormCDFsDiscretization(5d, 501);				
+			}
+			
+// TEST No Interpolation
+//u3ProbModel.setProbDistsDiscretization(10, 200001, false);
+// TEST No Interpolation and U3 ProbDistsDiscr
+//u3ProbModel.setProbDistsDiscretization(9, 18001, false);
+//TEST U3 CDF integration discr
+//u3ProbModel.setIntegrationNormCDFsDiscretization(5d, 501);
+//TEST increase CDF disc by factor of ten
+//u3ProbModel.setIntegrationNormCDFsDiscretization(5d, 5001);
+
+
+			// but can still set a custom implementation if needed (the GUI will say "External Custom Value: <name>")
+			// this test sets an external model that's also in the enum, but setting it this way makes it "external"
+			u3ProbModel.setCustomHistOpenIntervalModel(new HistoricalOpenInterval.SingleYear(openIntYear, true));
+		} else if (probModel instanceof WG02_ProbabilityModel) {
+			WG02_ProbabilityModel wgProbModel = (WG02_ProbabilityModel)probModel;
+			wgProbModel.setAperiodicityModelChoice(AperiodicityModels.UCERF3_LOW);
+		}
+		
+		// can also do things via the parameter list
+		ParameterList modelParams = probModel.getAdjustableParameters();
+		if (modelParams.containsParameter(RenewalModels.PARAM_NAME))
+			modelParams.setValue(RenewalModels.PARAM_NAME, RenewalModels.BPT);		
+		
+//		FaultSystemSolutionERF erf = new FaultSystemSolutionERF(sol);
+//		
+//		erf.setParameter(ProbabilityModelParam.NAME, probModel);
+//		erf.setParameter(MagDependentAperiodicityParam.NAME, aperModel);
+//		erf.setParameter(HistoricOpenIntervalParam.NAME, openInt); 
+		erf.getTimeSpan().setStartTime(startYear);
+		erf.getTimeSpan().setDuration(forecastDurationYears);
+		erf.updateForecast();
+		
+//List<Integer> testSectID_List = sol.getRupSet().getSectionsIndicesForRup(174250);	
+//for(int s:testSectID_List) {
+//	long dateLastEpoch = sol.getRupSet().getFaultSectionData(s).getDateOfLastEvent();
+//	double dateLastYrs = (double)dateLastEpoch/ProbabilityModelsCalc.MILLISEC_PER_YEAR + 1970.0;
+//	if(dateLastEpoch == Long.MIN_VALUE)
+//		dateLastYrs = Double.NaN;
+//	System.out.println(s+"\t"+dateLastYrs);
+//}
+//System.exit(0);
+		
+//		ProbabilityModelsCalc probCalc = new ProbabilityModelsCalc(erf);
+		
+		probModel = erf.getProbabilityModel(); // not sure this is necessary
+
+		
+		String headerString = "";
+		headerString += "srcIndex,";	// added here
+		headerString += "longTermRate,";	// added here
+		headerString += "gainTest,";	// added here
+		headerString += "numRup,";	// added here
+		// from ProbabilityModelsCalc
+		headerString += "fltSysRupIndex,";
+		headerString += "probGain,";
+		headerString += "condProb,";
+		headerString += "rupMag,";
+		headerString += "aveCondRecurInterval,";
+		headerString += "aveCondRecurIntervalWhereUnknown,";		
+		headerString += "aveTimeSinceLastWhereKnownYears,";
+		headerString += "aveNormTimeSinceLastEventWhereKnown,";
+		headerString += "totRupArea,";
+		headerString += "totRupAreaWithDateOfLast,";
+		headerString += "fractRupAreaWithDateOfLast,";
+		headerString += "aper,";
+		headerString += "numSubsectForRup,";
+
+
+//		double minRatio = Double.MAX_VALUE;
+//		double maxRatio = -Double.MAX_VALUE;
+
+		FileWriter fw;
+		FileWriter fw_readme;
+		try {
+			fw = new FileWriter(new File(outputDir2+"/rupTestFile.csv"));
+			fw_readme = new FileWriter(new File(outputDir2+"/INFO.txt"));
+			fw_readme.write(stringForReadmeFile);
+			fw.write(headerString+"\n"); 
+//			System.out.println(headerString);
+			for(int s=0;s<erf.getNumFaultSystemSources();s++) {
+				if(erf.getSource(s).isSourcePoissonian())
+					throw new RuntimeException("source is poissonian: "+s+"\t"+erf.getSource(s).getName());
+				int fsrIndex = erf.getFltSysRupIndexForSource(s);
+//				double aper = erf.getAperiodicityForSource(s);
+//				double probGainTest = probCalc.getU3_ProbGainForRup(fsrIndex, aper, openInt, false, true, true, 
+//						erf.getTimeSpan().getStartTimeInMillis(), forecastDurationYears);
+
+//				double aperiodicity = ((UCERF3_ProbabilityModel)probModel).getAperiodicityModel().getRuptureAperiodicity(fsrIndex);
+				double probGainTest = probModel.getProbabilityGain(fsrIndex, erf.getTimeSpan().getStartTimeInMillis(), forecastDurationYears);
+				
+				double testRate=0;  // this should equal fss rate time gain
+				for(int r=0;r<erf.getSource(s).getNumRuptures();r++) {
+					double prob = erf.getSource(s).getRupture(r).getProbability();
+// this not the right way because U3 TD does not use Poisson calc
+//					double rate;
+//					if(prob<1e-8)
+//						rate = prob/forecastDurationYears;	// avoiding numerical issues
+//					else
+//						rate = erf.getSource(s).getRupture(r).getMeanAnnualRate(forecastDurationYears);
+					testRate+=prob/forecastDurationYears;
+				}
+				testRate /= probGainTest;
+				if((float)testRate != (float)sol.getRateForRup(fsrIndex))
+					throw new RuntimeException("long-term rate discrepancy for srcID="+s);
+//				double rate = sol.getRateForRup(fsrIndex);
+//				double ratio = testRate/rate;
+//				if(minRatio>ratio) minRatio=ratio;
+//				if(maxRatio<ratio) maxRatio=ratio;	
+				
+				String line = s+","+testRate+","+probGainTest+","+erf.getSource(s).getNumRuptures()+
+						","+((UCERF3_ProbabilityModel)probModel).u3_ProbGainForRupInfoString+"\n";
+				fw.write(line); 
+				
+			}
+			fw.close();
+			fw_readme.close();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		
+//		probCalc.writeCurrentSectDataToCSV_File(outputDir2, "sectTestFile.csv");
+		System.out.println("DONE (tests checked out)");
+//		System.out.println("minRatio="+(float)minRatio);
+//		System.out.println("maxRatio="+(float)maxRatio);
+	}
+	
+	
+	
+	/**
+	 * This uses the UCERF3 ERF and ProbabilityModelCalc
+	 */
+	private static void makeTestTD_CalculationFiles_U3() {
 		
 		long currentTimeEpoch = System.currentTimeMillis();
 		String dateString = new java.text.SimpleDateFormat("MM_dd_yyyy").format(new java.util.Date (currentTimeEpoch)); // Epoch in seconds, remove '*1000' for milliseconds
@@ -134,7 +348,7 @@ public class LongTermTD2026_Analyses {
 		if(!outputDir1.exists()) outputDir1.mkdir();
 		System.out.println(!outputDir1.exists()+"\t"+outputDir1);
 
-		File outputDir2 = new File(outputDir1,"TD_TestFiles");
+		File outputDir2 = new File(outputDir1,"TD_TestFilesU3");
 		if(!outputDir2.exists()) outputDir2.mkdir();
 		System.out.println(!outputDir2.exists()+"\t"+outputDir2);
 
@@ -278,6 +492,7 @@ public class LongTermTD2026_Analyses {
 //		System.out.println("minRatio="+(float)minRatio);
 //		System.out.println("maxRatio="+(float)maxRatio);
 	}
+
 	
 	
 	
@@ -417,7 +632,117 @@ public class LongTermTD2026_Analyses {
 	}
 
 	
-	private static void tempTestPrefBlendCalculationFiles() {
+	private static void tempTestPrefBlendCalculationFiles(boolean matchU3_Calcs) {
+		
+		long currentTimeEpoch = System.currentTimeMillis();
+		String dateString = new java.text.SimpleDateFormat("MM_dd_yyyy").format(new java.util.Date (currentTimeEpoch)); // Epoch in seconds, remove '*1000' for milliseconds
+		File outputDir1 = new File("/Users/field/markdown/nshm23_time_dependence_"+dateString);
+		if(!outputDir1.exists()) outputDir1.mkdir();
+		System.out.println(!outputDir1.exists()+"\t"+outputDir1);
+		
+		String fileName = "TD_PrefBlendTestFiles";
+		if(matchU3_Calcs)
+			fileName += "_matchU3";
+
+
+		File outputDir2 = new File(outputDir1,fileName);
+		if(!outputDir2.exists()) outputDir2.mkdir();
+		System.out.println(!outputDir2.exists()+"\t"+outputDir2);
+
+		String fssFileName = "results_WUS_FM_v3_branch_averaged_gridded_simplified.zip";
+		int startYear = 2025;
+		int openIntYear = 1875;
+		double forecastDurationYears = 50;
+		
+		String stringForReadmeFile =
+				"This directory contains a verification files for long-term time-dependent "+
+				"calculations for the following settings:\n\n"+
+				"Only Historic Rupture DOLE data (no paleoseismic)\n" +
+				"Fault System Solution filename = "+fssFileName+"\n"+
+				"Start Year = "+startYear+"\n" +
+				"Forecast Duration = "+forecastDurationYears+" years\n"+
+				"Open Interval Year = "+openIntYear+"\n\n";
+				
+				stringForReadmeFile += "\n This directory was generated by running the OpenSHA java method \n\n\tscratch.ned.longTermTD2026.longTermTD2026_Analyses.makeTestTD_CalculationFiles() \n\non "+dateString;
+		
+		// get solution
+		FaultSystemSolution sol = null;
+		try {
+			sol = FaultSystemSolution.load(new File("/Users/field/nshm-haz_data/"+fssFileName));
+			// set historical rup DOLE
+			FaultSystemRupSet rupSet = sol.getRupSet();
+			List<? extends FaultSection> subSects = rupSet.getFaultSectionDataList();
+			List<PaleoDOLE_Data> paleoDataList = new ArrayList<PaleoDOLE_Data>();
+			List<HistoricalRupture> histRupDataList = DOLE_SubsectionMapper.loadHistRups();			
+			DOLE_SubsectionMapper.mapDOLE(subSects, histRupDataList, paleoDataList, PaleoMappingAlgorithm.NEIGHBORING_SECTS, false);
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		
+//		FaultSystemSolutionERF erf = new FaultSystemSolutionERF(sol);
+//		
+//		erf.setParameter(ProbabilityModelParam.NAME, probModel);
+////		erf.setParameter(MagDependentAperiodicityParam.NAME, aperModel);
+//		erf.setParameter(HistoricOpenIntervalParam.NAME, openInt); 
+//		erf.getTimeSpan().setStartTime(startYear);
+//		erf.getTimeSpan().setDuration(forecastDurationYears);
+//		erf.updateForecast();
+		
+		TimeDepFaultSystemSolutionERF erf = new TimeDepFaultSystemSolutionERF();
+		
+		erf.setSolution(sol);
+		
+		// this sets historic open interval year 1875
+		erf.setProbabilityModelChoice(FSS_ProbabilityModels.UCERF3_PREF_BLEND);
+		
+		if(matchU3_Calcs) {  // diescretizations in old ProbabilityModelCalc to match U3
+			FSS_ProbabilityModel.WeightedCombination probModel = (FSS_ProbabilityModel.WeightedCombination)erf.getProbabilityModel();
+			probModel.setUCERF3_Discretization();
+		}
+
+		
+		// can also do things via the parameter list
+//		ParameterList modelParams = probModel.getAdjustableParameters();
+//		if (modelParams.containsParameter(RenewalModels.PARAM_NAME))
+//			modelParams.setValue(RenewalModels.PARAM_NAME, RenewalModels.BPT);		
+
+		erf.getTimeSpan().setStartTime(startYear);
+		erf.getTimeSpan().setDuration(forecastDurationYears);
+		erf.updateForecast();
+		
+		String headerString = "srcIndex,prob";
+
+		FileWriter fw;
+		FileWriter fw_readme;
+		try {
+			fw = new FileWriter(new File(outputDir2+"/rupTestFile.csv"));
+			fw_readme = new FileWriter(new File(outputDir2+"/INFO.txt"));
+			fw_readme.write(stringForReadmeFile);
+			fw.write(headerString+"\n"); 
+//			System.out.println(headerString);
+			int rupIndex=-1;
+			for(int s=0;s<erf.getNumFaultSystemSources();s++) {
+				if(erf.getSource(s).isSourcePoissonian())
+					throw new RuntimeException("source is poissonian: "+s+"\t"+erf.getSource(s).getName());
+				for(int r=0;r<erf.getSource(s).getNumRuptures();r++) {
+					double prob = erf.getSource(s).getRupture(r).getProbability();
+					rupIndex+=1;
+					String line = rupIndex+","+prob+"\n";
+					fw.write(line); 
+
+				}
+			}
+			fw.close();
+			fw_readme.close();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		
+	}
+
+	
+	
+	private static void tempTestPrefBlendCalculationFilesU3() {
 		
 		long currentTimeEpoch = System.currentTimeMillis();
 		String dateString = new java.text.SimpleDateFormat("MM_dd_yyyy").format(new java.util.Date (currentTimeEpoch)); // Epoch in seconds, remove '*1000' for milliseconds
@@ -425,7 +750,7 @@ public class LongTermTD2026_Analyses {
 		if(!outputDir1.exists()) outputDir1.mkdir();
 		System.out.println(!outputDir1.exists()+"\t"+outputDir1);
 
-		File outputDir2 = new File(outputDir1,"TD_PrefBlendTestFiles");
+		File outputDir2 = new File(outputDir1,"TD_PrefBlendTestFilesU3");
 		if(!outputDir2.exists()) outputDir2.mkdir();
 		System.out.println(!outputDir2.exists()+"\t"+outputDir2);
 
@@ -533,7 +858,6 @@ public class LongTermTD2026_Analyses {
 //		System.out.println("maxRatio="+(float)maxRatio);
 	}
 
-	
 	
 	
 
@@ -1590,10 +1914,16 @@ public class LongTermTD2026_Analyses {
 	}
 	
 	
-	private static void tempTestPrefBlendCalc() {
+	private static void tempCompareTestPrefBlendCalc() {
 		try {
-			File dataFile1 = new File("/Users/field/markdown/nshm23_time_dependence_01_07_2026_before/TD_PrefBlendTestFiles/rupTestFile.csv");
-			File dataFile2 = new File("/Users/field/markdown/nshm23_time_dependence_01_07_2026/TD_PrefBlendTestFiles/rupTestFile.csv");
+			
+//			// These match - maxDiff: 1.4704979456325873E-9
+//			File dataFile1 = new File("/Users/field/markdown/nshm23_time_dependence_01_23_2026/TD_PrefBlendTestFilesU3/rupTestFile.csv");
+//			File dataFile2 = new File("/Users/field/markdown/nshm23_time_dependence_01_23_2026/TD_PrefBlendTestFiles_matchU3/rupTestFile.csv");
+
+//			// Discretization and interpolation differences lead to gain maxDiff: 0.028717490020562564
+			File dataFile1 = new File("/Users/field/markdown/nshm23_time_dependence_01_23_2026/TD_PrefBlendTestFiles/rupTestFile.csv");
+			File dataFile2 = new File("/Users/field/markdown/nshm23_time_dependence_01_23_2026/TD_PrefBlendTestFiles_matchU3/rupTestFile.csv");
 			
 			BufferedReader reader1 = new BufferedReader(scratch.UCERF3.utils.UCERF3_DataUtils.getReader(dataFile1.toURL()));
 			BufferedReader reader2 = new BufferedReader(scratch.UCERF3.utils.UCERF3_DataUtils.getReader(dataFile2.toURL()));
@@ -1644,18 +1974,49 @@ public class LongTermTD2026_Analyses {
 		}
 	}
 
-	
-	private static void tempTestTD_CalcFiles() {
+	/**
+	 * This compares the gain columns of the Test TD files
+	 */
+	private static void compareTestTD_CalcFiles() {
 		try {
-			File dataFile1 = new File("/Users/field/markdown/nshm23_time_dependence_01_07_2026/TD_TestFiles/rupTestFile.csv");
-			File dataFile2 = new File("/Users/field/markdown/nshm23_time_dependence_01_07_2026_before/TD_TestFiles/rupTestFile.csv");
+		
+			// CDF integration discr is less than 1% impact
+			// Try increasing CDF integration disc by a factor of 10: maxFractDiff = 0.008571332739760407
+			File dataFile1 = new File("/Users/field/markdown/nshm23_time_dependence_01_22_2026/TD_TestFiles_IncreaseCDF_IntgrationDiscrBy10/rupTestFile.csv");
+			File dataFile2 = new File("/Users/field/markdown/nshm23_time_dependence_01_22_2026/TD_TestFiles/rupTestFile.csv");
 			
+			// This is identical because new default equals that of U3
+//			// Compare new framework versus new with U3_CDF_IntegrationDisc: maxFractDiff = 0.04678507185752134
+//			File dataFile1 = new File("/Users/field/markdown/nshm23_time_dependence_01_22_2026/TD_TestFiles_U3_CDF_IntegrationDisc/rupTestFile.csv");
+//			File dataFile2 = new File("/Users/field/markdown/nshm23_time_dependence_01_22_2026/TD_TestFiles/rupTestFile.csv");
+			
+			// This explains all the difference
+//			// Compare new framework versus no interpolation and U3 Prob Mod Discr : maxFractDiff = 0.04678507185752134
+//			File dataFile1 = new File("/Users/field/markdown/nshm23_time_dependence_01_22_2026/TD_TestFiles_noInterpAndU3_ProbModDiscr/rupTestFile.csv");
+//			File dataFile2 = new File("/Users/field/markdown/nshm23_time_dependence_01_22_2026/TD_TestFiles/rupTestFile.csv");
+			
+			// This shows that turning off interpolation has a modest (<1%) effect on gain
+//			// Compare new framework with and without interpolation: maxFractDiff = 0.0069877695558691055
+//			File dataFile1 = new File("/Users/field/markdown/nshm23_time_dependence_01_22_2026/TD_TestFiles_noInterpolation/rupTestFile.csv");
+//			File dataFile2 = new File("/Users/field/markdown/nshm23_time_dependence_01_22_2026/TD_TestFiles/rupTestFile.csv");
+			
+//			// Compare new framework versus new with U3 cdf discretizations: maxFractDiff = 0.04678507185752134
+//			File dataFile1 = new File("/Users/field/markdown/nshm23_time_dependence_01_22_2026/TD_TestFiles_matchU3/rupTestFile.csv");
+//			File dataFile2 = new File("/Users/field/markdown/nshm23_time_dependence_01_22_2026/TD_TestFiles/rupTestFile.csv");
+			
+//			// Compare U3 calcs with new framework with U3 cdf discretizations: maxFractDiff = 8.791622985171443E-11
+//			File dataFile1 = new File("/Users/field/markdown/nshm23_time_dependence_01_22_2026/TD_TestFiles_matchU3/rupTestFile.csv");
+//			File dataFile2 = new File("/Users/field/markdown/nshm23_time_dependence_01_22_2026/TD_TestFilesU3/rupTestFile.csv");
+
+//			// Compare U3 with that before Kevin's re-refactoring work: maxFractDiff = 8.791922745388092E-11
+//			File dataFile1 = new File("/Users/field/markdown/nshm23_time_dependence_01_22_2026/TD_TestFiles_matchU3/rupTestFile.csv");
+//			File dataFile2 = new File("/Users/field/markdown/nshm23_time_dependence_01_07_2026/TD_TestFiles/rupTestFile.csv");
 			
 			BufferedReader reader1 = new BufferedReader(scratch.UCERF3.utils.UCERF3_DataUtils.getReader(dataFile1.toURL()));
 			BufferedReader reader2 = new BufferedReader(scratch.UCERF3.utils.UCERF3_DataUtils.getReader(dataFile2.toURL()));
 			String line;
 			
-			ArrayList<Double> list1 = new ArrayList<Double>();
+			ArrayList<Double> gainList1 = new ArrayList<Double>();
 			ArrayList<String> stringList1 = new ArrayList<String>();
 			boolean header = true;
 			while ((line = reader1.readLine()) != null) {
@@ -1666,12 +2027,12 @@ public class LongTermTD2026_Analyses {
 				String[] st = line.trim().split(",");
 				if(st.length != 17)
 						throw new RuntimeException("st.length: "+st.length);
-				list1.add(Double.valueOf(st[2]));
+				gainList1.add(Double.valueOf(st[2]));
 				stringList1.add(line);
 			}
 
 			
-			ArrayList<Double> list2 = new ArrayList<Double>();
+			ArrayList<Double> gainList2 = new ArrayList<Double>();
 			ArrayList<String> stringList2 = new ArrayList<String>();
 			header = true;
 			while ((line = reader2.readLine()) != null) {
@@ -1682,33 +2043,33 @@ public class LongTermTD2026_Analyses {
 				String[] st = line.trim().split(",");
 				if(st.length != 17)
 						throw new RuntimeException("");
-				list2.add(Double.valueOf(st[2]));
+				gainList2.add(Double.valueOf(st[2]));
 				stringList2.add(line);
 			}
 			
 			double fractBad=0;
 			int maxDiffLine=0;
 			double maxDiff = 0;
-			for(int i=0;i<list2.size();i++) {
-				double diff = Math.abs(list1.get(i)/list2.get(i)-1.0);
-				if(maxDiff<diff) {
+			for(int i=0;i<gainList2.size();i++) {
+				double diff = Math.abs(gainList1.get(i)/gainList2.get(i)-1.0);
+				if(maxDiff<diff && gainList1.get(i)>1e-9) {
 					maxDiff = diff;
 					maxDiffLine=i;
 				}
 //				if(num<100)
 //					System.out.println(diff);
-				if(diff > 0.0001) {
+				if(diff > 0.0001 && gainList1.get(i)>1e-9) {
 					fractBad+=1;
 //					System.out.println(diff);
 //					throw new RuntimeException("diff: "+diff);
 				}
 			}
-			fractBad /= list1.size();
+			fractBad /= gainList1.size();
 			System.out.println("fractBad: "+fractBad);
 			System.out.println("maxFractDiff: "+maxDiff);
 			System.out.println(stringList1.get(maxDiffLine));
 			System.out.println(stringList2.get(maxDiffLine));
-			System.out.println("num sources: "+list1.size());
+			System.out.println("num sources: "+gainList1.size());
 
 		} catch (Exception e) {
 			ExceptionUtils.throwAsRuntimeException(e);
@@ -1733,11 +2094,19 @@ public class LongTermTD2026_Analyses {
 //		System.out.println("maxNumRups = "+maxNumRups);
 		
 		// Use these to test changes:
-		testOldVsNewSimulationMethod(); // I commented out running the old simulation in this method
-//		makeTestTD_CalculationFiles();
-//		tempTestTD_CalcFiles();
-//		tempTestPrefBlendCalculationFiles();
-//		tempTestPrefBlendCalc();
+//		testOldVsNewSimulationMethod(); // I commented out running the old simulation in this method
+		
+		// These test that old and new calculations match (when same discretization and interpolation used)
+//		makeTestTD_CalculationFiles(false); // New test calculations
+//		makeTestTD_CalculationFiles(true);	// New test calculations but with U3 discretizations; diffs up to 4.8% on gains
+//		makeTestTD_CalculationFiles_U3();	// U3 calculations (consistent with old code)
+//		compareTestTD_CalcFiles();	// this compares gains in the test files generated above (it has notes on results)
+		
+		// These test that old and new calculations match for pref blend (when same discretization and interpolation used)
+//		tempTestPrefBlendCalculationFiles(false);
+//		tempTestPrefBlendCalculationFiles(true);
+//		tempTestPrefBlendCalculationFilesU3();
+		tempCompareTestPrefBlendCalc();
 		
 //		tempMakeTestTD_CalculationFilesForSingleSource();
 		System.exit(0);
