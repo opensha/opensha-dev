@@ -209,6 +209,9 @@ public class LongTermTD2026_Analyses {
 				u3ProbModel.setIntegrationNormCDFsDiscretization(5d, 501);				
 			}
 			
+			// enables getDebugString()
+			u3ProbModel.setSaveDebugInfo(true);
+			
 // TEST No Interpolation
 //u3ProbModel.setProbDistsDiscretization(10, 200001, false);
 // TEST No Interpolation and U3 ProbDistsDiscr
@@ -319,7 +322,7 @@ public class LongTermTD2026_Analyses {
 //				if(maxRatio<ratio) maxRatio=ratio;	
 				
 				String line = s+","+testRate+","+probGainTest+","+erf.getSource(s).getNumRuptures()+
-						","+((UCERF3_ProbabilityModel)probModel).u3_ProbGainForRupInfoString+"\n";
+						","+((UCERF3_ProbabilityModel)probModel).getDebugString()+"\n";
 				fw.write(line); 
 				
 			}
