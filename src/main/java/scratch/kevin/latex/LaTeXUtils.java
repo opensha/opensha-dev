@@ -874,10 +874,17 @@ public class LaTeXUtils {
 						File tifFile = new File(figInFile.getParentFile(), inPrefix+".tif");
 						if (!tifFile.exists())
 							tifFile = new File(figInFile.getParentFile(), inPrefix+".tiff");
+						System.out.flush();
 						if (tifFile.exists()) {
 							System.out.println("\tAlso copying TIF");
+							System.err.println("\tWARNING: make sure you converted it so that the metadata thinks it's "
+									+ "300 DPI, otherwise they might get confused and send it back: convert figure.png -density 300 figure.tif");
 							Files.copy(tifFile, new File(outputDir, outPrefix+".tif"));
+						} else {
+							System.err.println("\tWARNING: SSA arbitrarily discriminates agains PNGs and won't accept them! "
+									+ "Submit TIFs also, and convert with density set to 300: convert figure.png -density 300 figure.tif");
 						}
+						System.err.flush();
 					}
 					
 					String newLine = beforePath+outName+afterPath;
