@@ -2,6 +2,7 @@ package scratch.ned.rupsInFaultSystem.OLD_STUFF;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 
 import org.opensha.refFaultParamDb.vo.FaultSectionPrefData;
 
@@ -16,21 +17,21 @@ import org.opensha.refFaultParamDb.vo.FaultSectionPrefData;
  */
 public class OldSectionCluster {
 	
-	ArrayList<ArrayList<Integer>> localEndToEndSectLinksList;
-	ArrayList<Integer> allSectEndPtsInCluster;
-	ArrayList<ArrayList<FaultSectionPrefData>> subSectionPrefDataList;
-	ArrayList<Integer> allSubSectionsIdList;
-	ArrayList<ArrayList<Integer>> rupList;
+	List<List<Integer>> localEndToEndSectLinksList;
+	List<Integer> allSectEndPtsInCluster;
+	List<List<FaultSectionPrefData>> subSectionPrefDataList;
+	List<Integer> allSubSectionsIdList;
+	List<List<Integer>> rupList;
 	int minNumSubSectInRup;
 	
 	/**
 	 * 
 	 * @return
 	 */
-	public ArrayList<Integer> getSectionIndicesInCluster() {
-		ArrayList<Integer> sectIndices = new ArrayList<Integer>();
+	public List<Integer> getSectionIndicesInCluster() {
+		List<Integer> sectIndices = new ArrayList<Integer>();
 		for(int i=0; i<localEndToEndSectLinksList.size();i++) {
-			ArrayList<Integer> endToEndLink = localEndToEndSectLinksList.get(i);
+			List<Integer> endToEndLink = localEndToEndSectLinksList.get(i);
 //			System.out.println("endToEndLink="+endToEndLink);
 			for(int j=0; j< endToEndLink.size(); j++) {
 				Integer linkInt = endToEndLink.get(j);
@@ -48,14 +49,14 @@ public class OldSectionCluster {
 	 * @param endToEndSectLinksList
 	 * @return
 	 */
-	public ArrayList<ArrayList<Integer>> CreateCluster(ArrayList<ArrayList<Integer>> endToEndSectLinksList, 
-			ArrayList<ArrayList<FaultSectionPrefData>> subSectionPrefDataList, int minNumSubSectInRup) {
+	public List<List<Integer>> CreateCluster(List<List<Integer>> endToEndSectLinksList, 
+			List<List<FaultSectionPrefData>> subSectionPrefDataList, int minNumSubSectInRup) {
 		
 		this.subSectionPrefDataList = subSectionPrefDataList;
 		this.minNumSubSectInRup = minNumSubSectInRup;
 		
 		// make hashmap of endToEndSectLinksList to make it easier to remove those used from what's passed back
-		HashMap<Integer, ArrayList<Integer>> endToEndLinkdListHashMap = new HashMap<Integer, ArrayList<Integer>>();
+		HashMap<Integer, List<Integer>> endToEndLinkdListHashMap = new HashMap<>();
 		for(int i=0;i<endToEndSectLinksList.size();i++)
 			endToEndLinkdListHashMap.put(Integer.valueOf(i), endToEndSectLinksList.get(i));
 		
@@ -71,7 +72,7 @@ public class OldSectionCluster {
 		for(int i=1; i<endToEndSectLinksList.size(); i++) { // need double loop to make all connections
 //System.out.println("\tlink "+i+" of "+endToEndSectLinksList.size());
 			for(int j=1; j<endToEndSectLinksList.size(); j++) {
-				ArrayList<Integer> endToEndLink = endToEndSectLinksList.get(j);
+				List<Integer> endToEndLink = endToEndSectLinksList.get(j);
 				for(int k=0; k<endToEndLink.size(); k++) {
 					if(allSectEndPtsInCluster.contains(endToEndLink.get(k))) { // it's part of this cluster
 						if(!linkIndicesToKeep.contains(j)) {  // make sure we don't already have it
@@ -88,12 +89,12 @@ public class OldSectionCluster {
 			}	
 		}
 		
-		localEndToEndSectLinksList = new ArrayList<ArrayList<Integer>>();
+		localEndToEndSectLinksList = new ArrayList<>();
 		for(int i=0; i<linkIndicesToKeep.size();i++)
 			localEndToEndSectLinksList.add(endToEndSectLinksList.get(linkIndicesToKeep.get(i).intValue()));
 //		System.out.println("localEndToEndSectLinksList.size()="+localEndToEndSectLinksList.size());
 		
-		ArrayList<ArrayList<Integer>> unusedEndToEndSectLinksList = new ArrayList<ArrayList<Integer>>();
+		List<List<Integer>> unusedEndToEndSectLinksList = new ArrayList<>();
 		for(int i=1; i<endToEndSectLinksList.size();i++)
 			if(!linkIndicesToKeep.contains(i))
 				unusedEndToEndSectLinksList.add(endToEndLinkdListHashMap.get(Integer.valueOf(i)));
@@ -116,7 +117,7 @@ public class OldSectionCluster {
 	 * This returns the IDs of all the subsections in the cluster
 	 * @return
 	 */
-	public ArrayList<Integer> getAllSubSectionsIdList() {
+	public List<Integer> getAllSubSectionsIdList() {
 		return allSubSectionsIdList;
 	}
 	
@@ -127,7 +128,7 @@ public class OldSectionCluster {
 		for(int i=0; i< allSectEndPtsInCluster.size();i+=2) {
 			sectionIndex = allSectEndPtsInCluster.get(i).intValue()/2; // convert from endpoint index to section index
 //			System.out.println("sectionIndex="+sectionIndex);
-			ArrayList<FaultSectionPrefData> prefSubsectDataForSection = subSectionPrefDataList.get(sectionIndex);
+			List<FaultSectionPrefData> prefSubsectDataForSection = subSectionPrefDataList.get(sectionIndex);
 			for(int k=0; k< prefSubsectDataForSection.size();k++) {
 //				System.out.println(prefSubsectDataForSection.get(k).getSectionId());
 				allSubSectionsIdList.add(prefSubsectDataForSection.get(k).getSectionId());
@@ -135,7 +136,7 @@ public class OldSectionCluster {
 		}
 	}
 	
-	public ArrayList<ArrayList<Integer>> getRuptures() {
+	public List<List<Integer>> getRuptures() {
 		  if(rupList== null)
 			  computeRupList();
 		  return rupList;
@@ -151,10 +152,10 @@ public class OldSectionCluster {
 		HashMap<Integer, Integer> indexForSubsectionID = new HashMap<Integer, Integer>();
 		int index=0;
 //		ArrayList<Integer> keys = new ArrayList<Integer>();
-		ArrayList<Integer> sectIndicesInCluster = getSectionIndicesInCluster();
+		List<Integer> sectIndicesInCluster = getSectionIndicesInCluster();
 		for(int i=0; i<sectIndicesInCluster.size();i+=2) {
 			sectionIndex = sectIndicesInCluster.get(i).intValue()/2; // convert from endpoint index to section index
-			ArrayList<FaultSectionPrefData> prefSubsectDataForSection = subSectionPrefDataList.get(sectionIndex);
+			List<FaultSectionPrefData> prefSubsectDataForSection = subSectionPrefDataList.get(sectionIndex);
 			for(int k=0; k< prefSubsectDataForSection.size();k++) {
 				Integer key = prefSubsectDataForSection.get(k).getSectionId();
 //				keys.add(key);
@@ -172,19 +173,19 @@ public class OldSectionCluster {
 		// of subsection endpoints
 		//int[][] numSubsectInRup = new int[indexForSubsectionID.size()][indexForSubsectionID.size()];
 		int numSS = indexForSubsectionID.size();
-		ArrayList<ArrayList<Integer>>[][] rupsForSubSectEndpoints = new ArrayList[numSS][numSS];
+		List<List<Integer>>[][] rupsForSubSectEndpoints = new ArrayList[numSS][numSS];
 		
 		
-		rupList = new ArrayList<ArrayList<Integer>>();
+		rupList = new ArrayList<>();
 		// loop over each end-to-end link list
 		for(int l=0; l<localEndToEndSectLinksList.size();l++) {
 //System.out.println("\tWorking on Rups for link "+l+" of "+localEndToEndSectLinksList.size());
 			// get the list of subsection IDs for this end-to-end link
-			ArrayList<Integer> endToEndLink = localEndToEndSectLinksList.get(l);
-			ArrayList<Integer> endToEndSubsectionIDs = new ArrayList<Integer>();
+			List<Integer> endToEndLink = localEndToEndSectLinksList.get(l);
+			List<Integer> endToEndSubsectionIDs = new ArrayList<Integer>();
 			for(int i=0; i< endToEndLink.size();i+=2) {
 				sectionIndex = endToEndLink.get(i).intValue()/2; // convert from endpoint index to section index
-				ArrayList<FaultSectionPrefData> prefSubsectDataForSection = subSectionPrefDataList.get(sectionIndex);
+				List<FaultSectionPrefData> prefSubsectDataForSection = subSectionPrefDataList.get(sectionIndex);
 				for(int k=0; k< prefSubsectDataForSection.size();k++) {
 					endToEndSubsectionIDs.add(prefSubsectDataForSection.get(k).getSectionId());
 				}
@@ -193,7 +194,7 @@ public class OldSectionCluster {
 			for(int numSubSectInRup=minNumSubSectInRup;numSubSectInRup<=endToEndSubsectionIDs.size();numSubSectInRup++) {
 				for(int s=0;s<endToEndSubsectionIDs.size()-numSubSectInRup+1;s++) {
 //					if(l==0) System.out.println("s="+s+"\tnumSubSectInRup="+numSubSectInRup);
-					ArrayList<Integer> id_list = new ArrayList<Integer>();
+					List<Integer> id_list = new ArrayList<Integer>();
 					for(int t=0;t<numSubSectInRup;t++) id_list.add(endToEndSubsectionIDs.get(s+t));
 					
 					// now we need to determine if we already have this rupture
@@ -201,10 +202,10 @@ public class OldSectionCluster {
 					int lastIndex  = indexForSubsectionID.get(id_list.get(id_list.size()-1));
 					
 					// get the list of  rupts from the HashMap
-					ArrayList<ArrayList<Integer>> rups = rupsForSubSectEndpoints[firstIndex][lastIndex];
+					List<List<Integer>> rups = rupsForSubSectEndpoints[firstIndex][lastIndex];
 					if(rups == null){ // check this first for speed
 						rupList.add(id_list);
-						ArrayList<ArrayList<Integer>> newList = new ArrayList<ArrayList<Integer>>();
+						List<List<Integer>> newList = new ArrayList<>();
 						newList.add(id_list);
 						rupsForSubSectEndpoints[firstIndex][lastIndex] = newList;
 						rupsForSubSectEndpoints[lastIndex][firstIndex] = newList;
@@ -215,7 +216,7 @@ public class OldSectionCluster {
 					for(int n=id_list.size()-1;n>=0;n--) id_list_reversed.add(id_list.get(n));
 					if(!rups.contains(id_list) && !rups.contains(id_list_reversed)) {
 						rupList.add(id_list);
-						ArrayList<ArrayList<Integer>> list = rupsForSubSectEndpoints[firstIndex][lastIndex];
+						List<List<Integer>> list = rupsForSubSectEndpoints[firstIndex][lastIndex];
 						list.add(id_list);
 					}
 					//else do nothing

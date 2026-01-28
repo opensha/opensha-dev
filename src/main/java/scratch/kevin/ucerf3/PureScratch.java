@@ -136,6 +136,7 @@ import org.opensha.sha.earthquake.faultSysSolution.modules.ModSectMinMags;
 import org.opensha.sha.earthquake.faultSysSolution.modules.PolygonFaultGridAssociations;
 import org.opensha.sha.earthquake.faultSysSolution.modules.RegionsOfInterest;
 import org.opensha.sha.earthquake.faultSysSolution.modules.RupMFDsModule;
+import org.opensha.sha.earthquake.faultSysSolution.modules.SectAreas;
 import org.opensha.sha.earthquake.faultSysSolution.modules.SolutionLogicTree;
 import org.opensha.sha.earthquake.faultSysSolution.modules.SolutionSlipRates;
 import org.opensha.sha.earthquake.faultSysSolution.modules.TrueMeanRuptureMappings;
@@ -3407,13 +3408,26 @@ public class PureScratch {
 				visible.addParameter(param);
 	}
 	
+	private static void test350() throws IOException {
+		FaultSystemRupSet rs = FaultSystemRupSet.load(new File("/home/kevin/OpenSHA/nshm23/batch_inversions/"
+				+ "2024_02_02-nshm23_branches-WUS_FM_v3/results_WUS_FM_v3_branch_averaged.zip"));
+		
+		SectAreas areas = rs.requireModule(SectAreas.class);
+		System.out.println("Areas is of type: "+areas.getClass());
+		areas = SectAreas.precomputed(rs, areas.getSectAreas());
+		rs.addModule(areas);
+		File outDir = new File("/tmp/rsout");
+		Preconditions.checkState(outDir.exists() || outDir.mkdir());
+		rs.write(outDir);
+	}
+	
 	/**
 	 * @param args
 	 * @throws Exception 
 	 */
 	public static void main(String[] args) throws Exception {
 		try {
-			test348();
+			test350();
 		} catch (Throwable t) {
 			t.printStackTrace();
 			System.exit(1);

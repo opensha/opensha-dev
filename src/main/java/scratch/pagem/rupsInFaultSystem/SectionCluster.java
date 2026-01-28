@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 
 import org.opensha.refFaultParamDb.vo.FaultSectionPrefData;
 
@@ -13,17 +14,17 @@ import org.opensha.refFaultParamDb.vo.FaultSectionPrefData;
  */
 public class SectionCluster extends ArrayList<Integer> {
 	
-	ArrayList<FaultSectionPrefData> subSectionPrefDataList;
-	ArrayList<Integer> allSubSectionsIdList = null;
-	ArrayList<ArrayList<Integer>> subSectionConnectionsListList;
-	ArrayList<ArrayList<Integer>> rupListIndices;			// elements here are subsection IDs
+	List<FaultSectionPrefData> subSectionPrefDataList;
+	List<Integer> allSubSectionsIdList = null;
+	List<List<Integer>> subSectionConnectionsListList;
+	List<List<Integer>> rupListIndices;			// elements here are subsection IDs
 	int minNumSubSectInRup;
 	int numRupsAdded;
 	double maxAzimuthChange, maxTotAzimuthChange;
 	double[][] subSectionAzimuths;
 	
-	public SectionCluster(ArrayList<FaultSectionPrefData> subSectionPrefDataList, int minNumSubSectInRup, 
-			ArrayList<ArrayList<Integer>> subSectionConnectionsListList, double[][] subSectionAzimuths,
+	public SectionCluster(List<FaultSectionPrefData> subSectionPrefDataList, int minNumSubSectInRup, 
+			List<List<Integer>> subSectionConnectionsListList, double[][] subSectionAzimuths,
 			double maxAzimuthChange, double maxTotAzimuthChange) {
 		this.minNumSubSectInRup = minNumSubSectInRup;
 		this.subSectionPrefDataList = subSectionPrefDataList;
@@ -47,7 +48,7 @@ public class SectionCluster extends ArrayList<Integer> {
 	 * This returns the IDs of all the subsections in the cluster
 	 * @return
 	 */
-	public ArrayList<Integer> getAllSubSectionsIdList() {
+	public List<Integer> getAllSubSectionsIdList() {
 		if(allSubSectionsIdList==null) computeAllSubSectionsIdList();
 		return allSubSectionsIdList;
 	}
@@ -66,15 +67,15 @@ public class SectionCluster extends ArrayList<Integer> {
 	}
 	
 		
-	public ArrayList<ArrayList<Integer>> getRuptures() {
+	public List<List<Integer>> getRuptures() {
 //		return new ArrayList<ArrayList<Integer>>();
 		
 		  if(rupListIndices== null)  computeRupList();
 		  // now convert to holding subsection IDs
-		  ArrayList<ArrayList<Integer>> rupList = new ArrayList<ArrayList<Integer>>();
+		  List<List<Integer>> rupList = new ArrayList<>();
 		  for(int i=0;i<rupListIndices.size();i++) {
-			  ArrayList<Integer> rup = rupListIndices.get(i);
-			  ArrayList<Integer> newRup  = new ArrayList<Integer>();
+			  List<Integer> rup = rupListIndices.get(i);
+			  List<Integer> newRup  = new ArrayList<Integer>();
 			  for(int j=0;j<rup.size();j++)
 				  newRup.add(subSectionPrefDataList.get(rup.get(j)).getSectionId());
 			  rupList.add(newRup);
@@ -83,7 +84,7 @@ public class SectionCluster extends ArrayList<Integer> {
 		  
 	}
 	
-	public ArrayList<ArrayList<Integer>> getRupturesByIndices() {
+	public List<List<Integer>> getRupturesByIndices() {
 		  if(rupListIndices== null)
 			  computeRupList();
 		  return rupListIndices;
@@ -103,7 +104,7 @@ public class SectionCluster extends ArrayList<Integer> {
 			lastSubSect = -1;   // bogus index because subSectIndex is first in list
 		
 		// loop over branches at the present subsection
-		ArrayList<Integer> branches = subSectionConnectionsListList.get(subSectIndex);
+		List<Integer> branches = subSectionConnectionsListList.get(subSectIndex);
 		for(int i=0; i<branches.size(); i++) { 
 			Integer newSubSect = branches.get(i);
 			
@@ -134,7 +135,7 @@ public class SectionCluster extends ArrayList<Integer> {
 				
 				if(newLastAzimuthDiff>maxAzimuthChange) {
 			//		System.out.println("Azimuth difference is too large!");	
-					ArrayList<Integer> lastRup = rupListIndices.get(rupListIndices.size()-1);
+					List<Integer> lastRup = rupListIndices.get(rupListIndices.size()-1);
 			//		System.out.println("lastRup.get(lastRup.size()-1) = " + lastRup.get(lastRup.size()-1));
 			//		System.out.println("lastSubSect = " + lastSubSect);
 					continue;
@@ -172,7 +173,7 @@ public class SectionCluster extends ArrayList<Integer> {
 	
 	private void computeRupList() {
 		System.out.println("Cluster: "+this);
-		rupListIndices = new ArrayList<ArrayList<Integer>>();
+		rupListIndices = new ArrayList<>();
 		// loop over every subsection as the first in the rupture
 		int progress = 0;
 		int progressIncrement = 5;
@@ -194,10 +195,10 @@ public class SectionCluster extends ArrayList<Integer> {
 		System.out.print("\n");
 
 		// now filter out duplicates (which would exist in reverse order) & change from containing indices to IDs
-		ArrayList<ArrayList<Integer>> newRupList = new ArrayList<ArrayList<Integer>>();
+		List<List<Integer>> newRupList = new ArrayList<>();
 		for(int r=0; r< rupListIndices.size();r++) {
-			ArrayList<Integer> rup = rupListIndices.get(r);
-			ArrayList<Integer> reverseRup = new ArrayList<Integer>();
+			List<Integer> rup = rupListIndices.get(r);
+			List<Integer> reverseRup = new ArrayList<Integer>();
 			for(int i=rup.size()-1;i>=0;i--) reverseRup.add(rup.get(i));
 			if(!newRupList.contains(reverseRup)) { // keep if we don't already have
 				newRupList.add(rup);
@@ -210,11 +211,11 @@ public class SectionCluster extends ArrayList<Integer> {
 		
 		// Remove ruptures where subsection strikes have too big a spread
 		double MAXstrikeDiff = 90;  //maximum allowed difference in strikes between any two subsections in the same rupture, in degrees
-		ArrayList<ArrayList<Integer>> toRemove = new ArrayList<ArrayList<Integer>>();
+		List<List<Integer>> toRemove = new ArrayList<>();
 		for(int r=0; r< numRupsAdded;r++) {
-			ArrayList<Integer> rup = rupListIndices.get(r);
+			List<Integer> rup = rupListIndices.get(r);
 			//System.out.println("rup = " + rup);
-			ArrayList<Double> strikes = new ArrayList<Double>(rup.size());
+			List<Double> strikes = new ArrayList<Double>(rup.size());
 			for (int i=0; i<rup.size(); i++) {
 			//  System.out.println("Avg. strike = " + subSectionPrefDataList.get(rup.get(i)).getFaultTrace().getAveStrike());
 				if (subSectionPrefDataList.get(rup.get(i)).getFaultTrace().getAveStrike()<0)
@@ -226,7 +227,7 @@ public class SectionCluster extends ArrayList<Integer> {
 					
 			}
 		    Collections.sort(strikes);
-			ArrayList<Double> anglediffs = new ArrayList<Double>(rup.size());
+			List<Double> anglediffs = new ArrayList<Double>(rup.size());
 		    for (int i=0; i<rup.size()-1; i++) {
 		    	anglediffs.add(strikes.get(i+1)-strikes.get(i));
 		    }
@@ -248,14 +249,14 @@ public class SectionCluster extends ArrayList<Integer> {
 		
 		// Remove ruptures where subsection rakes have too big a spread
 		double MAXrakeDiff = 90;  //maximum allowed difference in strikes between any two subsections in the same rupture, in degrees
-		ArrayList<ArrayList<Integer>> toRemove2 = new ArrayList<ArrayList<Integer>>();
+		List<List<Integer>> toRemove2 = new ArrayList<>();
 		for(int r=0; r< numRupsAdded;r++) {
-			ArrayList<Integer> rup = rupListIndices.get(r);
-			ArrayList<Double> rakes = new ArrayList<Double>(rup.size());
+			List<Integer> rup = rupListIndices.get(r);
+			List<Double> rakes = new ArrayList<Double>(rup.size());
 			for (int i=0; i<rup.size(); i++) 		 {		
 				rakes.add(subSectionPrefDataList.get(rup.get(i)).getAveRake()); }
 		    Collections.sort(rakes);
-			ArrayList<Double> anglediffs2 = new ArrayList<Double>(rup.size());
+			List<Double> anglediffs2 = new ArrayList<Double>(rup.size());
 		    for (int i=0; i<rup.size()-1; i++) {
 		    	anglediffs2.add(rakes.get(i+1)-rakes.get(i));
 		    }
@@ -279,7 +280,7 @@ public class SectionCluster extends ArrayList<Integer> {
 	
 	  
 	  public void writeRuptureSubsectionNames(int index) {
-		  ArrayList<Integer> rupture = rupListIndices.get(index);
+		  List<Integer> rupture = rupListIndices.get(index);
 		  System.out.println("Rutpure "+index);
 		  for(int i=0; i<rupture.size(); i++ ) {
 			  System.out.println("\t"+this.subSectionPrefDataList.get(rupture.get(i)).getName());

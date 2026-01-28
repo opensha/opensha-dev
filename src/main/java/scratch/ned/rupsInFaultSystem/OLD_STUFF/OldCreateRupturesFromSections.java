@@ -3,6 +3,7 @@ package scratch.ned.rupsInFaultSystem.OLD_STUFF;
 import java.io.FileWriter;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.List;
 
 import org.opensha.commons.data.NamedComparator;
 import org.opensha.commons.data.function.ArbitrarilyDiscretizedFunc;
@@ -35,7 +36,7 @@ DONE	getRupList()								ArrayList<MultipleSectionRup>
 	ArrayList<ArrayList<Integer>> sectionConnectionsList, endToEndSectLinksList;
 	ArrayList<OldSectionCluster> sectionClusterList;
 	double maxJumpDist, maxAngle, maxTotStrikeChange, maxSubSectionLength;
-	ArrayList<ArrayList<FaultSectionPrefData>> subSectionPrefDataList;
+	List<List<FaultSectionPrefData>> subSectionPrefDataList;
 
 	
 	/**
@@ -86,8 +87,8 @@ DONE	getRupList()								ArrayList<MultipleSectionRup>
 	
 	
 	
-	  public ArrayList<ArrayList<Integer>> getRupList() {
-		  ArrayList<ArrayList<Integer>> rupList = new ArrayList<ArrayList<Integer>>();
+	  public List<List<Integer>> getRupList() {
+		  List<List<Integer>> rupList = new ArrayList<>();
 		  for(int i=0; i<sectionClusterList.size();i++)
 			  rupList.addAll(sectionClusterList.get(i).getRuptures());
 		  return rupList;
@@ -142,12 +143,12 @@ DONE	getRupList()								ArrayList<MultipleSectionRup>
 		 
 
 		 // make subsection data
-		 subSectionPrefDataList = new ArrayList<ArrayList<FaultSectionPrefData>>();
+		 subSectionPrefDataList = new ArrayList<>();
 		 numSubSections=0;
 		 numSections = allFaultSectionPrefData.size();
 		 for(int i=0; i<numSections; ++i) {
 			 FaultSectionPrefData faultSectionPrefData = (FaultSectionPrefData)allFaultSectionPrefData.get(i);
-			 ArrayList<FaultSectionPrefData> subSectData = faultSectionPrefData.getSubSectionsList(maxSubSectionLength);
+			 List<FaultSectionPrefData> subSectData = faultSectionPrefData.getSubSectionsList(maxSubSectionLength);
 			 numSubSections += subSectData.size();
 			 subSectionPrefDataList.add(subSectData);
 		 }
@@ -324,7 +325,7 @@ DONE	getRupList()								ArrayList<MultipleSectionRup>
     private void computeSectionClusters() {
     	sectionClusterList = new ArrayList<OldSectionCluster>();
     	// duplicate the following because it will get modified 
-    	ArrayList<ArrayList<Integer>> tempEndToEndSectList = (ArrayList<ArrayList<Integer>>)endToEndSectLinksList.clone();
+    	List<List<Integer>> tempEndToEndSectList = new ArrayList<>(endToEndSectLinksList);
 
     	int clusterCounter=0;
     	while(tempEndToEndSectList.size() > 0) {
@@ -349,7 +350,7 @@ System.out.println("sectionClusterList.size()="+sectionClusterList.size());
     		int sum =0;
     		for(int j=0;j<this.sectionClusterList.size(); j++) {
 //    		for(int j=0;j<6; j++) {
-    			ArrayList<Integer> indices = sectionClusterList.get(j).getSectionIndicesInCluster();
+    			List<Integer> indices = sectionClusterList.get(j).getSectionIndicesInCluster();
 //    			System.out.println(indices);
     			if(indices.contains(Integer.valueOf(i)))
     				sum+=1;
@@ -487,7 +488,7 @@ System.out.println("sectionClusterList.size()="+sectionClusterList.size());
 	
 	// Note that this produces erroneous zig-zag plot for traces that have multiple lats for a given lon 
 	// (functions force x values to monotonically increase)
-	public void plotAllSections(ArrayList<Integer> link) {
+	public void plotAllSections(List<Integer> link) {
 		ArbitrarilyDiscretizedFunc func = new ArbitrarilyDiscretizedFunc();
 		double minLat=1000, maxLat=-1000, minLon=1000, maxLon=-1000;
 		String name = new String();
@@ -522,7 +523,7 @@ System.out.println("sectionClusterList.size()="+sectionClusterList.size());
 	
 	public void plotAllClusters() {
 		for(int i=0;i<sectionClusterList.size();i++) {
-			ArrayList<Integer> indices = sectionClusterList.get(i).getSectionIndicesInCluster();
+			List<Integer> indices = sectionClusterList.get(i).getSectionIndicesInCluster();
 			if(indices.size()>6)
 				plotAllSections(indices);
 		}
@@ -689,7 +690,7 @@ System.out.println("sectionClusterList.size()="+sectionClusterList.size());
 	public static void main(String[] args) {
 		long startTime=System.currentTimeMillis();
 		OldCreateRupturesFromSections createRups = new OldCreateRupturesFromSections(10, 45, 60, 7, 2);
-		ArrayList<ArrayList<Integer>> rupList = createRups.getRupList();
+		List<List<Integer>> rupList = createRups.getRupList();
 		System.out.println(rupList.get(0));
 		int runtime = (int)(System.currentTimeMillis()-startTime)/1000;
 		System.out.println("Run took "+runtime+" seconds");

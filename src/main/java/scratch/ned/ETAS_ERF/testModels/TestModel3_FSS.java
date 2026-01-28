@@ -58,7 +58,7 @@ public class TestModel3_FSS extends U3FaultSystemSolution {
 	
 	int totNumRups;
 	
-	ArrayList<FaultSectionPrefData> subSectionData;
+	List<FaultSectionPrefData> subSectionData;
 	double[] rateForRup;
 	double[] magForRup;
 	double[] areaForRup;	// square-meters

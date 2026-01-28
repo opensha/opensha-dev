@@ -119,7 +119,7 @@ public class SimpleFaultInversion {
 	
 	final static double hazGridSpacing = 0.05;
 		
-	ArrayList<FaultSectionPrefData> faultSectionDataList;
+	List<FaultSectionPrefData> faultSectionDataList;
 	int[][] rupSectionMatrix;
 	
 	int numSections, numRuptures;
@@ -501,7 +501,7 @@ public class SimpleFaultInversion {
 //		System.exit(-1);
 	}
 	
-	public ArrayList<FaultSectionPrefData> getFaultSectionDataList() {
+	public List<FaultSectionPrefData> getFaultSectionDataList() {
 		return faultSectionDataList;
 	}
 	
@@ -1919,7 +1919,7 @@ yAxisRange=null;
 				System.out.println(mfdTargetType+" total rate "+targetMFD.getTotalIncrRate());
 		}
 		
-		ArrayList<FaultSectionPrefData> fltSectDataList = getFaultSectionDataList();
+		List<FaultSectionPrefData> fltSectDataList = getFaultSectionDataList();
 		int[][] rupSectionMatrix = getRupSectionMatrix();
 		
 		// this will be used to keep track of runtimes

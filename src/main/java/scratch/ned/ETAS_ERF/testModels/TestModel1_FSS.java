@@ -52,7 +52,7 @@ public class TestModel1_FSS extends InversionFaultSystemSolution {
 	
 	int totNumRups=1653;	// found by computing once
 	
-	ArrayList<FaultSectionPrefData> subSectionData;
+	List<FaultSectionPrefData> subSectionData;
 	double[] rateForRup = new double[totNumRups];
 	double[] magForRup = new double[totNumRups];
 	double[] areaForRup = new double[totNumRups];	// square-meters
