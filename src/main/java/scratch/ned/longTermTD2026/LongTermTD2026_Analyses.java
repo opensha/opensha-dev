@@ -33,6 +33,7 @@ import org.opensha.sha.earthquake.ProbEqkSource;
 import org.opensha.sha.earthquake.calc.ERF_Calculator;
 import org.opensha.sha.earthquake.faultSysSolution.FaultSystemRupSet;
 import org.opensha.sha.earthquake.faultSysSolution.FaultSystemSolution;
+import org.opensha.sha.earthquake.faultSysSolution.erf.BaseFaultSystemSolutionERF;
 import org.opensha.sha.earthquake.faultSysSolution.erf.td.AperiodicityModel;
 import org.opensha.sha.earthquake.faultSysSolution.erf.td.AperiodicityModels;
 import org.opensha.sha.earthquake.faultSysSolution.erf.td.FSS_ProbabilityModel;
@@ -72,6 +73,23 @@ import scratch.ned.nshm23.CONUS_TD_ERF_Demo;
 import scratch.ned.nshm23.Cascadia_FSS_creator;
 import scratch.ned.nshm23.AK_FSS_creator.DeformationModelEnum;
 
+
+
+/**
+ * This class was effectively used to transition from the old UCERF3 framework (scratch.UCERF3.erf.utils.ProbabilityModelsCalc) 
+ * to the new one developed in January 2026 (org.opensha.sha.earthquake.faultSysSolution.erf.td.FSS_ProbabilityModel).  
+ * Methods here were used to verify that things were reproducible at every step along the way (many different tests, but 
+ * not all conceivable ones).  Results from the new framework match those published in UCERF3 for equivalent runs, but there 
+ * are small (<10e-10) differences due to numerical noise.  For example, integrations in the EqkProbDistCalc classes were improved, 
+ * as some ~0.4% differences were observed due to relatively course discretizations (running from a different time zone caused 
+ * this difference with respect to the historic open interval; this has been fixed).  Most results generated here are in the dir: 
+ * 
+ * 		LongTermTD_2026/Analysis_OldToNewFramework 
+ * 
+ * and 
+ * 
+ * 		/Users/field/markdown/OldToNewFramework.
+ */
 public class LongTermTD2026_Analyses {
 	
 	/**
@@ -936,6 +954,43 @@ public class LongTermTD2026_Analyses {
 	}
 
 	
+	private static TimeDepFaultSystemSolutionERF getWUS_withCascadia_ERF_NewFramework(Cascadia_FSS_creator.FaultModelEnum cascadiaFaultModel, boolean matchU3_Calcs) {
+		String full_FSS_fileName = "/Users/field/nshm-haz_data/wusWithCascadia_FSS_"+cascadiaFaultModel+"_test.zip";
+		FaultSystemSolution sol = CONUS_TD_ERF_Demo.getWUS_withCascadia_FSS(full_FSS_fileName,cascadiaFaultModel);		
+
+		TimeDepFaultSystemSolutionERF erf = new TimeDepFaultSystemSolutionERF();
+		erf.setSolution(sol);
+		
+		erf.setProbabilityModelChoice(FSS_ProbabilityModels.UCERF3_METHOD);
+		
+		erf.getParameter(IncludeBackgroundParam.NAME).setValue(IncludeBackgroundOption.EXCLUDE);
+
+		FSS_ProbabilityModel probModel = erf.getProbabilityModel();
+		if (probModel instanceof UCERF3_ProbabilityModel) {
+			UCERF3_ProbabilityModel u3ProbModel = (UCERF3_ProbabilityModel)probModel;
+			// setting by enum is prefferred
+			u3ProbModel.setAperiodicityModelChoice(AperiodicityModels.UCERF3_MIDDLE);
+			
+			if(matchU3_Calcs) {  // diescretizations in old ProbabilityModelCalc to match U3
+				u3ProbModel.setProbDistsDiscretization(9, 18001, false);
+				u3ProbModel.setIntegrationNormCDFsDiscretization(5d, 501);				
+			}
+			u3ProbModel.setSaveDebugInfo(true);
+		} 
+		
+		ParameterList modelParams = probModel.getAdjustableParameters();
+		if (modelParams.containsParameter(RenewalModels.PARAM_NAME))
+			modelParams.setValue(RenewalModels.PARAM_NAME, RenewalModels.BPT);		
+		
+		erf.getTimeSpan().setStartTime(2025);	// this shouldn't matter
+		erf.getTimeSpan().setDuration(50);; 	// this shouldn't matter
+		erf.updateForecast();
+
+		return erf;
+	}
+
+	
+	
 	/**
 	 * this returns the ERF with background seismicity excluded but all other 
 	 * parameters set as default; erf.updateForecast()is not called
@@ -949,6 +1004,42 @@ public class LongTermTD2026_Analyses {
 
 		return erf;
 	}
+	
+	private static TimeDepFaultSystemSolutionERF getFullPrefUS26_ERF_NewFramework(boolean matchU3_Calcs) {
+		String full_FSS_fileName = "/Users/field/nshm-haz_data/fullPrefUS_FSS.zip";
+		FaultSystemSolution sol = CONUS_TD_ERF_Demo.getPreferredFull_FSS(full_FSS_fileName);		
+	
+		TimeDepFaultSystemSolutionERF erf = new TimeDepFaultSystemSolutionERF();
+		erf.setSolution(sol);
+		
+		erf.setProbabilityModelChoice(FSS_ProbabilityModels.UCERF3_METHOD);
+		
+		erf.getParameter(IncludeBackgroundParam.NAME).setValue(IncludeBackgroundOption.EXCLUDE);
+
+		FSS_ProbabilityModel probModel = erf.getProbabilityModel();
+		if (probModel instanceof UCERF3_ProbabilityModel) {
+			UCERF3_ProbabilityModel u3ProbModel = (UCERF3_ProbabilityModel)probModel;
+			// setting by enum is prefferred
+			u3ProbModel.setAperiodicityModelChoice(AperiodicityModels.NSHM26_MIDDLE);
+			
+			if(matchU3_Calcs) {  // diescretizations in old ProbabilityModelCalc to match U3
+				u3ProbModel.setProbDistsDiscretization(9, 18001, false);
+				u3ProbModel.setIntegrationNormCDFsDiscretization(5d, 501);				
+			}
+			u3ProbModel.setSaveDebugInfo(true);
+		} 
+		
+		ParameterList modelParams = probModel.getAdjustableParameters();
+		if (modelParams.containsParameter(RenewalModels.PARAM_NAME))
+			modelParams.setValue(RenewalModels.PARAM_NAME, RenewalModels.BPT);		
+		
+		erf.getTimeSpan().setStartTime(2025);	// this shouldn't matter
+		erf.getTimeSpan().setDuration(50);; 	// this shouldn't matter
+		erf.updateForecast();
+
+		return erf;
+	}
+
 	
 	private static void generateDOLE_ReportPages() {
 
@@ -992,7 +1083,7 @@ public class LongTermTD2026_Analyses {
 	private static void testOldVsNewSimulationMethod() {
 		
 		String fileName="/Users/field/Library/CloudStorage/OneDrive-DOI/Field_Other/CEA_WGCEP/UCERF3/UCERF3-TI/Figures/Fig11_FaultClusterFig/2013_05_10-ucerf3p3-production-10runs_COMPOUND_SOL_FM3_1_MEAN_BRANCH_AVG_SOL.zip";
-		String timeSinceLastFileName = "/Users/field/FilesFromOldComputerTransfer/workspace/OpenSHA/dev/scratch/UCERF3/data/scratch/erSimulations/timeSinceLastForSimulation.txt"; 
+		String timeSinceLastFileName = "/Users/field/Desktop/field/FilesFromOldComputerTransfer/workspace/OpenSHA/dev/scratch/UCERF3/data/scratch/erSimulations/timeSinceLastForSimulation.txt"; 
  // timeSinceLastFileName=null;
 		FaultSystemSolutionERF erf = new FaultSystemSolutionERF(fileName);
 		erf.getParameter(IncludeBackgroundParam.NAME).setValue(IncludeBackgroundOption.EXCLUDE);
@@ -1026,6 +1117,85 @@ public class LongTermTD2026_Analyses {
 		System.out.println("runtime (min) = "+(float)runtimeMin);
 
 	}
+	
+	
+	
+	/**
+	 * this verifies that the new method produces the same result as the old one
+	 */
+	private static void testNewJan2026_SimulationMethod(boolean matchU3_Calcs) {
+		
+		String fileName="/Users/field/Library/CloudStorage/OneDrive-DOI/Field_Other/CEA_WGCEP/UCERF3/UCERF3-TI/Figures/Fig11_FaultClusterFig/2013_05_10-ucerf3p3-production-10runs_COMPOUND_SOL_FM3_1_MEAN_BRANCH_AVG_SOL.zip";
+		String timeSinceLastFileName = "/Users/field/Desktop/field/FilesFromOldComputerTransfer/workspace/OpenSHA/dev/scratch/UCERF3/data/scratch/erSimulations/timeSinceLastForSimulation.txt"; 
+ // timeSinceLastFileName=null;
+		
+//		// get solution
+//		FaultSystemSolution sol = null;
+//		try {
+//			sol = FaultSystemSolution.load(new File(fileName));
+//		} catch (IOException e) {
+//			e.printStackTrace();
+//		}
+		
+		TimeDepFaultSystemSolutionERF erf = new TimeDepFaultSystemSolutionERF();
+		
+		erf.getParameter(BaseFaultSystemSolutionERF.FILE_PARAM_NAME).setValue(new File(fileName));
+
+		
+//		erf.setSolution(sol);
+		erf.setProbabilityModelChoice(FSS_ProbabilityModels.UCERF3_METHOD);
+		
+		FSS_ProbabilityModel probModel = erf.getProbabilityModel();
+		erf.getParameter(IncludeBackgroundParam.NAME).setValue(IncludeBackgroundOption.EXCLUDE);
+
+		
+		if (probModel instanceof UCERF3_ProbabilityModel) {
+			UCERF3_ProbabilityModel u3ProbModel = (UCERF3_ProbabilityModel)probModel;
+			// setting by enum is prefferred
+			u3ProbModel.setAperiodicityModelChoice(AperiodicityModels.UCERF3_MIDDLE);
+			
+			if(matchU3_Calcs) {  // diescretizations in old ProbabilityModelCalc to match U3
+				u3ProbModel.setProbDistsDiscretization(9, 18001, false);
+				u3ProbModel.setIntegrationNormCDFsDiscretization(5d, 501);				
+			}
+			u3ProbModel.setSaveDebugInfo(true);
+		} else if (probModel instanceof WG02_ProbabilityModel) {
+			WG02_ProbabilityModel wgProbModel = (WG02_ProbabilityModel)probModel;
+			wgProbModel.setAperiodicityModelChoice(AperiodicityModels.UCERF3_LOW);
+		}
+		
+		ParameterList modelParams = probModel.getAdjustableParameters();
+		if (modelParams.containsParameter(RenewalModels.PARAM_NAME))
+			modelParams.setValue(RenewalModels.PARAM_NAME, RenewalModels.BPT);		
+		
+		erf.getTimeSpan().setStartTime(2025);	// this shouldn't matter
+		erf.getTimeSpan().setDuration(50);; 	// this shouldn't matter
+		erf.updateForecast();
+						
+		long seed = 1234567l;
+		long startTime = System.currentTimeMillis();
+		double numYrs=1000; // Following took ~20 hrs;  =200000
+
+		File resultsDir = new File("/Users/field/Library/CloudStorage/OneDrive-DOI/Field_Other/ERF_Coordination/LongTermTD_2026/Analysis/OldVsNewSimMethodTest");
+		if(resultsDir != null)
+			if(!resultsDir.exists()) 
+				resultsDir.mkdir();
+		File outputDir;
+		if(matchU3_Calcs)
+			outputDir = new File("/Users/field/Library/CloudStorage/OneDrive-DOI/Field_Other/ERF_Coordination/LongTermTD_2026/Analysis/OldVsNewSimMethodTest/New2026SimMethodResult_matchU3");
+		else
+			outputDir = new File("/Users/field/Library/CloudStorage/OneDrive-DOI/Field_Other/ERF_Coordination/LongTermTD_2026/Analysis/OldVsNewSimMethodTest/New2026SimMethodResult");
+//		File outputDir=null;
+		boolean makePlots=true;
+		
+		LongTermTD_Simulator.simulateEvents(erf, timeSinceLastFileName, null, 
+				numYrs, outputDir, seed, true, makePlots, Double.NaN);
+//		testCalc.simulateEvents(timeSinceLastFileName, null, numYrs, outputDir, seed, true, makePlots, Double.NaN);
+		
+		double runtimeMin = (double)(System.currentTimeMillis()- startTime)/60000d;
+		System.out.println("runtime (min) = "+(float)runtimeMin);
+	}
+
 	
 	
 	private static void bptSimulations(FaultSystemSolutionERF erf, double numYrs, File parentDir, 
@@ -2080,10 +2250,13 @@ public class LongTermTD2026_Analyses {
 	}
 
 
-
+	/**
+	 * See notes at the top of this class for some explanations
+	 * @param args
+	 */
 	public static void main(String[] args) {
 		
-		String rootDir = "/Users/field/Library/CloudStorage/OneDrive-DOI/Field_Other/ERF_Coordination/LongTermTD_2026/Analysis/";
+		String rootDir = "/Users/field/Library/CloudStorage/OneDrive-DOI/Field_Other/ERF_Coordination/LongTermTD_2026/Analysis_OldToNewFramework/";
 		
 //		// this shows there is only one rupture for each FSS source
 //		String fileName="/Users/field/Library/CloudStorage/OneDrive-DOI/Field_Other/CEA_WGCEP/UCERF3/UCERF3-TI/Figures/Fig11_FaultClusterFig/2013_05_10-ucerf3p3-production-10runs_COMPOUND_SOL_FM3_1_MEAN_BRANCH_AVG_SOL.zip";
@@ -2098,8 +2271,9 @@ public class LongTermTD2026_Analyses {
 		
 		// Use these to test changes:
 //		testOldVsNewSimulationMethod(); // I commented out running the old simulation in this method
+//		testNewJan2026_SimulationMethod(true);
 		
-		// These test that old and new calculations match (when same discretization and interpolation used)
+//		// These test that old and new calculations match (when same discretization and interpolation used)
 //		makeTestTD_CalculationFiles(false); // New test calculations
 //		makeTestTD_CalculationFiles(true);	// New test calculations but with U3 discretizations; diffs up to 4.8% on gains
 //		makeTestTD_CalculationFiles_U3();	// U3 calculations (consistent with old code)
@@ -2109,10 +2283,10 @@ public class LongTermTD2026_Analyses {
 //		tempTestPrefBlendCalculationFiles(false);
 //		tempTestPrefBlendCalculationFiles(true);
 //		tempTestPrefBlendCalculationFilesU3();
-		tempCompareTestPrefBlendCalc();
+//		tempCompareTestPrefBlendCalc();
 		
 //		tempMakeTestTD_CalculationFilesForSingleSource();
-		System.exit(0);
+//		System.exit(0);
 		
 		
 		
@@ -2182,15 +2356,64 @@ public class LongTermTD2026_Analyses {
 //		double timeStepYrs = 5;
 //	    bptSimulations(getAleutianArc_ERF(faultModel),numYrs,parentDir, "Run1_aperMidVals", seed, rootDir+"poissonSimulationsAleutianArc/Run1/outputTimesinceLast.txt", aper, timeStepYrs);
 		
+		
+//		// THIS IS A TEST OF THE NEW FRAMEWORK - this should reproduce "Run2_aperMidVals" below
+//		TimeDepFaultSystemSolutionERF erf = getWUS_withCascadia_ERF_NewFramework(Cascadia_FSS_creator.FaultModelEnum.MIDDLE, true);
+//		File parentDir = new File(rootDir+"bptSimulationsWUS_withCascadia_NewFramework/");
+//		if(!parentDir.exists()) 
+//			parentDir.mkdir();
+//		File outputDir = new File(parentDir,"Run2_aperMidVals");
+//		long seed = 984087634;
+//		int numYrs = 50000;
+////		LongTermTD_Simulator.simulateEvents(erf, rootDir+"bptSimulationsWUS_withCascadia/Run1_aperMidVals/outputTimesinceLast.txt", null, 
+////				numYrs, outputDir, seed, true, true, Double.NaN);
+//		outputDir = new File(parentDir,"Run2_aperMidVals_Fast");
+////		LongTermTD_Simulator.simulateEventsFast(erf, rootDir+"bptSimulationsWUS_withCascadia/Run1_aperMidVals/outputTimesinceLast.txt", null, 
+////				numYrs, outputDir, seed, true, true, Double.NaN);
+//		LongTermTD_Simulator.generateSimulationPlots(erf, rootDir+"bptSimulationsWUS_withCascadia/Run1_aperMidVals/outputTimesinceLast.txt", 
+//				numYrs, outputDir, true);
+//		System.exit(0);
+		
+		
+		// TEST NEW FRAMEWORK WITH FULL US2026 MODEL
+		TimeDepFaultSystemSolutionERF erf = getFullPrefUS26_ERF_NewFramework(false);
+		File parentDir = new File(rootDir+"bptSimulationsUS26_NewFramework/");
+		if(!parentDir.exists()) 
+			parentDir.mkdir();
+		File outputDir = new File(parentDir,"Run2_50000yrs");
+		long seed = 984087634;
+		int numYrs = 50000;
+//		LongTermTD_Simulator.simulateEventsFast(erf, rootDir+"poissonSimulationsUS26_NewFramework/Run1_1000000yrs/outputTimesinceLast.txt"
+//				,null, numYrs, outputDir, seed, true, true, Double.NaN);
+
+		LongTermTD_Simulator.generateSimulationPlots(erf, 
+				rootDir+"poissonSimulationsUS26_NewFramework/Run1_1000000yrs/outputTimesinceLast.txt", numYrs, outputDir, true);
+		System.exit(0);
+		
+//		// TEST NEW FRAMEWORK WITH FULL US2026 MODEL - POISSON
+//		TimeDepFaultSystemSolutionERF erf = getFullPrefUS26_ERF_NewFramework(false);
+//		erf.setProbabilityModelChoice(FSS_ProbabilityModels.POISSON);
+//		File parentDir = new File(rootDir+"poissonSimulationsUS26_NewFramework/");
+//		if(!parentDir.exists()) 
+//			parentDir.mkdir();
+//		File outputDir = new File(parentDir,"Run1_1000000yrs");
+//		long seed = 984087634;
+//		int numYrs = 1000000;
+//		LongTermTD_Simulator.simulateEventsFast(erf, null,"outputTimesinceLast.txt", numYrs, outputDir, 
+//				seed, true, true, Double.NaN);
+//		LongTermTD_Simulator.generateSimulationPlots(erf, null, numYrs, outputDir, true);
+//		System.exit(0);
+
+		
 		// WUS w/ Cascadia (Middle branch) BPT simulations
 //		File parentDir = new File(rootDir+"bptSimulationsWUS_withCascadia/");
 //		MagDependentAperiodicityOptions aper = MagDependentAperiodicityOptions.ALL_PT5_VALUES;
 //		long seed = 984087634;
-		int numYrs = 50000;
+//		int numYrs = 50000;
 ////		bptSimulations(getWUS_withCascadia_ERF(),numYrs,parentDir, "Run1_aper0pt5", seed, rootDir+"poissonSimulationsWUS_withCascadia/Run1/outputTimesinceLast.txt", aper);
 //		bptSimulations(getWUS_withCascadia_ERF(Cascadia_FSS_creator.FaultModelEnum.MIDDLE),numYrs,parentDir, "Run2_aper0pt5", seed, rootDir+"bptSimulationsWUS_withCascadia/Run1_aper0pt5/outputTimesinceLast.txt", aper);
 //		bptSimulations(getWUS_withCascadia_ERF(Cascadia_FSS_creator.FaultModelEnum.MIDDLE),numYrs,parentDir, "Run3_aper0pt5", seed, rootDir+"bptSimulationsWUS_withCascadia/Run2_aper0pt5/outputTimesinceLast.txt", aper);
-		MagDependentAperiodicityOptions aper = MagDependentAperiodicityOptions.MID_VALUES;
+//		MagDependentAperiodicityOptions aper = MagDependentAperiodicityOptions.MID_VALUES;
 //		bptSimulations(getWUS_withCascadia_ERF(Cascadia_FSS_creator.FaultModelEnum.MIDDLE),numYrs,parentDir, "Run1_aperMidVals", seed, rootDir+"bptSimulationsWUS_withCascadia/Run2_aper0pt5/outputTimesinceLast.txt", aper, Double.NaN);
 //		bptSimulations(getWUS_withCascadia_ERF(Cascadia_FSS_creator.FaultModelEnum.MIDDLE),numYrs,parentDir, "Run2_aperMidVals", seed, rootDir+"bptSimulationsWUS_withCascadia/Run1_aperMidVals/outputTimesinceLast.txt", aper, Double.NaN);
 //		bptSimulations(getWUS_withCascadia_ERF(Cascadia_FSS_creator.FaultModelEnum.MIDDLE),numYrs,parentDir, "Run3_aperMidVals", seed, rootDir+"bptSimulationsWUS_withCascadia/Run2_aperMidVals/outputTimesinceLast.txt", aper, Double.NaN);
@@ -2209,7 +2432,7 @@ public class LongTermTD2026_Analyses {
 //		bptSimulations(getWUS_withCascadia_ERF(Cascadia_FSS_creator.FaultModelEnum.MIDDLE),numYrs,parentDir, "Run18_aperMidVals", seed, rootDir+"bptSimulationsWUS_withCascadia/Run17_aperMidVals/outputTimesinceLast.txt", aper, Double.NaN);
 //		bptSimulations(getWUS_withCascadia_ERF(Cascadia_FSS_creator.FaultModelEnum.MIDDLE),numYrs,parentDir, "Run19_aperMidVals", seed, rootDir+"bptSimulationsWUS_withCascadia/Run18_aperMidVals/outputTimesinceLast.txt", aper, Double.NaN);
 //		bptSimulations(getWUS_withCascadia_ERF(Cascadia_FSS_creator.FaultModelEnum.MIDDLE),numYrs,parentDir, "Run20_aperMidVals", seed, rootDir+"bptSimulationsWUS_withCascadia/Run19_aperMidVals/outputTimesinceLast.txt", aper, Double.NaN);
-		sectPlotsForMultSimulations(rootDir+"bptSimulationsWUS_withCascadia/", "Run", "_aperMidVals", 20, getWUS_withCascadia_ERF(Cascadia_FSS_creator.FaultModelEnum.MIDDLE).getSolution());
+//		sectPlotsForMultSimulations(rootDir+"bptSimulationsWUS_withCascadia/", "Run", "_aperMidVals", 20, getWUS_withCascadia_ERF(Cascadia_FSS_creator.FaultModelEnum.MIDDLE).getSolution());
 //		rupPlotsForMultSimulations(rootDir+"bptSimulationsWUS_withCascadia/", "Run", "_aperMidVals", 20, getWUS_withCascadia_ERF(Cascadia_FSS_creator.FaultModelEnum.MIDDLE), (double)numYrs, aper);
 
 		// WUS w/ Cascadia (Middle branch) Poisson simulations
