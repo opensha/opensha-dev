@@ -33,6 +33,7 @@ import org.opensha.commons.util.cpt.CPT;
 import org.opensha.sha.earthquake.faultSysSolution.ruptures.util.GeoJSONFaultReader;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_SubductionScalingRelationships;
 import org.opensha.sha.faultSurface.DownDipSubsectionBuilder;
+import org.opensha.sha.faultSurface.FaultSection;
 import org.opensha.sha.faultSurface.FaultTrace;
 import org.opensha.sha.faultSurface.GeoJSONFaultSection;
 
@@ -343,6 +344,28 @@ public class DownDipInterfaceSubSectTests {
 		System.out.println("Sub-Sect Mmin:\t"+magRange);
 		System.out.println("Sub-Sect Dip:\t"+dipRange);
 		System.out.println("Sub-Sect Row counts:\t"+perRowRange);
+		
+		System.out.println();
+		System.out.println("Row average stats:");
+		for (int row=0; row<subSects.length; row++) {
+			MinMaxAveTracker upperDepthTrack = new MinMaxAveTracker();
+			MinMaxAveTracker lowerDepthTrack = new MinMaxAveTracker();
+			dipRange = new MinMaxAveTracker();
+			magRange = new MinMaxAveTracker();
+			for (FaultSection sect : subSects[row]) {
+				upperDepthTrack.addValue(sect.getOrigAveUpperDepth());
+				lowerDepthTrack.addValue(sect.getAveLowerDepth());
+				dipRange.addValue(sect.getAveDip());
+				double area = sect.getArea(false)*1e-6;
+				magRange.addValue(PRVI25_SubductionScalingRelationships.LOGA_C4p0.getMag(
+						area*1e6, Double.NaN, Double.NaN, Double.NaN, 90d));
+			}
+			System.out.println("\tRow "+row+" ("+subSects[row].length+" sects):\t"
+					+ "upper="+twoDF.format(upperDepthTrack.getAverage())
+					+ ", lower="+twoDF.format(lowerDepthTrack.getAverage())
+					+ ", dip="+twoDF.format(dipRange.getAverage())
+					+ ", Mmin="+twoDF.format(magRange.getAverage()));
+		}
 		
 		mapMaker.setWriteGeoJSON(false);
 		mapMaker.plot(outputDir, prefix+"_sub_sects", " ");
@@ -732,6 +755,7 @@ public class DownDipInterfaceSubSectTests {
 	
 	private static String traceStr(FaultTrace trace) {
 		boolean resampled = false;
+		double avgDepth = trace.stream().mapToDouble(l->l.depth).average().getAsDouble();
 		if (trace.size() > 5) {
 			trace = FaultUtils.resampleTrace(trace, 4);
 			resampled = true;
@@ -746,6 +770,7 @@ public class DownDipInterfaceSubSectTests {
 					.append(", ").append(oDF.format(loc.depth)).append("]");
 		}
 		str.append("; strike=").append(oDF.format(LocationUtils.azimuth(trace.first(), trace.last())));
+		str.append(", avg depth=").append(oDF.format(avgDepth)).append(" km");
 		if (resampled)
 			str.append(" (resampled)");
 		return str.toString();
