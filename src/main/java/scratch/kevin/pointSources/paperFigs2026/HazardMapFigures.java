@@ -87,6 +87,7 @@ public class HazardMapFigures {
 		compAdd(comparisons, Models.FINITE_1X_UNCENTERED, Models.FINITE_1X_UNCENTERED_ALT_RAND);
 		compAdd(comparisons, Models.FINITE_2X_UNCENTERED, Models.FINITE_2X_UNCENTERED_ALT_RAND);
 		compAdd(comparisons, Models.FINITE_5X_UNCENTERED, Models.FINITE_5X_UNCENTERED_ALT_RAND);
+		compAdd(comparisons, Models.FINITE_10X_UNCENTERED, Models.FINITE_10X_UNCENTERED_ALT_RAND);
 		compAdd(comparisons, Models.FINITE_20X_UNCENTERED, Models.FINITE_20X_UNCENTERED_ALT_RAND);
 		compAdd(comparisons, Models.FINITE_50X_UNCENTERED, Models.FINITE_50X_UNCENTERED_ALT_RAND);
 		compAdd(comparisons, Models.FINITE_100X_UNCENTERED, Models.FINITE_100X_UNCENTERED_ALT_RAND);
@@ -294,17 +295,17 @@ public class HazardMapFigures {
 							
 							if (texFW != null) {
 								String texPrefix = model.texName+"Vs"+comp.texName+perTexPrefix;
-								texFW.write(LaTeXUtils.defineValueCommand(texPrefix+"Mean", oneDF.format(mean)+"%")+"\n");
-								texFW.write(LaTeXUtils.defineValueCommand(texPrefix+"MeanAbs", oneDF.format(meanAbs)+"%")+"\n");
-								texFW.write(LaTeXUtils.defineValueCommand(texPrefix+"MedianAbs", oneDF.format(medianAbs)+"%")+"\n");
-								texFW.write(LaTeXUtils.defineValueCommand(texPrefix+"Max", oneDF.format(maxSigned)+"%")+"\n");
+								texFW.write(LaTeXUtils.defineValueCommand(texPrefix+"Mean", noZeroChangeFormat(oneDF, mean)+"%")+"\n");
+								texFW.write(LaTeXUtils.defineValueCommand(texPrefix+"MeanAbs", noZeroChangeFormat(oneDF, meanAbs)+"%")+"\n");
+								texFW.write(LaTeXUtils.defineValueCommand(texPrefix+"MedianAbs", noZeroChangeFormat(oneDF, medianAbs)+"%")+"\n");
+								texFW.write(LaTeXUtils.defineValueCommand(texPrefix+"Max", noZeroChangeFormat(oneDF, maxSigned)+"%")+"\n");
 								
 								if (model == Models.AS_PUBLISHED && (comp == REF_FINITE_MODEL || comp == PROPOSED_FULL_MODEL)) {
 									// add extra rounded values
-									texFW.write(LaTeXUtils.defineValueCommand(texPrefix+"MeanRounded", roundedDF.format(mean)+"%")+"\n");
-									texFW.write(LaTeXUtils.defineValueCommand(texPrefix+"MeanAbsRounded", roundedDF.format(meanAbs)+"%")+"\n");
-									texFW.write(LaTeXUtils.defineValueCommand(texPrefix+"MedianAbsRounded", roundedDF.format(medianAbs)+"%")+"\n");
-									texFW.write(LaTeXUtils.defineValueCommand(texPrefix+"MaxRounded", roundedDF.format(maxSigned)+"%")+"\n");
+									texFW.write(LaTeXUtils.defineValueCommand(texPrefix+"MeanRounded", noZeroChangeFormat(roundedDF, mean)+"%")+"\n");
+									texFW.write(LaTeXUtils.defineValueCommand(texPrefix+"MeanAbsRounded", noZeroChangeFormat(roundedDF, meanAbs)+"%")+"\n");
+									texFW.write(LaTeXUtils.defineValueCommand(texPrefix+"MedianAbsRounded", noZeroChangeFormat(roundedDF, medianAbs)+"%")+"\n");
+									texFW.write(LaTeXUtils.defineValueCommand(texPrefix+"MaxRounded", noZeroChangeFormat(roundedDF, maxSigned)+"%")+"\n");
 								}
 							}
 						}
@@ -317,6 +318,18 @@ public class HazardMapFigures {
 					texFW.close();
 			}
 		}
+	}
+	
+	private static String noZeroChangeFormat(DecimalFormat df, double change) {
+		int digits = df.getMaximumFractionDigits();
+		Preconditions.checkState(digits >= 0 && digits < 10);
+		double minThreshold = 0.5*Math.pow(10, -digits);
+		if (Math.abs(change) < minThreshold) {
+			if (change < 0)
+				return "-<"+df.format(minThreshold);
+			return "<"+df.format(minThreshold);
+		}
+		return df.format(change);
 	}
 	
 	static GriddedGeoDataSet loadXYZ(ZipFile zip, GriddedRegion gridReg, String entryName, GriddedGeoDataSet mask) throws IOException {
