@@ -18,11 +18,17 @@ import org.opensha.commons.gui.plot.PlotSpec;
 import org.opensha.commons.gui.plot.PlotUtils;
 import org.opensha.commons.mapping.gmt.elements.GMT_CPT_Files;
 import org.opensha.commons.util.cpt.CPT;
+import org.opensha.sha.earthquake.faultSysSolution.FaultSystemRupSet;
 import org.opensha.sha.earthquake.faultSysSolution.RupSetScalingRelationship;
+import org.opensha.sha.earthquake.faultSysSolution.RuptureSets.RectangularDownDipSubductionRupSetConfig;
+import org.opensha.sha.earthquake.faultSysSolution.RuptureSets.RupSetConfig;
+import org.opensha.sha.earthquake.faultSysSolution.reports.ReportPageGen;
+import org.opensha.sha.earthquake.faultSysSolution.reports.ReportPageGen.PlotLevel;
 import org.opensha.sha.earthquake.faultSysSolution.ruptures.FaultSubsectionCluster;
 import org.opensha.sha.earthquake.faultSysSolution.ruptures.downDip.RectangularDownDipGrowingStrategy;
 import org.opensha.sha.earthquake.faultSysSolution.ruptures.downDip.RectangularDownDipGrowingStrategy.NeighborOverlaps;
 import org.opensha.sha.earthquake.faultSysSolution.ruptures.util.GeoJSONFaultReader;
+import org.opensha.sha.earthquake.faultSysSolution.util.FaultSysTools;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_SubductionScalingRelationships;
 import org.opensha.sha.faultSurface.FaultSection;
 import org.opensha.sha.faultSurface.GeoJSONFaultSection;
@@ -35,6 +41,7 @@ public class DownDipRupSetBuildingTests {
 
 	public static void main(String[] args) throws IOException {
 		String prefix = "ker_slab2";
+//		String prefix = "izu_slab2";
 		
 		File inDir = new File("/tmp/"+prefix);
 		File subSectsFile = new File(inDir, prefix+"_sub_sects.geojson");
@@ -43,7 +50,9 @@ public class DownDipRupSetBuildingTests {
 		Preconditions.checkState(outDir.exists() || outDir.mkdir());
 		
 		boolean doAnimation = true;
+		boolean doSubSeisAnimation = false;
 		boolean writeIndvFrames = true;
+		boolean buildRupSet = true;
 		
 		FaultSubsectionCluster fullCluster = new FaultSubsectionCluster(sects);
 		NeighborOverlaps neighborOverlaps = new NeighborOverlaps(fullCluster, false);
@@ -127,7 +136,8 @@ public class DownDipRupSetBuildingTests {
 				double maxMag = 0d;
 				
 				AnimatedGIFRenderer gif = new AnimatedGIFRenderer(new File(animDir, sectPrefix+"_rups.gif"), gifFPS, true);
-				AnimatedGIFRenderer gifSubSeis = new AnimatedGIFRenderer(new File(animDir, sectPrefix+"_rups_sub_seis.gif"), 0.5, true);
+				AnimatedGIFRenderer gifSubSeis = doSubSeisAnimation ?
+						new AnimatedGIFRenderer(new File(animDir, sectPrefix+"_rups_sub_seis.gif"), 0.5, true) : null;
 
 				File fullFrameDir = new File(outDir, sectPrefix+"_rups");
 				Preconditions.checkState(!writeIndvFrames || fullFrameDir.exists() || fullFrameDir.mkdir());
@@ -163,6 +173,10 @@ public class DownDipRupSetBuildingTests {
 					
 					gp.drawGraphPanel(plot, false, false, mapMaker.getXRange(), mapMaker.getYRange());
 					
+					double tick = mapMaker.getAxisTick();
+					PlotUtils.setXTick(gp, tick);
+					PlotUtils.setYTick(gp, tick);
+					
 					int height = PlotUtils.calcHeight(gp, gifWidth, true);
 					
 					gp.getChartPanel().setSize(gifWidth, height);
@@ -175,14 +189,14 @@ public class DownDipRupSetBuildingTests {
 					
 					if (gifWriteFuture != null)
 						gifWriteFuture.join();
-					if (hasFullWidth) {
+					if (hasFullWidth || !doSubSeisAnimation) {
 						gifWriteFuture = CompletableFuture.runAsync(new WriteFrameRunnable(img, gif));
 					} else {
 						gifWriteFuture = CompletableFuture.allOf(CompletableFuture.runAsync(new WriteFrameRunnable(img, gif)),
 								CompletableFuture.runAsync(new WriteFrameRunnable(img, gifSubSeis)));
 					}
 					
-					if (!hasFullWidth) {
+					if (!hasFullWidth && doSubSeisAnimation) {
 						// see if this was full-width
 						IntSummaryStatistics rowStats = cluster.subSects.stream().mapToInt(s->s.getSubSectionIndexDownDip()).summaryStatistics();
 						if (rowStats.getMin() == 0 && rowStats.getMax() == rowColOrganized.size()-1) {
@@ -204,12 +218,26 @@ public class DownDipRupSetBuildingTests {
 				}
 				gifWriteFuture.join();
 				gif.finalizeAnimation();
-				if (subSeisFinalizeFuture == null)
-					gifSubSeis.finalizeAnimation();
-				else
-					subSeisFinalizeFuture.join();
+				if (doSubSeisAnimation) {
+					if (subSeisFinalizeFuture == null)
+						gifSubSeis.finalizeAnimation();
+					else
+						subSeisFinalizeFuture.join();	
+				}
 				System.out.println("\tDone with animation");
 			}
+		}
+		
+		if (buildRupSet) {
+			RupSetConfig rsConfig = new RectangularDownDipSubductionRupSetConfig(sects, scale);
+			FaultSystemRupSet rupSet = rsConfig.build(FaultSysTools.defaultNumThreads());
+			rupSet.write(new File(outDir, "rupture_set.zip"));
+			File reportDir = new File(outDir, "rupture_set_report");
+			
+			ReportPageGen report = new ReportPageGen(rupSet, null, sects.get(0).getParentSectionName()+" Test Rupture Set",
+					reportDir, ReportPageGen.getDefaultRupSetPlots(PlotLevel.DEFAULT));
+			report.setReplot(true);
+			report.generatePage();
 		}
 	}
 	
