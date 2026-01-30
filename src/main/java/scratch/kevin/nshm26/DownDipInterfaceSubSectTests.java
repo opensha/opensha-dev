@@ -1,16 +1,21 @@
 package scratch.kevin.nshm26;
 
 import java.awt.Color;
+import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.Reader;
 import java.nio.charset.Charset;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
+import java.util.BitSet;
 import java.util.Collections;
 import java.util.List;
 import java.util.StringTokenizer;
 
 import org.apache.commons.math3.util.Precision;
+import org.opensha.commons.data.CSVFile;
 import org.opensha.commons.geo.Location;
 import org.opensha.commons.geo.LocationList;
 import org.opensha.commons.geo.LocationUtils;
@@ -23,7 +28,9 @@ import org.opensha.commons.mapping.gmt.elements.GMT_CPT_Files;
 import org.opensha.commons.util.DataUtils;
 import org.opensha.commons.util.DataUtils.MinMaxAveTracker;
 import org.opensha.commons.util.FaultUtils;
+import org.opensha.commons.util.FaultUtils.AngleAverager;
 import org.opensha.commons.util.cpt.CPT;
+import org.opensha.sha.earthquake.faultSysSolution.ruptures.util.GeoJSONFaultReader;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_SubductionScalingRelationships;
 import org.opensha.sha.faultSurface.DownDipSubsectionBuilder;
 import org.opensha.sha.faultSurface.FaultTrace;
@@ -31,35 +38,73 @@ import org.opensha.sha.faultSurface.GeoJSONFaultSection;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Range;
-import com.google.common.io.Files;
 
 import net.mahdilamb.colormap.Colors;
 
 public class DownDipInterfaceSubSectTests {
 
 	public static void main(String[] args) throws IOException {
-		File inFile = new File("/tmp/ker_slab2_dep_10km_contours.xyz");
+		Class<?> resourceClass = GeoJSONFaultSection.class;
+		
+		String faultName = "Kermadec";
+		int faultID = 0;
+		String resourcePrefix = "/data/erf/nshm26/amsam/fault_models/subduction/";
+		BufferedReader countoursIn = new BufferedReader(new InputStreamReader(
+				resourceClass.getResourceAsStream(resourcePrefix+"ker_slab2_dep_10km_contours.xyz")));
+		CSVFile<String> traceCSV = CSVFile.readStream(
+				resourceClass.getResourceAsStream(resourcePrefix+"trenches_usgs_2017_depths_ker.csv"), true);
+		boolean smoothTraceForDDW = true;
 		String prefix = "ker_slab2";
 		Range<Double> depthRange = Range.closed(0d, 60d);
 		Range<Double> lonFilter = null;
 		Range<Double> latFilter = Range.atLeast(-30d);
 		
-//		File inFile = new File("/tmp/izu_slab2_dep_10km_contours.xyz");
+//		String faultName = "Izu-Bonin";
+//		int faultID = 0;
+//		String resourcePrefix = "/data/erf/nshm26/gnmi/fault_models/subduction/";
+//		BufferedReader countoursIn = new BufferedReader(new InputStreamReader(
+//				GeoJSONFaultSection.class.getResourceAsStream(resourcePrefix+"izu_slab2_dep_10km_contours.xyz")));
+//		CSVFile<String> traceCSV = CSVFile.readStream(
+//				resourceClass.getResourceAsStream(resourcePrefix+"trenches_usgs_2017_depths_izu.csv"), true);
+//		boolean smoothTraceForDDW = true;
 //		String prefix = "izu_slab2";
 //		Range<Double> depthRange = Range.closed(0d, 60d);
 //		Range<Double> lonFilter = null;
 //		Range<Double> latFilter = Range.atMost(27d);
 		
-		File outputDir = inFile.getParentFile();
+		File outputDir = new File("/tmp/"+prefix);
+		Preconditions.checkArgument(outputDir.exists() || outputDir.mkdir());
+		
+		double traceSmoothDist = 200d;
 		
 		double scaleLength = 20d;
 		boolean scaleIsMax = false;
 		boolean constantCount = false;
 		
-		List<FaultTrace> rawContours = loadDepthContours(inFile);
+		List<FaultTrace> rawContours = loadDepthContours(countoursIn);
 		
-		if (lonFilter != null || latFilter != null)
+		// load the upper trace
+		FaultTrace upper = new FaultTrace();
+		AngleAverager upperAzAvg = new AngleAverager();
+		for (int row=1; row<traceCSV.getNumRows(); row++) {
+			double lon = traceCSV.getDouble(row, 0);
+			double lat = traceCSV.getDouble(row, 1);
+			double depth = traceCSV.getDouble(row, 5);
+			upperAzAvg.add(traceCSV.getDouble(row, 2), 1d);
+			upper.add(new Location(lat, lon, depth));
+		}
+		double upperAz = upperAzAvg.getAverage();
+		double upperStrike = upper.getStrikeDirection();
+		if (shouldReverse(upperAz, upperStrike)) {
+			System.out.println("Upper is reversed: data gives az="+(float)upperAz+", calculated is "+(float)upperStrike);
+			upper.reverse();
+			upperStrike = upper.getStrikeDirection();
+		}
+		
+		if (lonFilter != null || latFilter != null) {
 			rawContours = filterContours(rawContours, latFilter, lonFilter);
+			upper = filterContour(upper, latFilter, lonFilter);
+		}
 		
 		MinMaxAveTracker latRange = new MinMaxAveTracker();
 		MinMaxAveTracker lonRange = new MinMaxAveTracker();
@@ -69,12 +114,16 @@ public class DownDipInterfaceSubSectTests {
 				lonRange.addValue(loc.lon);
 			}
 		}
+		for (Location loc : upper) {
+			latRange.addValue(loc.lat);
+			lonRange.addValue(loc.lon);
+		}
 		
 		Region mapReg = new Region(new Location(latRange.getMin()-1d, lonRange.getMin()-1d),
 				new Location(latRange.getMax()+1d, lonRange.getMax()+1d));
 		GeographicMapMaker mapMaker = new GeographicMapMaker(mapReg);
 		
-		mapMaker.setWritePDFs(false);
+//		mapMaker.setWritePDFs(false);
 		
 		List<LocationList> lines = new ArrayList<>();
 		List<PlotCurveCharacterstics> chars = new ArrayList<>();
@@ -84,26 +133,32 @@ public class DownDipInterfaceSubSectTests {
 			lines.add(raw);
 			chars.add(rawChar);
 		}
+		
+		PlotCurveCharacterstics traceChar = new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, Colors.tab_orange);
+		lines.add(upper);
+		chars.add(traceChar);
 		mapMaker.plotLines(lines, chars);
 		
 		mapMaker.plot(outputDir, prefix+"_raw", " ");
 		List<List<FaultTrace>> stitchedIndividual = new ArrayList<>();
-		List<FaultTrace> depthContours = processContours(rawContours, stitchedIndividual);
+		List<FaultTrace> depthContours = processContours(rawContours, upper, stitchedIndividual);
 //		for (int d=0; d<rawContours.size(); d++)
 //			System.out.println("\t"+d+". "+traceStr(depthContours.get(d)));
 //		Range<Double> depthRange = Range.closedOpen(0d, 30d);
 		
-		GeoJSONFaultSection refSect = new GeoJSONFaultSection.Builder(0, "Test Fault", depthContours.get(0))
+		GeoJSONFaultSection refSect = new GeoJSONFaultSection.Builder(faultID, faultName, upper)
 				.dip(90d).upperDepth(depthRange.lowerEndpoint()).lowerDepth(depthRange.upperEndpoint())
 				.rake(90).build();
 		
 		lines.clear();
 		chars.clear();
+		
 		PlotCurveCharacterstics processedChar = new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, Color.BLACK);
 		for (FaultTrace processed : depthContours) {
 			lines.add(processed);
 			chars.add(processedChar);
 		}
+		
 		PlotCurveCharacterstics connectorChar = new PlotCurveCharacterstics(PlotLineType.SOLID, 2f, Colors.tab_red);
 		for (List<FaultTrace> stitched : stitchedIndividual) {
 			for (int i=1; i<stitched.size(); i++) {
@@ -112,6 +167,10 @@ public class DownDipInterfaceSubSectTests {
 				LocationList connector = LocationList.of(prev.last(), cur.first());
 				lines.add(connector);
 				chars.add(connectorChar);
+				if (cur.getName() != null && cur.getName().equals(ADDITION_FROM_UPPER_NAME)) {
+					lines.add(cur);
+					chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 2f, traceChar.getColor()));
+				}
 			}
 		}
 		mapMaker.plotLines(lines, chars);
@@ -141,8 +200,73 @@ public class DownDipInterfaceSubSectTests {
 			chars.add(rawChar);
 		}
 		
-		List<FaultTrace> interpTraces = DownDipSubsectionBuilder.interpolateDepthTraces(
-				depthContours, 2, scaleLength, scaleIsMax, depthRange);
+		List<FaultTrace> interpTraces;
+		if (smoothTraceForDDW) {
+			int numResample = 1000;
+			FaultTrace upperResampled = FaultUtils.resampleTrace(upper, numResample);
+			double avgDepth = upperResampled.stream().mapToDouble(l -> l.depth).average().getAsDouble();
+			double minDepth = upper.stream().mapToDouble(l -> l.depth).min().getAsDouble();
+			double maxDepth = upper.stream().mapToDouble(l -> l.depth).max().getAsDouble();
+			System.out.println("Averaging out depth of upper trace for DDW calculation; avg="
+					+(float)avgDepth+" km, range=["+(float)minDepth+", "+(float)maxDepth+"]");
+			
+			boolean replaceInterpolatedWithUpper = depthRange == null || depthRange.contains(avgDepth);
+			
+			FaultTrace localLimit = FaultUtils.resampleTrace(depthContours.get(1), numResample);
+			
+			FaultTrace upperForDDW;
+			if (Double.isFinite(traceSmoothDist) && traceSmoothDist > 0d) {
+				double[] smoothed = new double[upperResampled.size()];
+				double length = upper.getTraceLength();
+				
+				System.out.println("\tUsing smoothing distance="+(float)traceSmoothDist+" (in either direction) for length="+(float)length);
+				
+				double lengthEach = length/(upperResampled.size()-1d);
+				int numAway = (int)Math.round(traceSmoothDist/lengthEach);
+				
+				for (int i=0; i<upperResampled.size(); i++) {
+					int count = 0;
+					for (int j=Integer.max(0, i-numAway); j<=i+numAway && j<upperResampled.size(); j++) {
+						smoothed[i] += upperResampled.get(j).depth;
+						count++;
+					}
+					smoothed[i] /= (double)count;
+					if (smoothed[i] >= localLimit.get(i).depth)
+						// we smoothed past the next layer down, use that depth as a limit
+						smoothed[i] = localLimit.get(i).depth;
+				}
+				for (int i=0; i<smoothed.length; i++) {
+					Location loc = upperResampled.get(i);
+					upperResampled.set(i, new Location(loc.lat, loc.lon, smoothed[i]));
+				}
+				upperForDDW = upperResampled;
+				
+				avgDepth = upperResampled.stream().mapToDouble(l -> l.depth).average().getAsDouble();
+				minDepth = upperResampled.stream().mapToDouble(l -> l.depth).min().getAsDouble();
+				maxDepth = upperResampled.stream().mapToDouble(l -> l.depth).max().getAsDouble();
+				System.out.println("Smoothed upper trace for DDW calculation: avg="
+						+(float)avgDepth+" km, range=["+(float)minDepth+", "+(float)maxDepth+"]");
+			} else {
+				upperForDDW = new FaultTrace(null, upper.size());
+				for (int i=0; i<upper.size(); i++) {
+					Location loc = upper.get(i);
+					upperForDDW.add(new Location(loc.lat, loc.lon, avgDepth));
+				}
+			}
+			
+			List<FaultTrace> depthContoursForDDW = new ArrayList<>(depthContours);
+			depthContoursForDDW.set(0, upperForDDW);
+			interpTraces = DownDipSubsectionBuilder.interpolateDepthTraces(
+					depthContoursForDDW, 2, scaleLength, scaleIsMax, depthRange);
+			if (replaceInterpolatedWithUpper) {
+				System.out.println("Replacing interpolated upper with original");
+				interpTraces.set(0, upper);
+			}
+		} else {
+			interpTraces = DownDipSubsectionBuilder.interpolateDepthTraces(
+					depthContours, 2, scaleLength, scaleIsMax, depthRange);
+		}
+		
 		System.out.println("Built "+interpTraces.size()+" interpolated traces");
 		for (FaultTrace trace : interpTraces)
 			System.out.println("\t"+traceStr(trace));
@@ -220,20 +344,25 @@ public class DownDipInterfaceSubSectTests {
 		System.out.println("Sub-Sect Dip:\t"+dipRange);
 		System.out.println("Sub-Sect Row counts:\t"+perRowRange);
 		
+		mapMaker.setWriteGeoJSON(false);
 		mapMaker.plot(outputDir, prefix+"_sub_sects", " ");
+		
+		GeoJSONFaultReader.writeFaultSections(new File(outputDir, prefix+"_sub_sects.geojson"), allSects);
 	}
 	
-	private static List<FaultTrace> processContours(List<FaultTrace> contours) {
-		return processContours(contours, null);
+	private static List<FaultTrace> processContours(List<FaultTrace> contours, FaultTrace upper) {
+		return processContours(contours, upper, null);
 	}
 	
-	private static List<FaultTrace> processContours(List<FaultTrace> contours, List<List<FaultTrace>> stitchedIndividual) {
+	private static List<FaultTrace> processContours(List<FaultTrace> contours, FaultTrace upper, List<List<FaultTrace>> stitchedIndividual) {
 		// group by depth
 		List<List<FaultTrace>> depthGrouped = new ArrayList<>();
 		double curDepth = Double.NaN;
 		List<FaultTrace> curTraces = null;
 		for (FaultTrace trace : contours) {
 			double depth = trace.first().depth;
+			for (Location loc : trace)
+				Preconditions.checkState(Precision.equals(depth, loc.depth, 0.1), "Depths vary within contours: %s != %s", (float)depth, (float)loc.depth);
 			if (curTraces == null || !Precision.equals(depth, curDepth, 0.1)) {
 				curTraces = new ArrayList<>();
 				curDepth = depth;
@@ -291,8 +420,16 @@ public class DownDipInterfaceSubSectTests {
 		System.out.println("Detected middle strike="+oDF.format(strike)+" with dip direction of "
 				+oDF.format(dipDir)+" (delta="+FaultUtils.getAbsAngleDiff(strike, dipDir)+")");
 		
+		double upperMaxDepth = 0d;
+		for (Location loc : upper)
+			upperMaxDepth = Math.max(upperMaxDepth, loc.depth);
+		
+		FaultTrace resampledUpper = null;
+		
 		// now stitch
-		List<FaultTrace> stitched = new ArrayList<>();
+		List<FaultTrace> stitched = new ArrayList<>(depthGrouped.size()+1);
+		// add the upper trace first
+		stitched.add(upper);
 		for (List<FaultTrace> depthTraces : depthGrouped) {
 			double depth = depthTraces.get(0).first().depth;
 			System.out.println(oDF.format(depth)+" km: "+depthTraces.size()+" contours");
@@ -376,6 +513,104 @@ public class DownDipInterfaceSubSectTests {
 					stitchedList.set(i, getReversed(stitchedList.get(i)));
 			}
 			
+			if (depth < upperMaxDepth || Precision.equals(depth, upperMaxDepth, 2d)) {
+				// see if we can stitch anything in from the upper trace
+				System.out.println("Will try to stitch in from the upper trace that dips below this one (down to "
+						+(float)upperMaxDepth+" km); upper strike: "+upper.getStrikeDirection());
+				if (resampledUpper == null) {
+					resampledUpper = FaultUtils.resampleTrace(upper, (int)Math.max(1000, upper.getTraceLength()/0.1));
+					Preconditions.checkState(!shouldReverse(strike, resampledUpper.getStrikeDirection()));
+				}
+				List<FaultTrace> modStitchedList = new ArrayList<>();
+				modStitchedList.add(stitchedList.get(0));
+				for (int s=1; s<stitchedList.size(); s++) {
+					FaultTrace before = stitchedList.get(s-1);
+					FaultTrace after = stitchedList.get(s);
+					
+					if (before.size() > 1 && after.size() > 1) {
+						// draw lines extending the trace before and after this gap toward the gap
+						Location before1 = before.get(before.size()-2);
+						Location before2 = before.last();
+						Location after1 = after.get(1);
+						Location after2 = after.first();
+						
+						// and draw lines perpendicular to those lines that will be used to find trace points between them
+						// we'll make sure the trace points are to the right (positive in LocationUtils methods) of
+						// these lines
+						Location beforePerp1 = before2;
+						// azimuth is the direction - 90 degrees
+						Location beforePerp2 = LocationUtils.location(beforePerp1,
+								LocationUtils.azimuthRad(before1, before2) - Math.PI*0.5, 10d);
+						
+						Location afterPerp1 = after2;
+						// azimuth is the direction - 90 degrees
+						Location afterPerp2 = LocationUtils.location(afterPerp1,
+								LocationUtils.azimuthRad(after1, after2) - Math.PI*0.5, 10d);
+						
+						// within this distance from either end, we'll try to stop at the projection from the adjacent
+						// segment to get a smooth interpolation
+//						double gapDistance = LocationUtils.horzDistanceFast(before2, after1);
+//						double lineCheckDist = Math.max(10d, gapDistance * 0.2);
+						// on second thought, it seems to do better always forcing this check
+						double lineCheckDist = Double.POSITIVE_INFINITY;
+						
+						FaultTrace addition = null;
+						
+						for (int i=1; i<resampledUpper.size()-1; i++) {
+							Location loc = resampledUpper.get(i);
+							// these methods ignore depth, which is good here
+							boolean inside = LocationUtils.distanceToLineFast(beforePerp1, beforePerp2, loc) >= 0d
+									&& LocationUtils.distanceToLineFast(afterPerp1, afterPerp2, loc) >= 0d;
+							if (inside) {
+								// we're within the envelope of this missing piece
+								
+								boolean keep = false;
+								if (addition == null) {
+									// first one that's inside, see if we have crossed the projected line
+									double beforeDist = LocationUtils.horzDistanceFast(before2, loc);
+									if (beforeDist < lineCheckDist) {
+										// check against the projected line and wait until we've crossed it to the right
+										if (LocationUtils.distanceToLineFast(before1, before2, loc) >= 0) {
+											// we're on the right of the projected line, start tracking
+											addition = new FaultTrace(ADDITION_FROM_UPPER_NAME);
+											keep = true;
+										}
+									} else {
+										// far enough away, just start tracking
+										addition = new FaultTrace();
+										keep = true;
+									}
+								} else {
+									if (LocationUtils.horzDistanceFast(loc, after1) < lineCheckDist) {
+										// we're near the end, start checking against that line
+										if (LocationUtils.distanceToLineFast(after1, after2, loc) >= 0) {
+											// we're back to the left of the contour (to the right of the back-line)
+											break;
+										}
+									}
+									keep = true;
+								}
+								if (keep) {
+//									addition.add(loc);
+									addition.add(new Location(loc.lat, loc.lon, depth));
+								}
+							} else if (addition != null) {
+								// already found it, break
+								break;
+							}
+						}
+						if (addition != null) {
+							modStitchedList.add(addition);
+							System.out.println("Stitched in an addition from the upper trace:\t"+traceStr(addition));
+						}
+					}
+					
+					modStitchedList.add(after);
+				}
+				Preconditions.checkState(modStitchedList.size() >= stitchedList.size());
+				stitchedList = modStitchedList;
+			}
+			
 			if (stitchedIndividual != null)
 				stitchedIndividual.add(stitchedList);
 			
@@ -396,46 +631,84 @@ public class DownDipInterfaceSubSectTests {
 		return stitched;
 	}
 	
+	private static final String ADDITION_FROM_UPPER_NAME = "Stitched From Upper Trace";
+	
 	private static List<FaultTrace> filterContours(List<FaultTrace> contours, Range<Double> latRange, Range<Double> lonRange) {
 		List<FaultTrace> ret = new ArrayList<>();
 		
 		for (FaultTrace trace : contours) {
-			int firstInside = -1;
-			int lastInside = -1;
-			boolean allInside = true;
-			boolean noneInside = true;
-			for (int i=0; i<trace.size(); i++) {
-				Location loc = trace.get(i);
-				boolean inside = (latRange == null || latRange.contains(loc.lat))
-						&& (lonRange == null || lonRange.contains(loc.lon));
-				if (inside) {
-					if (firstInside < 0)
-						firstInside = i;
-					lastInside = i;
-					noneInside = false;
-				} else {
-					allInside = false;
-				}
-			}
-			if (noneInside)
-				continue;
-			if (allInside) {
-				ret.add(trace);
-				continue;
-			}
-			// need to cut it; could interpolate, but this is good enough for now
-			FaultTrace cutTrace = new FaultTrace(null, 1+lastInside-firstInside);
-			for (int i=firstInside; i<=lastInside; i++)
-				cutTrace.add(trace.get(i));
-			ret.add(cutTrace);
+			FaultTrace cutTrace = filterContour(trace, latRange, lonRange);
+			if (cutTrace != null)
+				ret.add(cutTrace);
 		}
 		return ret;
 	}
 	
-	private static List<FaultTrace> loadDepthContours(File inFile) throws IOException {
+	private static FaultTrace filterContour(FaultTrace contour, Range<Double> latRange, Range<Double> lonRange) {
+		
+		int firstInside = -1;
+		int lastInside = -1;
+		boolean allInside = true;
+		boolean noneInside = true;
+		for (int i=0; i<contour.size(); i++) {
+			Location loc = contour.get(i);
+			boolean inside = (latRange == null || latRange.contains(loc.lat))
+					&& (lonRange == null || lonRange.contains(loc.lon));
+			if (inside) {
+				if (firstInside < 0)
+					firstInside = i;
+				lastInside = i;
+				noneInside = false;
+			} else {
+				allInside = false;
+			}
+		}
+		if (noneInside)
+			return null;
+		if (allInside)
+			return contour;
+		
+		// need to cut it
+		FaultTrace cutTrace = new FaultTrace(null, 3+lastInside-firstInside);
+		if (firstInside > 1) {
+			// try to interpolate
+			Location first = findFurthestInside(contour.get(firstInside), contour.get(firstInside-1), latRange, lonRange);
+			if (first != null)
+				cutTrace.add(first);
+		}
+		for (int i=firstInside; i<=lastInside; i++)
+			cutTrace.add(contour.get(i));
+		if (lastInside < contour.size()-1) {
+			// try to interpolate
+			Location last = findFurthestInside(contour.get(lastInside), contour.get(lastInside+1), latRange, lonRange);
+			if (last != null)
+				cutTrace.add(last);
+		}
+		
+		return cutTrace;
+	}
+	
+	private static Location findFurthestInside(Location from, Location to, Range<Double> latRange, Range<Double> lonRange) {
+		FaultTrace resampled = new FaultTrace(null, 2);
+		resampled.add(from);
+		resampled.add(to);
+		resampled = FaultUtils.resampleTrace(resampled, 100);
+		Location lastInside = null;
+		for (int i=1; i<resampled.size(); i++) {
+			Location loc = resampled.get(i);
+			boolean inside = (latRange == null || latRange.contains(loc.lat))
+					&& (lonRange == null || lonRange.contains(loc.lon));
+			if (inside)
+				lastInside = loc;
+		}
+		return lastInside;
+	}
+	
+	private static List<FaultTrace> loadDepthContours(BufferedReader in) throws IOException {
 		List<FaultTrace> ret = new ArrayList<>();
 		FaultTrace curTrace = null;
-		for (String line : Files.readLines(inFile, Charset.defaultCharset())) {
+		String line;
+		while ((line = in.readLine()) != null) {
 			line = line.trim();
 			if (line.startsWith(">")) {
 				// new contour
