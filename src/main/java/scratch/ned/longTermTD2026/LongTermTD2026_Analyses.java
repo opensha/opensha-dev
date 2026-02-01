@@ -43,6 +43,8 @@ import org.opensha.sha.earthquake.faultSysSolution.erf.td.RenewalModels;
 import org.opensha.sha.earthquake.faultSysSolution.erf.td.TimeDepFaultSystemSolutionERF;
 import org.opensha.sha.earthquake.faultSysSolution.erf.td.UCERF3_ProbabilityModel;
 import org.opensha.sha.earthquake.faultSysSolution.erf.td.WG02_ProbabilityModel;
+import org.opensha.sha.earthquake.faultSysSolution.inversion.constraints.impl.UncertainDataConstraint.SectMappedUncertainDataConstraint;
+import org.opensha.sha.earthquake.faultSysSolution.modules.PaleoseismicConstraintData;
 import org.opensha.sha.earthquake.param.BPTAveragingTypeOptions;
 import org.opensha.sha.earthquake.param.BPTAveragingTypeParam;
 import org.opensha.sha.earthquake.param.HistoricOpenIntervalParam;
@@ -2258,6 +2260,31 @@ public class LongTermTD2026_Analyses {
 		
 		String rootDir = "/Users/field/Library/CloudStorage/OneDrive-DOI/Field_Other/ERF_Coordination/LongTermTD_2026/Analysis_OldToNewFramework/";
 		
+		TimeDepFaultSystemSolutionERF erf = getFullPrefUS26_ERF_NewFramework(false);
+		PaleoseismicConstraintData paleoDataMod = erf.getSolution().getRupSet().getModule(PaleoseismicConstraintData.class);
+//		ArrayList<String> parSectNames = new ArrayList<String>();
+//		
+////		FaultSystemSolutionERF erf = getCascadia_ERF(Cascadia_FSS_creator.FaultModelEnum.MIDDLE);
+//		
+//		int numNull = 0;
+//		for(int s = 0; s < erf.getSolution().getRupSet().getNumSections();s++) {
+//			String name = erf.getSolution().getRupSet().getFaultSectionData(s).getParentSectionName();
+//			if(name==null) {
+//				numNull+=1;
+//				System.out.println("null: "+erf.getSolution().getRupSet().getFaultSectionData(s).getFaultTrace().get(0));
+//			}
+//			if(!parSectNames.contains(name))
+//				parSectNames.add(name);
+//		}
+//		System.out.println("numNull = "+numNull);
+//
+//		for(String name:parSectNames)
+//			System.out.println(name);
+		for(SectMappedUncertainDataConstraint constr : paleoDataMod.getPaleoRateConstraints()) {
+			System.out.println(constr.getName()+constr);
+		}
+		System.exit(0);
+		
 //		// this shows there is only one rupture for each FSS source
 //		String fileName="/Users/field/Library/CloudStorage/OneDrive-DOI/Field_Other/CEA_WGCEP/UCERF3/UCERF3-TI/Figures/Fig11_FaultClusterFig/2013_05_10-ucerf3p3-production-10runs_COMPOUND_SOL_FM3_1_MEAN_BRANCH_AVG_SOL.zip";
 //		FaultSystemSolutionERF erf = new FaultSystemSolutionERF(fileName);
@@ -2375,20 +2402,20 @@ public class LongTermTD2026_Analyses {
 //		System.exit(0);
 		
 		
-		// TEST NEW FRAMEWORK WITH FULL US2026 MODEL
-		TimeDepFaultSystemSolutionERF erf = getFullPrefUS26_ERF_NewFramework(false);
-		File parentDir = new File(rootDir+"bptSimulationsUS26_NewFramework/");
-		if(!parentDir.exists()) 
-			parentDir.mkdir();
-		File outputDir = new File(parentDir,"Run2_50000yrs");
-		long seed = 984087634;
-		int numYrs = 50000;
-//		LongTermTD_Simulator.simulateEventsFast(erf, rootDir+"poissonSimulationsUS26_NewFramework/Run1_1000000yrs/outputTimesinceLast.txt"
-//				,null, numYrs, outputDir, seed, true, true, Double.NaN);
-
-		LongTermTD_Simulator.generateSimulationPlots(erf, 
-				rootDir+"poissonSimulationsUS26_NewFramework/Run1_1000000yrs/outputTimesinceLast.txt", numYrs, outputDir, true);
-		System.exit(0);
+//		// TEST NEW FRAMEWORK WITH FULL US2026 MODEL
+//		TimeDepFaultSystemSolutionERF erf = getFullPrefUS26_ERF_NewFramework(false);
+//		File parentDir = new File(rootDir+"bptSimulationsUS26_NewFramework/");
+//		if(!parentDir.exists()) 
+//			parentDir.mkdir();
+//		File outputDir = new File(parentDir,"Run2_50000yrs");
+//		long seed = 984087634;
+//		int numYrs = 50000;
+////		LongTermTD_Simulator.simulateEventsFast(erf, rootDir+"poissonSimulationsUS26_NewFramework/Run1_1000000yrs/outputTimesinceLast.txt"
+////				,null, numYrs, outputDir, seed, true, true, Double.NaN);
+//
+//		LongTermTD_Simulator.generateSimulationPlots(erf, 
+//				rootDir+"poissonSimulationsUS26_NewFramework/Run1_1000000yrs/outputTimesinceLast.txt", numYrs, outputDir, true);
+//		System.exit(0);
 		
 //		// TEST NEW FRAMEWORK WITH FULL US2026 MODEL - POISSON
 //		TimeDepFaultSystemSolutionERF erf = getFullPrefUS26_ERF_NewFramework(false);

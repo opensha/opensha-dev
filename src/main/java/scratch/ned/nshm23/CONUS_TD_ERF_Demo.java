@@ -12,6 +12,7 @@ import org.opensha.commons.data.function.DiscretizedFunc;
 import org.opensha.sha.earthquake.faultSysSolution.FaultSystemRupSet;
 import org.opensha.sha.earthquake.faultSysSolution.FaultSystemSolution;
 import org.opensha.sha.earthquake.faultSysSolution.erf.BaseFaultSystemSolutionERF;
+import org.opensha.sha.earthquake.faultSysSolution.modules.PaleoseismicConstraintData;
 import org.opensha.sha.earthquake.faultSysSolution.modules.RupMFDsModule;
 import org.opensha.sha.earthquake.faultSysSolution.modules.RupSetTectonicRegimes;
 import org.opensha.sha.earthquake.faultSysSolution.util.MergedSolutionCreator;
@@ -26,6 +27,7 @@ import org.opensha.sha.earthquake.rupForecastImpl.nshm23.timeDependence.DOLE_Sub
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.timeDependence.DOLE_SubsectionMapper.PaleoMappingAlgorithm;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.timeDependence.TimeDependentReportPageGen;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.timeDependence.TimeDependentReportPageGen.DataToInclude;
+import org.opensha.sha.earthquake.rupForecastImpl.nshm23.data.NSHM23_PaleoDataLoader;
 import org.opensha.sha.faultSurface.FaultSection;
 import org.opensha.sha.util.TectonicRegionType;
 
@@ -378,6 +380,16 @@ public class CONUS_TD_ERF_Demo {
 //		} catch (IOException e) {
 //			e.printStackTrace();
 //		}		
+		
+		// add paleo data module
+		try {
+			PaleoseismicConstraintData mod = NSHM23_PaleoDataLoader.load(sol.getRupSet());
+			sol.getRupSet().addModule(mod);
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		
 		
 		if(full_FSS_fileName != null) {
 			try {
