@@ -47,9 +47,10 @@ public class CalcTest {
 		
 		for (Asset asset : port) {
 			Site site = asset.getSite();
-			Iterator<Parameter<?>> siteParamsIt = imr.getSiteParamsIterator();
-			while (siteParamsIt.hasNext()) {
-				Parameter<?> param = siteParamsIt.next();
+//			Iterator<Parameter<?>> siteParamsIt = imr.getSiteParamsIterator();
+//			while (siteParamsIt.hasNext()) {
+//				Parameter<?> param = siteParamsIt.next();
+			for (Parameter<?> param : imr.getSiteParams()) {
 				if (!site.containsParameter(param))
 					site.addParameter((Parameter)param.clone());
 			}

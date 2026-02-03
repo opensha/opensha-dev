@@ -60,6 +60,7 @@ import org.opensha.sha.faultSurface.utils.ptSrcCorr.DistanceDistributionCorrecti
 import org.opensha.sha.faultSurface.utils.ptSrcCorr.PointSourceDistanceCorrection;
 import org.opensha.sha.faultSurface.utils.ptSrcCorr.PointSourceDistanceCorrections;
 import org.opensha.sha.imr.AttenRelRef;
+import org.opensha.sha.imr.ErgodicIMR;
 import org.opensha.sha.imr.ScalarIMR;
 import org.opensha.sha.imr.param.IntensityMeasureParams.PGA_Param;
 import org.opensha.sha.imr.param.IntensityMeasureParams.SA_Param;
@@ -147,8 +148,8 @@ public class SpinningFaultExceedanceFigures {
 		double length = ml.getMedianLength(mag);
 		
 		System.out.println("Length is: "+length);
-		Supplier<ScalarIMR> gmmRef = () -> {
-			ScalarIMR gmm = AttenRelRef.USGS_NSHM23_ACTIVE.get();
+		Supplier<ErgodicIMR> gmmRef = () -> {
+			ErgodicIMR gmm = (ErgodicIMR)AttenRelRef.USGS_NSHM23_ACTIVE.get();
 			gmm.getOtherParams().getParameter(SigmaTruncTypeParam.NAME).setValue(SigmaTruncTypeParam.SIGMA_TRUNC_TYPE_1SIDED);
 			gmm.getOtherParams().getParameter(SigmaTruncLevelParam.NAME).setValue(3d);
 			if (period == 0d) {
@@ -260,7 +261,7 @@ public class SpinningFaultExceedanceFigures {
 		texFW.write(LaTeXUtils.defineValueCommand(texLabel+"UncenteredExampleZHyp", "5")+"\n");
 		RectangularSurface uncenteredExampleSurf = surfBuilder.buildRectSurface();
 		
-		ScalarIMR gmm0 = gmmRef.get();
+		ErgodicIMR gmm0 = gmmRef.get();
 		
 		List<PlotSpec> plots = new ArrayList<>();
 		for (int d=0; d<distances.length; d++) {
@@ -1445,7 +1446,7 @@ public class SpinningFaultExceedanceFigures {
 		return ret;
 	}
 	
-	private static DiscretizedFunc[] calcExceedProbs(Site site, EqkRupture rup, Supplier<ScalarIMR> gmmRef,
+	private static DiscretizedFunc[] calcExceedProbs(Site site, EqkRupture rup, Supplier<? extends ScalarIMR> gmmRef,
 			DiscretizedFunc xVals, RectangularSurface[] surfs) {
 		System.out.println("Calculating exceedance probabilities for "+surfs.length+" surfaces");
 		double[] linearX = new double[xVals.size()];
