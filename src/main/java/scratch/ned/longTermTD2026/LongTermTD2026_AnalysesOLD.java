@@ -71,7 +71,7 @@ import scratch.UCERF3.erf.utils.ProbabilityModelsCalc;
 import scratch.ned.nshm23.AK_FSS_creator;
 import scratch.ned.nshm23.AleutianArc_FSS_Creator;
 import scratch.ned.nshm23.CEUS_FSS_creator;
-import scratch.ned.nshm23.CONUS_TD_ERF_Demo;
+import scratch.ned.nshm23.FSS_Fetcher2023;
 import scratch.ned.nshm23.Cascadia_FSS_creator;
 import scratch.ned.nshm23.AK_FSS_creator.DeformationModelEnum;
 
@@ -892,7 +892,7 @@ public class LongTermTD2026_AnalysesOLD {
 	 */
 	private static FaultSystemSolutionERF getCEUS_ERF() {
 		String full_FSS_fileName = "/Users/field/nshm-haz_data/ceus_FSS_test.zip";
-		FaultSystemSolution sol = CONUS_TD_ERF_Demo.getCEUS_FSS(full_FSS_fileName,CEUS_FSS_creator.FaultModelEnum.PREFERRED);		
+		FaultSystemSolution sol = FSS_Fetcher2023.getCEUS_FSS(full_FSS_fileName,CEUS_FSS_creator.FaultModelEnum.PREFERRED);		
 		FaultSystemSolutionERF erf = new FaultSystemSolutionERF(sol);
 		erf.getParameter(IncludeBackgroundParam.NAME).setValue(IncludeBackgroundOption.EXCLUDE);
 		return erf;
@@ -906,7 +906,7 @@ public class LongTermTD2026_AnalysesOLD {
 	 */
 	private static FaultSystemSolutionERF getAK_ERF(AK_FSS_creator.DeformationModelEnum defMod) {
 		String full_FSS_fileName = "/Users/field/nshm-haz_data/alaska_FSS_"+defMod+"_test.zip";
-		FaultSystemSolution sol = CONUS_TD_ERF_Demo.getAK_FSS(full_FSS_fileName, defMod);		
+		FaultSystemSolution sol = FSS_Fetcher2023.getAK_FSS(full_FSS_fileName, defMod);		
 		FaultSystemSolutionERF erf = new FaultSystemSolutionERF(sol);
 		erf.getParameter(IncludeBackgroundParam.NAME).setValue(IncludeBackgroundOption.EXCLUDE);
 		return erf;
@@ -920,7 +920,7 @@ public class LongTermTD2026_AnalysesOLD {
 	 */
 	private static FaultSystemSolutionERF getAleutianArc_ERF(AleutianArc_FSS_Creator.FaultModelEnum faultModel) {
 		String full_FSS_fileName = "/Users/field/nshm-haz_data/aleutianArc_FSS_"+faultModel+"_test.zip";
-		FaultSystemSolution sol = CONUS_TD_ERF_Demo.getAleutianArc_FSS(full_FSS_fileName, faultModel);		
+		FaultSystemSolution sol = FSS_Fetcher2023.getAleutianArc_FSS(full_FSS_fileName, faultModel);		
 		FaultSystemSolutionERF erf = new FaultSystemSolutionERF(sol);
 		erf.getParameter(IncludeBackgroundParam.NAME).setValue(IncludeBackgroundOption.EXCLUDE);
 		return erf;
@@ -933,7 +933,7 @@ public class LongTermTD2026_AnalysesOLD {
 	 */
 	private static FaultSystemSolutionERF getCascadia_ERF(Cascadia_FSS_creator.FaultModelEnum faultModel) {
 		String full_FSS_fileName = "/Users/field/nshm-haz_data/cascadia_FSS_"+faultModel+"_test.zip";
-		FaultSystemSolution sol = CONUS_TD_ERF_Demo.getCascadia_FSS(full_FSS_fileName, faultModel);	
+		FaultSystemSolution sol = FSS_Fetcher2023.getCascadia_FSS(full_FSS_fileName, faultModel);	
 //		for (FaultSection sect: sol.getRupSet().getFaultSectionDataList()) {
 //			System.out.println("here:\t"+sect.getDateOfLastEvent());
 //		}
@@ -949,7 +949,7 @@ public class LongTermTD2026_AnalysesOLD {
 	 */
 	private static FaultSystemSolutionERF getWUS_withCascadia_ERF(Cascadia_FSS_creator.FaultModelEnum cascadiaFaultModel) {
 		String full_FSS_fileName = "/Users/field/nshm-haz_data/wusWithCascadia_FSS_"+cascadiaFaultModel+"_test.zip";
-		FaultSystemSolution sol = CONUS_TD_ERF_Demo.getWUS_withCascadia_FSS(full_FSS_fileName,cascadiaFaultModel);		
+		FaultSystemSolution sol = FSS_Fetcher2023.getWUS_withCascadia_FSS(full_FSS_fileName,cascadiaFaultModel);		
 		FaultSystemSolutionERF erf = new FaultSystemSolutionERF(sol);
 		erf.getParameter(IncludeBackgroundParam.NAME).setValue(IncludeBackgroundOption.EXCLUDE);
 		return erf;
@@ -958,7 +958,7 @@ public class LongTermTD2026_AnalysesOLD {
 	
 	private static TimeDepFaultSystemSolutionERF getWUS_withCascadia_ERF_NewFramework(Cascadia_FSS_creator.FaultModelEnum cascadiaFaultModel, boolean matchU3_Calcs) {
 		String full_FSS_fileName = "/Users/field/nshm-haz_data/wusWithCascadia_FSS_"+cascadiaFaultModel+"_test.zip";
-		FaultSystemSolution sol = CONUS_TD_ERF_Demo.getWUS_withCascadia_FSS(full_FSS_fileName,cascadiaFaultModel);		
+		FaultSystemSolution sol = FSS_Fetcher2023.getWUS_withCascadia_FSS(full_FSS_fileName,cascadiaFaultModel);		
 
 		TimeDepFaultSystemSolutionERF erf = new TimeDepFaultSystemSolutionERF();
 		erf.setSolution(sol);
@@ -1000,7 +1000,7 @@ public class LongTermTD2026_AnalysesOLD {
 	 */
 	private static FaultSystemSolutionERF getFullPrefUS26_ERF() {
 		String full_FSS_fileName = "/Users/field/nshm-haz_data/fullPrefUS_FSS.zip";
-		FaultSystemSolution sol = CONUS_TD_ERF_Demo.getPreferredFull_FSS(full_FSS_fileName);		
+		FaultSystemSolution sol = FSS_Fetcher2023.getPreferredFull_FSS(full_FSS_fileName);		
 		FaultSystemSolutionERF erf = new FaultSystemSolutionERF(sol);
 		erf.getParameter(IncludeBackgroundParam.NAME).setValue(IncludeBackgroundOption.EXCLUDE);
 
@@ -1009,7 +1009,7 @@ public class LongTermTD2026_AnalysesOLD {
 	
 	private static TimeDepFaultSystemSolutionERF getFullPrefUS26_ERF_NewFramework(boolean matchU3_Calcs) {
 		String full_FSS_fileName = "/Users/field/nshm-haz_data/fullPrefUS_FSS.zip";
-		FaultSystemSolution sol = CONUS_TD_ERF_Demo.getPreferredFull_FSS(full_FSS_fileName);		
+		FaultSystemSolution sol = FSS_Fetcher2023.getPreferredFull_FSS(full_FSS_fileName);		
 	
 		TimeDepFaultSystemSolutionERF erf = new TimeDepFaultSystemSolutionERF();
 		erf.setSolution(sol);
@@ -1048,7 +1048,7 @@ public class LongTermTD2026_AnalysesOLD {
 		long currentTimeEpoch = System.currentTimeMillis();
 		String dateString = new java.text.SimpleDateFormat("MM_dd_yyyy").format(new java.util.Date (currentTimeEpoch)); // Epoch in seconds, remove '*1000' for milliseconds
 		String full_FSS_fileName = "/Users/field/nshm-haz_data/fullPref_US_FSS.zip";
-		FaultSystemSolution sol = CONUS_TD_ERF_Demo.getPreferredFull_FSS(full_FSS_fileName);		
+		FaultSystemSolution sol = FSS_Fetcher2023.getPreferredFull_FSS(full_FSS_fileName);		
 		
 		File tdMainDir = new File("/Users/field/markdown/nshm23_time_dependence_"+dateString);
 

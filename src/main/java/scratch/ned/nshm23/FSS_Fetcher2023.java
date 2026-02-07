@@ -42,7 +42,7 @@ import scratch.ned.nshm23.CEUS_FSS_creator.FaultModelEnum;
  * 
  * Parent section names are null for AK fault system solution faults (info not readily available, but IDs are good)
  */
-public class CONUS_TD_ERF_Demo {
+public class FSS_Fetcher2023 {
 	
 //	String nshmAK_ModelDirPath = "/Users/field/nshm-haz_data/nshm-alaska-3.0.1/";
 	public static String nshmAK_ModelDirPath = "/Users/field/nshm-haz_data/nshm-alaska-3.1-maint/";
