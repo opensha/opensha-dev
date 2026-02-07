@@ -1190,7 +1190,7 @@ public class LongTermTD2026_AnalysesOLD {
 //		File outputDir=null;
 		boolean makePlots=true;
 		
-		LongTermTD_Simulator.simulateEvents(erf, timeSinceLastFileName, null, 
+		LongTermTD_Simulator.simulateEventsOLD(erf, timeSinceLastFileName, null, 
 				numYrs, outputDir, seed, true, makePlots, Double.NaN);
 //		testCalc.simulateEvents(timeSinceLastFileName, null, numYrs, outputDir, seed, true, makePlots, Double.NaN);
 		
@@ -2396,10 +2396,10 @@ public class LongTermTD2026_AnalysesOLD {
 //		File outputDir = new File(parentDir,"Run2_aperMidVals");
 //		long seed = 984087634;
 //		int numYrs = 50000;
-////		LongTermTD_Simulator.simulateEvents(erf, rootDir+"bptSimulationsWUS_withCascadia/Run1_aperMidVals/outputTimesinceLast.txt", null, 
+////		LongTermTD_Simulator.simulateEventsOLD(erf, rootDir+"bptSimulationsWUS_withCascadia/Run1_aperMidVals/outputTimesinceLast.txt", null, 
 ////				numYrs, outputDir, seed, true, true, Double.NaN);
 //		outputDir = new File(parentDir,"Run2_aperMidVals_Fast");
-////		LongTermTD_Simulator.simulateEventsFast(erf, rootDir+"bptSimulationsWUS_withCascadia/Run1_aperMidVals/outputTimesinceLast.txt", null, 
+////		LongTermTD_Simulator.simulateEvents(erf, rootDir+"bptSimulationsWUS_withCascadia/Run1_aperMidVals/outputTimesinceLast.txt", null, 
 ////				numYrs, outputDir, seed, true, true, Double.NaN);
 //		LongTermTD_Simulator.generateSimulationPlots(erf, rootDir+"bptSimulationsWUS_withCascadia/Run1_aperMidVals/outputTimesinceLast.txt", 
 //				numYrs, outputDir, true);
@@ -2414,7 +2414,7 @@ public class LongTermTD2026_AnalysesOLD {
 		File outputDir = new File(parentDir,"Run2_50000yrs");
 		long seed = 984087634;
 		int numYrs = 50000;
-//		LongTermTD_Simulator.simulateEventsFast(erf, rootDir+"poissonSimulationsUS26_NewFramework/Run1_1000000yrs/outputTimesinceLast.txt"
+//		LongTermTD_Simulator.simulateEvents(erf, rootDir+"poissonSimulationsUS26_NewFramework/Run1_1000000yrs/outputTimesinceLast.txt"
 //				,null, numYrs, outputDir, seed, true, true, Double.NaN);
 
 		LongTermTD_Simulator.generateSimulationPlots(erf, 
@@ -2430,7 +2430,7 @@ public class LongTermTD2026_AnalysesOLD {
 //		File outputDir = new File(parentDir,"Run1_1000000yrs");
 //		long seed = 984087634;
 //		int numYrs = 1000000;
-//		LongTermTD_Simulator.simulateEventsFast(erf, null,"outputTimesinceLast.txt", numYrs, outputDir, 
+//		LongTermTD_Simulator.simulateEvents(erf, null,"outputTimesinceLast.txt", numYrs, outputDir, 
 //				seed, true, true, Double.NaN);
 //		LongTermTD_Simulator.generateSimulationPlots(erf, null, numYrs, outputDir, true);
 //		System.exit(0);

@@ -62,7 +62,11 @@ public class LongTermTD_Simulator {
 	final static double MILLISEC_PER_YEAR = TimeDepUtils.MILLISEC_PER_YEAR;
 
 	
-	public static void simulateEvents(TimeDepFaultSystemSolutionERF erf, String inputTimeSinceLastMillisFileName, String outputTimesinceLastMillisFileName, 
+	/**
+	 * This is the version before plotting was separated out.  This can be deleted.
+	 * 
+	 */
+	public static void simulateEventsOLD(TimeDepFaultSystemSolutionERF erf, String inputTimeSinceLastMillisFileName, String outputTimesinceLastMillisFileName, 
 			double numYears, File resultsDir, long randomSeed, boolean verbose, boolean makePlots, double timeStepYrs) {
 
 		FSS_ProbabilityModel probModel = erf.getProbabilityModel();
@@ -1043,7 +1047,7 @@ public class LongTermTD_Simulator {
 	
 	
 	
-	public static void simulateEventsFast(TimeDepFaultSystemSolutionERF erf, String inputTimeSinceLastMillisFileName, String outputTimesinceLastMillisFileName, 
+	public static void simulateEvents(TimeDepFaultSystemSolutionERF erf, String inputTimeSinceLastMillisFileName, String outputTimesinceLastMillisFileName, 
 			double numYears, File resultsDir, long randomSeed, boolean verbose, boolean makePlots, double timeStepYrs) {
 
 		FSS_ProbabilityModel probModel = erf.getProbabilityModel();
