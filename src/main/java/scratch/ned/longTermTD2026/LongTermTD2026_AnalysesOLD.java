@@ -2260,9 +2260,17 @@ public class LongTermTD2026_AnalysesOLD {
 		
 		String rootDir = "/Users/field/Library/CloudStorage/OneDrive-DOI/Field_Other/ERF_Coordination/LongTermTD_2026/Analysis_OldToNewFramework/";
 		
-		TimeDepFaultSystemSolutionERF erf = getFullPrefUS26_ERF_NewFramework(false);
-		PaleoseismicConstraintData paleoDataMod = erf.getSolution().getRupSet().getModule(PaleoseismicConstraintData.class);
-//		ArrayList<String> parSectNames = new ArrayList<String>();
+//		TimeDepFaultSystemSolutionERF erf = getFullPrefUS26_ERF_NewFramework(false);
+//		PaleoseismicConstraintData paleoDataMod = erf.getSolution().getRupSet().getModule(PaleoseismicConstraintData.class);
+//		int i=0;
+//		for(SectMappedUncertainDataConstraint constr : paleoDataMod.getPaleoRateConstraints()) {
+//			String name = constr.getName();
+//			System.out.println(i+"\t"+name.replace(" ",""));
+//			i++;
+//		}
+//		System.exit(0);
+
+		//		ArrayList<String> parSectNames = new ArrayList<String>();
 //		
 ////		FaultSystemSolutionERF erf = getCascadia_ERF(Cascadia_FSS_creator.FaultModelEnum.MIDDLE);
 //		
@@ -2280,10 +2288,6 @@ public class LongTermTD2026_AnalysesOLD {
 //
 //		for(String name:parSectNames)
 //			System.out.println(name);
-		for(SectMappedUncertainDataConstraint constr : paleoDataMod.getPaleoRateConstraints()) {
-			System.out.println(constr.getName()+constr);
-		}
-		System.exit(0);
 		
 //		// this shows there is only one rupture for each FSS source
 //		String fileName="/Users/field/Library/CloudStorage/OneDrive-DOI/Field_Other/CEA_WGCEP/UCERF3/UCERF3-TI/Figures/Fig11_FaultClusterFig/2013_05_10-ucerf3p3-production-10runs_COMPOUND_SOL_FM3_1_MEAN_BRANCH_AVG_SOL.zip";
@@ -2402,20 +2406,20 @@ public class LongTermTD2026_AnalysesOLD {
 //		System.exit(0);
 		
 		
-//		// TEST NEW FRAMEWORK WITH FULL US2026 MODEL
-//		TimeDepFaultSystemSolutionERF erf = getFullPrefUS26_ERF_NewFramework(false);
-//		File parentDir = new File(rootDir+"bptSimulationsUS26_NewFramework/");
-//		if(!parentDir.exists()) 
-//			parentDir.mkdir();
-//		File outputDir = new File(parentDir,"Run2_50000yrs");
-//		long seed = 984087634;
-//		int numYrs = 50000;
-////		LongTermTD_Simulator.simulateEventsFast(erf, rootDir+"poissonSimulationsUS26_NewFramework/Run1_1000000yrs/outputTimesinceLast.txt"
-////				,null, numYrs, outputDir, seed, true, true, Double.NaN);
-//
-//		LongTermTD_Simulator.generateSimulationPlots(erf, 
-//				rootDir+"poissonSimulationsUS26_NewFramework/Run1_1000000yrs/outputTimesinceLast.txt", numYrs, outputDir, true);
-//		System.exit(0);
+		// TEST NEW FRAMEWORK WITH FULL US2026 MODEL
+		TimeDepFaultSystemSolutionERF erf = getFullPrefUS26_ERF_NewFramework(false);
+		File parentDir = new File(rootDir+"bptSimulationsUS26_NewFramework/");
+		if(!parentDir.exists()) 
+			parentDir.mkdir();
+		File outputDir = new File(parentDir,"Run2_50000yrs");
+		long seed = 984087634;
+		int numYrs = 50000;
+//		LongTermTD_Simulator.simulateEventsFast(erf, rootDir+"poissonSimulationsUS26_NewFramework/Run1_1000000yrs/outputTimesinceLast.txt"
+//				,null, numYrs, outputDir, seed, true, true, Double.NaN);
+
+		LongTermTD_Simulator.generateSimulationPlots(erf, 
+				rootDir+"poissonSimulationsUS26_NewFramework/Run1_1000000yrs/outputTimesinceLast.txt", numYrs, outputDir, true);
+		System.exit(0);
 		
 //		// TEST NEW FRAMEWORK WITH FULL US2026 MODEL - POISSON
 //		TimeDepFaultSystemSolutionERF erf = getFullPrefUS26_ERF_NewFramework(false);

@@ -39,6 +39,9 @@ import org.opensha.sha.earthquake.faultSysSolution.erf.td.TimeDepFaultSystemSolu
 import org.opensha.sha.earthquake.faultSysSolution.erf.td.TimeDepUtils;
 import org.opensha.sha.earthquake.faultSysSolution.erf.td.UCERF3_ProbabilityModel;
 import org.opensha.sha.earthquake.faultSysSolution.erf.td.WG02_ProbabilityModel;
+import org.opensha.sha.earthquake.faultSysSolution.inversion.constraints.impl.UncertainDataConstraint.SectMappedUncertainDataConstraint;
+import org.opensha.sha.earthquake.faultSysSolution.modules.PaleoseismicConstraintData;
+import org.opensha.sha.earthquake.faultSysSolution.modules.RupSetTectonicRegimes;
 import org.opensha.sha.earthquake.param.IncludeBackgroundOption;
 import org.opensha.sha.earthquake.param.IncludeBackgroundParam;
 import org.opensha.sha.earthquake.param.MagDependentAperiodicityOptions;
@@ -47,6 +50,8 @@ import org.opensha.sha.earthquake.param.ProbabilityModelOptions;
 import org.opensha.sha.earthquake.param.ProbabilityModelParam;
 import org.opensha.sha.faultSurface.FaultSection;
 import org.opensha.sha.magdist.SummedMagFreqDist;
+import org.opensha.sha.util.TectonicRegionType;
+import org.opensha.sha.faultSurface.RuptureSurface;
 
 import scratch.UCERF3.erf.utils.ProbModelsPlottingUtils;
 import scratch.UCERF3.erf.utils.ProbabilityModelsCalc.RenewalModelType;
@@ -1447,7 +1452,6 @@ public class LongTermTD_Simulator {
 		FaultSystemRupSet fltSysRupSet = fltSysSolution.getRupSet();
 		int numRupsInFaultSystem = fltSysRupSet.getNumRuptures();
 		int numSections = fltSysRupSet.getNumSections();
-
 		
 		double[] longTermPartRateForSectArray = probModel.getSectLongTermPartRates(); // this is a duplicate
 		double[] sectionArea = fltSysRupSet.getAreaForAllSections();
@@ -1538,6 +1542,39 @@ public class LongTermTD_Simulator {
 		
 		// this is for storing section normalized RIs
 		ArrayList<Double> normalizedSectRecurIntervals = new ArrayList<Double>();
+
+		// Norm RIs at paleo sites
+		PaleoseismicConstraintData paleoDataMod = erf.getSolution().getRupSet().getModule(PaleoseismicConstraintData.class);
+		boolean processPaleoSiteRIs = false;
+		HashMap<Integer,ArrayList<Double>> paleoSitesNormRI_List_Map = null;
+		HashMap<Integer,String> paleoSitesNameMap = null;
+		if(paleoDataMod != null) {
+			processPaleoSiteRIs = true;
+			paleoSitesNormRI_List_Map = new HashMap<Integer,ArrayList<Double>>();
+			paleoSitesNameMap = new HashMap<Integer,String>();
+			for(SectMappedUncertainDataConstraint constr : paleoDataMod.getPaleoRateConstraints()) {
+				int paleoSectID = constr.sectionIndex;
+				paleoSitesNormRI_List_Map.put(paleoSectID, new ArrayList<Double>());
+				paleoSitesNameMap.put(paleoSectID, constr.getName());
+
+//				// this was used to make sure the paleo sites were properly mapped
+//				RuptureSurface sectSurf =erf.getSolution().getRupSet().getFaultSectionData(paleoSectID).getFaultSurface(1.0);
+//				double distTest = sectSurf.getDistanceJB(constr.dataLocation);
+//				if(distTest > 3) { // 3 km
+//					// check if any other sections are closer
+//					double minDist = Double.POSITIVE_INFINITY;
+//					for(FaultSection fltSectData : fltSysRupSet.getFaultSectionDataList()) {
+//						double dist = fltSectData.getFaultSurface(1.0).getDistanceJB(constr.dataLocation);
+//						if(minDist>dist)
+//							minDist=dist;
+//					}
+//					System.out.println((float)distTest+"\t"+constr.getName()+";  minDist to all sections: "+(float)minDist);
+//					// throw new RuntimeException("Paleo site not near fault section: dist="+(float)distTest+" for "+constr.getName());
+//					System.exit(0);
+//				}
+//				System.out.println((float)distTest+"\t"+constr.getName());
+			}
+		}
 		
 		double simDuration = 1/totalLongTermRate;  // used to compute next prob gain
 		
@@ -1670,7 +1707,7 @@ public class LongTermTD_Simulator {
 						aveNormRI_test = Double.NaN;
 				}		
 				if(!Double.isNaN(aveNormRI_test) || !Double.isNaN(aveNormRI))
-					if(aveNormRI_test != aveNormRI)
+					if((float)aveNormRI_test != (float)aveNormRI)
 						throw new RuntimeException("aveNormRI_test != aveNormRI; "+aveNormRI_test+"  vs  "+aveNormRI);
 
 				// compute things that are function of subsection
@@ -1690,6 +1727,10 @@ public class LongTermTD_Simulator {
 						double normDistAlong = ((double)ithSectInRup+0.5)/(double)numSectInRup;
 						sumRI_AlongHist.add(normDistAlong, normYrsSinceLast);
 						numRI_AlongHist.add(normDistAlong, 1.0);
+						// add to list if paleo site
+						if(paleoSitesNormRI_List_Map.keySet().contains(sect)) {
+							paleoSitesNormRI_List_Map.get(sect).add(normYrsSinceLast);
+						}
 					}
 					ithSectInRup += 1;
 				}
@@ -1820,11 +1861,19 @@ public class LongTermTD_Simulator {
 		for(double aper:aperValuesList) {
 			normalizedRupRecurIntervalsAperMap.put(aper, new ArrayList<Double>());
 		}
+		// normalize RIs for subduction zone events
+		ArrayList<Double> subductionNormRupRIs = new ArrayList<Double>();
+		RupSetTectonicRegimes tectonicRegimes = fltSysRupSet.getModule(RupSetTectonicRegimes.class);
+		if(tectonicRegimes==null)
+			throw new RuntimeException("RupSetTectonicRegimes cannot be null");
+
 		for(int e=0;e<normRI_ForEventList.size();e++) {
 			double normRI = normRI_ForEventList.get(e);
 			if(Double.isNaN(normRI))
 				continue;
 			normalizedRupRecurIntervals.add(normRI);
+			if(tectonicRegimes.get(fltSysRupIndexForEventList.get(e)) == TectonicRegionType.SUBDUCTION_INTERFACE)
+				subductionNormRupRIs.add(normRI);
 			if(numAperValues>0) {
 				//					double rupMag = mag_ForEventList.get(e);
 				//					double aper = aperModel.getRuptureAperiodicity(rupSetIndex);
@@ -1838,6 +1887,11 @@ public class LongTermTD_Simulator {
 			aper=aperValuesList.get(0);	// only one value, so include for comparison
 		infoString += ProbModelsPlottingUtils.writeNormalizedDistPlotWithFits(normalizedRupRecurIntervals, aper, 
 				plotsDir, "Normalized Rupture RIs", "normalizedRupRecurIntervals");		
+
+		// for subduction zones
+		infoString += ProbModelsPlottingUtils.writeNormalizedDistPlotWithFits(subductionNormRupRIs, aper, 
+				plotsDir, "Subduction Norm Rup RIs", "normalizedRupRecurIntervalsForSubductionZones");		
+		
 		// now mag-dep:
 		if(numAperValues >1) {
 			for(double aperVal : aperValuesList) {
@@ -1865,6 +1919,18 @@ public class LongTermTD_Simulator {
 		ProbModelsPlottingUtils.writeNormalizedDistHazardRatePlotWithFits(normalizedSectRecurIntervals, 
 				plotsDir, "Normalized Section Hazard Rate", "normalizedSectHazardRate");
 		
+		// paleo sites norm RIs
+//		paleoPlotsDir
+		File paleoPlotsDir = new File(plotsDir, "paleoSitesPlots");
+		if(!paleoPlotsDir.exists()) paleoPlotsDir.mkdir();
+		for(int paleoSiteID : paleoSitesNormRI_List_Map.keySet()) {
+			String paleoFileName = paleoSitesNameMap.get(paleoSiteID).replace(" ", "")+"_normRI";
+			ProbModelsPlottingUtils.writeNormalizedDistPlotWithFits(paleoSitesNormRI_List_Map.get(paleoSiteID), aper, 
+					paleoPlotsDir, paleoSitesNameMap.get(paleoSiteID), paleoFileName);	
+			paleoFileName = paleoSitesNameMap.get(paleoSiteID).replace(" ", "")+"_hazRate";
+			ProbModelsPlottingUtils.writeNormalizedDistHazardRatePlotWithFits(paleoSitesNormRI_List_Map.get(paleoSiteID), 
+					paleoPlotsDir, paleoSitesNameMap.get(paleoSiteID), paleoFileName);
+		}
 
 		// write infoString
 		FileWriter info_fr;
