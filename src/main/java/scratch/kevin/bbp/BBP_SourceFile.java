@@ -13,6 +13,7 @@ import org.opensha.commons.geo.LocationVector;
 import org.opensha.sha.earthquake.FocalMechanism;
 import org.opensha.sha.faultSurface.FaultTrace;
 import org.opensha.sha.faultSurface.QuadSurface;
+import org.opensha.sha.faultSurface.RectangularSurface;
 import org.opensha.sha.faultSurface.RuptureSurface;
 
 import com.google.common.base.Preconditions;
@@ -37,6 +38,7 @@ public class BBP_SourceFile {
 		
 		private Location[] rect = null;
 		private QuadSurface quad = null;
+		private RectangularSurface rectSurf = null;
 		
 		public BBP_PlanarSurface(Location topCenter, double length, double width, FocalMechanism mech) {
 			this.topCenter = topCenter;
@@ -109,6 +111,14 @@ public class BBP_SourceFile {
 //				maxDist = Math.max(maxDist, Math.abs(a))
 //			}
 //		}
+		
+		public synchronized RectangularSurface getRectSurface() {
+			if (rectSurf == null) {
+				Location[] rect = getRectangle();
+				rectSurf = new RectangularSurface(rect[0], rect[1], mech.getDip(), rect[2].depth);
+			}
+			return rectSurf;
+		}
 		
 		public synchronized QuadSurface getQuadSurface() {
 			if (quad == null) {
