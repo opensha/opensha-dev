@@ -4,8 +4,10 @@ import java.awt.geom.Point2D;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.function.Function;
 
@@ -21,6 +23,7 @@ import org.opensha.commons.geo.Location;
 import org.opensha.commons.geo.LocationList;
 import org.opensha.commons.geo.Region;
 import org.opensha.commons.mapping.PoliticalBoundariesData;
+import org.opensha.sha.earthquake.PointSource.FocalMechRuptureSurfaceBuilder;
 import org.opensha.sha.earthquake.faultSysSolution.modules.GridSourceList;
 import org.opensha.sha.earthquake.faultSysSolution.modules.GridSourceList.GriddedRupture;
 import org.opensha.sha.earthquake.faultSysSolution.modules.GridSourceList.GriddedRuptureProperties;
@@ -29,9 +32,13 @@ import org.opensha.sha.earthquake.rupForecastImpl.nshm23.util.NSHM23_RegionLoade
 import org.opensha.sha.earthquake.util.GridCellSupersamplingSettings;
 import org.opensha.sha.earthquake.util.GriddedFiniteRuptureSettings;
 import org.opensha.sha.earthquake.util.GriddedSeismicitySettings;
+import org.opensha.sha.faultSurface.PointSurface;
+import org.opensha.sha.faultSurface.RuptureSurface;
 import org.opensha.sha.faultSurface.utils.PointSurfaceBuilder;
 import org.opensha.sha.faultSurface.utils.ptSrcCorr.PointSourceDistanceCorrections;
 import org.opensha.sha.magdist.IncrementalMagFreqDist;
+import org.opensha.sha.util.FocalMech;
+import org.opensha.sha.util.NEHRP_TestCity;
 import org.opensha.sha.util.TectonicRegionType;
 
 import com.google.common.base.Preconditions;
@@ -64,10 +71,20 @@ public class ConstantsAndSettings {
 	public static final GriddedRegion ZOOM_GRID_REG = new GriddedRegion(
 			new Region(new Location(36, -120), new Location(39, -117)), 0.02, GriddedRegion.ANCHOR_0_0);
 	
+	public static final Map<String, Location> ZOOM_CITIES;
+	static {
+		ZOOM_CITIES = new HashMap<>();
+		ZOOM_CITIES.put("Mammoth Lakes", new Location(37.6485, -118.9721));
+//		ZOOM_CITIES.put("Las Vegas", NEHRP_TestCity.LAS_VEGAS.location());
+	}
+	
 	public enum Models implements Named {
 		/*
 		 * Point source correction tests
 		 */
+		TRUE_POINT("True Point Source", "TruePoint",
+				5d, PointSourceDistanceCorrections.NONE, 6d, true, null,
+				"true_point"),
 		AS_PUBLISHED("NSHM23 as-published", "AsPublished",
 				5d, PointSourceDistanceCorrections.NSHM_2013, 6d, true, null,
 				"as_published"),
@@ -119,6 +136,24 @@ public class ConstantsAndSettings {
 		FINITE_50X_UNCENTERED_ALT_RAND("Finite ruptures (50x), uncentered, alt random", "FiniteUncenteredFiftyAltRand",
 				5d, 50, true, 5d, true, 5050123455050l,
 				"finite-50x-uncentered-m5-alt_rand"),
+		OPENQUAKE_FINITE("OpenQuake Fixed Strike", "OQFixedStrike",
+				5d, PointSourceDistanceCorrections.NONE, 5d, true, null, "openquake-fixed") {
+
+			@Override
+			public Function<GridSourceList, GridSourceList> getGridModFunction() {
+				return original -> { return new OpenQuakeFixedStrikeUpdate(original, true);};
+			}
+	
+		},
+//		OPENQUAKE_FINITE_UNCENTERED("OpenQuake Fixed Strike Uncentered", "OQFixedStrikeUncentered",
+//				5d, PointSourceDistanceCorrections.NONE, 5d, true, null, "openquake-fixed-uncentered") {
+//
+//			@Override
+//			public Function<GridSourceList, GridSourceList> getGridModFunction() {
+//				return original -> { return new OpenQuakeFixedStrikeUpdate(original, false);};
+//			}
+//	
+//		},
 		// Reference to compare point source calculations
 		FINITE_100X_UNCENTERED("Finite ruptures (100x), uncentered", "FiniteUncenteredHundred",
 				5d, 100, true, 5d, true, null,
@@ -158,18 +193,8 @@ public class ConstantsAndSettings {
 					}
 			
 		},
-		SPINNING_DIST_5X_UNCENTERED_MOD_ZTOR_LEN_M4("Spinning distribution (5x), uncentered, updated Ztor and lengths, M>4", "SpinningDistUncenteredModZtorLenMFour",
-				4d, PointSourceDistanceCorrections.FIVE_POINT_SPINNING_DIST, 5d, true, null,
-				"spinning_dist-uncentered-m4-mod_ztor_len") {
-
-					@Override
-					public Function<GridSourceList, GridSourceList> getGridModFunction() {
-						return original -> { return new GridPropertyUpdate(original, LEONARD, true);};
-					}
-			
-		},
 		SPINNING_DIST_5X_UNCENTERED_MOD_ZTOR_LEN_M3p5("Spinning distribution (5x), uncentered, updated Ztor and lengths, M>3.5", "SpinningDistUncenteredModZtorLenMThreeFive",
-				3.5d, PointSourceDistanceCorrections.FIVE_POINT_SPINNING_DIST, 5d, true, null,
+				3.5d, PointSourceDistanceCorrections.FIVE_POINT_SPINNING_DIST, 3.5d, true, null,
 				"spinning_dist-uncentered-m3p5-mod_ztor_len") {
 
 					@Override
@@ -178,9 +203,39 @@ public class ConstantsAndSettings {
 					}
 			
 		},
+		SPINNING_DIST_5X_UNCENTERED_MOD_ZTOR_LEN_M4("Spinning distribution (5x), uncentered, updated Ztor and lengths, M>4", "SpinningDistUncenteredModZtorLenMFour",
+				4d, PointSourceDistanceCorrections.FIVE_POINT_SPINNING_DIST, 4d, true, null,
+				"spinning_dist-uncentered-m4-mod_ztor_len") {
+
+					@Override
+					public Function<GridSourceList, GridSourceList> getGridModFunction() {
+						return original -> { return new GridPropertyUpdate(original, LEONARD, true);};
+					}
+			
+		},
 		SPINNING_DIST_5X_UNCENTERED_MOD_ZTOR_LEN_M3("Spinning distribution (5x), uncentered, updated Ztor and lengths, M>3", "SpinningDistUncenteredModZtorLenMThree",
-				3d, PointSourceDistanceCorrections.FIVE_POINT_SPINNING_DIST, 5d, true, null,
+				3d, PointSourceDistanceCorrections.FIVE_POINT_SPINNING_DIST, 3d, true, null,
 				"spinning_dist-uncentered-m3-mod_ztor_len") {
+
+					@Override
+					public Function<GridSourceList, GridSourceList> getGridModFunction() {
+						return original -> { return new GridPropertyUpdate(original, LEONARD, true);};
+					}
+			
+		},
+		SPINNING_DIST_5X_UNCENTERED_MOD_ZTOR_LEN_M4_CORR_M5("Spinning distribution (5x), uncentered, updated Ztor and lengths, M>4, Corr M>5", "SpinningDistUncenteredModZtorLenMFourCorrMFive",
+				4d, PointSourceDistanceCorrections.FIVE_POINT_SPINNING_DIST, 5d, true, null,
+				"spinning_dist-uncentered-m4-mod_ztor_len-corrM5") {
+
+					@Override
+					public Function<GridSourceList, GridSourceList> getGridModFunction() {
+						return original -> { return new GridPropertyUpdate(original, LEONARD, true);};
+					}
+			
+		},
+		SPINNING_DIST_5X_UNCENTERED_MOD_ZTOR_LEN_M3p5_CORR_M5("Spinning distribution (5x), uncentered, updated Ztor and lengths, M>3.5, Corr M>5", "SpinningDistUncenteredModZtorLenMThreeFiveCorrMFive",
+				3.5d, PointSourceDistanceCorrections.FIVE_POINT_SPINNING_DIST, 5d, true, null,
+				"spinning_dist-uncentered-m3.5-mod_ztor_len-corrM5") {
 
 					@Override
 					public Function<GridSourceList, GridSourceList> getGridModFunction() {
@@ -428,6 +483,76 @@ public class ConstantsAndSettings {
 		
 	}
 	
+	/**
+	 * SS strikes: (0°, 45°, 90°, 135°)
+	 * dipping strikes: (0°, 45°, 90°, 135°, 180°, 225°, 270°, 315°
+	 */
+	public static class OpenQuakeFixedStrikeUpdate extends GridSourceList.DynamicallyBuilt {
+		
+		private static final double[] SS_STRIKES = {0d, 45d, 90d, 135d};
+		private static final double[] DIP_STRIKES = {0d, 45d, 90d, 135d, 180, 225, 270, 315};
+		private static final double[] CENTERD_FRACT_DAS = {0.5};
+		private static final double[] UNCENTERD_FRACT_DAS = {0.1, 0.3, 0.5, 0.7, 0.9};
+
+		private GridSourceList original;
+		private boolean centered;
+
+		public OpenQuakeFixedStrikeUpdate(GridSourceList original, boolean centered) {
+			super(original.getTectonicRegionTypes(), original.getGriddedRegion(), original.getRefMFD());
+			this.original = original;
+			this.centered = centered;
+		}
+
+		@Override
+		public int getNumSources() {
+			return original.getNumSources();
+		}
+		
+		@Override
+		public int getLocationIndexForSource(int sourceIndex) {
+			return original.getLocationIndexForSource(sourceIndex);
+		}
+		
+		@Override
+		public TectonicRegionType tectonicRegionTypeForSourceIndex(int sourceIndex) {
+			return original.tectonicRegionTypeForSourceIndex(sourceIndex);
+		}
+		
+		@Override
+		public Set<Integer> getAssociatedGridIndexes(int sectionIndex) {
+			return original.getAssociatedGridIndexes(sectionIndex);
+		}
+		
+		@Override
+		protected List<GriddedRupture> buildRuptures(TectonicRegionType tectonicRegionType, int gridIndex) {
+			List<GriddedRupture> orig = original.getRuptures(tectonicRegionType, gridIndex);
+			if (orig == null || orig.isEmpty())
+				return orig;
+			List<GriddedRupture> ret = new ArrayList<>();
+			for (GriddedRupture rup : orig) {
+				GriddedRuptureProperties props = rup.properties;
+				if (props.magnitude < 5d) {
+					ret.add(rup);
+					continue;
+				}
+					
+				double[] strikes = props.dip < 89d ? DIP_STRIKES : SS_STRIKES;
+				double[] fractDASs = centered ? CENTERD_FRACT_DAS : UNCENTERD_FRACT_DAS;
+				double rateScalar = 1d/(strikes.length*fractDASs.length);
+				for (double strike : strikes) {
+					for (double fractDAS : fractDASs) {
+						GriddedRuptureProperties modProps = new GriddedRuptureProperties(
+								props.magnitude, props.rake, props.dip, strike, null, props.upperDepth, props.lowerDepth,
+								props.length, props.hypocentralDepth, props.length*fractDAS, tectonicRegionType);
+						ret.add(new GriddedRupture(gridIndex, rup.location, modProps, rup.rate*rateScalar));
+					}
+				}
+			}
+			return ret;
+		}
+		
+	}
+	
 	private static final double zCenter = 5d;	// km
 	private static final double zTopMin = 1d;	// km
 	private static final double zBotMax = 14d;	// km
@@ -464,14 +589,55 @@ public class ConstantsAndSettings {
 		return new double[] {upper, lower};
 	}
 	
+	public static final Function<Double, Double> LEONARD_DIP_SLIP_ML = M -> Leonard2010_MagLengthRelationship.DIP_SLIP.getMedianLength(M);
+	public static final Function<Double, Double> LEONARD_STRIKE_SLIP_ML = M -> Leonard2010_MagLengthRelationship.STRIKE_SLIP.getMedianLength(M);
 	public static final Function<GriddedRuptureProperties, Double> LEONARD =
-			P -> P.dip < 89.99 ? Leonard2010_MagLengthRelationship.DIP_SLIP.getMedianLength(P.magnitude)
-					: Leonard2010_MagLengthRelationship.STRIKE_SLIP.getMedianLength(P.magnitude);
-	
+			P -> P.dip < 89.99 ? LEONARD_DIP_SLIP_ML.apply(P.magnitude)
+					: LEONARD_STRIKE_SLIP_ML.apply(P.magnitude);
+
 	/**
-	 * WC 94 RLD (subsurface rupture length) formula
+	 * WC 94 RLD (subsurface rupture length) formula (table 2A, "All" case
 	 */
-	public static final Function<GriddedRuptureProperties, Double> WC94_RLD =
-			P -> Math.pow(10.0,-2.44+0.59*P.magnitude);
+	public static final Function<Double, Double> WC94_RLD_ML = M -> Math.pow(10.0,-2.44+0.59*M);
+	/**
+	 * WC 94 RLD (subsurface rupture length) formula (table 2A, "All" case
+	 */
+	public static final Function<Double, Double> WC94_SRL_ML = M -> Math.pow(10.0,-3.22+0.69*M);
+			
+	/**
+	 * WC 94 RLD (subsurface rupture length) formula (table 2A, "All" case
+	 */
+	public static final Function<GriddedRuptureProperties, Double> WC94_RLD = P -> WC94_RLD_ML.apply(P.magnitude);
+	
+	public static final FocalMechRuptureSurfaceBuilder UPDATED_SURF_BUILDER = new FocalMechRuptureSurfaceBuilder() {
+		
+		@Override
+		public Location getHypocenter(Location sourceLoc, RuptureSurface rupSurface) {
+			return null;
+		}
+		
+		@Override
+		public boolean isSurfaceFinite(double magnitude, FocalMech mech, int surfaceIndex) {
+			return false;
+		}
+		
+		@Override
+		public double getSurfaceWeight(double magnitude, FocalMech mech, int surfaceIndex) {
+			return 1d;
+		}
+		
+		@Override
+		public RuptureSurface getSurface(Location sourceLoc, double magnitude, FocalMech mech, int surfaceIndex) {
+			double length = mech == FocalMech.STRIKE_SLIP ? LEONARD_STRIKE_SLIP_ML.apply(magnitude) : LEONARD_DIP_SLIP_ML.apply(magnitude);
+			double[] depths = calcDepths(magnitude, length, Math.toRadians(mech.dip()));
+			return new PointSurface(sourceLoc, mech.dip(), depths[0], depths[1], length);
+		}
+		
+		@Override
+		public int getNumSurfaces(double magnitude, FocalMech mech) {
+			return 1;
+		}
+	};
+	
 
 }

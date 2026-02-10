@@ -40,7 +40,7 @@ public class HangingWallFractFigure {
 		FocalMech mech = FocalMech.REVERSE;
 		MagLengthRelationship ml = Leonard2010_MagLengthRelationship.DIP_SLIP;
 		String prefix = "m7_rev_hw_fract";
-		String label = "M7.05, Reverse";
+		String label = "M7.05, Dipping";
 
 		double rake = mech.rake();
 		double dip = mech.dip();

@@ -10,6 +10,7 @@ import java.io.IOException;
 import java.text.DecimalFormat;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.DoubleSummaryStatistics;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
@@ -25,6 +26,7 @@ import org.jfree.chart.plot.XYPlot;
 import org.jfree.chart.ui.RectangleAnchor;
 import org.jfree.chart.ui.TextAnchor;
 import org.jfree.data.Range;
+import org.netlib.util.intW;
 import org.opensha.commons.calc.magScalingRelations.MagLengthRelationship;
 import org.opensha.commons.calc.magScalingRelations.magScalingRelImpl.WC1994_MagLengthRelationship;
 import org.opensha.commons.data.Site;
@@ -104,7 +106,7 @@ public class SpinningFaultExceedanceFigures {
 		
 		double mag;
 		MagLengthRelationship ml;
-		String prefix, label, texLabel;
+		String prefix, geomLabel, imLabel, texLabel;
 		
 		switch (mech) {
 		case STRIKE_SLIP:
@@ -112,7 +114,9 @@ public class SpinningFaultExceedanceFigures {
 			ml = new WC1994_MagLengthRelationship();
 //			ml = Leonard2010_MagLengthRelationship.STRIKE_SLIP;
 			prefix = "m7_ss";
-			label = "M7.05, Strike-Slip";
+//			geomLabel = "M7.05, Vertical";
+			imLabel = "M7.05, Strike-Slip";
+			geomLabel = imLabel;
 			texLabel = "MSevenSS";
 			break;
 		case REVERSE:
@@ -120,13 +124,18 @@ public class SpinningFaultExceedanceFigures {
 			ml = new WC1994_MagLengthRelationship();
 //			ml = Leonard2010_MagLengthRelationship.DIP_SLIP;
 			prefix = "m7_rev";
-			label = "M7.05, Reverse";
+//			geomLabel = "M7.05, Dipping";
+			imLabel = "M7.05, Reverse";
+			geomLabel = imLabel;
 			texLabel = "MSevenRev";
 			break;
 
 		default:
 			throw new IllegalStateException("Unexpected mech: "+mech);
 		}
+		
+		Sortables[] sortables = Sortables.values();
+		Sortables SORT_QUANTITY = Sortables.RRUP_PLUS_RJB;
 
 		double period = 0d;
 //		double[] distances = {25d};
@@ -139,7 +148,12 @@ public class SpinningFaultExceedanceFigures {
 		
 		Preconditions.checkState(texDistPrefixes.length == distances.length);
 		Range imlRange = new Range(3e-2, 3e0);
-		Range medianIMLRange = new Range(6e-2, 8e-1);
+		Range medianIMLRange1 = new Range(1e-1, 1e-0);
+		Range medianIMLRange2= new Range(5e-2, 5e-1);
+		Range[] medianIMLRanges = new Range[distances.length];
+		for (int d=0; d<distances.length; d++) {
+			medianIMLRanges[d] = distances[d] > 30d ? medianIMLRange2 : medianIMLRange1;
+		}
 
 		double rake = mech.rake();
 		double dip = mech.dip();
@@ -320,7 +334,7 @@ public class SpinningFaultExceedanceFigures {
 					if (i == 0)
 						func.setName("Centered individual");
 					funcs.add(func);
-					chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, Color.GRAY));
+					chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, Colors.tab_lightblue));
 				}
 //			} else {
 //				for (boolean hw : new boolean[] {true,false}) {
@@ -376,7 +390,7 @@ public class SpinningFaultExceedanceFigures {
 				chars.add(corrChars.get(c));
 			}
 			
-			PlotSpec plot = new PlotSpec(funcs, chars, label, imlAxisLabel, "Exceedance Probability");
+			PlotSpec plot = new PlotSpec(funcs, chars, imLabel, imlAxisLabel, "Exceedance Probability");
 			
 			double annX = xVals.getX((int)(xVals.size()*0.97));
 			double annY = 0.97;
@@ -386,8 +400,27 @@ public class SpinningFaultExceedanceFigures {
 			ann.setTextAnchor(TextAnchor.TOP_RIGHT);
 			plot.addPlotAnnotation(ann);
 
-			SurfaceDistances nshmDists = nshm23Corr.getCorrectedDistances(
-					siteLoc, ptSurf, TectonicRegionType.ACTIVE_SHALLOW, mag, distance).getValue(0);
+			WeightedList<SurfaceDistances> tmpNshm23Dists = nshm23Corr.getCorrectedDistances(
+					siteLoc, ptSurf, TectonicRegionType.ACTIVE_SHALLOW, mag, distance);
+			SurfaceDistances nshmDistsHW, nshmDistsFW;
+			if (tmpNshm23Dists.size() == 1) {
+				nshmDistsFW = tmpNshm23Dists.getValue(0);
+				nshmDistsHW = null;
+			} else {
+				nshmDistsHW = null;
+				nshmDistsFW = null;
+				for (int i=0; i<tmpNshm23Dists.size(); i++) {
+					SurfaceDistances dist = tmpNshm23Dists.getValue(i);
+					if (dist.getDistanceX() >= 0)
+						nshmDistsHW = dist;
+					else
+						nshmDistsFW = dist;
+				}
+				Preconditions.checkNotNull(nshmDistsHW);
+				Preconditions.checkNotNull(nshmDistsFW);
+			}
+//			SurfaceDistances nshmDists = nshm23Corr.getCorrectedDistances(
+//					siteLoc, ptSurf, TectonicRegionType.ACTIVE_SHALLOW, mag, distance).getValue(0);
 			WeightedList<SurfaceDistances> averageDists = averageCorr.getCorrectedDistances(
 					siteLoc, ptSurf, TectonicRegionType.ACTIVE_SHALLOW, mag, distance);
 			WeightedList<SurfaceDistances> proposedDists = proposedCorr.getCorrectedDistances(
@@ -515,6 +548,12 @@ public class SpinningFaultExceedanceFigures {
 //				}
 //			}
 			
+			List<XY_DataSet> rupVsJBXYs = new ArrayList<>();
+			List<PlotCurveCharacterstics> rupVsJBChars = new ArrayList<>();
+			
+			PlotCurveCharacterstics nshm23FWSymbol = new PlotCurveCharacterstics(PlotSymbol.FILLED_SQUARE, 6f, Colors.tab_lightbrown);
+			PlotCurveCharacterstics nshm23HWSymbol = new PlotCurveCharacterstics(PlotSymbol.FILLED_SQUARE, 6f, Colors.tab_brown);
+			
 			if (mech != FocalMech.STRIKE_SLIP) {
 				centeredRupVsJB_fw = thin(centeredRupVsJB_fw, 0.1);
 				centeredRupVsJB_fw.setName("Centered, FW");
@@ -524,36 +563,57 @@ public class SpinningFaultExceedanceFigures {
 				centeredRupVsJB_hw.setName("Centered, HW");
 				funcs.add(centeredRupVsJB_hw);
 				chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, avgThickness, Colors.tab_blue));
+				
+				DefaultXY_DataSet nshm23RupVsJB = new DefaultXY_DataSet();
+				nshm23RupVsJB.set(nshmDistsFW.getDistanceJB(), nshmDistsFW.getDistanceRup());
+				nshm23RupVsJB.setName(nshm23Name+", FW");
+				funcs.add(nshm23RupVsJB);
+				chars.add(nshm23FWSymbol);
+//				rupVsJBXYs.add(funcs.get(funcs.size()-1));
+//				rupVsJBChars.add(chars.get(chars.size()-1));
+				
+				nshm23RupVsJB = new DefaultXY_DataSet();
+				nshm23RupVsJB.set(nshmDistsHW.getDistanceJB(), nshmDistsHW.getDistanceRup());
+				nshm23RupVsJB.setName(nshm23Name+", HW");
+				funcs.add(nshm23RupVsJB);
+				chars.add(nshm23HWSymbol);
+				rupVsJBXYs.add(funcs.get(funcs.size()-1));
+				rupVsJBChars.add(chars.get(chars.size()-1));
 			} else {
 				centeredRupVsJB.setName("Centered");
 				funcs.add(centeredRupVsJB);
 				chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, avgThickness, Colors.tab_blue));
+				
+				DefaultXY_DataSet nshm23RupVsJB = new DefaultXY_DataSet();
+				nshm23RupVsJB.set(nshmDistsFW.getDistanceJB(), nshmDistsFW.getDistanceRup());
+				nshm23RupVsJB.setName(nshm23Name);
+				funcs.add(nshm23RupVsJB);
+				chars.add(nshm23HWSymbol);
+				rupVsJBXYs.add(funcs.get(funcs.size()-1));
+				rupVsJBChars.add(chars.get(chars.size()-1));
 			}
 			
-			DefaultXY_DataSet nshm23RupVsJB = new DefaultXY_DataSet();
-			nshm23RupVsJB.set(nshmDists.getDistanceJB(), nshmDists.getDistanceRup());
-			nshm23RupVsJB.setName(nshm23Name);
-			funcs.add(nshm23RupVsJB);
-			chars.add(new PlotCurveCharacterstics(PlotSymbol.BOLD_X, 4f, Colors.tab_brown));
-			
+			PlotCurveCharacterstics averageDistHWSymbol = new PlotCurveCharacterstics(PlotSymbol.FILLED_DIAMOND, 5f, Colors.tab_orange);
+			PlotCurveCharacterstics averageDistFWSymbol = new PlotCurveCharacterstics(PlotSymbol.FILLED_DIAMOND, 5f, Colors.tab_lightorange);
 			for (WeightedValue<SurfaceDistances> dist : averageDists) {
 				DefaultXY_DataSet avgRupVsJB = new DefaultXY_DataSet();
 				avgRupVsJB.set(dist.value.getDistanceJB(), dist.value.getDistanceRup());
-				Color color;
+				PlotCurveCharacterstics pChar;
 				if (averageDists.size() == 1) {
 					avgRupVsJB.setName(averageName);
-					color = Colors.tab_orange;
+					pChar = averageDistHWSymbol;
 				} else if (dist.value.getDistanceX() >= 0d) {
 					avgRupVsJB.setName(averageName+", HW");
-					color = Colors.tab_orange;
+					pChar = averageDistHWSymbol;
 				} else {
 					avgRupVsJB.setName(averageName+", FW");
-					color = Colors.tab_lightorange;
+					pChar = averageDistFWSymbol;
 				}
 				funcs.add(avgRupVsJB);
-				chars.add(new PlotCurveCharacterstics(PlotSymbol.BOLD_X, 4f, color));
+				chars.add(pChar);
+				rupVsJBXYs.add(funcs.get(funcs.size()-1));
+				rupVsJBChars.add(chars.get(chars.size()-1));
 			}
-			
 			DefaultXY_DataSet proposedRupVsJB_hw = new DefaultXY_DataSet();
 			DefaultXY_DataSet proposedRupVsJB = new DefaultXY_DataSet();
 			DefaultXY_DataSet proposedRupVsJB_fw = new DefaultXY_DataSet();
@@ -564,20 +624,28 @@ public class SpinningFaultExceedanceFigures {
 					proposedRupVsJB_fw.set(dist.value.getDistanceJB(), dist.value.getDistanceRup());
 				proposedRupVsJB.set(dist.value.getDistanceJB(), dist.value.getDistanceRup());
 			}
+			PlotCurveCharacterstics proposedDistHWSymbol = new PlotCurveCharacterstics(PlotSymbol.FILLED_CIRCLE, 6f, Color.BLACK);
+			PlotCurveCharacterstics proposedDistFWSymbol = new PlotCurveCharacterstics(PlotSymbol.FILLED_CIRCLE, 6f, new Color(80, 80, 80));
 			if (proposedRupVsJB_hw.size() > 0 && proposedRupVsJB_fw.size() > 0) {
 				proposedRupVsJB_fw.setName("Proposed, FW");
 				funcs.add(proposedRupVsJB_fw);
-				chars.add(new PlotCurveCharacterstics(PlotSymbol.BOLD_X, 4f, new Color(80, 80, 80)));
+				chars.add(proposedDistFWSymbol);
+				rupVsJBXYs.add(funcs.get(funcs.size()-1));
+				rupVsJBChars.add(chars.get(chars.size()-1));
 				proposedRupVsJB_hw.setName("Proposed, HW");
 				funcs.add(proposedRupVsJB_hw);
-				chars.add(new PlotCurveCharacterstics(PlotSymbol.BOLD_X, 4f, Color.BLACK));
+				chars.add(proposedDistHWSymbol);
+				rupVsJBXYs.add(funcs.get(funcs.size()-1));
+				rupVsJBChars.add(chars.get(chars.size()-1));
 			} else {
 				proposedRupVsJB.setName("Proposed");
 				funcs.add(proposedRupVsJB);
-				chars.add(new PlotCurveCharacterstics(PlotSymbol.BOLD_X, 4f, Color.BLACK));
+				chars.add(proposedDistHWSymbol);
+				rupVsJBXYs.add(funcs.get(funcs.size()-1));
+				rupVsJBChars.add(chars.get(chars.size()-1));
 			}
 			
-			plot = new PlotSpec(funcs, chars, label+", "+oDF.format(distance)+" km", "Rjb (km)", "Rrup (km)");
+			plot = new PlotSpec(funcs, chars, geomLabel+", "+oDF.format(distance)+" km", "Rjb (km)", "Rrup (km)");
 			plot.setLegendInset(RectangleAnchor.BOTTOM_RIGHT);
 			
 			annX = distRange.getLowerBound() + 0.025*distRange.getLength();
@@ -587,13 +655,37 @@ public class SpinningFaultExceedanceFigures {
 			List<String> distAnns = new ArrayList<>();
 			distAnns.add("Length="+oDF.format(length)+", Ztor="+oDF.format(upperDepth)
 					+", Dip="+oDF.format(mech.dip())+", DDW="+oDF.format(ptSurf.getAveWidth()));
-			distAnns.add("NSHM23 Rjb="+oneDF.format(nshmDists.getDistanceJB())
-					+", Rrup="+oneDF.format(nshmDists.getDistanceRup()));
-			
 			String distTexPrefix = texLabel+texDistPrefixes[d];
 			texFW.write("% "+oDF.format(distance)+"km surface distances\n");
-			texFW.write(LaTeXUtils.defineValueCommand(distTexPrefix+"NSHMJB", oneDF.format(nshmDists.getDistanceJB()))+"\n");
-			texFW.write(LaTeXUtils.defineValueCommand(distTexPrefix+"NSHMRup", oneDF.format(nshmDists.getDistanceRup()))+"\n");
+			texFW.write(LaTeXUtils.defineValueCommand(distTexPrefix+"NSHMJBCenteredPercentile",
+					percentileStr(calcPercentiles(centeredDists, nshmDistsFW, true, null)))+"\n");
+			texFW.write(LaTeXUtils.defineValueCommand(distTexPrefix+"NSHMJBUncenteredPercentile",
+					percentileStr(calcPercentiles(uncenteredDists, nshmDistsFW, true, null)))+"\n");
+			if (mech != FocalMech.STRIKE_SLIP) {
+				distAnns.add("NSHM23 Rjb="+oneDF.format(nshmDistsFW.getDistanceJB())
+						+", RrupFW="+oneDF.format(nshmDistsFW.getDistanceRup())
+						+", RrupHW="+oneDF.format(nshmDistsHW.getDistanceRup()));
+				texFW.write(LaTeXUtils.defineValueCommand(distTexPrefix+"NSHMJB", oneDF.format(nshmDistsFW.getDistanceJB()))+"\n");
+				texFW.write(LaTeXUtils.defineValueCommand(distTexPrefix+"NSHMRupFW", oneDF.format(nshmDistsFW.getDistanceRup()))+"\n");
+				texFW.write(LaTeXUtils.defineValueCommand(distTexPrefix+"NSHMRupHW", oneDF.format(nshmDistsHW.getDistanceRup()))+"\n");
+				texFW.write(LaTeXUtils.defineValueCommand(distTexPrefix+"NSHMRupFWCenteredPercentile",
+						percentileStr(calcPercentiles(centeredDists, nshmDistsFW, false, false)))+"\n");
+				texFW.write(LaTeXUtils.defineValueCommand(distTexPrefix+"NSHMRupFWUncenteredPercentile",
+						percentileStr(calcPercentiles(uncenteredDists, nshmDistsFW, false, false)))+"\n");
+				texFW.write(LaTeXUtils.defineValueCommand(distTexPrefix+"NSHMRupHWCenteredPercentile",
+						percentileStr(calcPercentiles(centeredDists, nshmDistsHW, false, true)))+"\n");
+				texFW.write(LaTeXUtils.defineValueCommand(distTexPrefix+"NSHMRupHWUncenteredPercentile",
+						percentileStr(calcPercentiles(uncenteredDists, nshmDistsHW, false, true)))+"\n");
+			} else {
+				distAnns.add("NSHM23 Rjb="+oneDF.format(nshmDistsFW.getDistanceJB())
+						+", Rrup="+oneDF.format(nshmDistsFW.getDistanceRup()));
+				texFW.write(LaTeXUtils.defineValueCommand(distTexPrefix+"NSHMJB", oneDF.format(nshmDistsFW.getDistanceJB()))+"\n");
+				texFW.write(LaTeXUtils.defineValueCommand(distTexPrefix+"NSHMRup", oneDF.format(nshmDistsFW.getDistanceRup()))+"\n");
+				texFW.write(LaTeXUtils.defineValueCommand(distTexPrefix+"NSHMRupCenteredPercentile",
+						percentileStr(calcPercentiles(centeredDists, nshmDistsFW, false, null)))+"\n");
+				texFW.write(LaTeXUtils.defineValueCommand(distTexPrefix+"NSHMRupUncenteredPercentile",
+						percentileStr(calcPercentiles(uncenteredDists, nshmDistsFW, false, null)))+"\n");
+			}
 			
 			MinMaxAveTracker jbCenteredRange = calcJBRange(centeredDists);
 			MinMaxAveTracker rupCenteredRange = calcRupRange(centeredDists);
@@ -688,37 +780,65 @@ public class SpinningFaultExceedanceFigures {
 			chars.add(new PlotCurveCharacterstics(PlotLineType.HISTOGRAM, 1f, Colors.tab_blue));
 			
 			Range histRange = new Range(0d, 1.05d);
+			double lineUpper = 1d;
 			
-			for (WeightedValue<SurfaceDistances> dist : proposedDists) {
-				DefaultXY_DataSet line = new DefaultXY_DataSet();
-				line.set(dist.value.getDistanceJB(), histRange.getLowerBound());
-				line.set(dist.value.getDistanceJB(), histRange.getUpperBound());
-				funcs.add(line);
-				if (mech == FocalMech.STRIKE_SLIP || dist.value.getDistanceX() >= 0d)
-					chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 2f, Color.BLACK));
-				else
-					chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 2f, new Color(80, 80, 80)));
+//			for (WeightedValue<SurfaceDistances> dist : proposedDists) {
+//				DefaultXY_DataSet line = new DefaultXY_DataSet();
+//				line.set(dist.value.getDistanceJB(), 0d);
+//				line.set(dist.value.getDistanceJB(), histRange.getUpperBound());
+//				funcs.add(line);
+//				if (mech == FocalMech.STRIKE_SLIP || dist.value.getDistanceX() >= 0d)
+//					chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 2f, Color.BLACK));
+//				else
+//					chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 2f, new Color(80, 80, 80)));
+//			}
+//			
+//			DefaultXY_DataSet line = new DefaultXY_DataSet();
+//			line.set(nshmDistsFW.getDistanceJB(), 0d);
+//			line.set(nshmDistsFW.getDistanceJB(), lineUpper);
+//			funcs.add(line);
+//			chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, avgThickness, Colors.tab_brown));
+//			
+//			double fwJB = calcJBRange(centeredDists, false).getAverage();
+//			line = new DefaultXY_DataSet();
+//			line.set(fwJB, 0d);
+//			line.set(fwJB, lineUpper);
+//			funcs.add(line);
+//			chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, avgThickness, Colors.tab_lightorange));
+//			
+//			double hwJB = calcJBRange(centeredDists, true).getAverage();
+//			line = new DefaultXY_DataSet();
+//			line.set(hwJB, 0d);
+//			line.set(hwJB, lineUpper);
+//			funcs.add(line);
+//			chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, avgThickness, Colors.tab_orange));
+			
+			for (int i=0; i<rupVsJBXYs.size(); i++) {
+				XY_DataSet xy = rupVsJBXYs.get(i);
+				PlotCurveCharacterstics pChar = rupVsJBChars.get(i);
+				
+				float thickness = pChar.getSymbol() == PlotSymbol.FILLED_CIRCLE ? 2f : avgThickness;
+				
+				for (Point2D pt : xy) {
+					DefaultXY_DataSet line = new DefaultXY_DataSet();
+					line.set(pt.getX(), 0d);
+					line.set(pt.getX(), lineUpper);
+					funcs.add(line);
+					chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, thickness, pChar.getColor()));
+				}
 			}
 			
-			DefaultXY_DataSet line = new DefaultXY_DataSet();
-			line.set(nshmDists.getDistanceJB(), histRange.getLowerBound());
-			line.set(nshmDists.getDistanceJB(), histRange.getUpperBound());
-			funcs.add(line);
-			chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, avgThickness, Colors.tab_brown));
-			
-			double fwJB = calcJBRange(centeredDists, false).getAverage();
-			line = new DefaultXY_DataSet();
-			line.set(fwJB, histRange.getLowerBound());
-			line.set(fwJB, histRange.getUpperBound());
-			funcs.add(line);
-			chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, avgThickness, Colors.tab_lightorange));
-			
-			double hwJB = calcJBRange(centeredDists, true).getAverage();
-			line = new DefaultXY_DataSet();
-			line.set(hwJB, histRange.getLowerBound());
-			line.set(hwJB, histRange.getUpperBound());
-			funcs.add(line);
-			chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, avgThickness, Colors.tab_orange));
+			for (int i=0; i<rupVsJBXYs.size(); i++) {
+				XY_DataSet xy = rupVsJBXYs.get(i);
+				PlotCurveCharacterstics pChar = rupVsJBChars.get(i);
+				
+				DefaultXY_DataSet modXY = new DefaultXY_DataSet();
+				for (Point2D pt : xy)
+					modXY.set(pt.getX(), lineUpper);
+				
+				funcs.add(modXY);
+				chars.add(pChar);
+			}
 			
 			PlotSpec histPlot = new PlotSpec(funcs, chars, null, plot.getXAxisLabel(), " ");
 			
@@ -758,8 +878,23 @@ public class SpinningFaultExceedanceFigures {
 				double sortMin = Double.POSITIVE_INFINITY;
 				double sortMax = 0d;
 				List<double[]> sortScalarsList = new ArrayList<>();
-				Sortables[] sortables = Sortables.values();
+				List<double[]> sortIMLsList = new ArrayList<>();
 				WeightedList<FractileBin> fractiles = proposedCorr.getFractiles();
+				List<double[]> sortBinLowerSortables = new ArrayList<>();
+				List<double[]> sortBinUpperSortables = new ArrayList<>();
+				double[] binLowerSortables = null;
+				double[] binUpperSortables = null;
+				
+				WeightedList<SurfaceDistances> fractileDists;
+				if (hwFlag == null) {
+					fractileDists = proposedDists;
+				} else {
+					fractileDists = new WeightedList<>();
+					for (WeightedValue<SurfaceDistances> val : proposedDists)
+						if (hwFlag == val.value.getDistanceX() >= 0d)
+							fractileDists.add(val);
+				}
+				
 				for (Sortables sortable : sortables) {
 					double[] sortValues, sortIMLs;
 					SurfaceDistances[] sortDists;
@@ -785,6 +920,7 @@ public class SpinningFaultExceedanceFigures {
 						sortIMLs = Doubles.toArray(imls);
 					}
 					sortScalarsList.add(sortValues);
+					sortIMLsList.add(sortIMLs);
 					sortMin = Math.min(sortMin, StatUtils.min(sortValues));
 					sortMax = Math.max(sortMax, StatUtils.max(sortValues));
 					DefaultXY_DataSet cloud = new DefaultXY_DataSet(sortValues, sortIMLs);
@@ -802,101 +938,122 @@ public class SpinningFaultExceedanceFigures {
 					funcs.add(average);
 					chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, avgThickness, sortable.color));
 					
-					if (sortable !=Sortables.RRUP_PLUS_RJB) {
-						double[] unityWeights = new double[sortValues.length];
-						for (int i=0; i<unityWeights.length; i++)
-							unityWeights[i] = 1d;
-						LightFixedXFunc sortNCDF = ArbDiscrEmpiricalDistFunc.calcQuickNormCDF(sortValues, unityWeights);
-						double[] myBinLowerSortables = new double[fractiles.size()];
-						double[] myBinUpperSortables = new double[fractiles.size()];
-						for (int f=0; f<fractiles.size(); f++) {
-							FractileBin bin = fractiles.getValue(f);
-							
-							myBinLowerSortables[f] = ArbDiscrEmpiricalDistFunc.calcFractileFromNormCDF(sortNCDF, bin.minimum);
-							myBinUpperSortables[f] = ArbDiscrEmpiricalDistFunc.calcFractileFromNormCDF(sortNCDF, bin.maximum);
-						}
-						
-						// calculate and add manually
-						int[] counts = new int[fractiles.size()];
-						double[] sumJBs = new double[fractiles.size()];
-						double[] sumRups = new double[fractiles.size()];
-						double[] sumXs = new double[fractiles.size()];
-						
-						for (int i=0; i<sortValues.length; i++) {
-							for (int f=0; f<myBinLowerSortables.length; f++) {
-								if (sortValues[i] <= myBinUpperSortables[f]) {
-									counts[f]++;
-									sumJBs[f] += sortDists[i].getDistanceJB();
-									sumRups[f] += sortDists[i].getDistanceRup();
-									sumXs[f] += sortDists[i].getDistanceX();
-									break;
-								}
+					double[] unityWeights = new double[sortValues.length];
+					for (int i=0; i<unityWeights.length; i++)
+						unityWeights[i] = 1d;
+					LightFixedXFunc sortNCDF = ArbDiscrEmpiricalDistFunc.calcQuickNormCDF(sortValues, unityWeights);
+					double[] myBinLowerSortables = new double[fractiles.size()];
+					double[] myBinUpperSortables = new double[fractiles.size()];
+					for (int f=0; f<fractiles.size(); f++) {
+						FractileBin bin = fractiles.getValue(f);
+
+						double lowerX = ArbDiscrEmpiricalDistFunc.calcFractileFromNormCDF(sortNCDF, bin.minimum);
+						double upperX = ArbDiscrEmpiricalDistFunc.calcFractileFromNormCDF(sortNCDF, bin.maximum);
+						myBinLowerSortables[f] = lowerX;
+						myBinUpperSortables[f] = upperX;
+
+//						double lowerY = f == 0 ? average.getY(0) : average.getInterpolatedY(lowerX);
+//						double upperY = f == fractiles.size()-1 ? average.getY(average.size()-1) : average.getInterpolatedY(upperX);
+//
+//						if (lowerX > 0d) {
+//							double tickUp = Math.pow(10, Math.log10(lowerY)+0.05);
+//							double tickDown = Math.pow(10, Math.log10(lowerY)-0.05);
+//							funcs.add(0, new DefaultXY_DataSet(lowerX, tickDown, lowerX, tickUp));
+//							chars.add(0, new PlotCurveCharacterstics(PlotLineType.DASHED, 1f, sortable.color));
+//						}
+//
+//						double tickUp = Math.pow(10, Math.log10(upperY)+0.05);
+//						double tickDown = Math.pow(10, Math.log10(upperY)-0.05);
+//						funcs.add(0, new DefaultXY_DataSet(upperX, tickDown, upperX, tickUp));
+//						chars.add(0, new PlotCurveCharacterstics(PlotLineType.DASHED, 1f, sortable.color));
+					}
+
+					sortBinLowerSortables.add(myBinLowerSortables);
+					sortBinUpperSortables.add(myBinUpperSortables);
+					if (sortable == SORT_QUANTITY) {
+						binLowerSortables = myBinLowerSortables;
+						binUpperSortables = myBinUpperSortables;
+					}
+
+					// calculate and add manually
+					int[] counts = new int[fractiles.size()];
+					double[] sumJBs = new double[fractiles.size()];
+					double[] sumRups = new double[fractiles.size()];
+					double[] sumXs = new double[fractiles.size()];
+					List<List<Double>> binIMLs = new ArrayList<>(fractiles.size());
+					for (int f=0; f<fractiles.size(); f++)
+						binIMLs.add(new ArrayList<>());
+
+					for (int i=0; i<sortValues.length; i++) {
+						for (int f=0; f<myBinLowerSortables.length; f++) {
+							if (f == fractiles.size()-1 || sortValues[i] <= myBinUpperSortables[f]) {
+								counts[f]++;
+								sumJBs[f] += sortDists[i].getDistanceJB();
+								sumRups[f] += sortDists[i].getDistanceRup();
+								sumXs[f] += sortDists[i].getDistanceX();
+								binIMLs.get(f).add(sortIMLs[i]);
+								break;
 							}
 						}
-						
-						DefaultXY_DataSet scatter = new DefaultXY_DataSet();
-						for (int f=0; f<fractiles.size(); f++) {
-							double middle = 0.5*(myBinLowerSortables[f] + myBinUpperSortables[f]);
+					}
+
+					DefaultXY_DataSet scatter = new DefaultXY_DataSet();
+					DefaultXY_DataSet trueAvgScatter = new DefaultXY_DataSet();
+					funcs.add(scatter);
+					chars.add(new PlotCurveCharacterstics(PlotSymbol.FILLED_CIRCLE, 6f, sortable.color));
+					funcs.add(scatter);
+					chars.add(new PlotCurveCharacterstics(PlotSymbol.CIRCLE, 6f, sortable.color.darker().darker()));
+//					funcs.add(trueAvgScatter);
+//					chars.add(new PlotCurveCharacterstics(PlotSymbol.FILLED_CIRCLE, 2f, Color.BLACK));
+					for (int f=0; f<fractiles.size(); f++) {
+						if (counts[f] > 0) {
+							double lower = myBinLowerSortables[f];
+							double upper = myBinUpperSortables[f];
+							double middle = 0.5*(lower + upper);
 							double rJB = sumJBs[f]/(double)counts[f];
 							double rRup = sumRups[f]/(double)counts[f];
 							double rX = sumXs[f]/(double)counts[f];
 							gmm0.setPropagationEffectParams(new SurfaceDistances.Precomputed(siteLoc, rRup, rJB, rX));
 							scatter.set(middle, Math.exp(gmm0.getMean()));
+							List<Double> myIMLs = binIMLs.get(f);
+							DoubleSummaryStatistics imlStats = myIMLs.stream().mapToDouble(v->v).summaryStatistics();
+							trueAvgScatter.set(middle, imlStats.getAverage());
+							
+//							funcs.add(new DefaultXY_DataSet(lower, imlStats.getMin(), lower, imlStats.getMax()));
+//							chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, sortable.color));
+//							funcs.add(new DefaultXY_DataSet(upper, imlStats.getMin(), upper, imlStats.getMax()));
+//							chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, sortable.color));
+//							funcs.add(new DefaultXY_DataSet(lower, imlStats.getAverage(), upper, imlStats.getAverage()));
+//							chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, sortable.color));
 						}
-						funcs.add(scatter);
-						chars.add(new PlotCurveCharacterstics(PlotSymbol.FILLED_CIRCLE, 6f, sortable.color));
-						funcs.add(scatter);
-						chars.add(new PlotCurveCharacterstics(PlotSymbol.CIRCLE, 6f, sortable.color.darker().darker()));
 					}
 				}
 				
-				WeightedList<SurfaceDistances> fractileDists;
-				if (hwFlag == null) {
-					fractileDists = proposedDists;
-				} else {
-					fractileDists = new WeightedList<>();
-					for (WeightedValue<SurfaceDistances> val : proposedDists)
-						if (hwFlag == val.value.getDistanceX() >= 0d)
-							fractileDists.add(val);
-				}
-				Preconditions.checkState(fractiles.size() == fractileDists.size(), "%s != %s", fractiles.size(), fractileDists.size());
-				double[] finalSortables = sortScalarsList.get(sortScalarsList.size()-1);
-				double[] unityWeights = new double[finalSortables.length];
-				for (int i=0; i<unityWeights.length; i++)
-					unityWeights[i] = 1d;
-				LightFixedXFunc sortNCDF = ArbDiscrEmpiricalDistFunc.calcQuickNormCDF(finalSortables, unityWeights);
-				double[] binLowerSortables = new double[fractiles.size()];
-				double[] binUpperSortables = new double[fractiles.size()];
-				for (int f=0; f<fractiles.size(); f++) {
-					FractileBin bin = fractiles.getValue(f);
-					
-					binLowerSortables[f] = ArbDiscrEmpiricalDistFunc.calcFractileFromNormCDF(sortNCDF, bin.minimum);
-					binUpperSortables[f] = ArbDiscrEmpiricalDistFunc.calcFractileFromNormCDF(sortNCDF, bin.maximum);
-				}
+				Range medianIMLRange = medianIMLRanges[d];
 				
 				// add corr lines and bins
 				PlotCurveCharacterstics binChar = new PlotCurveCharacterstics(PlotLineType.SHORT_DASHED, 1f, Color.BLACK);
-				XY_DataSet proposedGMs = new DefaultXY_DataSet();
+//				XY_DataSet proposedGMs = new DefaultXY_DataSet();
 				for (int f=0; f<fractiles.size(); f++) {
 					double lower = binLowerSortables[f];
 					double upper = binUpperSortables[f];
 					if (f == 0) {
-						line = new DefaultXY_DataSet();
+						DefaultXY_DataSet line = new DefaultXY_DataSet();
 						line.set(lower, medianIMLRange.getLowerBound());
 						line.set(lower, medianIMLRange.getUpperBound());
 						funcs.add(line);
 						chars.add(binChar);
 					}
 					
-					line = new DefaultXY_DataSet();
+					DefaultXY_DataSet line = new DefaultXY_DataSet();
 					line.set(upper, medianIMLRange.getLowerBound());
 					line.set(upper, medianIMLRange.getUpperBound());
 					funcs.add(line);
 					chars.add(binChar);
 					
-					gmm0.setPropagationEffectParams(fractileDists.getValue(f));
-					
-					double iml = Math.exp(gmm0.getMean());
+//					gmm0.setPropagationEffectParams(fractileDists.getValue(f));
+//					
+//					double iml = Math.exp(gmm0.getMean());
 					
 //					line = new DefaultXY_DataSet();
 //					line.set(lower, iml);
@@ -905,16 +1062,16 @@ public class SpinningFaultExceedanceFigures {
 //						line.setName("Proposed ");
 //					funcs.add(line);
 //					chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, Color.BLACK));
-					
-					proposedGMs.set(0.5*(upper+lower), iml);
+//					
+//					proposedGMs.set(0.5*(upper+lower), iml);
 				}
-//				proposedGMs.setName("Proposed");
-				funcs.add(proposedGMs);
-				chars.add(new PlotCurveCharacterstics(PlotSymbol.FILLED_CIRCLE, 6f, Sortables.RRUP_PLUS_RJB.color));
-//				proposedGMs = proposedGMs.deepClone();
-//				proposedGMs.setName(null);
-				funcs.add(proposedGMs);
-				chars.add(new PlotCurveCharacterstics(PlotSymbol.CIRCLE, 6f, Color.BLACK));
+////				proposedGMs.setName("Proposed");
+//				funcs.add(proposedGMs);
+//				chars.add(new PlotCurveCharacterstics(PlotSymbol.FILLED_CIRCLE, 6f, Sortables.RRUP_PLUS_RJB.color));
+////				proposedGMs = proposedGMs.deepClone();
+////				proposedGMs.setName(null);
+//				funcs.add(proposedGMs);
+//				chars.add(new PlotCurveCharacterstics(PlotSymbol.CIRCLE, 6f, Color.BLACK));
 				
 				if (sortMin < 5)
 					sortMin = 0;
@@ -923,39 +1080,182 @@ public class SpinningFaultExceedanceFigures {
 				sortMax = Math.ceil(sortMax/5d)*5d;
 				Range sortRange = new Range(sortMin, sortMax);
 				
-				String title = plot.getTitle();
+				String title = imLabel+", "+oDF.format(distance)+" km";
 				if (hwFlag != null) {
 					if (hwFlag)
-						title += ", Hanging-Wall";
+						title += ", Hanging Wall";
 					else
-						title += ", Foot-Wall";
+						title += ", Footwall";
 				}
-				PlotSpec sortPlot = new PlotSpec(funcs, chars, title, "Sorting Quantity", "Median "+imlAxisLabel);
+				PlotSpec sortPlot = new PlotSpec(funcs, chars, title, "Sorting Quantity (ξ)", "Median "+imlAxisLabel);
 				sortPlot.setLegendInset(RectangleAnchor.TOP_RIGHT);
 				
-				EvenlyDiscretizedFunc sortHistBins = HistogramFunction.getEncompassingHistogram(sortMin+1e-3, sortMax, sortMax > 50 ? 2d : 1d);
+				/*
+				 * Variance plot
+				 */
 				
-				funcs = new ArrayList<>();
-				chars = new ArrayList<>();
+				double maxVar = 0d;
+				DiscretizedFunc[] varFuncs = new DiscretizedFunc[sortables.length];
+				for (int s=0; s<sortables.length; s++) {
+					double[] scalars = sortScalarsList.get(s);
+					double minScalar = StatUtils.min(scalars);
+					double maxScalar = StatUtils.max(scalars);
+					
+					double myDelta = Math.min((maxScalar-minScalar)/50d, 1d);
+					EvenlyDiscretizedFunc varBins = HistogramFunction.getEncompassingHistogram(minScalar+0.25*myDelta, maxScalar-0.25*myDelta, myDelta);
+					
+					List<Double> zeroValues = new ArrayList<>();
+					
+					double[] imls =sortIMLsList.get(s);
+					List<List<Double>> binValues = new ArrayList<>(varBins.size());
+					for (int i=0; i<varBins.size(); i++)
+						binValues.add(new ArrayList<>());
+					Preconditions.checkState(scalars.length == imls.length);
+					for (int i=0; i<scalars.length; i++) {
+						double value = scalars[i];
+						double iml = imls[i];
+						if (value == 0d) {
+							zeroValues.add(iml);
+						} else {
+							int index = varBins.getClosestXIndex(value);
+							binValues.get(index).add(iml);
+						}
+					}
+					
+					ArbitrarilyDiscretizedFunc varFunc = new ArbitrarilyDiscretizedFunc();
+					
+					for (int i=-1; i<varBins.size(); i++) {
+						double x;
+						double[] binIMLs;
+						if (i < 0) {
+							x = 0d;
+							binIMLs = Doubles.toArray(zeroValues);
+						} else {
+							x = varBins.getX(i);
+							binIMLs = Doubles.toArray(binValues.get(i));
+						}
+						if (binIMLs.length == 0)
+							continue;
+						double var;
+						if (binIMLs.length == 1)
+							var = 0d;
+						else
+							var = StatUtils.variance(binIMLs);
+						double mean = StatUtils.mean(binIMLs);
+						double sd = Math.sqrt(var);
+						double cov = sd/mean;
+						double plotVal = cov;
+						if (i <= 0) {
+							System.out.println(sortables[s]+" "+(float)distance+" km, hwFlag="+hwFlag+" x="+(float)x+" var="
+									+(float)var+", sd="+(float)sd+", cov="+(float)cov);
+//							System.out.print("\tValues: ");
+//							for (int j=0; j<binIMLs.length && j<20; j++) {
+//								if (j > 0)
+//									System.out.print(", ");
+//								System.out.print((float)binIMLs[j]);
+//							}
+//							System.out.println();
+						}
+						Preconditions.checkState(Double.isFinite(var), "Bad var=%s for %s", var, binIMLs);
+						varFunc.set(x, plotVal);
+						maxVar = Math.max(maxVar, plotVal);
+					}
+					if (minScalar > 0d)
+						varFunc.set(minScalar, varFunc.getY(0));
+					varFunc.set(maxScalar, varFunc.getY(varFunc.size()-1));
+					
+					System.out.print("\tValues: ");
+					for (int i=0; i<varFunc.size(); i++) {
+						if (i>0)
+							System.out.print(", ");
+						System.out.print((float)varFunc.getY(i));
+					}
+					System.out.println();
+					
+//					System.out.println(sortables[s]+" Variance Func:\n"+varFunc+"\n\n");
+					
+					varFuncs[s] = varFunc;
+				}
+				
+				maxVar = Math.max(0.1, Math.ceil((maxVar*1.05)*20d)/20d);
+				Range varRange = new Range(0d, maxVar);
+				
+				List<XY_DataSet> varPlotFuncs = new ArrayList<>();
+				List<PlotCurveCharacterstics> varChars = new ArrayList<>();
+				
+				double varTick = varRange.getLength()/30d;
+				for (int s=0; s<sortables.length; s++) {
+					varPlotFuncs.add(varFuncs[s]);
+					varChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 3f, sortables[s].color));
+					
+//					double[] lowers = sortBinLowerSortables.get(s);
+//					double[] uppers = sortBinUpperSortables.get(s);
+//					
+//					for (int f=0; f<lowers.length; f++) {
+//						double y = f == 0 ? varFuncs[s].getY(0) : varFuncs[s].getInterpolatedY(lowers[f]);
+//						varPlotFuncs.add(new DefaultXY_DataSet(lowers[f], y-varTick, lowers[f], y+varTick));
+//						varChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 2f, sortables[s].color));
+//					}
+//					double x = uppers[uppers.length-1];
+//					double y = varFuncs[s].getY(varFuncs[s].size()-1);
+//					varPlotFuncs.add(new DefaultXY_DataSet(x, y-varTick, x, y+varTick));
+//					varChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 2f, sortables[s].color));
+				}
+				
+				PlotSpec varPlot = new PlotSpec(varPlotFuncs, varChars, null, sortPlot.getXAxisLabel(), "COV");
+				
+				/*
+				 * Bin histogram plot
+				 */
+				
+				EvenlyDiscretizedFunc sortHistBins = HistogramFunction.getEncompassingHistogram(
+//						sortMin+1e-3, sortMax, sortMax > 50 ? 2d : 1d);
+						sortMin+1e-3, sortMax, sortMax > 50 ? 1d : 0.5d);
+				
+				List<XY_DataSet> histFuncs = new ArrayList<>();
+				List<PlotCurveCharacterstics> histChars = new ArrayList<>();
 				
 				for (int s=0; s<sortables.length; s++) {
-					HistogramFunction hist = new HistogramFunction(sortHistBins.getMinX(), sortHistBins.getMaxX(), sortHistBins.size());
+					EvenlyDiscretizedFunc hist = new EvenlyDiscretizedFunc(sortHistBins.getMinX(), sortHistBins.getMaxX(), sortHistBins.size());
 					double[] scalars = sortScalarsList.get(s);
 					for (double value : scalars) {
 						int index = hist.getClosestXIndex(value);
 						hist.add(index, 1d);
 					}
-					hist.scale(1d/hist.getMaxY());
+//					hist.scale(1d/hist.getMaxY());
+					hist.scale(1d/hist.calcSumOfY_Vals());
 					
-					funcs.add(hist);
-					chars.add(new PlotCurveCharacterstics(PlotLineType.HISTOGRAM, 1f, sortables[s].transColor));
+					histFuncs.add(hist);
+					histChars.add(new PlotCurveCharacterstics(PlotLineType.HISTOGRAM, 1f, sortables[s].transColor));
 				}
 				
-				PlotSpec sortHistPlot = new PlotSpec(funcs, chars, null, sortPlot.getXAxisLabel(), " ");
+				// mow rescale to max of any
+				double maxHistY = 0d;
+				for (XY_DataSet xy : histFuncs)
+					maxHistY = Math.max(maxHistY, xy.getMaxY());
+				for (XY_DataSet xy : histFuncs)
+					((DiscretizedFunc)xy).scale(1d/maxHistY);
+				
+				PlotSpec sortHistPlot = new PlotSpec(histFuncs, histChars, null, sortPlot.getXAxisLabel(), "Density");
 				
 				// add fractile annotations
 				double fLine0 = 1.2;
 				double fLine1 = fLine0+0.2;
+				
+//				for (int s=0; s<sortables.length; s++) {
+//					if (sortables[s] != SORT_QUANTITY) {
+//						double[] lowers = sortBinLowerSortables.get(s);
+//						double[] uppers = sortBinUpperSortables.get(s);
+//						PlotCurveCharacterstics oBinChar = new PlotCurveCharacterstics(binChar.getLineType(), binChar.getLineWidth(), sortables[s].color);
+//						histFuncs.add(new DefaultXY_DataSet(lowers[0], fLine0, lowers[0], fLine1));
+//						histChars.add(oBinChar);
+//						for (double upper : uppers) {
+//							histFuncs.add(new DefaultXY_DataSet(upper, fLine0, upper, fLine1));
+//							histChars.add(oBinChar);
+//						}
+//					}
+//				}
+				
 				char sub1 = '₁';
 //				Font weightFont = new Font(Font.SANS_SERIF, Font.BOLD, 18);
 //				Font percentileFont = new Font(Font.SANS_SERIF, Font.BOLD, 16);
@@ -969,11 +1269,16 @@ public class SpinningFaultExceedanceFigures {
 					double upper = binUpperSortables[f];
 					
 					if (f == 0) {
-						line = new DefaultXY_DataSet();
+						DefaultXY_DataSet line = new DefaultXY_DataSet();
 						line.set(lower, fLine0);
 						line.set(lower, fLine1);
-						funcs.add(line);
-						chars.add(binChar);
+						histFuncs.add(line);
+						histChars.add(binChar);
+						line = new DefaultXY_DataSet();
+						line.set(lower, varRange.getLowerBound());
+						line.set(lower, varRange.getUpperBound());
+						varPlotFuncs.add(line);
+						varChars.add(binChar);
 						
 						double lowerFractOfRange = (lower-sortRange.getLowerBound())/sortRange.getLength();
 						boolean snap = lowerFractOfRange < 0.02;
@@ -983,11 +1288,10 @@ public class SpinningFaultExceedanceFigures {
 						sortHistPlot.addPlotAnnotation(ann);
 					}
 					
-					line = new DefaultXY_DataSet();
-					line.set(upper, fLine0);
-					line.set(upper, fLine1);
-					funcs.add(line);
-					chars.add(binChar);
+					histFuncs.add(new DefaultXY_DataSet(upper, fLine0, upper, fLine1));
+					histChars.add(binChar);
+					varPlotFuncs.add(new DefaultXY_DataSet(upper, varRange.getLowerBound(), upper, varRange.getUpperBound()));
+					varChars.add(binChar);
 					
 					double upperFractOfRange = (upper-sortRange.getLowerBound())/sortRange.getLength();
 					boolean snap = upperFractOfRange > 0.97;
@@ -1001,7 +1305,9 @@ public class SpinningFaultExceedanceFigures {
 					
 					int digits = ((float)weight+"").length();
 					double fractOfRange = (upper - lower)/sortRange.getLength();
-					boolean include = (digits == 3 && fractOfRange > 0.07) || fractOfRange > 0.09;
+//					boolean include = (digits == 3 && fractOfRange > 0.07) || fractOfRange > 0.09;
+//					boolean includeShort = (digits == 3 && fractOfRange > 0.04) || fractOfRange > 0.03;
+					boolean include = (digits == 3 && fractOfRange > 0.06) || fractOfRange > 0.07;
 					boolean includeShort = (digits == 3 && fractOfRange > 0.04) || fractOfRange > 0.03;
 					char subNum = (char)(sub1+f);
 					String weightTxt = "w"+subNum+"="+(float)weight;
@@ -1016,6 +1322,7 @@ public class SpinningFaultExceedanceFigures {
 //						ann = new XYTextAnnotation(oDF.format(weight*100d)+"%", centerX, centerY);
 						ann.setFont(weightFont);
 						ann.setTextAnchor(TextAnchor.CENTER);
+						ann.setBackgroundPaint(new Color(255, 255, 255, 80));
 						sortHistPlot.addPlotAnnotation(ann);
 					}
 				}
@@ -1028,7 +1335,7 @@ public class SpinningFaultExceedanceFigures {
 				gp.drawGraphPanel(List.of(sortPlot, sortHistPlot), List.of(false), List.of(true, false),
 						List.of(sortRange), List.of(medianIMLRange, new Range(0d, fLine1)));
 				
-				PlotUtils.setSubPlotWeights(gp, 8, 2);
+				PlotUtils.setSubPlotWeights(gp, 6, 2);
 				
 				combPlot = (CombinedDomainXYPlot)gp.getPlot();
 				
@@ -1043,7 +1350,27 @@ public class SpinningFaultExceedanceFigures {
 					else
 						sortPrefix += "_fw";
 				}
-				PlotUtils.writePlots(outputDir, sortPrefix, gp, 800, 900, true, true, false);
+				PlotUtils.writePlots(outputDir, sortPrefix, gp, 1000, 900, true, true, false);
+				
+				gp.drawGraphPanel(List.of(sortPlot, varPlot, sortHistPlot), List.of(false), List.of(true, false, false),
+						List.of(sortRange), List.of(medianIMLRange, varRange, new Range(0d, fLine1)));
+				
+				PlotUtils.setSubPlotWeights(gp, 6, 2, 2);
+				
+				combPlot = (CombinedDomainXYPlot)gp.getPlot();
+				
+				subPlot = ((XYPlot)combPlot.getSubplots().get(2));
+				subPlot.getRangeAxis().setTickLabelsVisible(false);
+				subPlot.setRangeGridlinesVisible(false);
+				
+				sortPrefix = prefix+"_"+perPrefix+"_"+oDF.format(distance)+"km_sorting_var";
+				if (hwFlag != null) {
+					if (hwFlag)
+						sortPrefix += "_hw";
+					else
+						sortPrefix += "_fw";
+				}
+				PlotUtils.writePlots(outputDir, sortPrefix, gp, 1000, 1000, true, true, false);
 			}
 			
 			// map plot
@@ -1340,7 +1667,7 @@ public class SpinningFaultExceedanceFigures {
 			funcs.add(xyCircle);
 			chars.add(new PlotCurveCharacterstics(PlotLineType.POLYGON_SOLID, 1f, polyColor));
 			
-			plot = new PlotSpec(funcs, chars, label, "X (km)", "Y (km)");
+			plot = new PlotSpec(funcs, chars, geomLabel, "X (km)", "Y (km)");
 			plot.setLegendInset(true);
 			plot.setPlotAnnotations(anns);
 			
@@ -1365,7 +1692,7 @@ public class SpinningFaultExceedanceFigures {
 		
 		gp.drawGraphPanel(plots, true, false, List.of(imlRange), yRanges);
 		
-		PlotUtils.writePlots(outputDir, prefix+"_"+perPrefix, gp, 1000, 200+300*plots.size(), true, true, false);
+		PlotUtils.writePlots(outputDir, prefix+"_"+perPrefix, gp, 1200, 200+300*plots.size(), true, true, false);
 		
 		texFW.close();
 	}
@@ -1719,6 +2046,28 @@ public class SpinningFaultExceedanceFigures {
 			polygon.closePath();
 		}
 		return polygon;
+	}
+	
+	private static double calcPercentiles(SurfaceDistances[] dists, SurfaceDistances target, boolean rJB, Boolean hwFlag) {
+		List<Double> values = new ArrayList<>();
+		for (SurfaceDistances dist : dists) {
+			if (hwFlag != null && hwFlag != dist.getDistanceX() >= 0)
+				continue;
+			values.add(rJB ? dist.getDistanceJB() : dist.getDistanceRup());
+		}
+		
+		LightFixedXFunc nCDF = ArbDiscrEmpiricalDistFunc.calcQuickNormCDF(values, null);
+		double val = rJB ? target.getDistanceJB() : target.getDistanceRup();
+		if (val < nCDF.getMinX())
+			return 0d;
+		else if (val > nCDF.getMaxX())
+			return 1d;
+		else
+			return nCDF.getInterpolatedY(val);
+	}
+	
+	private static String percentileStr(double fractile) {
+		return LaTeXUtils.numberAsOrdinal((int)Math.round(fractile*100d));
 	}
 
 }

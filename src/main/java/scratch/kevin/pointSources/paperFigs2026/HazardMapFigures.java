@@ -3,6 +3,7 @@ package scratch.kevin.pointSources.paperFigs2026;
 import static scratch.kevin.pointSources.paperFigs2026.ConstantsAndSettings.*;
 
 import java.awt.Color;
+import java.awt.Font;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileWriter;
@@ -11,6 +12,8 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
+import java.util.EnumSet;
+import java.util.GregorianCalendar;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -18,19 +21,27 @@ import java.util.StringTokenizer;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 
+import org.jfree.chart.annotations.XYTextAnnotation;
+import org.jfree.chart.ui.TextAnchor;
 import org.opensha.commons.data.CSVFile;
-import org.opensha.commons.data.xyz.GeoDataSetMath;
+import org.opensha.commons.data.comcat.ComcatAccessor;
+import org.opensha.commons.data.comcat.ComcatRegion;
+import org.opensha.commons.data.comcat.ComcatRegionAdapter;
 import org.opensha.commons.data.xyz.GriddedGeoDataSet;
 import org.opensha.commons.geo.GriddedRegion;
 import org.opensha.commons.geo.Location;
+import org.opensha.commons.geo.LocationList;
 import org.opensha.commons.geo.LocationUtils;
 import org.opensha.commons.gui.plot.GeographicMapMaker;
 import org.opensha.commons.gui.plot.PlotCurveCharacterstics;
 import org.opensha.commons.gui.plot.PlotLineType;
+import org.opensha.commons.gui.plot.PlotSymbol;
 import org.opensha.commons.mapping.gmt.elements.GMT_CPT_Files;
 import org.opensha.commons.util.DataUtils;
 import org.opensha.commons.util.cpt.CPT;
 import org.opensha.sha.earthquake.faultSysSolution.util.SolHazardMapCalc.ReturnPeriods;
+import org.opensha.sha.earthquake.observedEarthquake.ObsEqkRupList;
+import org.opensha.sha.earthquake.observedEarthquake.ObsEqkRupture;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_FaultModels;
 import org.opensha.sha.faultSurface.FaultSection;
 
@@ -39,6 +50,7 @@ import com.google.common.collect.HashBasedTable;
 import com.google.common.collect.Table;
 import com.google.common.primitives.Doubles;
 
+import net.mahdilamb.colormap.Colors;
 import scratch.kevin.latex.LaTeXUtils;
 import scratch.kevin.pointSources.paperFigs2026.ConstantsAndSettings.Models;
 
@@ -71,8 +83,9 @@ public class HazardMapFigures {
 				compAdd(comparisons, model, REF_FINITE_MODEL);
 			if (model.ordinal() >= PROPOSED_DIST_CORR_MODEL.ordinal()) {
 				// this is a further grid property test
-				// include a reference with original grid props, but proposed dist corr
-				compAdd(comparisons, model, PROPOSED_FULL_MODEL);
+				if (model.ordinal() < PROPOSED_FULL_MODEL.ordinal())
+					// compare with proposed full model
+					compAdd(comparisons, model, PROPOSED_FULL_MODEL);
 				if (prevModel != PROPOSED_FULL_MODEL)
 					// also add the incremental change from just this compared to the previous
 					compAdd(comparisons, model, prevModel);
@@ -83,6 +96,9 @@ public class HazardMapFigures {
 		// published vs full proposed
 		compAdd(comparisons, Models.AS_PUBLISHED, PROPOSED_FULL_MODEL);
 		
+		// mag threshold only
+		compAdd(comparisons, Models.SPINNING_AVG_CENTERED_M5, Models.SPINNING_AVG_CENTERED_M6);
+		
 		// alt random and realization count tests
 		compAdd(comparisons, Models.FINITE_1X_UNCENTERED, Models.FINITE_1X_UNCENTERED_ALT_RAND);
 		compAdd(comparisons, Models.FINITE_2X_UNCENTERED, Models.FINITE_2X_UNCENTERED_ALT_RAND);
@@ -92,10 +108,21 @@ public class HazardMapFigures {
 		compAdd(comparisons, Models.FINITE_50X_UNCENTERED, Models.FINITE_50X_UNCENTERED_ALT_RAND);
 		compAdd(comparisons, Models.FINITE_100X_UNCENTERED, Models.FINITE_100X_UNCENTERED_ALT_RAND);
 		
+		// openquake vs 100 random
+		compAdd(comparisons, Models.OPENQUAKE_FINITE, Models.FINITE_100X_CENTERED);
+		compAdd(comparisons, Models.OPENQUAKE_FINITE, Models.FINITE_100X_UNCENTERED);
+//		compAdd(comparisons, Models.OPENQUAKE_FINITE_UNCENTERED, Models.FINITE_100X_UNCENTERED);
+		
 		compAdd(comparisons, PROPOSED_DIST_CORR_MODEL, Models.AS_PUBLISHED);
 		compLabels.put(PROPOSED_DIST_CORR_MODEL, Models.AS_PUBLISHED, "Proposed corrections");
 		compAdd(comparisons, PROPOSED_FULL_MODEL, Models.AS_PUBLISHED);
 		compLabels.put(PROPOSED_FULL_MODEL, Models.AS_PUBLISHED, "Proposed properties & corrections");
+		
+		compAdd(comparisons, PROPOSED_FULL_MODEL, Models.SPINNING_DIST_5X_UNCENTERED_MOD_ZTOR_LEN_M4);
+		compAdd(comparisons, Models.SPINNING_DIST_5X_UNCENTERED_MOD_ZTOR_LEN_M3, PROPOSED_FULL_MODEL);
+		compAdd(comparisons, Models.SPINNING_DIST_5X_UNCENTERED_MOD_ZTOR_LEN_M3p5_CORR_M5, PROPOSED_FULL_MODEL);
+		
+		EnumSet<Models> seismicityMapModels = EnumSet.of(Models.FINITE_100X_CENTERED);
 		
 //		// + improved Rrup and Rx
 //		compAdd(comparisons, Models.SPINNING_AVG_M6, Models.AS_PUBLISHED);
@@ -152,6 +179,30 @@ public class HazardMapFigures {
 		}
 //		mapMaker.setSectOutlineChar(null);
 //		zoomMapMaker.setSectOutlineChar(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, new Color(127, 127, 127, 100)));
+		
+		LocationList zoomScatterLocs = new LocationList();
+		List<PlotCurveCharacterstics> zoomScatterChars = new ArrayList<>();
+		
+		if (ZOOM_CITIES != null && !ZOOM_CITIES.isEmpty()) {
+			Font cityFont = new Font(Font.SANS_SERIF, Font.BOLD, 18);
+			for (String name : ZOOM_CITIES.keySet()) {
+				Location loc = ZOOM_CITIES.get(name);
+				XYTextAnnotation ann = new XYTextAnnotation("  "+name, loc.lon, loc.lat);
+				ann.setFont(cityFont);
+				ann.setTextAnchor(TextAnchor.BASELINE_LEFT);
+				zoomMapMaker.addAnnotation(ann);
+				
+				zoomScatterLocs.add(loc);
+				zoomScatterChars.add(new PlotCurveCharacterstics(PlotSymbol.FILLED_INV_TRIANGLE, 5f, Colors.tab_brown));
+				zoomScatterLocs.add(loc);
+				zoomScatterChars.add(new PlotCurveCharacterstics(PlotSymbol.INV_TRIANGLE, 5f, Color.BLACK));
+			}
+		}
+		zoomMapMaker.plotScatters(zoomScatterLocs, zoomScatterChars);
+		zoomMapMaker.setDefaultPlotWidth(650);
+		
+		LocationList seisZoomScatterLocs = null;
+		List<PlotCurveCharacterstics> seisZoomScatterChars = null;
 		
 		Color trans = new Color(255, 255, 255, 0);
 		
@@ -229,6 +280,7 @@ public class HazardMapFigures {
 						System.err.println("Skipping "+models[i].getName()+", calculations not found");
 						continue;
 					}
+					boolean doSeis = plotMaps && seismicityMapModels != null && seismicityMapModels.contains(model) && zoomMaps[i] != null;
 					System.out.println("Plotting maps for "+models[i].getName());
 					if (plotMaps) {
 						if (replot || !new File(mapsDir, model.name()+".pdf").exists()) {
@@ -239,6 +291,19 @@ public class HazardMapFigures {
 							zoomMapMaker.plotXYZData(zoomMaps[i], hazardCPT, model.getName()+", "+mapLabel);
 							zoomMapMaker.plot(zoomMapsDir, model.name(), " ");
 						}
+					}
+					
+					if (doSeis && (replot || !new File(zoomMapsDir, model.name()+"_seis.pdf").exists())) {
+						if (seisZoomScatterLocs == null) {
+							seisZoomScatterLocs = new LocationList(zoomScatterLocs);
+							seisZoomScatterChars = new ArrayList<>(zoomScatterChars);
+							fetchComcatEvents(seisZoomScatterLocs, seisZoomScatterChars);
+						}
+						
+						zoomMapMaker.plotScatters(seisZoomScatterLocs, seisZoomScatterChars);
+						zoomMapMaker.plotXYZData(zoomMaps[i], hazardCPT, model.getName()+", "+mapLabel);
+						zoomMapMaker.plot(zoomMapsDir, model.name()+"_seis", " ");
+						zoomMapMaker.plotScatters(zoomScatterLocs, zoomScatterChars);
 					}
 					
 					List<Models> comps = comparisons.get(model);
@@ -272,11 +337,11 @@ public class HazardMapFigures {
 								+"%;\tmeanAbs="+twoDF.format(meanAbs)
 								+"%;\tmedianAbs="+twoDF.format(medianAbs)
 								+"%;\tmaxSigned="+twoDF.format(maxSigned)+"%");
-							
+
+							String prefix = model.name()+"_vs_"+comp.name();
+							String label = mapDiffLabel;
 							if (plotMaps) {
-								String prefix = model.name()+"_vs_"+comp.name();
 //								String label = model.getName()+" vs "+comp.getName()+", "+mapDiffLabel;
-								String label = mapDiffLabel;
 								if (compLabels.contains(model, comp))
 									label = compLabels.get(model, comp)+", "+label;
 								
@@ -290,22 +355,38 @@ public class HazardMapFigures {
 								}
 							}
 							
+							if (doSeis && zoomPDiff != null && (replot || !new File(zoomMapCompDir, prefix+"_seis.pdf").exists())) {
+								if (seisZoomScatterLocs == null) {
+									seisZoomScatterLocs = new LocationList(zoomScatterLocs);
+									seisZoomScatterChars = new ArrayList<>(zoomScatterChars);
+									fetchComcatEvents(seisZoomScatterLocs, seisZoomScatterChars);
+								}
+								
+								zoomMapMaker.plotScatters(seisZoomScatterLocs, seisZoomScatterChars);
+								zoomMapMaker.plotXYZData(zoomPDiff, cpt, label);
+								zoomMapMaker.plot(zoomMapCompDir, prefix+"_seis", " ");
+								zoomMapMaker.plotScatters(zoomScatterLocs, zoomScatterChars);
+							}
+							
 							compCSV.addLine(model.getName(), comp.getName(), twoDF.format(mean)+"%",
 									twoDF.format(meanAbs)+"%", twoDF.format(medianAbs)+"%", twoDF.format(maxSigned)+"%");
 							
 							if (texFW != null) {
 								String texPrefix = model.texName+"Vs"+comp.texName+perTexPrefix;
 								texFW.write(LaTeXUtils.defineValueCommand(texPrefix+"Mean", noZeroChangeFormat(oneDF, mean)+"%")+"\n");
+								texFW.write(LaTeXUtils.defineValueCommand(texPrefix+"AbsMean", noZeroChangeFormat(oneDF, Math.abs(mean))+"%")+"\n");
 								texFW.write(LaTeXUtils.defineValueCommand(texPrefix+"MeanAbs", noZeroChangeFormat(oneDF, meanAbs)+"%")+"\n");
 								texFW.write(LaTeXUtils.defineValueCommand(texPrefix+"MedianAbs", noZeroChangeFormat(oneDF, medianAbs)+"%")+"\n");
 								texFW.write(LaTeXUtils.defineValueCommand(texPrefix+"Max", noZeroChangeFormat(oneDF, maxSigned)+"%")+"\n");
+								texFW.write(LaTeXUtils.defineValueCommand(texPrefix+"AbsMax", noZeroChangeFormat(oneDF, Math.abs(maxSigned))+"%")+"\n");
 								
 								if (model == Models.AS_PUBLISHED && (comp == REF_FINITE_MODEL || comp == PROPOSED_FULL_MODEL)) {
 									// add extra rounded values
-									texFW.write(LaTeXUtils.defineValueCommand(texPrefix+"MeanRounded", noZeroChangeFormat(roundedDF, mean)+"%")+"\n");
+									// always absolute value for these (used in the text)
+									texFW.write(LaTeXUtils.defineValueCommand(texPrefix+"MeanRounded", noZeroChangeFormat(roundedDF, Math.abs(mean))+"%")+"\n");
 									texFW.write(LaTeXUtils.defineValueCommand(texPrefix+"MeanAbsRounded", noZeroChangeFormat(roundedDF, meanAbs)+"%")+"\n");
-									texFW.write(LaTeXUtils.defineValueCommand(texPrefix+"MedianAbsRounded", noZeroChangeFormat(roundedDF, medianAbs)+"%")+"\n");
-									texFW.write(LaTeXUtils.defineValueCommand(texPrefix+"MaxRounded", noZeroChangeFormat(roundedDF, maxSigned)+"%")+"\n");
+									texFW.write(LaTeXUtils.defineValueCommand(texPrefix+"MedianAbsRounded", noZeroChangeFormat(roundedDF, Math.abs(medianAbs))+"%")+"\n");
+									texFW.write(LaTeXUtils.defineValueCommand(texPrefix+"MaxRounded", noZeroChangeFormat(roundedDF, Math.abs(maxSigned))+"%")+"\n");
 								}
 							}
 						}
@@ -439,6 +520,19 @@ public class HazardMapFigures {
 		}
 		if (!comps.contains(to))
 			comps.add(to);
+	}
+	
+	private static void fetchComcatEvents(LocationList locs, List<PlotCurveCharacterstics> chars) {
+		double minMag = 5d;
+		ComcatRegion cReg = new ComcatRegionAdapter(ZOOM_GRID_REG);
+		long startTime = new GregorianCalendar(1900, 0, 1).getTimeInMillis();
+		long endTime = new GregorianCalendar(2023, 0, 1).getTimeInMillis();
+		ObsEqkRupList events = new ComcatAccessor().fetchEventList(
+				null, startTime, endTime, -1, 100d, cReg, false, false, minMag);
+		for (ObsEqkRupture event : events) {
+			locs.add(event.getHypocenterLocation());
+			chars.add(new PlotCurveCharacterstics(PlotSymbol.FILLED_CIRCLE, 2f, Colors.tab_purple));
+		}
 	}
 
 }

@@ -64,8 +64,12 @@ public class BranchScratch {
 		FaultSystemSolution fss = FaultSystemSolution.load(new File("/home/kevin/OpenSHA/nshm23/batch_inversions/"
 				+ "2024_02_02-nshm23_branches-WUS_FM_v3/results_WUS_FM_v3_branch_averaged.zip"));
 		
+		File outputDir = new File("/tmp");
 		Location loc = new Location(37.760, -121.937);
-		double radius = 10;
+//		double radius = 10;
+//		String prefix = "san_ramon_10km";
+		double radius = 20;
+		String prefix = "san_ramon_20km";
 		Region reg = new Region(loc, radius);
 		EvenlyDiscretizedFunc refMFD = FaultSysTools.initEmptyMFD(5.01, 8.49);
 		FaultSystemRupSet rupSet = fss.getRupSet();
@@ -82,7 +86,7 @@ public class BranchScratch {
 		for (int i=0; i<refMFD.size(); i++)
 			incrCSV.addLine((float)refMFD.getX(i)+"", (float)nuclMFD.getY(i)+"", (float)particMFD.getY(i)+"");
 		
-		incrCSV.writeToFile(new File("/tmp/san_ramon_10km_on_fault_incr.csv"));
+		incrCSV.writeToFile(new File(outputDir, prefix+"_on_fault_incr.csv"));
 		
 		CSVFile<String> cmlCSV = new CSVFile<>(true);
 		cmlCSV.addLine("Magnitude", "Nucleation Rate (1/yr)", "Participation Rate (1/yr)");
@@ -90,7 +94,7 @@ public class BranchScratch {
 		EvenlyDiscretizedFunc particCmlMFD = particMFD.getCumRateDistWithOffset();
 		for (int i=0; i<nuclCmlMFD.size(); i++)
 			cmlCSV.addLine((float)nuclCmlMFD.getX(i)+"", (float)nuclCmlMFD.getY(i)+"", (float)particCmlMFD.getY(i)+"");
-		cmlCSV.writeToFile(new File("/tmp/san_ramon_10km_on_fault_cml.csv"));
+		cmlCSV.writeToFile(new File(outputDir, prefix+"_on_fault_cml.csv"));
 		
 		double[] sectFracts = rupSet.getFractSectsInsideRegion(reg, false);
 		for (int s=0; s<sectFracts.length; s++) {

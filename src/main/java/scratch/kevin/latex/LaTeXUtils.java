@@ -158,6 +158,19 @@ public class LaTeXUtils {
 		return numberExpFormatFixedDecimal(number, decimalPlaces)+LATEX_ESCAPE_MAP.get('%');
 	}
 	
+	public static String numberAsOrdinal(int n) {
+		int mod100 = n % 100;
+		if (mod100 >= 11 && mod100 <= 13)
+			return n + "th";
+
+		switch (n % 10) {
+			case 1: return n + "st";
+			case 2: return n + "nd";
+			case 3: return n + "rd";
+			default: return n + "th";
+		}
+	}
+	
 	public static final String BEGIN_DYNVAL_INCLUDES_HEADER = "% begin dynval includes";
 	public static final String END_DYNVAL_INCLUDES_HEADER = "% end dynval includes";
 	
