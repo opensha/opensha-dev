@@ -48,33 +48,36 @@ public class DownDipInterfaceSubSectTests {
 	public static void main(String[] args) throws IOException {
 		Class<?> resourceClass = GeoJSONFaultSection.class;
 		
-//		String faultName = "Kermadec";
-//		int faultID = 0;
-//		String resourcePrefix = "/data/erf/nshm26/amsam/fault_models/subduction/";
-//		BufferedReader countoursIn = new BufferedReader(new InputStreamReader(
-//				resourceClass.getResourceAsStream(resourcePrefix+"ker_slab2_dep_10km_contours.xyz")));
-//		CSVFile<String> traceCSV = CSVFile.readStream(
-//				resourceClass.getResourceAsStream(resourcePrefix+"trenches_usgs_2017_depths_ker.csv"), true);
-//		boolean smoothTraceForDDW = true;
-//		String prefix = "ker_slab2";
-//		Range<Double> depthRange = Range.closed(0d, 60d);
-//		Range<Double> lonFilter = null;
-//		Range<Double> latFilter = Range.atLeast(-30d);
+		File baseOutputDir = new File("/home/kevin/OpenSHA/nshm26/down-dip-subsectioning");
+		Preconditions.checkState(baseOutputDir.exists() || baseOutputDir.mkdir());
 		
-		String faultName = "Izu-Bonin";
+		String faultName = "Kermadec";
 		int faultID = 0;
-		String resourcePrefix = "/data/erf/nshm26/gnmi/fault_models/subduction/";
+		String resourcePrefix = "/data/erf/nshm26/amsam/fault_models/subduction/";
 		BufferedReader countoursIn = new BufferedReader(new InputStreamReader(
-				GeoJSONFaultSection.class.getResourceAsStream(resourcePrefix+"izu_slab2_dep_10km_contours.xyz")));
+				resourceClass.getResourceAsStream(resourcePrefix+"ker_slab2_dep_10km_contours.xyz")));
 		CSVFile<String> traceCSV = CSVFile.readStream(
-				resourceClass.getResourceAsStream(resourcePrefix+"trenches_usgs_2017_depths_izu.csv"), true);
+				resourceClass.getResourceAsStream(resourcePrefix+"trenches_usgs_2017_depths_ker.csv"), true);
 		boolean smoothTraceForDDW = true;
-		String prefix = "izu_slab2";
+		String prefix = "ker_slab2";
 		Range<Double> depthRange = Range.closed(0d, 60d);
 		Range<Double> lonFilter = null;
-		Range<Double> latFilter = Range.atMost(27d);
+		Range<Double> latFilter = Range.atLeast(-30d);
 		
-		File outputDir = new File("/tmp/"+prefix);
+//		String faultName = "Izu-Bonin";
+//		int faultID = 0;
+//		String resourcePrefix = "/data/erf/nshm26/gnmi/fault_models/subduction/";
+//		BufferedReader countoursIn = new BufferedReader(new InputStreamReader(
+//				GeoJSONFaultSection.class.getResourceAsStream(resourcePrefix+"izu_slab2_dep_10km_contours.xyz")));
+//		CSVFile<String> traceCSV = CSVFile.readStream(
+//				resourceClass.getResourceAsStream(resourcePrefix+"trenches_usgs_2017_depths_izu.csv"), true);
+//		boolean smoothTraceForDDW = true;
+//		String prefix = "izu_slab2";
+//		Range<Double> depthRange = Range.closed(0d, 60d);
+//		Range<Double> lonFilter = null;
+//		Range<Double> latFilter = Range.atMost(27d);
+		
+		File outputDir = new File(baseOutputDir, prefix);
 		Preconditions.checkArgument(outputDir.exists() || outputDir.mkdir());
 		
 		double traceSmoothDist = 200d;

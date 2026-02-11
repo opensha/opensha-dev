@@ -40,10 +40,13 @@ import net.mahdilamb.colormap.Colors;
 public class DownDipRupSetBuildingTests {
 
 	public static void main(String[] args) throws IOException {
+		File baseOutputDir = new File("/home/kevin/OpenSHA/nshm26/down-dip-subsectioning");
+		Preconditions.checkState(baseOutputDir.exists() || baseOutputDir.mkdir());
+		
 		String prefix = "ker_slab2";
 //		String prefix = "izu_slab2";
 		
-		File inDir = new File("/tmp/"+prefix);
+		File inDir = new File(baseOutputDir, prefix);
 		File subSectsFile = new File(inDir, prefix+"_sub_sects.geojson");
 		List<GeoJSONFaultSection> sects = GeoJSONFaultReader.readFaultSections(subSectsFile);
 		File outDir = new File(inDir, "rup_set_debug");
@@ -52,6 +55,7 @@ public class DownDipRupSetBuildingTests {
 		boolean doAnimation = true;
 		boolean doSubSeisAnimation = false;
 		boolean writeIndvFrames = true;
+		boolean doMiddleRowOverlaps = true;
 		boolean buildRupSet = true;
 		
 		FaultSubsectionCluster fullCluster = new FaultSubsectionCluster(sects);
@@ -107,6 +111,27 @@ public class DownDipRupSetBuildingTests {
 		HeadlessGraphPanel gp = PlotUtils.initHeadless();
 		int gifWidth = 800;
 		double gifFPS = 5;
+		
+		if (doMiddleRowOverlaps) {
+			// do middle row down-dip
+			File middleRowDir = new File(outDir, "middle_row_overlap_dd");
+			Preconditions.checkArgument(middleRowDir.exists() || middleRowDir.mkdir());
+			for (FaultSection sect : middleRow) {
+				mapMaker.plotSectScalars(s-> s == sect ? Double.NaN : neighborOverlapsDD.getOverlap(sect, s),
+						overlapCPT, "Fractional Overlap");
+				
+				mapMaker.plot(middleRowDir, "col"+frameDF.format(sect.getSubSectionIndexAlong())+"_sect"+sect.getSectionId(), " ");
+				
+				if (sect.getSectionId() == 361 || sect.getSectionId() == 362) {
+					System.out.println("DD overlap debug from "+sect.getSectionName());
+					for (FaultSection oSect : sects) {
+						double overlap = neighborOverlapsDD.getOverlap(sect, oSect);
+						if (overlap > 0)
+							System.out.println("\t"+oSect.getSectionName()+":\t"+overlap);
+					}
+				}
+			}
+		}
 		
 		File animDir = new File(outDir, "animations");
 		Preconditions.checkArgument(!doAnimation || animDir.exists() || animDir.mkdir());
