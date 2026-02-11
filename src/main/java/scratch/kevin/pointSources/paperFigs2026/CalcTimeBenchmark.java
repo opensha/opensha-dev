@@ -69,21 +69,21 @@ public class CalcTimeBenchmark {
 	/*
 	 * for quicker and dirtier stats
 	 */
-	private static final double MIN_SPINUP_TIME = 60d;
-	private static final int MIN_SPINUP_ROUNDS = 1;
-	
-	private static final double MIN_BENCHMARK_TIME = 60d;
-	private static final int MIN_BENCHMARK_ROUNDS = 3;
-	private static final int THREADS = 10;
+//	private static final double MIN_SPINUP_TIME = 60d;
+//	private static final int MIN_SPINUP_ROUNDS = 1;
+//	
+//	private static final double MIN_BENCHMARK_TIME = 60d;
+//	private static final int MIN_BENCHMARK_ROUNDS = 3;
+//	private static final int THREADS = 10;
 	/*
 	 * for production stats
 	 */
-//	private static final double MIN_SPINUP_TIME = 60d;
-//	private static final int MIN_SPINUP_ROUNDS = 2;
-//	
-//	private static final double MIN_BENCHMARK_TIME = 600d; // 10 minutes
-//	private static final int MIN_BENCHMARK_ROUNDS = 5;
-//	private static final int THREADS = 1;
+	private static final double MIN_SPINUP_TIME = 60d;
+	private static final int MIN_SPINUP_ROUNDS = 2;
+	
+	private static final double MIN_BENCHMARK_TIME = 600d; // 10 minutes
+	private static final int MIN_BENCHMARK_ROUNDS = 5;
+	private static final int THREADS = 1;
 
 	private static final boolean ADD_ON_FAULT = true;
 	private static final boolean CACHE_GRID_SOURCES = true;
@@ -92,8 +92,30 @@ public class CalcTimeBenchmark {
 		SurfaceCachingPolicy.force(CacheTypes.THREAD_LOCAL);
 		ModuleContainer.VERBOSE_DEFAULT = false;
 		
+		File outputDir, solFile;
+		boolean optimize;
+		
+		boolean loadExisting;
+		
+		if (args.length == 0) {
+			outputDir = FIGURES_DIR;
+			solFile = ORIG_SOL_FILE;
+			optimize = true;
+			loadExisting = false;
+		} else {
+			Preconditions.checkState(args.length == 3, "Usage: <output-dir> <sol-file> <optimize>");
+			outputDir = new File(args[0]);
+			Preconditions.checkState(outputDir.exists() || outputDir.mkdir(),
+					"Output dir doesn't exist and couldn't be created: %s", outputDir.getAbsolutePath());
+			solFile = new File(args[1]);
+			Preconditions.checkState(solFile.exists(), "Solution file doesn't exist: %s", solFile.getAbsolutePath());
+			optimize = Boolean.parseBoolean(args[2]);
+			loadExisting = false;
+		}
+		
+		System.out.println("Loading solution and instantiating ERF");
 		BaseFaultSystemSolutionERF erf = new BaseFaultSystemSolutionERF();
-		erf.setSolution(FaultSystemSolution.load(ORIG_SOL_FILE));
+		erf.setSolution(FaultSystemSolution.load(solFile));
 		
 //		// test to see the memory requirements of 100x
 //		erf.setParameter(IncludeBackgroundParam.NAME, IncludeBackgroundOption.ONLY);
@@ -120,17 +142,31 @@ public class CalcTimeBenchmark {
 //		System.out.println("Iterated over "+groupedDF.format(sourceCount)+" sources and "+groupedDF.format(rupCount)+" ruptures");
 //		System.exit(0);
 		
-		File outputDir = FIGURES_DIR;
+		String outputPrefix, texPrefix;
+		if (optimize) {
+			outputPrefix = "benchmark_stats_optimized";
+			texPrefix = "BenchmarkOptimized";
+		} else {
+			outputPrefix = "benchmark_stats";
+			texPrefix = "Benchmark";
+		}
 		
-		boolean loadExisting = false;
+		System.out.println("***************************************");
+		System.out.println("Benchmarking with ADD_ON_FAULT="+ADD_ON_FAULT
+				+", CACHE_GRID_SOURCES="+CACHE_GRID_SOURCES+", optimize="+optimize+", THREADS="+THREADS);
+		System.out.println("\tSpinup settings:\t"+MIN_SPINUP_ROUNDS+" rounds in "+(float)MIN_SPINUP_TIME+"s");
+		System.out.println("\tBenchmark settings:\t"+MIN_BENCHMARK_ROUNDS+" rounds in "+(float)MIN_BENCHMARK_TIME+"s");
+		System.out.println("\tOutput dir:\t"+outputDir.getAbsolutePath());
+		System.out.println("\tOutput prefix:\t"+outputPrefix);
+		System.out.println("***************************************");
 		
 //		boolean optimize = true;
 //		String outputPrefix = "benchmark_stats_optimized";
 //		String texPrefix = "BenchmarkOptimized";
 		
-		boolean optimize = false;
-		String outputPrefix = "benchmark_stats";
-		String texPrefix = "Benchmark";
+//		boolean optimize = false;
+//		String outputPrefix = "benchmark_stats";
+//		String texPrefix = "Benchmark";
 		
 		List<Location> siteLocs = new ArrayList<>();
 		Region siteReg = NSHM23_RegionLoader.loadFullConterminousWUS();
@@ -214,7 +250,19 @@ public class CalcTimeBenchmark {
 		
 		if (loadExisting) {
 			CSVFile<String> csv = CSVFile.readFile(csvFile, true);
-			for (int row=1; row<csv.getNumRows(); row++) {
+			int startRow=1;
+			if (ADD_ON_FAULT) {
+				Preconditions.checkState(csv.get(startRow, 0).equals("On-Fault"), "Expected on-fault to be first");
+				int rounds = csv.getInt(startRow, 1);
+				int curves = csv.getInt(startRow, 2);
+				double median = csv.getDouble(startRow, 4);
+				List<Double> batchTimes = new ArrayList<>(rounds);
+				for (int i=0; i<rounds; i++)
+					batchTimes.add(median);
+				onFaultResult = new BenchmarkResult(curves/rounds, batchTimes);
+				startRow++;
+			}
+			for (int row=startRow; row<csv.getNumRows(); row++) {
 				String name = csv.get(row, 0);
 				Models model = null;
 				for (Models candidate : models) {
@@ -226,21 +274,30 @@ public class CalcTimeBenchmark {
 				Preconditions.checkNotNull(model, "Didn't find a match for %s", name);
 				int rounds = csv.getInt(row, 1);
 				int curves = csv.getInt(row, 2);
-//				double totalTime = csv.getDouble(row, 3);
 				double median = csv.getDouble(row, 4);
-//				double rate = csv.getDouble(row, 5);
 				List<Double> batchTimes = new ArrayList<>(rounds);
 				for (int i=0; i<rounds; i++)
 					batchTimes.add(median);
-				results.put(model, new BenchmarkResult(curves/rounds, batchTimes));
-			}
-		} else {
-			for (Models model : models) {
-				BenchmarkResult result = benchmark(erf, gmms, sites, calcs, logXVals, exec, model);
+				BenchmarkResult result = new BenchmarkResult(curves/rounds, batchTimes);
 				if (ADD_ON_FAULT)
 					result = addOnFault(result, onFaultResult);
 				results.put(model, result);
 			}
+		} else {
+			CSVFile<String> csv = new CSVFile<>(true);
+			csv.addLine("Name", "Rounds Calculated", "Curves Calculated", "Total Time (s)", "Median Round Time (s)", "Median Rate (/s)");
+			if (ADD_ON_FAULT)
+				csv.addLine("On-Fault", onFaultResult.numRounds+"", onFaultResult.curvesCalculated+"",
+						secDF.format(onFaultResult.totalTimeSec), secDF.format(onFaultResult.medianBatchTime), (float)onFaultResult.curvesPerSec+"");
+			for (Models model : models) {
+				BenchmarkResult result = benchmark(erf, gmms, sites, calcs, logXVals, exec, model);
+				csv.addLine(model.getName(), result.numRounds+"", result.curvesCalculated+"",
+						secDF.format(result.totalTimeSec), secDF.format(result.medianBatchTime), (float)result.curvesPerSec+"");
+				if (ADD_ON_FAULT)
+					result = addOnFault(result, onFaultResult);
+				results.put(model, result);
+			}
+			csv.writeToFile(csvFile);
 		}
 		
 		if (exec != null)
@@ -249,8 +306,6 @@ public class CalcTimeBenchmark {
 		File texFile = new File(outputDir, outputPrefix+".tex");
 		File texTemp = new File(outputDir, texFile.getName()+".tmp");
 		FileWriter texFW = new FileWriter(texTemp);
-		CSVFile<String> csv = new CSVFile<>(true);
-		csv.addLine("Name", "Rounds Calculated", "Curves Calculated", "Total Time (s)", "Median Round Time (s)", "Median Rate (/s)");
 
 		DecimalFormat oneDF = new DecimalFormat("0.0");
 		DecimalFormat intDF = new DecimalFormat("0");
@@ -261,8 +316,6 @@ public class CalcTimeBenchmark {
 			BenchmarkResult result = results.get(model);
 			Preconditions.checkNotNull(result, "No result calculated for %s", model);
 			System.out.println(result);
-			csv.addLine(model.getName(), result.numRounds+"", result.curvesCalculated+"",
-					secDF.format(result.totalTimeSec), secDF.format(result.medianBatchTime), (float)result.curvesPerSec+"");
 			
 			for (Models comp : comparisons.get(model)) {
 				System.out.println("Compared against: "+comp.getName());
@@ -287,8 +340,6 @@ public class CalcTimeBenchmark {
 		
 		texFW.close();
 		Files.move(texTemp, texFile);
-		if (!loadExisting)
-			csv.writeToFile(csvFile);
 	}
 	
 	private static String getPDiffStr(double pDiff) {

@@ -118,7 +118,7 @@ public class PaperHazardScriptWriter {
 		GridSourceList origGridded = inputSol.requireModule(GridSourceList.class);
 		
 		for (Models model : Models.values()) {
-			System.out.println("Writing "+model.name+" to "+model.mapDir.getName());
+			System.out.println("Writing "+model.name+" to "+model.getMapDir().getName());
 			String gridArgz = model.getGridArgs();
 			Function<GridSourceList, GridSourceList> gridFunc = model.getGridModFunction();
 			System.out.println("\t"+gridArgz);
@@ -133,7 +133,7 @@ public class PaperHazardScriptWriter {
 			boolean[] zooms = {false, true};
 			
 			for (boolean zoom : zooms) {
-				File localDir = zoom ? model.zoomMapDir : model.mapDir;
+				File localDir = zoom ? model.getZoomMapDir() : model.getMapDir();
 				GriddedRegion gridReg = zoom ? ZOOM_GRID_REG : FULL_GRID_REG;
 				
 				Preconditions.checkState(localDir.exists() || localDir.mkdir());

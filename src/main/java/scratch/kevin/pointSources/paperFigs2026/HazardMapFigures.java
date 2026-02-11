@@ -157,10 +157,10 @@ public class HazardMapFigures {
 		ZipFile[] modelZoomZips = new ZipFile[models.length];
 		for (int i=0; i<models.length; i++) {
 			Models model = models[i];
-			File mapFile = new File(model.mapDir, mapZipName);
+			File mapFile = new File(model.getMapDir(), mapZipName);
 			if (mapFile.exists())
 				modelZips[i] = new ZipFile(mapFile);
-			File zoomFile = new File(model.zoomMapDir, mapZipName);
+			File zoomFile = new File(model.getZoomMapDir(), mapZipName);
 			if (zoomFile.exists())
 				modelZoomZips[i] = new ZipFile(zoomFile);
 		}

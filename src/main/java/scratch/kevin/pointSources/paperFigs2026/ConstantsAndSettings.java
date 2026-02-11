@@ -12,7 +12,6 @@ import java.util.Set;
 import java.util.function.Function;
 
 import org.apache.commons.lang3.exception.ExceptionUtils;
-import org.opensha.commons.calc.magScalingRelations.MagLengthRelationship;
 import org.opensha.commons.calc.magScalingRelations.magScalingRelImpl.Leonard2010_MagLengthRelationship;
 import org.opensha.commons.data.Named;
 import org.opensha.commons.data.function.XY_DataSet;
@@ -25,7 +24,6 @@ import org.opensha.commons.geo.Region;
 import org.opensha.commons.mapping.PoliticalBoundariesData;
 import org.opensha.sha.earthquake.PointSource.FocalMechRuptureSurfaceBuilder;
 import org.opensha.sha.earthquake.faultSysSolution.modules.GridSourceList;
-import org.opensha.sha.earthquake.faultSysSolution.modules.GridSourceList.GriddedRupture;
 import org.opensha.sha.earthquake.faultSysSolution.modules.GridSourceList.GriddedRuptureProperties;
 import org.opensha.sha.earthquake.param.BackgroundRupType;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.util.NSHM23_RegionLoader;
@@ -36,9 +34,7 @@ import org.opensha.sha.faultSurface.PointSurface;
 import org.opensha.sha.faultSurface.RuptureSurface;
 import org.opensha.sha.faultSurface.utils.PointSurfaceBuilder;
 import org.opensha.sha.faultSurface.utils.ptSrcCorr.PointSourceDistanceCorrections;
-import org.opensha.sha.magdist.IncrementalMagFreqDist;
 import org.opensha.sha.util.FocalMech;
-import org.opensha.sha.util.NEHRP_TestCity;
 import org.opensha.sha.util.TectonicRegionType;
 
 import com.google.common.base.Preconditions;
@@ -48,7 +44,15 @@ public class ConstantsAndSettings {
 	public static final File PAPER_DIR =new File("/home/kevin/Documents/papers/2026_nshm_grid_seis_dist_corr/papers-2026-nshm-grid-seis-dist-corrs");
 	public static final File FIGURES_DIR =new File(PAPER_DIR, "Figures");
 	
-	public static final File INV_DIR = new File("/data/kevin/nshm23/batch_inversions/");
+	public static final File INV_DIR;
+	static {
+		File testDir = new File("/data/kevin/nshm23/batch_inversions/");
+		if (testDir.exists()) {
+			INV_DIR = testDir;
+		} else {
+			INV_DIR = new File("/project2/scec_608/kmilner/fss_inversions/");
+		}
+	}
 	
 	public static final File ORIG_SOL_DIR = new File(INV_DIR, "2024_02_02-nshm23_branches-WUS_FM_v3");
 	public static final File ORIG_SOL_FILE = new File(ORIG_SOL_DIR, "results_WUS_FM_v3_branch_averaged_gridded.zip");
@@ -255,9 +259,7 @@ public class ConstantsAndSettings {
 		public final double pointFiniteMinMag;
 		public final boolean supersample;
 		public final Long customRandSeed;
-		
-		public final File mapDir;
-		public final File zoomMapDir;
+		public final String mapDirSuffix;
 		
 		// point surface constructor
 		private Models(String name, String texName,
@@ -304,8 +306,15 @@ public class ConstantsAndSettings {
 			this.pointFiniteMinMag = pointFiniteMinMag;
 			this.supersample = supersample;
 			this.customRandSeed = customRandSeed;
-			this.mapDir = new File(INV_DIR, HAZARD_MODEL_PREFIX+"-"+mapDirSuffix);
-			this.zoomMapDir = new File(INV_DIR, HAZARD_MODEL_ZOOM_PREFIX+"-"+mapDirSuffix);
+			this.mapDirSuffix = mapDirSuffix;
+		}
+		
+		public File getMapDir() {
+			return new File(INV_DIR, HAZARD_MODEL_PREFIX+"-"+mapDirSuffix);
+		}
+		
+		public File getZoomMapDir() {
+			return new File(INV_DIR, HAZARD_MODEL_ZOOM_PREFIX+"-"+mapDirSuffix);
 		}
 
 		@Override
@@ -370,11 +379,10 @@ public class ConstantsAndSettings {
 		for (Models model : Models.values()) {
 			Preconditions.checkState(!names.contains(model.name), "Duplicate model name: %s", model.name);
 			Preconditions.checkState(!texNames.contains(model.texName), "Duplicate model tex name: %s", model.texName);
-			String dirName = model.mapDir.getName();
-			Preconditions.checkState(!dirNames.contains(dirName), "Duplicate model directory name: %s", dirName);
+			Preconditions.checkState(!dirNames.contains(model.mapDirSuffix), "Duplicate model directory name: %s", model.mapDirSuffix);
 			names.add(model.name);
 			texNames.add(model.texName);
-			dirNames.add(dirName);
+			dirNames.add(model.mapDirSuffix);
 		}
 	}
 	
