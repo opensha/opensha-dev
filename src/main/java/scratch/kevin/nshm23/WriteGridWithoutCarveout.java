@@ -19,6 +19,7 @@ import org.opensha.commons.logicTree.LogicTreeLevel;
 import org.opensha.commons.logicTree.LogicTreeNode;
 import org.opensha.commons.util.modules.AverageableModule.AveragingAccumulator;
 import org.opensha.commons.util.modules.OpenSHA_Module;
+import org.opensha.sha.earthquake.PointSource;
 import org.opensha.sha.earthquake.ProbEqkSource;
 import org.opensha.sha.earthquake.faultSysSolution.FaultSystemSolution;
 import org.opensha.sha.earthquake.faultSysSolution.modules.FaultGridAssociations;
@@ -322,7 +323,7 @@ public class WriteGridWithoutCarveout {
 		}
 
 		@Override
-		protected ProbEqkSource buildSource(int gridIndex, IncrementalMagFreqDist mfd, double duration,
+		protected PointSource buildSource(int gridIndex, IncrementalMagFreqDist mfd, double duration,
 				GriddedSeismicitySettings gridSourceSettings) {
 			throw new IllegalStateException();
 		}
