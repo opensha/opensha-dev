@@ -87,6 +87,11 @@ public class CalcTimeBenchmark {
 
 	private static final boolean ADD_ON_FAULT = true;
 	private static final boolean CACHE_GRID_SOURCES = true;
+	
+	private static final String OPTIMIZED_TEX_PREFIX = "BenchmarkOptimized";
+	private static final String BASELINE_TEX_PREFIX = "Benchmark";
+	private static final String OPTIMIZED_PREFIX = "benchmark_stats_optimized";
+	private static final String BASELINE_PREFIX = "benchmark_stats";
 
 	public static void main(String[] args) throws IOException {
 		SurfaceCachingPolicy.force(CacheTypes.THREAD_LOCAL);
@@ -101,7 +106,7 @@ public class CalcTimeBenchmark {
 			outputDir = FIGURES_DIR;
 			solFile = ORIG_SOL_FILE;
 			optimize = true;
-			loadExisting = false;
+			loadExisting = true;
 		} else {
 			Preconditions.checkState(args.length == 3, "Usage: <output-dir> <sol-file> <optimize>");
 			outputDir = new File(args[0]);
@@ -142,14 +147,8 @@ public class CalcTimeBenchmark {
 //		System.out.println("Iterated over "+groupedDF.format(sourceCount)+" sources and "+groupedDF.format(rupCount)+" ruptures");
 //		System.exit(0);
 		
-		String outputPrefix, texPrefix;
-		if (optimize) {
-			outputPrefix = "benchmark_stats_optimized";
-			texPrefix = "BenchmarkOptimized";
-		} else {
-			outputPrefix = "benchmark_stats";
-			texPrefix = "Benchmark";
-		}
+		String outputPrefix = optimize ? OPTIMIZED_PREFIX : BASELINE_PREFIX;
+		String texPrefix = optimize ? OPTIMIZED_TEX_PREFIX : BASELINE_TEX_PREFIX;
 		
 		System.out.println("***************************************");
 		System.out.println("Benchmarking with ADD_ON_FAULT="+ADD_ON_FAULT
@@ -243,7 +242,7 @@ public class CalcTimeBenchmark {
 				comparisons.get(model).add(Models.AS_PUBLISHED);
 		// compare all to as proposed
 		for (Models model : models)
-			if (model != PROPOSED_DIST_CORR_MODEL)
+			if (model != PROPOSED_DIST_CORR_MODEL && model != Models.AS_PUBLISHED)
 				comparisons.get(model).add(PROPOSED_DIST_CORR_MODEL);
 		
 		Map<Models, BenchmarkResult> results = new HashMap<>();
@@ -252,7 +251,8 @@ public class CalcTimeBenchmark {
 			CSVFile<String> csv = CSVFile.readFile(csvFile, true);
 			int startRow=1;
 			if (ADD_ON_FAULT) {
-				Preconditions.checkState(csv.get(startRow, 0).equals("On-Fault"), "Expected on-fault to be first");
+				String firstName = csv.get(startRow, 0);
+				Preconditions.checkState(firstName.equals("On-Fault"), "Expected on-fault to be first, encountered: %s", firstName);
 				int rounds = csv.getInt(startRow, 1);
 				int curves = csv.getInt(startRow, 2);
 				double median = csv.getDouble(startRow, 4);
@@ -272,16 +272,7 @@ public class CalcTimeBenchmark {
 					}
 				}
 				Preconditions.checkNotNull(model, "Didn't find a match for %s", name);
-				int rounds = csv.getInt(row, 1);
-				int curves = csv.getInt(row, 2);
-				double median = csv.getDouble(row, 4);
-				List<Double> batchTimes = new ArrayList<>(rounds);
-				for (int i=0; i<rounds; i++)
-					batchTimes.add(median);
-				BenchmarkResult result = new BenchmarkResult(curves/rounds, batchTimes);
-				if (ADD_ON_FAULT)
-					result = addOnFault(result, onFaultResult);
-				results.put(model, result);
+				results.put(model, loadResultCSVRow(csv, row, onFaultResult));
 			}
 		} else {
 			CSVFile<String> csv = new CSVFile<>(true);
@@ -338,8 +329,57 @@ public class CalcTimeBenchmark {
 			System.out.println("**************************************\n");
 		}
 		
+		File baselineCSV = new File(outputDir, BASELINE_PREFIX+".csv");
+		if (optimize && baselineCSV.exists()) {
+			// compare optimized to baseline
+			CSVFile<String> csv = CSVFile.readFile(baselineCSV, true);
+			
+			for (int row=1; row<csv.getNumRows(); row++) {
+				String name = csv.get(row, 0).trim();
+				Models model = null;
+				for (Models candidate : models) {
+					if (candidate.name.equals(name)) {
+						model = candidate;
+						break;
+					}
+				}
+				if (model == null || model.finiteNum >= 1)
+					continue;
+				BenchmarkResult result = results.get(model);
+				BenchmarkResult compResult = loadResultCSVRow(csv, row, onFaultResult);
+				double speedup = result.curvesPerSec/compResult.curvesPerSec;
+				double invSpeedup = 1d/speedup;
+				double pDiff = 100d*(result.curvesPerSec - compResult.curvesPerSec)/compResult.curvesPerSec;
+				double invPDiff = 100d*(compResult.curvesPerSec - result.curvesPerSec)/result.curvesPerSec;
+				System.out.println("**************************************");
+				System.out.println("Compared Optimized vs Baseline: "+model.getName());
+				texFW.write("% "+model.getName()+" Optimized vs Baseline\n");
+				texFW.write(LaTeXUtils.defineValueCommand(texPrefix+model.texName+"VsBaseline", oneDF.format(speedup))+"\n");
+				texFW.write(LaTeXUtils.defineValueCommand(BASELINE_TEX_PREFIX+""+model.texName+"VsOptimized", oneDF.format(invSpeedup))+"\n");
+				texFW.write(LaTeXUtils.defineValueCommand(texPrefix+"Percent"+model.texName+"VsBaseline", getPDiffStr(pDiff))+"\n");
+				texFW.write(LaTeXUtils.defineValueCommand(BASELINE_TEX_PREFIX+"Percent"+model.texName+"VsOptimized", getPDiffStr(invPDiff))+"\n");
+				System.out.println("\tSpeedup:\t"+(float)speedup+"\t("+getPDiffStr(pDiff)+")");
+				System.out.println("\tInv. Speedup:\t"+(float)(1d/speedup)+"\t("+getPDiffStr(invPDiff)+")");
+				texFW.write("\n");
+				System.out.println("**************************************\n");
+			}
+		}
+		
 		texFW.close();
 		Files.move(texTemp, texFile);
+	}
+	
+	private static BenchmarkResult loadResultCSVRow(CSVFile<String> csv, int row, BenchmarkResult onFaultResult) {
+		int rounds = csv.getInt(row, 1);
+		int curves = csv.getInt(row, 2);
+		double median = csv.getDouble(row, 4);
+		List<Double> batchTimes = new ArrayList<>(rounds);
+		for (int i=0; i<rounds; i++)
+			batchTimes.add(median);
+		BenchmarkResult result = new BenchmarkResult(curves/rounds, batchTimes);
+		if (ADD_ON_FAULT)
+			result = addOnFault(result, onFaultResult);
+		return result;
 	}
 	
 	private static String getPDiffStr(double pDiff) {

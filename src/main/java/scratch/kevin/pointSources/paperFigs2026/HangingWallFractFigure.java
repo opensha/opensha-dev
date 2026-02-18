@@ -85,7 +85,7 @@ public class HangingWallFractFigure {
 		
 		gp.drawGraphPanel(plot, false, false, new Range(0d, distances.getMaxX()), new Range(0.5, 1d));
 		
-		PlotUtils.writePlots(outputDir, prefix, gp, 800, 600, true, true, false);
+		PlotUtils.writePlots(outputDir, prefix, gp, 700, 600, true, true, false);
 	}
 	
 	private static EvenlyDiscretizedFunc calc(Location gridLoc, EvenlyDiscretizedFunc distances, RectangularSurface[] surfs) {

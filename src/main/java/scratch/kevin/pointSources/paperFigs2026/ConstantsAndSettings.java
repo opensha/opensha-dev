@@ -26,6 +26,7 @@ import org.opensha.sha.earthquake.PointSource.FocalMechRuptureSurfaceBuilder;
 import org.opensha.sha.earthquake.faultSysSolution.modules.GridSourceList;
 import org.opensha.sha.earthquake.faultSysSolution.modules.GridSourceList.GriddedRuptureProperties;
 import org.opensha.sha.earthquake.param.BackgroundRupType;
+import org.opensha.sha.earthquake.rupForecastImpl.PointSourceNshm;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.util.NSHM23_RegionLoader;
 import org.opensha.sha.earthquake.util.GridCellSupersamplingSettings;
 import org.opensha.sha.earthquake.util.GriddedFiniteRuptureSettings;
@@ -616,6 +617,8 @@ public class ConstantsAndSettings {
 	 * WC 94 RLD (subsurface rupture length) formula (table 2A, "All" case
 	 */
 	public static final Function<GriddedRuptureProperties, Double> WC94_RLD = P -> WC94_RLD_ML.apply(P.magnitude);
+	
+	public static final FocalMechRuptureSurfaceBuilder ORIG_SURF_BUILDER = PointSourceNshm.SURF_BUILDER_DEFAULT;
 	
 	public static final FocalMechRuptureSurfaceBuilder UPDATED_SURF_BUILDER = new FocalMechRuptureSurfaceBuilder() {
 		
