@@ -103,9 +103,9 @@ public class CalcTimeBenchmark {
 		boolean loadExisting;
 		
 		if (args.length == 0) {
-			outputDir = FIGURES_DIR;
+			outputDir = new File(FIGURES_DIR, "benchmark_stats_local");
 			solFile = ORIG_SOL_FILE;
-			optimize = true;
+			optimize = false;
 			loadExisting = true;
 		} else {
 			Preconditions.checkState(args.length == 3, "Usage: <output-dir> <sol-file> <optimize>");
@@ -248,6 +248,7 @@ public class CalcTimeBenchmark {
 		Map<Models, BenchmarkResult> results = new HashMap<>();
 		
 		if (loadExisting) {
+			System.out.println("Reading from CSV: "+csvFile.getAbsolutePath());
 			CSVFile<String> csv = CSVFile.readFile(csvFile, true);
 			int startRow=1;
 			if (ADD_ON_FAULT) {
@@ -269,6 +270,8 @@ public class CalcTimeBenchmark {
 					if (candidate.name.equals(name)) {
 						model = candidate;
 						break;
+//					} else {
+//						System.out.println("\t'"+candidate.name+"'.equals('"+name+"'): false");
 					}
 				}
 				Preconditions.checkNotNull(model, "Didn't find a match for %s", name);
@@ -297,9 +300,6 @@ public class CalcTimeBenchmark {
 		File texFile = new File(outputDir, outputPrefix+".tex");
 		File texTemp = new File(outputDir, texFile.getName()+".tmp");
 		FileWriter texFW = new FileWriter(texTemp);
-
-		DecimalFormat oneDF = new DecimalFormat("0.0");
-		DecimalFormat intDF = new DecimalFormat("0");
 		
 		for (Models model : models) {
 			System.out.println("**************************************");
@@ -317,8 +317,8 @@ public class CalcTimeBenchmark {
 				double pDiff = 100d*(result.curvesPerSec - compResult.curvesPerSec)/compResult.curvesPerSec;
 				double invPDiff = 100d*(compResult.curvesPerSec - result.curvesPerSec)/result.curvesPerSec;
 				texFW.write("% "+model.getName()+" vs "+comp.getName()+"\n");
-				texFW.write(LaTeXUtils.defineValueCommand(texPrefix+model.texName+"Vs"+comp.texName, oneDF.format(speedup))+"\n");
-				texFW.write(LaTeXUtils.defineValueCommand(texPrefix+""+comp.texName+"Vs"+model.texName, oneDF.format(invSpeedup))+"\n");
+				texFW.write(LaTeXUtils.defineValueCommand(texPrefix+model.texName+"Vs"+comp.texName, getSpeedupTexStr(speedup))+"\n");
+				texFW.write(LaTeXUtils.defineValueCommand(texPrefix+""+comp.texName+"Vs"+model.texName, getSpeedupTexStr(invSpeedup))+"\n");
 				texFW.write(LaTeXUtils.defineValueCommand(texPrefix+"Percent"+model.texName+"Vs"+comp.texName, getPDiffStr(pDiff))+"\n");
 				texFW.write(LaTeXUtils.defineValueCommand(texPrefix+"Percent"+comp.texName+"Vs"+model.texName, getPDiffStr(invPDiff))+"\n");
 				System.out.println("\tSpeedup:\t"+(float)speedup+"\t("+getPDiffStr(pDiff)+")");
@@ -354,8 +354,8 @@ public class CalcTimeBenchmark {
 				System.out.println("**************************************");
 				System.out.println("Compared Optimized vs Baseline: "+model.getName());
 				texFW.write("% "+model.getName()+" Optimized vs Baseline\n");
-				texFW.write(LaTeXUtils.defineValueCommand(texPrefix+model.texName+"VsBaseline", oneDF.format(speedup))+"\n");
-				texFW.write(LaTeXUtils.defineValueCommand(BASELINE_TEX_PREFIX+""+model.texName+"VsOptimized", oneDF.format(invSpeedup))+"\n");
+				texFW.write(LaTeXUtils.defineValueCommand(texPrefix+model.texName+"VsBaseline", getSpeedupTexStr(speedup))+"\n");
+				texFW.write(LaTeXUtils.defineValueCommand(BASELINE_TEX_PREFIX+""+model.texName+"VsOptimized", getSpeedupTexStr(invSpeedup))+"\n");
 				texFW.write(LaTeXUtils.defineValueCommand(texPrefix+"Percent"+model.texName+"VsBaseline", getPDiffStr(pDiff))+"\n");
 				texFW.write(LaTeXUtils.defineValueCommand(BASELINE_TEX_PREFIX+"Percent"+model.texName+"VsOptimized", getPDiffStr(invPDiff))+"\n");
 				System.out.println("\tSpeedup:\t"+(float)speedup+"\t("+getPDiffStr(pDiff)+")");
@@ -368,6 +368,9 @@ public class CalcTimeBenchmark {
 		texFW.close();
 		Files.move(texTemp, texFile);
 	}
+
+	private static final DecimalFormat oneDF = new DecimalFormat("0.0");
+	private static final DecimalFormat intDF = new DecimalFormat("0");
 	
 	private static BenchmarkResult loadResultCSVRow(CSVFile<String> csv, int row, BenchmarkResult onFaultResult) {
 		int rounds = csv.getInt(row, 1);
@@ -380,6 +383,12 @@ public class CalcTimeBenchmark {
 		if (ADD_ON_FAULT)
 			result = addOnFault(result, onFaultResult);
 		return result;
+	}
+	
+	private static String getSpeedupTexStr(double speedup) {
+		if (speedup >= 9.5d)
+			return intDF.format(speedup);
+		return oneDF.format(speedup);
 	}
 	
 	private static String getPDiffStr(double pDiff) {
