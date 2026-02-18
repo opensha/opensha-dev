@@ -201,7 +201,8 @@ public class U3_EAL_ExampleCalc {
 		
 		// add EAL at the bottom
 		csv.addLine("");
-		csv.addLine("EAL:", eal+"");
+		csv.addLine("EAL (from cond. losses):", eal+"");
+		csv.addLine("EAL (traditional):", calcEAL+"");
 		
 		csv.writeToFile(outputCSV);
 	}
