@@ -58,11 +58,13 @@ public class HazardMapFigures {
 
 	public static void main(String[] args) throws IOException {
 		double[] periods = { 0d, 1d };
-		ReturnPeriods[] rps = { ReturnPeriods.TWO_IN_50 };
+		ReturnPeriods[] rps = { ReturnPeriods.TWO_IN_50, ReturnPeriods.TEN_IN_50 };
 		
-		double[] texPeriods = { 0d, 1d };
-		ReturnPeriods texRP = ReturnPeriods.TWO_IN_50;
+		Map<ReturnPeriods, String> texRPSuffixes = new HashMap<>();
+		texRPSuffixes.put(ReturnPeriods.TWO_IN_50, "");
+		texRPSuffixes.put(ReturnPeriods.TEN_IN_50, "TenFifty");
 		
+		ReturnPeriods[] mapRPs = { ReturnPeriods.TWO_IN_50 };
 		boolean replot = false;
 		
 		String mapZipName = "results_hazard_INCLUDE.zip";
@@ -71,8 +73,9 @@ public class HazardMapFigures {
 		Preconditions.checkState(hazardDir.exists() || hazardDir.mkdir());
 		
 		Map<Models, List<Models>> comparisons = new HashMap<>();
-		
+
 		Table<Models, Models, String> compLabels = HashBasedTable.create();
+		Table<Models, Models, Boolean> compForceTights = HashBasedTable.create();
 		
 		Models[] models = Models.values();
 		Models prevModel = null;
@@ -101,16 +104,42 @@ public class HazardMapFigures {
 		
 		// alt random and realization count tests
 		compAdd(comparisons, Models.FINITE_1X_UNCENTERED, Models.FINITE_1X_UNCENTERED_ALT_RAND);
+		compLabels.put(Models.FINITE_1X_UNCENTERED, Models.FINITE_1X_UNCENTERED_ALT_RAND, "Virtual faults (1x)");
+		compForceTights.put(Models.FINITE_1X_UNCENTERED, Models.FINITE_1X_UNCENTERED_ALT_RAND, true);
+		
 		compAdd(comparisons, Models.FINITE_2X_UNCENTERED, Models.FINITE_2X_UNCENTERED_ALT_RAND);
+		compLabels.put(Models.FINITE_2X_UNCENTERED, Models.FINITE_2X_UNCENTERED_ALT_RAND, "Virtual faults (2x)");
+		compForceTights.put(Models.FINITE_2X_UNCENTERED, Models.FINITE_2X_UNCENTERED_ALT_RAND, true);
+		
 		compAdd(comparisons, Models.FINITE_5X_UNCENTERED, Models.FINITE_5X_UNCENTERED_ALT_RAND);
+		compLabels.put(Models.FINITE_5X_UNCENTERED, Models.FINITE_5X_UNCENTERED_ALT_RAND, "Virtual faults (5x)");
+		compForceTights.put(Models.FINITE_5X_UNCENTERED, Models.FINITE_5X_UNCENTERED_ALT_RAND, true);
+		
+		
 		compAdd(comparisons, Models.FINITE_10X_UNCENTERED, Models.FINITE_10X_UNCENTERED_ALT_RAND);
 		compAdd(comparisons, Models.FINITE_20X_UNCENTERED, Models.FINITE_20X_UNCENTERED_ALT_RAND);
 		compAdd(comparisons, Models.FINITE_50X_UNCENTERED, Models.FINITE_50X_UNCENTERED_ALT_RAND);
 		compAdd(comparisons, Models.FINITE_100X_UNCENTERED, Models.FINITE_100X_UNCENTERED_ALT_RAND);
 		
-		// openquake vs 100 random
+		// fixed (openquake) vs 100 random
+		compAdd(comparisons, Models.FINITE_FIXED_1X, Models.FINITE_100X_CENTERED);
+		compForceTights.put(Models.FINITE_FIXED_1X, Models.FINITE_100X_CENTERED, true);
+		compLabels.put(Models.FINITE_FIXED_1X, Models.FINITE_100X_CENTERED, "1/2 fixed strikes");
+		compAdd(comparisons, Models.FINITE_FIXED_1X, Models.FINITE_100X_UNCENTERED);
+		compForceTights.put(Models.FINITE_FIXED_1X, Models.FINITE_100X_UNCENTERED, true);
+		compLabels.put(Models.FINITE_FIXED_1X, Models.FINITE_100X_UNCENTERED, "1/2 fixed strikes");
+		compAdd(comparisons, Models.FINITE_FIXED_2X, Models.FINITE_100X_CENTERED);
+		compForceTights.put(Models.FINITE_FIXED_2X, Models.FINITE_100X_CENTERED, true);
+		compLabels.put(Models.FINITE_FIXED_2X, Models.FINITE_100X_CENTERED, "2/4 fixed strikes");
+		compAdd(comparisons, Models.FINITE_FIXED_2X, Models.FINITE_100X_UNCENTERED);
+		compForceTights.put(Models.FINITE_FIXED_2X, Models.FINITE_100X_UNCENTERED, true);
+		compLabels.put(Models.FINITE_FIXED_2X, Models.FINITE_100X_UNCENTERED, "2/4 fixed strikes");
 		compAdd(comparisons, Models.OPENQUAKE_FINITE, Models.FINITE_100X_CENTERED);
+		compForceTights.put(Models.OPENQUAKE_FINITE, Models.FINITE_100X_CENTERED, true);
+		compLabels.put(Models.OPENQUAKE_FINITE, Models.FINITE_100X_CENTERED, "4/8 fixed strikes");
 		compAdd(comparisons, Models.OPENQUAKE_FINITE, Models.FINITE_100X_UNCENTERED);
+		compForceTights.put(Models.OPENQUAKE_FINITE, Models.FINITE_100X_UNCENTERED, true);
+		compLabels.put(Models.OPENQUAKE_FINITE, Models.FINITE_100X_UNCENTERED, "4/8 fixed strikes");
 //		compAdd(comparisons, Models.OPENQUAKE_FINITE_UNCENTERED, Models.FINITE_100X_UNCENTERED);
 		
 		compAdd(comparisons, PROPOSED_DIST_CORR_MODEL, Models.AS_PUBLISHED);
@@ -122,7 +151,48 @@ public class HazardMapFigures {
 		compAdd(comparisons, Models.SPINNING_DIST_5X_UNCENTERED_MOD_ZTOR_LEN_M3, PROPOSED_FULL_MODEL);
 		compAdd(comparisons, Models.SPINNING_DIST_5X_UNCENTERED_MOD_ZTOR_LEN_M3p5_CORR_M5, PROPOSED_FULL_MODEL);
 		
+		// incremental comps, table 1
+		compAdd(comparisons, Models.SPINNING_AVG_CENTERED_M6, Models.AS_PUBLISHED);
+		compLabels.put(Models.SPINNING_AVG_CENTERED_M6, Models.AS_PUBLISHED, "Improved Rrup and hanging wall");
+		compForceTights.put(Models.SPINNING_AVG_CENTERED_M6, Models.AS_PUBLISHED, true);
+		
+		compAdd(comparisons, Models.SPINNING_AVG_CENTERED_M5, Models.SPINNING_AVG_CENTERED_M6);
+		compLabels.put(Models.SPINNING_AVG_CENTERED_M5, Models.SPINNING_AVG_CENTERED_M6, "Lower correction M>5");
+		compForceTights.put(Models.SPINNING_AVG_CENTERED_M5, Models.SPINNING_AVG_CENTERED_M6, true);
+		
+		compAdd(comparisons, Models.FINITE_100X_CENTERED, Models.SPINNING_AVG_CENTERED_M5);
+		compLabels.put(Models.FINITE_100X_CENTERED, Models.SPINNING_AVG_CENTERED_M5, "Virtual faults, centered");
+		compForceTights.put(Models.FINITE_100X_CENTERED, Models.SPINNING_AVG_CENTERED_M5, true);
+		
+		compAdd(comparisons, Models.FINITE_100X_UNCENTERED, Models.FINITE_100X_CENTERED);
+		compLabels.put(Models.FINITE_100X_UNCENTERED, Models.FINITE_100X_CENTERED, "Virtual faults, uncentered");
+		compForceTights.put(Models.FINITE_100X_UNCENTERED, Models.FINITE_100X_CENTERED, true);
+		
+		compAdd(comparisons, PROPOSED_DIST_CORR_MODEL, Models.FINITE_100X_UNCENTERED);
+		compLabels.put(PROPOSED_DIST_CORR_MODEL, Models.FINITE_100X_UNCENTERED, "Distribution-based correction");
+		compForceTights.put(PROPOSED_DIST_CORR_MODEL, Models.FINITE_100X_UNCENTERED, true);
+		
+
+		// incremental comps, table 3
+		compAdd(comparisons, Models.SPINNING_DIST_5X_UNCENTERED_MOD_ZTOR, PROPOSED_DIST_CORR_MODEL);
+		compLabels.put(Models.SPINNING_DIST_5X_UNCENTERED_MOD_ZTOR, PROPOSED_DIST_CORR_MODEL, "Smooth Ztor transition");
+		compForceTights.put(Models.SPINNING_DIST_5X_UNCENTERED_MOD_ZTOR, PROPOSED_DIST_CORR_MODEL, true);
+		
+		compAdd(comparisons, Models.SPINNING_DIST_5X_UNCENTERED_MOD_ZTOR_LEN, Models.SPINNING_DIST_5X_UNCENTERED_MOD_ZTOR);
+		compLabels.put(Models.SPINNING_DIST_5X_UNCENTERED_MOD_ZTOR_LEN, Models.SPINNING_DIST_5X_UNCENTERED_MOD_ZTOR, "Leonard (2010) M~L");
+		compForceTights.put(Models.SPINNING_DIST_5X_UNCENTERED_MOD_ZTOR_LEN, Models.SPINNING_DIST_5X_UNCENTERED_MOD_ZTOR, true);
+		
+		compAdd(comparisons, Models.SPINNING_DIST_5X_UNCENTERED_MOD_ZTOR_LEN_M3p5, Models.SPINNING_DIST_5X_UNCENTERED_MOD_ZTOR_LEN);
+		compLabels.put(Models.SPINNING_DIST_5X_UNCENTERED_MOD_ZTOR_LEN_M3p5, Models.SPINNING_DIST_5X_UNCENTERED_MOD_ZTOR_LEN, "Reduced Mmin=3.5");
+		compForceTights.put(Models.SPINNING_DIST_5X_UNCENTERED_MOD_ZTOR_LEN_M3p5, Models.SPINNING_DIST_5X_UNCENTERED_MOD_ZTOR_LEN, true);
+		
 		EnumSet<Models> seismicityMapModels = EnumSet.of(Models.FINITE_100X_CENTERED);
+		
+		// ones that we'll always plot even for 10 in 50
+		Map<Models, List<Models>> alwaysPlotComps = new HashMap<>();
+		alwaysPlotComps.put(Models.AS_PUBLISHED, new ArrayList<>()); // plot it as is
+		compAdd(alwaysPlotComps, PROPOSED_DIST_CORR_MODEL, Models.AS_PUBLISHED);
+		compAdd(alwaysPlotComps, PROPOSED_FULL_MODEL, Models.AS_PUBLISHED);
 		
 //		// + improved Rrup and Rx
 //		compAdd(comparisons, Models.SPINNING_AVG_M6, Models.AS_PUBLISHED);
@@ -217,6 +287,8 @@ public class HazardMapFigures {
 		
 		GriddedGeoDataSet landMask = buildLandMask(FULL_GRID_REG);
 		
+		DecimalFormat oDF = new DecimalFormat("0.#");
+		
 		for (int p=0; p<periods.length; p++) {
 			String perPrefix, perLabel, perUnits;
 			String perTexPrefix;
@@ -227,7 +299,7 @@ public class HazardMapFigures {
 				perTexPrefix = "PGA";
 			} else {
 				perPrefix = (float)periods[p]+"s";
-				perLabel = (float)periods[p]+"s SA";
+				perLabel = oDF.format(periods[p])+"s SA";
 				perUnits = "(g)";
 				Preconditions.checkState(periods[p] == 1d);
 				perTexPrefix = "SAOne";
@@ -254,22 +326,27 @@ public class HazardMapFigures {
 				File subDir = new File(hazardDir, perPrefix+"_"+rp.name());
 				Preconditions.checkState(subDir.exists() || subDir.mkdir());
 				
+				
+				boolean plotMaps = false;
+				for (ReturnPeriods mapRP : mapRPs)
+					if (mapRP == rp)
+						plotMaps = true;
+				String texRPSuffix = texRPSuffixes.get(rp);
+				FileWriter texFW = texRPSuffix == null ? null : new FileWriter(new File(subDir, "hazard_change_stats.tex"));
+				
 				File mapsDir = new File(subDir, "maps");
-				Preconditions.checkState(mapsDir.exists() || mapsDir.mkdir());
+				if (plotMaps || (alwaysPlotComps != null && !alwaysPlotComps.isEmpty()))
+					Preconditions.checkState(mapsDir.exists() || mapsDir.mkdir());
 				File mapCompDir = new File(subDir, "comparisons");
-				Preconditions.checkState(mapCompDir.exists() || mapCompDir.mkdir());
+				if (plotMaps || (alwaysPlotComps != null && !alwaysPlotComps.isEmpty()))
+					Preconditions.checkState(mapCompDir.exists() || mapCompDir.mkdir());
 				
 				File zoomMapsDir = new File(subDir, "maps_zoom");
-				Preconditions.checkState(zoomMapsDir.exists() || zoomMapsDir.mkdir());
+				if (plotMaps || (alwaysPlotComps != null && !alwaysPlotComps.isEmpty()))
+					Preconditions.checkState(zoomMapsDir.exists() || zoomMapsDir.mkdir());
 				File zoomMapCompDir = new File(subDir, "comparisons_zoom");
-				Preconditions.checkState(zoomMapCompDir.exists() || zoomMapCompDir.mkdir());
-				
-				FileWriter texFW = null;
-				boolean plotMaps = false;
-				if (Doubles.contains(texPeriods, periods[p]) && rp == texRP) {
-					plotMaps = true;
-					texFW = new FileWriter(new File(subDir, "hazard_change_stats.tex"));
-				}
+				if (plotMaps || (alwaysPlotComps != null && !alwaysPlotComps.isEmpty()))
+					Preconditions.checkState(zoomMapCompDir.exists() || zoomMapCompDir.mkdir());
 				
 				CSVFile<String> compCSV = new CSVFile<>(true);
 				compCSV.addLine("Model", "Comparison Model", "Mean Change", "Mean Absolute Change", "Median Absolute Change", "Maximum Change");
@@ -280,9 +357,10 @@ public class HazardMapFigures {
 						System.err.println("Skipping "+models[i].getName()+", calculations not found");
 						continue;
 					}
+					List<Models> alwaysPlots = alwaysPlotComps == null ? null : alwaysPlotComps.get(model);
 					boolean doSeis = plotMaps && seismicityMapModels != null && seismicityMapModels.contains(model) && zoomMaps[i] != null;
 					System.out.println("Plotting maps for "+models[i].getName());
-					if (plotMaps) {
+					if (plotMaps || alwaysPlots != null) {
 						if (replot || !new File(mapsDir, model.name()+".pdf").exists()) {
 							mapMaker.plotXYZData(maps[i], hazardCPT, model.getName()+", "+mapLabel);
 							mapMaker.plot(mapsDir, model.name(), " ");
@@ -330,7 +408,13 @@ public class HazardMapFigures {
 									maxSigned = zoomStats.maxSigned;
 							}
 							
-							CPT cpt = Math.abs(maxSigned) > maxForTight ? pDiffCPT : pDiffTightCPT;
+							Boolean tight = compForceTights.get(model, comp);
+							if (tight == null)
+								tight = compForceTights.get(comp, model);
+							if (tight == null)
+								tight = Math.abs(maxSigned) <= maxForTight;
+							
+							CPT cpt = tight ? pDiffTightCPT : pDiffCPT;
 							
 //							System.out.println("\t\t"+stats);
 							System.out.println("\t\tmean="+twoDF.format(mean)
@@ -340,7 +424,7 @@ public class HazardMapFigures {
 
 							String prefix = model.name()+"_vs_"+comp.name();
 							String label = mapDiffLabel;
-							if (plotMaps) {
+							if (plotMaps || (alwaysPlots != null && alwaysPlots.contains(comp))) {
 //								String label = model.getName()+" vs "+comp.getName()+", "+mapDiffLabel;
 								if (compLabels.contains(model, comp))
 									label = compLabels.get(model, comp)+", "+label;
@@ -372,7 +456,7 @@ public class HazardMapFigures {
 									twoDF.format(meanAbs)+"%", twoDF.format(medianAbs)+"%", twoDF.format(maxSigned)+"%");
 							
 							if (texFW != null) {
-								String texPrefix = model.texName+"Vs"+comp.texName+perTexPrefix;
+								String texPrefix = model.texName+"Vs"+comp.texName+perTexPrefix+texRPSuffix;
 								texFW.write(LaTeXUtils.defineValueCommand(texPrefix+"Mean", noZeroChangeFormat(oneDF, mean)+"%")+"\n");
 								texFW.write(LaTeXUtils.defineValueCommand(texPrefix+"AbsMean", noZeroChangeFormat(oneDF, Math.abs(mean))+"%")+"\n");
 								texFW.write(LaTeXUtils.defineValueCommand(texPrefix+"MeanAbs", noZeroChangeFormat(oneDF, meanAbs)+"%")+"\n");

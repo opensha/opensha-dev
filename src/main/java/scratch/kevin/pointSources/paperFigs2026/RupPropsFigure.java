@@ -76,9 +76,9 @@ public class RupPropsFigure {
 		origZTorFunc.setName("NSHM23 as-published (strike-slip)");
 		depthFuncs.add(origZTorFunc);
 		depthChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 3f, origColor));
-		origZBotSSFunc.setName("NSHM23 as-published (dipping)");
 		depthFuncs.add(origZBotSSFunc);
 		depthChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 3f, origColor));
+		origZBotDipFunc.setName("NSHM23 as-published (dipping)");
 		depthFuncs.add(origZBotDipFunc);
 		depthChars.add(new PlotCurveCharacterstics(PlotLineType.SHORT_DASHED, 3f, origColor));
 		

@@ -99,54 +99,74 @@ public class ConstantsAndSettings {
 		SPINNING_AVG_CENTERED_M5("Spinning average, centered, M>5", "AvgCenteredMFive",
 				5d, PointSourceDistanceCorrections.AVERAGE_SPINNING_CENTERED, 5d, true, null,
 				"spinning_average-centered-m5"),
-		FINITE_20X_CENTERED("Finite ruptures (20x), centered", "FiniteCenteredTwenty",
+		FINITE_20X_CENTERED("Virtual faults (20x), centered", "FiniteCenteredTwenty",
 				5d, 20, false, 5d, true, null,
 				"finite-20x-centered-m5"),
-		FINITE_100X_CENTERED("Finite ruptures (100x), centered", "FiniteCenteredHundred",
+		FINITE_100X_CENTERED("Virtual faults (100x), centered", "FiniteCenteredHundred",
 				5d, 100, false, 5d, true, null,
 				"finite-100x-centered-m5"),
-		FINITE_1X_UNCENTERED("Finite ruptures (1x), uncentered", "FiniteUncenteredSingle",
+		FINITE_1X_UNCENTERED("Virtual faults (1x), uncentered", "FiniteUncenteredSingle",
 				5d, 1, true, 5d, true, null,
 				"finite-1x-uncentered-m5"),
-		FINITE_1X_UNCENTERED_ALT_RAND("Finite ruptures (1x), uncentered, alt random", "FiniteUncenteredSingleAltRand",
+		FINITE_1X_UNCENTERED_ALT_RAND("Virtual faults (1x), uncentered, alt random", "FiniteUncenteredSingleAltRand",
 				5d, 1, true, 5d, true, 111234511l,
 				"finite-1x-uncentered-m5-alt_rand"),
-		FINITE_2X_UNCENTERED("Finite ruptures (2x), uncentered", "FiniteUncenteredDouble",
+		FINITE_2X_UNCENTERED("Virtual faults (2x), uncentered", "FiniteUncenteredDouble",
 				5d, 2, true, 5d, true, null,
 				"finite-2x-uncentered-m5"),
-		FINITE_2X_UNCENTERED_ALT_RAND("Finite ruptures (2x), uncentered, alt random", "FiniteUncenteredDoubleAltRand",
+		FINITE_2X_UNCENTERED_ALT_RAND("Virtual faults (2x), uncentered, alt random", "FiniteUncenteredDoubleAltRand",
 				5d, 2, true, 5d, true, 221234522l,
 				"finite-2x-uncentered-m5-alt_rand"),
-		FINITE_5X_UNCENTERED("Finite ruptures (5x), uncentered", "FiniteUncenteredFive",
+		FINITE_5X_UNCENTERED("Virtual faults (5x), uncentered", "FiniteUncenteredFive",
 				5d, 5, true, 5d, true, null,
 				"finite-5x-uncentered-m5"),
-		FINITE_5X_UNCENTERED_ALT_RAND("Finite ruptures (5x), uncentered, alt random", "FiniteUncenteredFiveAltRand",
+		FINITE_5X_UNCENTERED_ALT_RAND("Virtual faults (5x), uncentered, alt random", "FiniteUncenteredFiveAltRand",
 				5d, 5, true, 5d, true, 551234555l,
 				"finite-5x-uncentered-m5-alt_rand"),
-		FINITE_10X_UNCENTERED("Finite ruptures (10x), uncentered", "FiniteUncenteredTen",
+		FINITE_10X_UNCENTERED("Virtual faults (10x), uncentered", "FiniteUncenteredTen",
 				5d, 10, true, 5d, true, null,
 				"finite-10x-uncentered-m5"),
-		FINITE_10X_UNCENTERED_ALT_RAND("Finite ruptures (10x), uncentered, alt random", "FiniteUncenteredTenAltRand",
+		FINITE_10X_UNCENTERED_ALT_RAND("Virtual faults (10x), uncentered, alt random", "FiniteUncenteredTenAltRand",
 				5d, 10, true, 5d, true, 1010123451010l,
 				"finite-10x-uncentered-m5-alt_rand"),
-		FINITE_20X_UNCENTERED("Finite ruptures (20x), uncentered", "FiniteUncenteredTwenty",
+		FINITE_20X_UNCENTERED("Virtual faults (20x), uncentered", "FiniteUncenteredTwenty",
 				5d, 20, true, 5d, true, null,
 				"finite-20x-uncentered-m5"),
-		FINITE_20X_UNCENTERED_ALT_RAND("Finite ruptures (20x), uncentered, alt random", "FiniteUncenteredTwentyAltRand",
+		FINITE_20X_UNCENTERED_ALT_RAND("Virtual faults (20x), uncentered, alt random", "FiniteUncenteredTwentyAltRand",
 				5d, 20, true, 5d, true, 2020123452020l,
 				"finite-20x-uncentered-m5-alt_rand"),
-		FINITE_50X_UNCENTERED("Finite ruptures (50x), uncentered", "FiniteUncenteredFifty",
+		FINITE_50X_UNCENTERED("Virtual faults (50x), uncentered", "FiniteUncenteredFifty",
 				5d, 50, true, 5d, true, null,
 				"finite-50x-uncentered-m5"),
-		FINITE_50X_UNCENTERED_ALT_RAND("Finite ruptures (50x), uncentered, alt random", "FiniteUncenteredFiftyAltRand",
+		FINITE_50X_UNCENTERED_ALT_RAND("Virtual faults (50x), uncentered, alt random", "FiniteUncenteredFiftyAltRand",
 				5d, 50, true, 5d, true, 5050123455050l,
 				"finite-50x-uncentered-m5-alt_rand"),
+		FINITE_FIXED_1X("Single Fixed Strike", "FixedOneTwo",
+				5d, PointSourceDistanceCorrections.NONE, 5d, true, null, "fixed-1_2x") {
+
+			@Override
+			public Function<GridSourceList, GridSourceList> getGridModFunction() {
+				return original -> { return new OpenQuakeFixedStrikeUpdate(original, true,
+						new double[] {0d}, new double[] {0d, 180d});};
+			}
+	
+		},
+		FINITE_FIXED_2X("Double Fixed Strike", "FixedTwoFour",
+				5d, PointSourceDistanceCorrections.NONE, 5d, true, null, "fixed-2_4x") {
+
+			@Override
+			public Function<GridSourceList, GridSourceList> getGridModFunction() {
+				return original -> { return new OpenQuakeFixedStrikeUpdate(original, true,
+						new double[] {0d, 90d}, new double[] {0d, 90d, 180d, 270d});};
+			}
+	
+		},
 		OPENQUAKE_FINITE("OpenQuake Fixed Strike", "OQFixedStrike",
 				5d, PointSourceDistanceCorrections.NONE, 5d, true, null, "openquake-fixed") {
 
 			@Override
 			public Function<GridSourceList, GridSourceList> getGridModFunction() {
-				return original -> { return new OpenQuakeFixedStrikeUpdate(original, true);};
+				return original -> { return new OpenQuakeFixedStrikeUpdate(original, true, OPENQUAKE_SS_STRIKES, OPENQUAKE_DIP_STRIKES);};
 			}
 	
 		},
@@ -160,10 +180,10 @@ public class ConstantsAndSettings {
 //	
 //		},
 		// Reference to compare point source calculations
-		FINITE_100X_UNCENTERED("Finite ruptures (100x), uncentered", "FiniteUncenteredHundred",
+		FINITE_100X_UNCENTERED("Virtual faults (100x), uncentered", "FiniteUncenteredHundred",
 				5d, 100, true, 5d, true, null,
 				"finite-100x-uncentered-m5"),
-		FINITE_100X_UNCENTERED_ALT_RAND("Finite ruptures (100x), uncentered, alt random", "FiniteUncenteredHundredAltRand",
+		FINITE_100X_UNCENTERED_ALT_RAND("Virtual faults (100x), uncentered, alt random", "FiniteUncenteredHundredAltRand",
 				5d, 100, true, 5d, true, 10012345100l,
 				"finite-100x-uncentered-m5-alt_rand"),
 		SPINNING_DIST_5X_CENTERED("Spinning distribution (5x), centered", "SpinningDistCentered",
@@ -496,20 +516,26 @@ public class ConstantsAndSettings {
 	 * SS strikes: (0°, 45°, 90°, 135°)
 	 * dipping strikes: (0°, 45°, 90°, 135°, 180°, 225°, 270°, 315°
 	 */
+	
+	private static double[] OPENQUAKE_SS_STRIKES = {0d, 45d, 90d, 135d};
+	private static double[] OPENQUAKE_DIP_STRIKES = {0d, 45d, 90d, 135d, 180, 225, 270, 315};
+	
 	public static class OpenQuakeFixedStrikeUpdate extends GridSourceList.DynamicallyBuilt {
-		
-		private static final double[] SS_STRIKES = {0d, 45d, 90d, 135d};
-		private static final double[] DIP_STRIKES = {0d, 45d, 90d, 135d, 180, 225, 270, 315};
 		private static final double[] CENTERD_FRACT_DAS = {0.5};
 		private static final double[] UNCENTERD_FRACT_DAS = {0.1, 0.3, 0.5, 0.7, 0.9};
 
 		private GridSourceList original;
 		private boolean centered;
+		private double[] ssStrikes;
+		private double[] dipStrikes;
 
-		public OpenQuakeFixedStrikeUpdate(GridSourceList original, boolean centered) {
+		public OpenQuakeFixedStrikeUpdate(GridSourceList original, boolean centered,
+				double[] ssStrikes, double[] dipStrikes) {
 			super(original.getTectonicRegionTypes(), original.getGriddedRegion(), original.getRefMFD());
 			this.original = original;
 			this.centered = centered;
+			this.ssStrikes = ssStrikes;
+			this.dipStrikes = dipStrikes;
 		}
 
 		@Override
@@ -545,7 +571,7 @@ public class ConstantsAndSettings {
 					continue;
 				}
 					
-				double[] strikes = props.dip < 89d ? DIP_STRIKES : SS_STRIKES;
+				double[] strikes = props.dip < 89d ? dipStrikes : ssStrikes;
 				double[] fractDASs = centered ? CENTERD_FRACT_DAS : UNCENTERD_FRACT_DAS;
 				double rateScalar = 1d/(strikes.length*fractDASs.length);
 				for (double strike : strikes) {

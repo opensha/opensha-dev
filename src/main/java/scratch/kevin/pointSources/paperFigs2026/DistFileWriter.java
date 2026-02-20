@@ -29,7 +29,7 @@ public class DistFileWriter {
 		File dataDir = new File(ConstantsAndSettings.PAPER_DIR, "data");
 		Preconditions.checkState(dataDir.exists() || dataDir.mkdir());
 		
-		boolean origProps = true;
+		boolean origProps = false;
 		
 		String propPrefix = origProps ? "original-rupture-properties" : "proposed-rupture-properties";
 		
@@ -77,7 +77,7 @@ public class DistFileWriter {
 					hwPrefix = "Footwall ";
 				for (int f=0; f<fractiles.size(); f++) {
 					FractileBin bin = fractiles.getValue(f);
-					String binPrefix = hwPrefix+" "+oDF.format(bin.minimum*100d)+"-"+oDF.format(bin.maximum*100d)+"%";
+					String binPrefix = hwPrefix+oDF.format(bin.minimum*100d)+"-"+oDF.format(bin.maximum*100d)+"%";
 					header.add(binPrefix+" Rrup (km)");
 					header.add(binPrefix+" Rjb (km)");
 					header.add(binPrefix+" Rx (km)");
