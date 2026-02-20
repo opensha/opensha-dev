@@ -129,7 +129,7 @@ public class HazardCurveDifferenceDebug {
 			System.out.println(trt+": "+gmm.getName());
 			TectonicRegionTypeParam trtParam = (TectonicRegionTypeParam)gmm.getParameter(TectonicRegionTypeParam.NAME);
 			Preconditions.checkState(trtParam != null, "Multiple GMPEs supplied, but GMPE "+gmm.getShortName()+" doesn't have a TRT");
-			System.out.println("\tGMM reports TRT: "+trtParam.getValueAsTRT());
+			System.out.println("\tGMM reports TRT: "+trtParam.getValue());
 			for (Parameter<?> param : gmm.getSiteParams())
 				if (!site.containsParameter(param.getName()))
 					site.addParameter((Parameter<?>)param.clone());
