@@ -53,7 +53,7 @@ public class BranchScratch {
 				List.of(new PlotCurveCharacterstics(PlotLineType.SOLID, 3f, Color.BLACK)),
 				"UCERF2 Source "+sourceID+": "+source.getName(), "Magnitude", "Annual Rate");
 		
-		HeadlessGraphPanel gp = PlotUtils.initHeadless();
+		HeadlessGraphPanel gp = PlotUtils.initScreenHeadless();
 		
 		gp.drawGraphPanel(plot, false, true, new Range(6d, 9d), new Range(1e-6, 1e0));
 		

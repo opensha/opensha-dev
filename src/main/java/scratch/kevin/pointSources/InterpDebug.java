@@ -101,7 +101,7 @@ public class InterpDebug {
 		PlotSpec plot = new PlotSpec(funcs, chars, " ", "Ln(IML)", "POE");
 		plot.setLegendInset(true);
 		
-		HeadlessGraphPanel gp = PlotUtils.initHeadless();
+		HeadlessGraphPanel gp = PlotUtils.initScreenHeadless();
 		
 		gp.drawGraphPanel(plot);
 		

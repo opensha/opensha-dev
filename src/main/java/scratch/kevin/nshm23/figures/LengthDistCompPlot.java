@@ -299,7 +299,7 @@ public class LengthDistCompPlot {
 		HistogramFunction meanHist = meanHistMap.get(null);
 		HistogramFunction meanCmlHist = meanCmlHistMap.get(null);
 		
-		HeadlessGraphPanel gp = PlotUtils.initHeadless();
+		HeadlessGraphPanel gp = PlotUtils.initScreenHeadless();
 		
 		boolean[] falseTrue = { false, true };
 		boolean[] falseOnly = { false };

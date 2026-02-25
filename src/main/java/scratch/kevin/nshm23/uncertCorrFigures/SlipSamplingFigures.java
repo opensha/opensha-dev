@@ -117,7 +117,7 @@ public class SlipSamplingFigures {
 		mapMaker.setAxisTicksVisible(axisVisible);
 		mapMaker.setFaultSections(subSects);
 		mapMaker.setScalarThickness(5f);
-		mapMaker.setDefaultPlotWidth(650);
+		mapMaker.setDefaultPlotWidthPixels(650);
 		
 		FaultSection corrSect = subSects.get(corrSubsectID);
 		double[] cors = new double[subSects.size()];

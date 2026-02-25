@@ -295,7 +295,7 @@ public class GridCubeRatePlot {
 		XYZPlotSpec assocPlot = buildPlot(assocXYZ, cellXRanges, cellAssocs, new FormatFunc(fractDF),
 				sectXY, polyXY, assocCPT, "Fractional Association", " ");
 		
-		HeadlessGraphPanel gp = PlotUtils.initHeadless();
+		HeadlessGraphPanel gp = PlotUtils.initScreenHeadless();
 		
 		Range yRange = new Range(CELL_TOP_Z, assocXYZ.getMaxY()+0.5*cubeSpacingZ);
 		gp.drawGraphPanel(assocPlot, false, false, xRange, yRange);

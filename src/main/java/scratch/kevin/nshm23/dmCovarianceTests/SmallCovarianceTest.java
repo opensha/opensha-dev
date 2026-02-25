@@ -24,6 +24,7 @@ import org.opensha.commons.gui.plot.GraphWidget;
 import org.opensha.commons.gui.plot.GraphWindow;
 import org.opensha.commons.gui.plot.PlotCurveCharacterstics;
 import org.opensha.commons.gui.plot.PlotLineType;
+import org.opensha.commons.gui.plot.PlotPreferences;
 import org.opensha.commons.gui.plot.PlotSpec;
 import org.opensha.commons.gui.plot.PlotUtils;
 
@@ -223,7 +224,7 @@ public class SmallCovarianceTest {
 		plots.add(buildHistPlot(sumHist, Colors.tab_orange));
 		yRanges.add(new Range(0d, sumHist.getMaxY()+2));
 		
-		GraphWindow gw = new GraphWindow(new GraphWidget(plots, PlotUtils.getDefaultFigurePrefs(), false, false, xRanges, yRanges));
+		GraphWindow gw = new GraphWindow(new GraphWidget(plots, PlotPreferences.getDefaultScreenFigurePrefs(), false, false, xRanges, yRanges));
 		
 		gw.setVisible(true);
 		gw.setDefaultCloseOperation(GraphWindow.EXIT_ON_CLOSE);

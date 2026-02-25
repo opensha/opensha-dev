@@ -203,7 +203,7 @@ public class CombinedLogicTreeLineIntegralsPlot {
 				}
 			}
 			
-			HeadlessGraphPanel gp = PlotUtils.initHeadless();
+			HeadlessGraphPanel gp = PlotUtils.initScreenHeadless();
 			
 			gp.drawGraphPanel(plots, false, false, xRanges, yRanges);
 			

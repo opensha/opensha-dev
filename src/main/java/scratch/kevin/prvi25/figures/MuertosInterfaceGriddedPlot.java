@@ -195,7 +195,7 @@ public class MuertosInterfaceGriddedPlot {
 		plot.setLegendVisible(true);
 		plot.setYAxisInverted(true);
 		
-		HeadlessGraphPanel gp = PlotUtils.initHeadless();
+		HeadlessGraphPanel gp = PlotUtils.initScreenHeadless();
 		
 		gp.drawGraphPanel(plot, false, false, latRange, depthRange);
 		

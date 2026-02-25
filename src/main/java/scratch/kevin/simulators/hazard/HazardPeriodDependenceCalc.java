@@ -214,7 +214,7 @@ public class HazardPeriodDependenceCalc {
 			PlotSpec spec = new PlotSpec(funcs, chars, rpDF.format(rps[r])+" T Dependence", "T [sec]", "Ln("+catalogName+"/UCERF3)");
 			spec.setLegendVisible(true);
 			
-			PlotPreferences plotPrefs = PlotPreferences.getDefault();
+			PlotPreferences plotPrefs = PlotPreferences.getDefaultAppPrefs();
 			plotPrefs.setTickLabelFontSize(18);
 			plotPrefs.setAxisLabelFontSize(20);
 			plotPrefs.setPlotLabelFontSize(21);

@@ -437,7 +437,7 @@ public class BValPlusSegModelMFDPlot {
 				PlotSpec cmlSpec = new PlotSpec(cmlFuncs, cmlChars, title, xAxisName, "Cumulative Rate (/yr)");
 				cmlSpec.setLegendInset(RectangleAnchor.BOTTOM_LEFT);
 				
-				HeadlessGraphPanel gp = PlotUtils.initHeadless();
+				HeadlessGraphPanel gp = PlotUtils.initScreenHeadless();
 				
 				gp.setAxisLabelFontSize(26);
 				gp.setTickLabelFontSize(22);

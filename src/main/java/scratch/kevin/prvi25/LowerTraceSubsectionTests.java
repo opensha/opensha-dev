@@ -149,7 +149,7 @@ public class LowerTraceSubsectionTests {
 		
 		PlotSpec spec = new PlotSpec(funcs, chars, title, "Longitude", "Depth (km)");
 		
-		HeadlessGraphPanel gp = PlotUtils.initHeadless();
+		HeadlessGraphPanel gp = PlotUtils.initScreenHeadless();
 		
 		double minX = Double.POSITIVE_INFINITY;
 		double maxX = Double.NEGATIVE_INFINITY;

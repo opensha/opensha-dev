@@ -531,7 +531,7 @@ public class SlabTestModGridProvWriter {
 					plot.setTitle(label);
 			}
 			
-			HeadlessGraphPanel gp = PlotUtils.initHeadless();
+			HeadlessGraphPanel gp = PlotUtils.initScreenHeadless();
 			
 			gp.drawGraphPanel(plots, false, false, xRanges, yRanges);
 			
@@ -584,7 +584,7 @@ public class SlabTestModGridProvWriter {
 					plot.setTitle(label);
 			}
 			
-			HeadlessGraphPanel gp = PlotUtils.initHeadless();
+			HeadlessGraphPanel gp = PlotUtils.initScreenHeadless();
 			
 			gp.drawGraphPanel(plots, false, false, xRanges, yRanges);
 			

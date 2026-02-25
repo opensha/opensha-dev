@@ -235,7 +235,7 @@ public class MethodsAndIngredientsHazChangeFigures {
 		
 		mapMaker23.plotXYZData(attXYZ, attributionCPT, "Methodology     ←     |Hazard % Change|     →     Ingredients");
 		PlotSpec plot = mapMaker23.buildPlot(" ");
-		int width = mapMaker23.getDefaultPlotWidth();
+		int width = GeographicMapMaker.PLOT_WIDTH_PIXELS_DEFAULT;
 		// plot both sides as positive
 		DecimalFormat intDF = new DecimalFormat("0");
 		NumberFormat format = new NumberFormat() {
@@ -448,7 +448,7 @@ public class MethodsAndIngredientsHazChangeFigures {
 		
 		mapMaker23.plotXYZData(attXYZ, attributionCPT, "Methodology     ←     |Hazard % Change|     →     Ingredients");
 		PlotSpec plot = mapMaker23.buildPlot(" ");
-		int width = mapMaker23.getDefaultPlotWidth();
+		int width = GeographicMapMaker.PLOT_WIDTH_PIXELS_DEFAULT;
 		// plot both sides as positive
 		DecimalFormat intDF = new DecimalFormat("0");
 		NumberFormat format = new NumberFormat() {

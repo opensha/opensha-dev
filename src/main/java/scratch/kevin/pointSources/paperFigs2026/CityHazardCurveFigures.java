@@ -179,7 +179,7 @@ public class CityHazardCurveFigures {
 		
 		System.out.println("Done calculating");
 		
-		HeadlessGraphPanel gp = PlotUtils.initHeadless();
+		HeadlessGraphPanel gp = PlotUtils.initScreenHeadless();
 		
 		Range xRange = new Range(1e-3, 3e0);
 		Range yRange = new Range(1e-6, 1e0);

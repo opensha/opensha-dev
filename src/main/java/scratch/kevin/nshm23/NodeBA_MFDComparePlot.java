@@ -198,7 +198,7 @@ public class NodeBA_MFDComparePlot {
 		PlotSpec spec = new PlotSpec(incrFuncs, chars, level.getName()+" Sweep", "Magnitude", "Incremental Rate (/yr)");
 		spec.setLegendInset(RectangleAnchor.BOTTOM_LEFT);
 		
-		HeadlessGraphPanel gp = PlotUtils.initHeadless();
+		HeadlessGraphPanel gp = PlotUtils.initScreenHeadless();
 		
 		gp.setRenderingOrder(DatasetRenderingOrder.REVERSE);
 		

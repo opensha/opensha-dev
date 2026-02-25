@@ -190,7 +190,7 @@ public class DippingFaultTests {
 		
 		CPT tab10 = GMT_CPT_Files.CATEGORICAL_TAB10.instance();
 		
-		HeadlessGraphPanel gp = PlotUtils.initHeadless();
+		HeadlessGraphPanel gp = PlotUtils.initScreenHeadless();
 		
 		for (Boolean forceHW : forceHWs) {
 			

@@ -273,7 +273,7 @@ public class ObsUncertaintyBoundsFigure {
 			plot.setLegendInset(true);
 			plot.setPlotAnnotations(anns);
 			
-			HeadlessGraphPanel gp = PlotUtils.initHeadless();
+			HeadlessGraphPanel gp = PlotUtils.initScreenHeadless();
 			
 			gp.drawGraphPanel(plot, false, true, xRange, yRange);
 			

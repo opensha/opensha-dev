@@ -135,7 +135,7 @@ public class SegWeightSearch {
 		Range xRange = new Range(xVals.getMinX(), xVals.getMaxX());
 		Range yRange = new Range(0d, 1d);
 		
-		HeadlessGraphPanel gp = PlotUtils.initHeadless();
+		HeadlessGraphPanel gp = PlotUtils.initScreenHeadless();
 		
 		gp.drawGraphPanel(spec, false, false, xRange, yRange);
 		

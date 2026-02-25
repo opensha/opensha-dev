@@ -687,7 +687,7 @@ public class IndividualMFDPlots {
 		PlotSpec plot = new PlotSpec(funcs, chars, " ", "Magnitude", "Incremental Rate (1/yr)");
 		plot.setLegendInset(true);
 		
-		HeadlessGraphPanel gp = PlotUtils.initHeadless();
+		HeadlessGraphPanel gp = PlotUtils.initScreenHeadless();
 		
 		gp.drawGraphPanel(plot, false, true, xRange, yRange);
 		
@@ -742,7 +742,7 @@ public class IndividualMFDPlots {
 		PlotSpec plot = new PlotSpec(funcs, chars, " ", "Magnitude", "Incremental Rate (1/yr)");
 		plot.setLegendInset(RectangleAnchor.BOTTOM_LEFT);
 		
-		HeadlessGraphPanel gp = PlotUtils.initHeadless();
+		HeadlessGraphPanel gp = PlotUtils.initScreenHeadless();
 		
 		gp.drawGraphPanel(plot, false, true, xRange, yRange);
 		

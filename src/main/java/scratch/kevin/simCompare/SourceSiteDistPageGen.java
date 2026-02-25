@@ -267,7 +267,7 @@ public class SourceSiteDistPageGen<E> {
 		anns.add(countAnn);
 		spec.setPlotAnnotations(anns);
 		
-		PlotPreferences plotPrefs = PlotPreferences.getDefault();
+		PlotPreferences plotPrefs = PlotPreferences.getDefaultAppPrefs();
 		plotPrefs.setTickLabelFontSize(18);
 		plotPrefs.setAxisLabelFontSize(20);
 		plotPrefs.setPlotLabelFontSize(21);

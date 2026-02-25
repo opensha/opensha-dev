@@ -265,7 +265,7 @@ public class StationarityPlot extends AbstractPlot {
 		plot.setLegendVisible(true);
 		PlotPreferences prefs = gp.getPlotPrefs();
 		plot.addSubtitle(GraphPanel.getLegendForCPT(startYearCPT, "Start Year ("+binString+")",
-				prefs.getAxisLabelFontSize(), prefs.getTickLabelFontSize(), Double.NaN, RectangleEdge.BOTTOM));
+				prefs, Double.NaN, RectangleEdge.BOTTOM));
 		
 		xRange = new Range(minMag, maxMag);
 		yRange = new Range(minRate, maxRate);

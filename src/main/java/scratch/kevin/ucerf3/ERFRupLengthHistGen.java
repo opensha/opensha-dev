@@ -157,7 +157,7 @@ public class ERFRupLengthHistGen {
 		Range xRange = new Range(0, u2hist.getMaxX()+0.5*delta);
 		Range yRange = new Range(1e-6, 1);
 		
-		PlotPreferences plotPrefs = PlotPreferences.getDefault();
+		PlotPreferences plotPrefs = PlotPreferences.getDefaultAppPrefs();
 		plotPrefs.setTickLabelFontSize(20);
 		plotPrefs.setAxisLabelFontSize(22);
 		plotPrefs.setPlotLabelFontSize(24);

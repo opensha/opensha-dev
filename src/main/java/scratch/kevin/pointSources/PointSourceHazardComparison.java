@@ -1513,7 +1513,7 @@ public class PointSourceHazardComparison {
 							xAxisLabel, rRup ? "DistanceRup Difference" : "DistanceJB Difference");
 //					diffSpec.setLegendInset(RectangleAnchor.BOTTOM_RIGHT);
 					
-					HeadlessGraphPanel gp = PlotUtils.initHeadless();
+					HeadlessGraphPanel gp = PlotUtils.initScreenHeadless();
 					
 					gp.drawGraphPanel(List.of(ratioSpec, diffSpec), false, false, List.of(distPlotRange), List.of(ratioRange, diffRange));
 					
@@ -1643,7 +1643,7 @@ public class PointSourceHazardComparison {
 			table.initNewLine();
 			for (boolean rRup : falseTrue) {
 				List<PlotSpec> specs = rRup ? magSpecsRRup : magSpecsRJB;
-				HeadlessGraphPanel gp = PlotUtils.initHeadless();
+				HeadlessGraphPanel gp = PlotUtils.initScreenHeadless();
 				
 				gp.drawGraphPanel(specs, false, false, List.of(magRange), magPlotYRanges);
 				
@@ -1731,7 +1731,7 @@ public class PointSourceHazardComparison {
 				List<PlotSpec> specs = magPropSpecs.get(i);
 				List<Range> yRanges = magPropYRanges.get(i);
 				
-				HeadlessGraphPanel gp = PlotUtils.initHeadless();
+				HeadlessGraphPanel gp = PlotUtils.initScreenHeadless();
 				
 				gp.drawGraphPanel(specs, false, false, List.of(magRange), yRanges);
 				
@@ -1968,7 +1968,7 @@ public class PointSourceHazardComparison {
 						perLabels[p]+" ("+perUnits[p]+")", "Annual Probability of Exceedance");
 				spec.setLegendInset(RectangleAnchor.TOP_RIGHT);
 				
-				HeadlessGraphPanel gp = PlotUtils.initHeadless();
+				HeadlessGraphPanel gp = PlotUtils.initScreenHeadless();
 				
 				gp.drawGraphPanel(spec, true, true, curveXRanges[p], curveYRange);
 				

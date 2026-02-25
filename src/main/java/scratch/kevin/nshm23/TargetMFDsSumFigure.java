@@ -130,7 +130,7 @@ public class TargetMFDsSumFigure {
 						"Magnitude", "Nucleation Rate (1/yr)");
 				spec.setLegendVisible(true);
 				
-				HeadlessGraphPanel gp = PlotUtils.initHeadless();
+				HeadlessGraphPanel gp = PlotUtils.initScreenHeadless();
 				
 				gp.drawGraphPanel(spec, false, true, xRange, yRange);
 				

@@ -478,7 +478,7 @@ public class SingleSiteHazardAndDataComparisonPageGen {
 				spec.addPlotAnnotation(ann);
 			}
 			
-			HeadlessGraphPanel gp = PlotUtils.initHeadless();
+			HeadlessGraphPanel gp = PlotUtils.initScreenHeadless();
 			
 			gp.setRenderingOrder(DatasetRenderingOrder.REVERSE);
 			gp.drawGraphPanel(spec, true, true, xRange, new Range(1e-6, 1e0));
@@ -667,7 +667,7 @@ public class SingleSiteHazardAndDataComparisonPageGen {
 			PlotSpec cmlSpec = new PlotSpec(cmlFuncs, chars, title, "Magnitude", "Cumulative Participation Rate (/yr)");
 			cmlSpec.setLegendInset(true);
 			
-			HeadlessGraphPanel gp = PlotUtils.initHeadless();
+			HeadlessGraphPanel gp = PlotUtils.initScreenHeadless();
 			
 			String prefix = "mfds_"+oDF.format(dists[d])+"km";
 			

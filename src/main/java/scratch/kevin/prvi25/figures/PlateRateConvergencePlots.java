@@ -331,7 +331,7 @@ public class PlateRateConvergencePlots {
 					yRanges.add(yRange);
 				}
 				
-				HeadlessGraphPanel gp = PlotUtils.initHeadless();
+				HeadlessGraphPanel gp = PlotUtils.initScreenHeadless();
 				
 				gp.drawGraphPanel(plots, false, false, xRanges, yRanges);
 				

@@ -204,7 +204,7 @@ public class GriddedHazardSingleSiteComparison {
 		ann.setFont(annFont);
 		plot.addPlotAnnotation(ann);
 		
-		HeadlessGraphPanel gp = PlotUtils.initHeadless();
+		HeadlessGraphPanel gp = PlotUtils.initScreenHeadless();
 		
 		gp.setRenderingOrder(DatasetRenderingOrder.REVERSE);
 		

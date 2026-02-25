@@ -276,7 +276,7 @@ public class SingleSiteVerificationTest {
 		
 		PlotSpec rangeSpec = new PlotSpec(funcs, chars, title, spec.getXAxisLabel(), "Wrapper / Model, % Difference");
 		
-		HeadlessGraphPanel gp = PlotUtils.initHeadless();
+		HeadlessGraphPanel gp = PlotUtils.initScreenHeadless();
 		
 		gp.drawGraphPanel(List.of(spec, rangeSpec), List.of(true), List.of(true, false),
 				List.of(xRange), List.of(yRange, diffRange));
@@ -332,7 +332,7 @@ public class SingleSiteVerificationTest {
 		PlotSpec spec = new PlotSpec(funcs, chars, title, "PGA (g)", "Annual Probability of Exceedance");
 		spec.setLegendInset(RectangleAnchor.BOTTOM_LEFT);
 		
-		HeadlessGraphPanel gp = PlotUtils.initHeadless();
+		HeadlessGraphPanel gp = PlotUtils.initScreenHeadless();
 		
 		gp.drawGraphPanel(spec, true, true, xRange, yRange);
 		

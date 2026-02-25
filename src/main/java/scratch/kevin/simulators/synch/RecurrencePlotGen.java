@@ -214,7 +214,7 @@ public class RecurrencePlotGen {
 //		discreteCPT.setNanColor(Color.GRAY);
 //	}
 	
-	private static PlotPreferences prefs = PlotUtils.getDefaultFigurePrefs();
+	private static PlotPreferences prefs = PlotPreferences.getDefaultScreenFigurePrefs();
 	static {
 		prefs.setPlotLabelFontSize(50);
 		prefs.setAxisLabelFontSize(40);
@@ -289,7 +289,7 @@ public class RecurrencePlotGen {
 			window.setDefaultCloseOperation(GraphWindow.EXIT_ON_CLOSE);
 		} else {
 			// write plot
-			HeadlessGraphPanel panel = PlotUtils.initHeadless();
+			HeadlessGraphPanel panel = PlotUtils.initScreenHeadless();
 			panel.drawGraphPanel(spec, false, false, new Range(0, max), new Range(0, max));
 			panel.getChartPanel().setSize(width, height);
 			panel.saveAsPNG(outputFile.getAbsolutePath());
@@ -564,7 +564,7 @@ public class RecurrencePlotGen {
 			int myHeight = height;
 			if (specs.size() > 0)
 				myHeight = (height-200)*specs.size()+500;
-			panel = PlotUtils.initHeadless();
+			panel = PlotUtils.initScreenHeadless();
 			panel.drawGraphPanel(specs, false, false, Lists.newArrayList(xRange), yRanges);
 			panel.getChartPanel().setSize(plotWidth, myHeight);
 			panel.saveAsPNG(outputFile.getAbsolutePath());

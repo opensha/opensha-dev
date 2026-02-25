@@ -154,7 +154,7 @@ public class SectMFD_Plots {
 		PlotSpec cmlSpec = new PlotSpec(cmlFuncs, cmlChars, faultName, "Magnitude", "Cumulative Rate (/yr)");
 		cmlSpec.setLegendInset(RectangleAnchor.BOTTOM_LEFT);
 		
-		HeadlessGraphPanel gp = PlotUtils.initHeadless();
+		HeadlessGraphPanel gp = PlotUtils.initScreenHeadless();
 		
 		gp.setAxisLabelFontSize(26);
 		gp.setTickLabelFontSize(22);

@@ -45,6 +45,7 @@ import org.opensha.commons.geo.LocationUtils;
 import org.opensha.commons.gui.plot.HeadlessGraphPanel;
 import org.opensha.commons.gui.plot.PlotCurveCharacterstics;
 import org.opensha.commons.gui.plot.PlotLineType;
+import org.opensha.commons.gui.plot.PlotPreferences;
 import org.opensha.commons.gui.plot.PlotSpec;
 import org.opensha.commons.gui.plot.PlotSymbol;
 import org.opensha.commons.gui.plot.PlotUtils;
@@ -100,6 +101,9 @@ public class SpinningFaultExceedanceFigures {
 	public static void main(String[] args) throws IOException {
 		File outputDir = new File(ConstantsAndSettings.FIGURES_DIR, "spinning_exceedance_probs");
 		Preconditions.checkState(outputDir.exists() || outputDir.mkdir());
+		
+		double fullW = PlotUtils.DEFAULT_USABLE_PAGE_WIDTH;
+		double fullH = PlotUtils.DEFAULT_USABLE_PAGE_HEIGHT;
 		
 //		FocalMech mech = FocalMech.STRIKE_SLIP;
 		FocalMech mech = FocalMech.REVERSE;
@@ -277,6 +281,13 @@ public class SpinningFaultExceedanceFigures {
 		
 		ErgodicIMR gmm0 = gmmRef.get();
 		
+		PlotPreferences prefs = PlotPreferences.getDefaultPrintFigurePrefs();
+		prefs.setSizeScalar(0.5d);
+		prefs.setPlotLabelFontSize(10);
+		prefs.setLegendFontSize(8);
+		prefs.setLegendLineLength(8d);
+		HeadlessGraphPanel gp = PlotUtils.initHeadless(prefs);
+		
 		List<PlotSpec> plots = new ArrayList<>();
 		for (int d=0; d<distances.length; d++) {
 			double distance = distances[d];
@@ -394,7 +405,7 @@ public class SpinningFaultExceedanceFigures {
 			
 			double annX = xVals.getX((int)(xVals.size()*0.97));
 			double annY = 0.97;
-			Font distFont = new Font(Font.SANS_SERIF, Font.BOLD, 30);
+			Font distFont = new Font(Font.SANS_SERIF, Font.BOLD, 12);
 			XYTextAnnotation ann = new XYTextAnnotation(oDF.format(distance)+" km", annX, annY);
 			ann.setFont(distFont);
 			ann.setTextAnchor(TextAnchor.TOP_RIGHT);
@@ -733,7 +744,7 @@ public class SpinningFaultExceedanceFigures {
 			}
 			texFW.write("\n");
 			
-			Font labelFont = new Font(Font.SANS_SERIF, Font.PLAIN, 20);
+			Font labelFont = new Font(Font.SANS_SERIF, Font.PLAIN, 10);
 			for (String str : distAnns) {
 				ann = new XYTextAnnotation(str, annX, annY);
 				ann.setFont(labelFont);
@@ -741,8 +752,6 @@ public class SpinningFaultExceedanceFigures {
 				plot.addPlotAnnotation(ann);
 				annY -= annDeltaY;
 			}
-			
-			HeadlessGraphPanel gp = PlotUtils.initHeadless();
 			
 			gp.drawGraphPanel(plot, false, false, distRange, distRange);
 			
@@ -840,6 +849,7 @@ public class SpinningFaultExceedanceFigures {
 				chars.add(pChar);
 			}
 			
+			System.out.println("Plotting Rrup vs Rjb");
 			PlotSpec histPlot = new PlotSpec(funcs, chars, null, plot.getXAxisLabel(), " ");
 			
 			gp.drawGraphPanel(List.of(plot, histPlot), false, false,
@@ -856,8 +866,10 @@ public class SpinningFaultExceedanceFigures {
 			PlotUtils.setXTick(gp, tick);
 			PlotUtils.setYTick(gp, tick);
 			
-			PlotUtils.writePlots(outputDir, prefix+"_"+oDF.format(distance)+"km_rrup_vs_jb",
-					gp, 800, 900, true, true, false);
+//			PlotUtils.writePlots(outputDir, prefix+"_"+oDF.format(distance)+"km_rrup_vs_jb",
+//					gp, 800, 900, true, true, false);
+			PlotUtils.writePrintPlots(outputDir, prefix+"_"+oDF.format(distance)+"km_rrup_vs_jb",
+					gp, fullW*2d/3d, 6d, 300, true, true, false);
 			
 			// mow median GM vs comparable
 			double[] medians = new double[uncenteredExceedProbs.length];
@@ -1259,8 +1271,8 @@ public class SpinningFaultExceedanceFigures {
 				char sub1 = '₁';
 //				Font weightFont = new Font(Font.SANS_SERIF, Font.BOLD, 18);
 //				Font percentileFont = new Font(Font.SANS_SERIF, Font.BOLD, 16);
-				Font weightFont = new Font(Font.SANS_SERIF, Font.BOLD, 16);
-				Font percentileFont = new Font(Font.SANS_SERIF, Font.BOLD, 16);
+				Font weightFont = new Font(Font.SANS_SERIF, Font.BOLD, 8);
+				Font percentileFont = new Font(Font.SANS_SERIF, Font.BOLD, 8);
 				for (int f=0; f<fractiles.size(); f++) {
 					FractileBin bin = fractiles.getValue(f);
 					double weight = fractiles.getWeight(f);
@@ -1350,7 +1362,8 @@ public class SpinningFaultExceedanceFigures {
 					else
 						sortPrefix += "_fw";
 				}
-				PlotUtils.writePlots(outputDir, sortPrefix, gp, 1000, 900, true, true, false);
+//				PlotUtils.writePlots(outputDir, sortPrefix, gp, 1000, 900, true, true, false);
+				PlotUtils.writePrintPlots(outputDir, sortPrefix, gp, fullW, 6d, 300, true, true, false);
 				
 				gp.drawGraphPanel(List.of(sortPlot, varPlot, sortHistPlot), List.of(false), List.of(true, false, false),
 						List.of(sortRange), List.of(medianIMLRange, varRange, new Range(0d, fLine1)));
@@ -1370,7 +1383,8 @@ public class SpinningFaultExceedanceFigures {
 					else
 						sortPrefix += "_fw";
 				}
-				PlotUtils.writePlots(outputDir, sortPrefix, gp, 1000, 1000, true, true, false);
+//				PlotUtils.writePlots(outputDir, sortPrefix, gp, 1000, 1000, true, true, false);
+				PlotUtils.writePrintPlots(outputDir, sortPrefix, gp, fullW, 7d, 300, true, true, false);
 			}
 			
 			// map plot
@@ -1433,7 +1447,7 @@ public class SpinningFaultExceedanceFigures {
 					jbAnn.setTextAnchor(anchor);
 					jbAnn.setRotationAnchor(anchor);
 					jbAnn.setRotationAngle(0.5*Math.PI);
-					jbAnn.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 16));
+					jbAnn.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 6));
 					jbAnn.setBackgroundPaint(new Color(255, 255, 255, 60));
 					anns.add(jbAnn);
 					
@@ -1449,7 +1463,7 @@ public class SpinningFaultExceedanceFigures {
 			
 			int exampleInsertIndex = funcs.size();
 
-			PlotCurveCharacterstics centeredTraceChar = new PlotCurveCharacterstics(PlotLineType.SOLID, 4f, Colors.tab_blue);
+			PlotCurveCharacterstics centeredTraceChar = new PlotCurveCharacterstics(PlotLineType.SOLID, 3f, Colors.tab_blue);
 			if (mech == FocalMech.STRIKE_SLIP) {
 				boolean first = true;
 				for (RectangularSurface surf : centeredExampleSurfs) {
@@ -1466,7 +1480,7 @@ public class SpinningFaultExceedanceFigures {
 					chars.add(centeredTraceChar);
 				}
 			} else {
-				boolean firstFW = true;
+				boolean firstFW = false; // don't use separate labels
 				boolean firstHW = true;
 				PlotCurveCharacterstics outlineChar = new PlotCurveCharacterstics(
 						PlotLineType.SOLID, 1f, centeredTraceChar.getColor());
@@ -1496,19 +1510,22 @@ public class SpinningFaultExceedanceFigures {
 					if (hws[s]) {
 						// hanging wall
 						if (firstHW) {
-							if (numHW > 1)
-								traceXY.setName("Example centered HW surfaces");
-							else
-								traceXY.setName("Example centered HW surface");
+//							if (numHW > 1)
+//								traceXY.setName("Example centered HW surfaces");
+//							else
+//								traceXY.setName("Example centered HW surface");
+							traceXY.setName("Example centered surfaces");
 						}
 						firstHW = false;
 						chars.add(centeredTraceChar);
 					} else {
 						// foot wall
-						if (numFW > 1)
-							traceXY.setName("Example centered FW surfaces");
-						else
-							traceXY.setName("Example centered FW surface");
+						if (firstFW) {
+							if (numFW > 1)
+								traceXY.setName("Example centered FW surfaces");
+							else
+								traceXY.setName("Example centered FW surface");
+						}
 						firstFW = false;
 						chars.add(fwTraceChar);
 					}
@@ -1641,10 +1658,12 @@ public class SpinningFaultExceedanceFigures {
 						xyCircle.set(xyCircle.get(0));
 						if (i == 0) {
 							DefaultXY_DataSet fakeCircleXY = new DefaultXY_DataSet();
+//							if (hw)
+//								fakeCircleXY.setName("Centered HW strike range");
+//							else
+//								fakeCircleXY.setName("Centered FW strike range");
 							if (hw)
-								fakeCircleXY.setName("Centered HW strike range");
-							else
-								fakeCircleXY.setName("Centered FW strike range");
+								fakeCircleXY.setName("Centered strike range");
 							fakeCircleXY.set(-100d, -100d);
 							funcs.add(fakeCircleXY);
 							chars.add(new PlotCurveCharacterstics(PlotSymbol.FILLED_CIRCLE, 6f, color));
@@ -1678,7 +1697,18 @@ public class SpinningFaultExceedanceFigures {
 			PlotUtils.setXTick(gp, 5d);
 			PlotUtils.setYTick(gp, 5d);
 			
-			PlotUtils.writePlots(outputDir, prefix+"_"+oDF.format(distance)+"km_map", gp, 800, false, true, true, false);
+//			PlotUtils.writePlots(outputDir, prefix+"_"+oDF.format(distance)+"km_map", gp, 800, false, true, true, false);
+			PlotUtils.writePrintPlots(outputDir, prefix+"_"+oDF.format(distance)+"km_map_legend", gp, fullW/2d, false, 300, true, true, false);
+			plot.setLegendVisible(false);
+			
+			gp.drawGraphPanel(plot, false, false, xRange, yRange);
+			
+			PlotUtils.setXTick(gp, 5d);
+			PlotUtils.setYTick(gp, 5d);
+			PlotUtils.writePrintPlots(outputDir, prefix+"_"+oDF.format(distance)+"km_map", gp, fullW/2d, false, 300, true, true, false);
+			
+			gp.setRenderingOrder(DatasetRenderingOrder.FORWARD);
+			
 		}
 		
 		plots.get(0).setLegendInset(RectangleAnchor.BOTTOM_LEFT);
@@ -1688,11 +1718,10 @@ public class SpinningFaultExceedanceFigures {
 		for (int i=0; i<plots.size(); i++)
 			yRanges.add(new Range(0d, 1d));
 		
-		HeadlessGraphPanel gp = PlotUtils.initHeadless();
-		
 		gp.drawGraphPanel(plots, true, false, List.of(imlRange), yRanges);
 		
-		PlotUtils.writePlots(outputDir, prefix+"_"+perPrefix, gp, 1200, 200+300*plots.size(), true, true, false);
+//		PlotUtils.writePlots(outputDir, prefix+"_"+perPrefix, gp, 1200, 200+300*plots.size(), true, true, false);
+		PlotUtils.writePrintPlots(outputDir, prefix+"_"+perPrefix, gp, fullW, 7d, 300, true, true, false);
 		
 		texFW.close();
 	}

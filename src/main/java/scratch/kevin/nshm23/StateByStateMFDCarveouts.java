@@ -95,7 +95,7 @@ public class StateByStateMFDCarveouts {
 			PlotSpec plot = new PlotSpec(funcs, chars, title, "Magnitude", "Incremental Rate (1/yr)");
 			plot.setLegendInset(true);
 			
-			HeadlessGraphPanel gp = PlotUtils.initHeadless();
+			HeadlessGraphPanel gp = PlotUtils.initScreenHeadless();
 			
 			gp.drawGraphPanel(plot, false, true, xRange, yRange);
 			

@@ -227,7 +227,7 @@ public class GriddedSeismicityMFDTests {
 				PlotSpec spec = new PlotSpec(funcs, chars, title, "Magnitude", "Rate");
 				spec.setLegendInset(true);
 
-				HeadlessGraphPanel gp = PlotUtils.initHeadless();
+				HeadlessGraphPanel gp = PlotUtils.initScreenHeadless();
 
 				gp.drawGraphPanel(spec, false, true, new Range(5d, 8.1d), new Range(1e-4, 10));
 

@@ -122,7 +122,7 @@ class DistCalcBenchmark {
 		PlotSpec spec = new PlotSpec(funcs, chars, " ", "Magnitude", "Time For "+testLocs.length+" Distance Calcs (s)");
 		spec.setLegendVisible(true);
 		
-		HeadlessGraphPanel gp = PlotUtils.initHeadless();
+		HeadlessGraphPanel gp = PlotUtils.initScreenHeadless();
 		
 		Range xRange = new Range(refFunc.getMinX(), refFunc.getMaxX());
 		Range yRange = new Range(0d, maxY*1.2);

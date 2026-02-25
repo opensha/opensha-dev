@@ -346,7 +346,7 @@ public class PlottingUtils {
 			if (fileNamePrefix != null) {
 				int width = (int)(widthInches*72.);
 				int height = (int)(heightInches*72.);
-				PlotPreferences plotPrefs = PlotPreferences.getDefault();
+				PlotPreferences plotPrefs = PlotPreferences.getDefaultAppPrefs();
 				plotPrefs.setAxisLabelFontSize(11);
 				plotPrefs.setTickLabelFontSize(9);
 				plotPrefs.setBackgroundColor(Color.WHITE);

@@ -73,27 +73,29 @@ public class RupPropsFigure {
 		List<DiscretizedFunc> depthFuncs = new ArrayList<>();
 		List<PlotCurveCharacterstics> depthChars = new ArrayList<>();
 		
+		Float thickness = 1.75f;
+		
 		origZTorFunc.setName("NSHM23 as-published (strike-slip)");
 		depthFuncs.add(origZTorFunc);
-		depthChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 3f, origColor));
+		depthChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, thickness, origColor));
 		depthFuncs.add(origZBotSSFunc);
-		depthChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 3f, origColor));
+		depthChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, thickness, origColor));
 		origZBotDipFunc.setName("NSHM23 as-published (dipping)");
 		depthFuncs.add(origZBotDipFunc);
-		depthChars.add(new PlotCurveCharacterstics(PlotLineType.SHORT_DASHED, 3f, origColor));
+		depthChars.add(new PlotCurveCharacterstics(PlotLineType.SHORT_DASHED, thickness, origColor));
 		
 		modZTorSSFunc.setName("Smooth Ztor transition (strike-slip)");
 		depthFuncs.add(modZTorSSFunc);
-		depthChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 3f, modColor));
+		depthChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, thickness, modColor));
 		modZTorDipFunc.setName("Smooth Ztor transition (dipping)");
 		depthFuncs.add(modZTorDipFunc);
-		depthChars.add(new PlotCurveCharacterstics(PlotLineType.SHORT_DASHED, 3f, modColor));
+		depthChars.add(new PlotCurveCharacterstics(PlotLineType.SHORT_DASHED, thickness, modColor));
 		depthFuncs.add(modZBotSSFunc);
-		depthChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 3f, modColor));
+		depthChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, thickness, modColor));
 		depthFuncs.add(modZBotDipFunc);
-		depthChars.add(new PlotCurveCharacterstics(PlotLineType.SHORT_DASHED, 3f, modColor));
+		depthChars.add(new PlotCurveCharacterstics(PlotLineType.SHORT_DASHED, thickness, modColor));
 		
-		PlotSpec depthPlot = new PlotSpec(depthFuncs, depthChars, " ", "Magnitude", "Depth (km)");
+		PlotSpec depthPlot = new PlotSpec(depthFuncs, depthChars, null, "Magnitude", "Depth (km)");
 		depthPlot.setLegendInset(RectangleAnchor.BOTTOM_LEFT);
 		depthPlot.setYAxisInverted(true);
 		
@@ -102,24 +104,26 @@ public class RupPropsFigure {
 		
 		origLenFunc.setName("NSHM23 as-published (WC94 SRL)");
 		lengthFuncs.add(origLenFunc);
-		lengthChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 3f, origColor));
+		lengthChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, thickness, origColor));
 		
 		modLenSSFunc.setName("Leonard (2010) strike-slip");
 		lengthFuncs.add(modLenSSFunc);
-		lengthChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 3f, modColor));
+		lengthChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, thickness, modColor));
 		
 		modLenDipFunc.setName("Leonard (2010) dipping");
 		lengthFuncs.add(modLenDipFunc);
-		lengthChars.add(new PlotCurveCharacterstics(PlotLineType.SHORT_DASHED, 3f, modColor));
+		lengthChars.add(new PlotCurveCharacterstics(PlotLineType.SHORT_DASHED, thickness, modColor));
 		
-		PlotSpec lengthPlot = new PlotSpec(lengthFuncs, lengthChars, " ", "Magnitude", "Length (km)");
+		PlotSpec lengthPlot = new PlotSpec(lengthFuncs, lengthChars, depthPlot.getTitle(), "Magnitude", "Length (km)");
 		lengthPlot.setLegendInset(RectangleAnchor.TOP_LEFT);
 		
-		HeadlessGraphPanel gp = PlotUtils.initHeadless();
+		HeadlessGraphPanel gp = PlotUtils.initPrintHeadless();
 		
 		gp.drawGraphPanel(List.of(depthPlot, lengthPlot), List.of(false), List.of(false, false), List.of(magRange), null);
 		
-		PlotUtils.writePlots(FIGURES_DIR, "rupture_properties", gp, 1000, 700, true, true, false);
+//		PlotUtils.writePlots(FIGURES_DIR, "rupture_properties", gp, 1000, 700, true, true, false);
+		PlotUtils.writePrintPlots(FIGURES_DIR, "rupture_properties", gp, PlotUtils.DEFAULT_USABLE_PAGE_WIDTH,
+				0.5*PlotUtils.DEFAULT_USABLE_PAGE_HEIGHT, 150, true, true, false);
 	}
 
 }

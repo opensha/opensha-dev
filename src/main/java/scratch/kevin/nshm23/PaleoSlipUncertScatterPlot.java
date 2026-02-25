@@ -127,7 +127,7 @@ public class PaleoSlipUncertScatterPlot {
 			title = "Subsection Paleo Data Comparison";
 		PlotSpec spec = new PlotSpec(funcs, chars, title, "Paleo RI Data Rate (/yr)", "Paleo Slip Data Proxy Rate (/yr)");
 		
-		HeadlessGraphPanel gp = PlotUtils.initHeadless();
+		HeadlessGraphPanel gp = PlotUtils.initScreenHeadless();
 		
 		gp.drawGraphPanel(spec, true, true, range, range);
 		

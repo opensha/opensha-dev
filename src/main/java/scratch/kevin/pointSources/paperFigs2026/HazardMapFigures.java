@@ -15,13 +15,17 @@ import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.GregorianCalendar;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.StringTokenizer;
+import java.util.function.Consumer;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 
 import org.jfree.chart.annotations.XYTextAnnotation;
+import org.jfree.chart.ui.RectangleEdge;
 import org.jfree.chart.ui.TextAnchor;
 import org.opensha.commons.data.CSVFile;
 import org.opensha.commons.data.comcat.ComcatAccessor;
@@ -35,7 +39,9 @@ import org.opensha.commons.geo.LocationUtils;
 import org.opensha.commons.gui.plot.GeographicMapMaker;
 import org.opensha.commons.gui.plot.PlotCurveCharacterstics;
 import org.opensha.commons.gui.plot.PlotLineType;
+import org.opensha.commons.gui.plot.PlotPreferences;
 import org.opensha.commons.gui.plot.PlotSymbol;
+import org.opensha.commons.gui.plot.PlotUtils;
 import org.opensha.commons.mapping.gmt.elements.GMT_CPT_Files;
 import org.opensha.commons.util.DataUtils;
 import org.opensha.commons.util.cpt.CPT;
@@ -48,6 +54,7 @@ import org.opensha.sha.faultSurface.FaultSection;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.HashBasedTable;
 import com.google.common.collect.Table;
+import com.google.common.collect.Table.Cell;
 import com.google.common.primitives.Doubles;
 
 import net.mahdilamb.colormap.Colors;
@@ -64,17 +71,18 @@ public class HazardMapFigures {
 		texRPSuffixes.put(ReturnPeriods.TWO_IN_50, "");
 		texRPSuffixes.put(ReturnPeriods.TEN_IN_50, "TenFifty");
 		
-		ReturnPeriods[] mapRPs = { ReturnPeriods.TWO_IN_50 };
 		boolean replot = false;
 		
 		String mapZipName = "results_hazard_INCLUDE.zip";
-		
+
 		File hazardDir = new File(FIGURES_DIR, "hazard_calcs");
 		Preconditions.checkState(hazardDir.exists() || hazardDir.mkdir());
+		File hazardRawDir = new File(PAPER_DIR.getParentFile(), "hazard_calcs_raw");
+		Preconditions.checkState(hazardRawDir.exists() || hazardRawDir.mkdir());
 		
 		Map<Models, List<Models>> comparisons = new HashMap<>();
 
-		Table<Models, Models, String> compLabels = HashBasedTable.create();
+		Table<Models, Models, String> compTitles = HashBasedTable.create();
 		Table<Models, Models, Boolean> compForceTights = HashBasedTable.create();
 		
 		Models[] models = Models.values();
@@ -104,15 +112,15 @@ public class HazardMapFigures {
 		
 		// alt random and realization count tests
 		compAdd(comparisons, Models.FINITE_1X_UNCENTERED, Models.FINITE_1X_UNCENTERED_ALT_RAND);
-		compLabels.put(Models.FINITE_1X_UNCENTERED, Models.FINITE_1X_UNCENTERED_ALT_RAND, "Virtual faults (1x)");
+		compTitles.put(Models.FINITE_1X_UNCENTERED, Models.FINITE_1X_UNCENTERED_ALT_RAND, "Virtual faults (1x)");
 		compForceTights.put(Models.FINITE_1X_UNCENTERED, Models.FINITE_1X_UNCENTERED_ALT_RAND, true);
 		
 		compAdd(comparisons, Models.FINITE_2X_UNCENTERED, Models.FINITE_2X_UNCENTERED_ALT_RAND);
-		compLabels.put(Models.FINITE_2X_UNCENTERED, Models.FINITE_2X_UNCENTERED_ALT_RAND, "Virtual faults (2x)");
+		compTitles.put(Models.FINITE_2X_UNCENTERED, Models.FINITE_2X_UNCENTERED_ALT_RAND, "Virtual faults (2x)");
 		compForceTights.put(Models.FINITE_2X_UNCENTERED, Models.FINITE_2X_UNCENTERED_ALT_RAND, true);
 		
 		compAdd(comparisons, Models.FINITE_5X_UNCENTERED, Models.FINITE_5X_UNCENTERED_ALT_RAND);
-		compLabels.put(Models.FINITE_5X_UNCENTERED, Models.FINITE_5X_UNCENTERED_ALT_RAND, "Virtual faults (5x)");
+		compTitles.put(Models.FINITE_5X_UNCENTERED, Models.FINITE_5X_UNCENTERED_ALT_RAND, "Virtual faults (5x)");
 		compForceTights.put(Models.FINITE_5X_UNCENTERED, Models.FINITE_5X_UNCENTERED_ALT_RAND, true);
 		
 		
@@ -124,28 +132,28 @@ public class HazardMapFigures {
 		// fixed (openquake) vs 100 random
 		compAdd(comparisons, Models.FINITE_FIXED_1X, Models.FINITE_100X_CENTERED);
 		compForceTights.put(Models.FINITE_FIXED_1X, Models.FINITE_100X_CENTERED, true);
-		compLabels.put(Models.FINITE_FIXED_1X, Models.FINITE_100X_CENTERED, "1/2 fixed strikes");
+		compTitles.put(Models.FINITE_FIXED_1X, Models.FINITE_100X_CENTERED, "1-2 fixed strikes");
 		compAdd(comparisons, Models.FINITE_FIXED_1X, Models.FINITE_100X_UNCENTERED);
 		compForceTights.put(Models.FINITE_FIXED_1X, Models.FINITE_100X_UNCENTERED, true);
-		compLabels.put(Models.FINITE_FIXED_1X, Models.FINITE_100X_UNCENTERED, "1/2 fixed strikes");
+		compTitles.put(Models.FINITE_FIXED_1X, Models.FINITE_100X_UNCENTERED, "1-2 fixed strikes");
 		compAdd(comparisons, Models.FINITE_FIXED_2X, Models.FINITE_100X_CENTERED);
 		compForceTights.put(Models.FINITE_FIXED_2X, Models.FINITE_100X_CENTERED, true);
-		compLabels.put(Models.FINITE_FIXED_2X, Models.FINITE_100X_CENTERED, "2/4 fixed strikes");
+		compTitles.put(Models.FINITE_FIXED_2X, Models.FINITE_100X_CENTERED, "2-4 fixed strikes");
 		compAdd(comparisons, Models.FINITE_FIXED_2X, Models.FINITE_100X_UNCENTERED);
 		compForceTights.put(Models.FINITE_FIXED_2X, Models.FINITE_100X_UNCENTERED, true);
-		compLabels.put(Models.FINITE_FIXED_2X, Models.FINITE_100X_UNCENTERED, "2/4 fixed strikes");
+		compTitles.put(Models.FINITE_FIXED_2X, Models.FINITE_100X_UNCENTERED, "2-4 fixed strikes");
 		compAdd(comparisons, Models.OPENQUAKE_FINITE, Models.FINITE_100X_CENTERED);
 		compForceTights.put(Models.OPENQUAKE_FINITE, Models.FINITE_100X_CENTERED, true);
-		compLabels.put(Models.OPENQUAKE_FINITE, Models.FINITE_100X_CENTERED, "4/8 fixed strikes");
+		compTitles.put(Models.OPENQUAKE_FINITE, Models.FINITE_100X_CENTERED, "4-8 fixed strikes");
 		compAdd(comparisons, Models.OPENQUAKE_FINITE, Models.FINITE_100X_UNCENTERED);
 		compForceTights.put(Models.OPENQUAKE_FINITE, Models.FINITE_100X_UNCENTERED, true);
-		compLabels.put(Models.OPENQUAKE_FINITE, Models.FINITE_100X_UNCENTERED, "4/8 fixed strikes");
+		compTitles.put(Models.OPENQUAKE_FINITE, Models.FINITE_100X_UNCENTERED, "4-8 fixed strikes");
 //		compAdd(comparisons, Models.OPENQUAKE_FINITE_UNCENTERED, Models.FINITE_100X_UNCENTERED);
 		
 		compAdd(comparisons, PROPOSED_DIST_CORR_MODEL, Models.AS_PUBLISHED);
-		compLabels.put(PROPOSED_DIST_CORR_MODEL, Models.AS_PUBLISHED, "Proposed corrections");
+		compTitles.put(PROPOSED_DIST_CORR_MODEL, Models.AS_PUBLISHED, "Proposed corrections");
 		compAdd(comparisons, PROPOSED_FULL_MODEL, Models.AS_PUBLISHED);
-		compLabels.put(PROPOSED_FULL_MODEL, Models.AS_PUBLISHED, "Proposed properties & corrections");
+		compTitles.put(PROPOSED_FULL_MODEL, Models.AS_PUBLISHED, "Proposed properties & corrections");
 		
 		compAdd(comparisons, PROPOSED_FULL_MODEL, Models.SPINNING_DIST_5X_UNCENTERED_MOD_ZTOR_LEN_M4);
 		compAdd(comparisons, Models.SPINNING_DIST_5X_UNCENTERED_MOD_ZTOR_LEN_M3, PROPOSED_FULL_MODEL);
@@ -153,37 +161,37 @@ public class HazardMapFigures {
 		
 		// incremental comps, table 1
 		compAdd(comparisons, Models.SPINNING_AVG_CENTERED_M6, Models.AS_PUBLISHED);
-		compLabels.put(Models.SPINNING_AVG_CENTERED_M6, Models.AS_PUBLISHED, "Improved Rrup and hanging wall");
+		compTitles.put(Models.SPINNING_AVG_CENTERED_M6, Models.AS_PUBLISHED, "Improved Rrup and hanging wall");
 		compForceTights.put(Models.SPINNING_AVG_CENTERED_M6, Models.AS_PUBLISHED, true);
 		
 		compAdd(comparisons, Models.SPINNING_AVG_CENTERED_M5, Models.SPINNING_AVG_CENTERED_M6);
-		compLabels.put(Models.SPINNING_AVG_CENTERED_M5, Models.SPINNING_AVG_CENTERED_M6, "Lower correction M>5");
+		compTitles.put(Models.SPINNING_AVG_CENTERED_M5, Models.SPINNING_AVG_CENTERED_M6, "Lower correction M>5");
 		compForceTights.put(Models.SPINNING_AVG_CENTERED_M5, Models.SPINNING_AVG_CENTERED_M6, true);
 		
 		compAdd(comparisons, Models.FINITE_100X_CENTERED, Models.SPINNING_AVG_CENTERED_M5);
-		compLabels.put(Models.FINITE_100X_CENTERED, Models.SPINNING_AVG_CENTERED_M5, "Virtual faults, centered");
+		compTitles.put(Models.FINITE_100X_CENTERED, Models.SPINNING_AVG_CENTERED_M5, "Virtual faults, centered");
 		compForceTights.put(Models.FINITE_100X_CENTERED, Models.SPINNING_AVG_CENTERED_M5, true);
 		
 		compAdd(comparisons, Models.FINITE_100X_UNCENTERED, Models.FINITE_100X_CENTERED);
-		compLabels.put(Models.FINITE_100X_UNCENTERED, Models.FINITE_100X_CENTERED, "Virtual faults, uncentered");
+		compTitles.put(Models.FINITE_100X_UNCENTERED, Models.FINITE_100X_CENTERED, "Virtual faults, uncentered");
 		compForceTights.put(Models.FINITE_100X_UNCENTERED, Models.FINITE_100X_CENTERED, true);
 		
 		compAdd(comparisons, PROPOSED_DIST_CORR_MODEL, Models.FINITE_100X_UNCENTERED);
-		compLabels.put(PROPOSED_DIST_CORR_MODEL, Models.FINITE_100X_UNCENTERED, "Distribution-based correction");
+		compTitles.put(PROPOSED_DIST_CORR_MODEL, Models.FINITE_100X_UNCENTERED, "Distribution-based correction");
 		compForceTights.put(PROPOSED_DIST_CORR_MODEL, Models.FINITE_100X_UNCENTERED, true);
 		
 
 		// incremental comps, table 3
 		compAdd(comparisons, Models.SPINNING_DIST_5X_UNCENTERED_MOD_ZTOR, PROPOSED_DIST_CORR_MODEL);
-		compLabels.put(Models.SPINNING_DIST_5X_UNCENTERED_MOD_ZTOR, PROPOSED_DIST_CORR_MODEL, "Smooth Ztor transition");
+		compTitles.put(Models.SPINNING_DIST_5X_UNCENTERED_MOD_ZTOR, PROPOSED_DIST_CORR_MODEL, "Smooth Ztor transition");
 		compForceTights.put(Models.SPINNING_DIST_5X_UNCENTERED_MOD_ZTOR, PROPOSED_DIST_CORR_MODEL, true);
 		
 		compAdd(comparisons, Models.SPINNING_DIST_5X_UNCENTERED_MOD_ZTOR_LEN, Models.SPINNING_DIST_5X_UNCENTERED_MOD_ZTOR);
-		compLabels.put(Models.SPINNING_DIST_5X_UNCENTERED_MOD_ZTOR_LEN, Models.SPINNING_DIST_5X_UNCENTERED_MOD_ZTOR, "Leonard (2010) M~L");
+		compTitles.put(Models.SPINNING_DIST_5X_UNCENTERED_MOD_ZTOR_LEN, Models.SPINNING_DIST_5X_UNCENTERED_MOD_ZTOR, "Leonard (2010) M~L");
 		compForceTights.put(Models.SPINNING_DIST_5X_UNCENTERED_MOD_ZTOR_LEN, Models.SPINNING_DIST_5X_UNCENTERED_MOD_ZTOR, true);
 		
 		compAdd(comparisons, Models.SPINNING_DIST_5X_UNCENTERED_MOD_ZTOR_LEN_M3p5, Models.SPINNING_DIST_5X_UNCENTERED_MOD_ZTOR_LEN);
-		compLabels.put(Models.SPINNING_DIST_5X_UNCENTERED_MOD_ZTOR_LEN_M3p5, Models.SPINNING_DIST_5X_UNCENTERED_MOD_ZTOR_LEN, "Reduced Mmin=3.5");
+		compTitles.put(Models.SPINNING_DIST_5X_UNCENTERED_MOD_ZTOR_LEN_M3p5, Models.SPINNING_DIST_5X_UNCENTERED_MOD_ZTOR_LEN, "Reduced Mmin=3.5");
 		compForceTights.put(Models.SPINNING_DIST_5X_UNCENTERED_MOD_ZTOR_LEN_M3p5, Models.SPINNING_DIST_5X_UNCENTERED_MOD_ZTOR_LEN, true);
 		
 		EnumSet<Models> seismicityMapModels = EnumSet.of(Models.FINITE_100X_CENTERED);
@@ -193,6 +201,37 @@ public class HazardMapFigures {
 		alwaysPlotComps.put(Models.AS_PUBLISHED, new ArrayList<>()); // plot it as is
 		compAdd(alwaysPlotComps, PROPOSED_DIST_CORR_MODEL, Models.AS_PUBLISHED);
 		compAdd(alwaysPlotComps, PROPOSED_FULL_MODEL, Models.AS_PUBLISHED);
+		
+		// boolean here is true:1/3 width, false 1/2 width
+		Table<Models, Models, Boolean> paperFigs = HashBasedTable.create();
+		// figure 1
+		paperFigs.put(Models.AS_PUBLISHED, Models.AS_PUBLISHED, true);
+		paperFigs.put(PROPOSED_DIST_CORR_MODEL, Models.AS_PUBLISHED, true);
+		paperFigs.put(PROPOSED_FULL_MODEL, Models.AS_PUBLISHED, true);
+		
+		// incremental 1
+		paperFigs.put(Models.SPINNING_AVG_CENTERED_M6, Models.AS_PUBLISHED, true);
+		paperFigs.put(Models.SPINNING_AVG_CENTERED_M5, Models.SPINNING_AVG_CENTERED_M6, true);
+		paperFigs.put(Models.FINITE_100X_CENTERED, Models.SPINNING_AVG_CENTERED_M5, true);
+		paperFigs.put(Models.FINITE_100X_UNCENTERED, Models.FINITE_100X_CENTERED, true);
+		paperFigs.put(PROPOSED_DIST_CORR_MODEL, Models.FINITE_100X_UNCENTERED, true);
+		
+		// incremental 2
+		paperFigs.put(Models.SPINNING_DIST_5X_UNCENTERED_MOD_ZTOR, PROPOSED_DIST_CORR_MODEL, true);
+		paperFigs.put(Models.SPINNING_DIST_5X_UNCENTERED_MOD_ZTOR_LEN, Models.SPINNING_DIST_5X_UNCENTERED_MOD_ZTOR, true);
+		paperFigs.put(Models.SPINNING_DIST_5X_UNCENTERED_MOD_ZTOR_LEN_M3p5, Models.SPINNING_DIST_5X_UNCENTERED_MOD_ZTOR_LEN, true);
+		
+		paperFigs.put(Models.FINITE_1X_UNCENTERED, Models.FINITE_1X_UNCENTERED_ALT_RAND, true);
+		paperFigs.put(Models.FINITE_2X_UNCENTERED, Models.FINITE_2X_UNCENTERED_ALT_RAND, true);
+		paperFigs.put(Models.FINITE_5X_UNCENTERED, Models.FINITE_5X_UNCENTERED_ALT_RAND, true);
+		paperFigs.put(Models.FINITE_FIXED_1X, Models.FINITE_100X_CENTERED, true);
+		paperFigs.put(Models.FINITE_FIXED_2X, Models.FINITE_100X_CENTERED, true);
+		paperFigs.put(Models.OPENQUAKE_FINITE, Models.FINITE_100X_CENTERED, true);
+		paperFigs.put(Models.FINITE_FIXED_1X, Models.FINITE_100X_UNCENTERED, true);
+		paperFigs.put(Models.FINITE_FIXED_2X, Models.FINITE_100X_UNCENTERED, true);
+		paperFigs.put(Models.OPENQUAKE_FINITE, Models.FINITE_100X_UNCENTERED, true);
+		paperFigs.put(Models.AS_PUBLISHED, Models.FINITE_100X_UNCENTERED, false); // half width
+		paperFigs.put(Models.FINITE_100X_CENTERED, Models.FINITE_100X_UNCENTERED, false); // half width
 		
 //		// + improved Rrup and Rx
 //		compAdd(comparisons, Models.SPINNING_AVG_M6, Models.AS_PUBLISHED);
@@ -239,13 +278,25 @@ public class HazardMapFigures {
 		GeographicMapMaker zoomMapMaker = new GeographicMapMaker(ZOOM_GRID_REG);
 		
 		List<? extends FaultSection> allSects = NSHM23_FaultModels.WUS_FM_v3.getFaultSections();
+
+		double thirdWidth = PlotUtils.DEFAULT_USABLE_PAGE_WIDTH/3d;
+		double defaultWidth = PlotUtils.DEFAULT_USABLE_PAGE_WIDTH/2d;
+		PlotPreferences plotPrefs = GeographicMapMaker.PLOT_PREFS_PRINT_DEFAULT.clone();
+		plotPrefs.setSizeScalar(1d/3d);
+		plotPrefs.setPlotLabelFontSize(10);
+		PlotPreferences thirdPlotPrefs = plotPrefs.clone();
+		thirdPlotPrefs.setTickLabelFontSize(6);
+		thirdPlotPrefs.setAxisLabelFontSize(10);
 		
 		for (GeographicMapMaker map : List.of(mapMaker, zoomMapMaker)) {
 			map.setFaultSections(allSects);
 			map.setSectOutlineChar(null);
-			map.setSectTraceChar(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, Color.DARK_GRAY));
+			map.setSectTraceChar(new PlotCurveCharacterstics(PlotLineType.SOLID, 0.7f, Color.DARK_GRAY));
+			map.setPoliticalBoundaryChar(new PlotCurveCharacterstics(PlotLineType.SOLID, 0.7f, Color.GRAY));
 //			map.setSectOutlineChar(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, new Color(127, 127, 127, 100)));
 			map.setWriteGeoJSON(false);
+			map.setPrintPlotPrefs(plotPrefs);
+			map.setDefaultPlotWidthInches(defaultWidth);
 		}
 //		mapMaker.setSectOutlineChar(null);
 //		zoomMapMaker.setSectOutlineChar(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, new Color(127, 127, 127, 100)));
@@ -254,7 +305,7 @@ public class HazardMapFigures {
 		List<PlotCurveCharacterstics> zoomScatterChars = new ArrayList<>();
 		
 		if (ZOOM_CITIES != null && !ZOOM_CITIES.isEmpty()) {
-			Font cityFont = new Font(Font.SANS_SERIF, Font.BOLD, 18);
+			Font cityFont = new Font(Font.SANS_SERIF, Font.BOLD, 10);
 			for (String name : ZOOM_CITIES.keySet()) {
 				Location loc = ZOOM_CITIES.get(name);
 				XYTextAnnotation ann = new XYTextAnnotation("  "+name, loc.lon, loc.lat);
@@ -269,7 +320,6 @@ public class HazardMapFigures {
 			}
 		}
 		zoomMapMaker.plotScatters(zoomScatterLocs, zoomScatterChars);
-		zoomMapMaker.setDefaultPlotWidth(650);
 		
 		LocationList seisZoomScatterLocs = null;
 		List<PlotCurveCharacterstics> seisZoomScatterChars = null;
@@ -321,166 +371,214 @@ public class HazardMapFigures {
 				}
 				
 				String mapLabel = perLabel+" "+perUnits+", "+rp.label;
-				String mapDiffLabel = "% Change, "+perLabel+", "+rp.label;
+				String mapDiffLabel = "% change, "+perLabel+", "+rp.label;
 				
-				File subDir = new File(hazardDir, perPrefix+"_"+rp.name());
-				Preconditions.checkState(subDir.exists() || subDir.mkdir());
-				
-				
-				boolean plotMaps = false;
-				for (ReturnPeriods mapRP : mapRPs)
-					if (mapRP == rp)
-						plotMaps = true;
-				String texRPSuffix = texRPSuffixes.get(rp);
-				FileWriter texFW = texRPSuffix == null ? null : new FileWriter(new File(subDir, "hazard_change_stats.tex"));
-				
-				File mapsDir = new File(subDir, "maps");
-				if (plotMaps || (alwaysPlotComps != null && !alwaysPlotComps.isEmpty()))
-					Preconditions.checkState(mapsDir.exists() || mapsDir.mkdir());
-				File mapCompDir = new File(subDir, "comparisons");
-				if (plotMaps || (alwaysPlotComps != null && !alwaysPlotComps.isEmpty()))
-					Preconditions.checkState(mapCompDir.exists() || mapCompDir.mkdir());
-				
-				File zoomMapsDir = new File(subDir, "maps_zoom");
-				if (plotMaps || (alwaysPlotComps != null && !alwaysPlotComps.isEmpty()))
-					Preconditions.checkState(zoomMapsDir.exists() || zoomMapsDir.mkdir());
-				File zoomMapCompDir = new File(subDir, "comparisons_zoom");
-				if (plotMaps || (alwaysPlotComps != null && !alwaysPlotComps.isEmpty()))
-					Preconditions.checkState(zoomMapCompDir.exists() || zoomMapCompDir.mkdir());
-				
-				CSVFile<String> compCSV = new CSVFile<>(true);
-				compCSV.addLine("Model", "Comparison Model", "Mean Change", "Mean Absolute Change", "Median Absolute Change", "Maximum Change");
-				
-				for (int i=0; i<models.length; i++) {
-					Models model = models[i];
-					if (maps[i] == null) {
-						System.err.println("Skipping "+models[i].getName()+", calculations not found");
-						continue;
-					}
-					List<Models> alwaysPlots = alwaysPlotComps == null ? null : alwaysPlotComps.get(model);
-					boolean doSeis = plotMaps && seismicityMapModels != null && seismicityMapModels.contains(model) && zoomMaps[i] != null;
-					System.out.println("Plotting maps for "+models[i].getName());
-					if (plotMaps || alwaysPlots != null) {
-						if (replot || !new File(mapsDir, model.name()+".pdf").exists()) {
-							mapMaker.plotXYZData(maps[i], hazardCPT, model.getName()+", "+mapLabel);
-							mapMaker.plot(mapsDir, model.name(), " ");
-						}
-						if (zoomMaps[i] != null && (replot || !new File(zoomMapsDir, model.name()+".pdf").exists())) {
-							zoomMapMaker.plotXYZData(zoomMaps[i], hazardCPT, model.getName()+", "+mapLabel);
-							zoomMapMaker.plot(zoomMapsDir, model.name(), " ");
-						}
-					}
+				for (boolean paper : new boolean[] {false,true}) {
+					File subDir = new File(paper ? hazardDir : hazardRawDir, perPrefix+"_"+rp.name());
+					Preconditions.checkState(subDir.exists() || subDir.mkdir());
 					
-					if (doSeis && (replot || !new File(zoomMapsDir, model.name()+"_seis.pdf").exists())) {
-						if (seisZoomScatterLocs == null) {
-							seisZoomScatterLocs = new LocationList(zoomScatterLocs);
-							seisZoomScatterChars = new ArrayList<>(zoomScatterChars);
-							fetchComcatEvents(seisZoomScatterLocs, seisZoomScatterChars);
+					String texRPSuffix = texRPSuffixes.get(rp);
+					FileWriter texFW = !paper || texRPSuffix == null ? null : new FileWriter(new File(subDir, "hazard_change_stats.tex"));
+					
+					File mapsDir = new File(subDir, "maps");
+					if (alwaysPlotComps != null && !alwaysPlotComps.isEmpty())
+						Preconditions.checkState(mapsDir.exists() || mapsDir.mkdir());
+					File mapCompDir = new File(subDir, "comparisons");
+					if (alwaysPlotComps != null && !alwaysPlotComps.isEmpty())
+						Preconditions.checkState(mapCompDir.exists() || mapCompDir.mkdir());
+					
+					File zoomMapsDir = new File(subDir, "maps_zoom");
+					if (alwaysPlotComps != null && !alwaysPlotComps.isEmpty())
+						Preconditions.checkState(zoomMapsDir.exists() || zoomMapsDir.mkdir());
+					File zoomMapCompDir = new File(subDir, "comparisons_zoom");
+					if (alwaysPlotComps != null && !alwaysPlotComps.isEmpty())
+						Preconditions.checkState(zoomMapCompDir.exists() || zoomMapCompDir.mkdir());
+					
+					File cptsDir = new File(subDir, "cpts");
+					Preconditions.checkState(cptsDir.exists() || cptsDir.mkdir());
+					
+					if (replot || !new File(cptsDir, "hazard_cpt.cpt").exists())
+						PlotUtils.writeScaleLegendOnly(cptsDir, "hazard_cpt",
+								GeographicMapMaker.buildCPTLegend(hazardCPT, mapLabel, mapMaker.getPrintPlotPrefs()),
+								defaultWidth, 300, true, true);
+					if (replot || !new File(cptsDir, "pdiff_cpt.cpt").exists())
+						PlotUtils.writeScaleLegendOnly(cptsDir, "pdiff_cpt",
+								GeographicMapMaker.buildCPTLegend(pDiffCPT, mapDiffLabel, mapMaker.getPrintPlotPrefs()),
+								defaultWidth, 300, true, true);
+					if (replot || !new File(cptsDir, "pdiff_tight_cpt.cpt").exists())
+						PlotUtils.writeScaleLegendOnly(cptsDir, "pdiff_tight_cpt",
+								GeographicMapMaker.buildCPTLegend(pDiffTightCPT, mapDiffLabel, mapMaker.getPrintPlotPrefs()),
+								defaultWidth, 300, true, true);
+					
+					CSVFile<String> compCSV = new CSVFile<>(true);
+					compCSV.addLine("Model", "Comparison Model", "Mean Change", "Mean Absolute Change", "Median Absolute Change", "Maximum Change");
+					
+					for (int i=0; i<models.length; i++) {
+						Models model = models[i];
+						if (maps[i] == null) {
+							System.err.println("Skipping "+models[i].getName()+", calculations not found");
+							continue;
+						}
+						boolean plotModelMaps = !paper || paperFigs.contains(model, model);
+						boolean doSeis = seismicityMapModels != null && seismicityMapModels.contains(model) && zoomMaps[i] != null;
+						boolean doThird = plotModelMaps && paper && paperFigs.get(model, model);
+						String myMapLabel = mapLabel;
+						if (doThird) {
+							mapMaker.setDefaultPlotWidthInches(thirdWidth);
+							mapMaker.setPrintPlotPrefs(thirdPlotPrefs);
+							zoomMapMaker.setDefaultPlotWidthInches(thirdWidth);
+							zoomMapMaker.setPrintPlotPrefs(thirdPlotPrefs);
+							myMapLabel = null;
+						}
+						System.out.println("Plotting maps for "+models[i].getName());
+						if (plotModelMaps) {
+							if (replot || !new File(mapsDir, model.name()+".pdf").exists()) {
+								mapMaker.plotXYZData(maps[i], hazardCPT, myMapLabel);
+								mapMaker.plot(mapsDir, model.name(), model.getName());
+							}
+							if (zoomMaps[i] != null && (replot || !new File(zoomMapsDir, model.name()+".pdf").exists())) {
+								zoomMapMaker.plotXYZData(zoomMaps[i], hazardCPT, myMapLabel);
+								zoomMapMaker.plot(zoomMapsDir, model.name(), model.getName());
+							}
 						}
 						
-						zoomMapMaker.plotScatters(seisZoomScatterLocs, seisZoomScatterChars);
-						zoomMapMaker.plotXYZData(zoomMaps[i], hazardCPT, model.getName()+", "+mapLabel);
-						zoomMapMaker.plot(zoomMapsDir, model.name()+"_seis", " ");
-						zoomMapMaker.plotScatters(zoomScatterLocs, zoomScatterChars);
-					}
-					
-					List<Models> comps = comparisons.get(model);
-					if (comps != null) {
-						for (Models comp : comps) {
-							int compIndex = comp.ordinal();
-							System.out.println("\tVs "+comp.getName());
-							if (maps[compIndex] == null) {
-								System.err.println("\tSkipping comparison with "+models[compIndex].getName()+", calculations not found");
-								continue;
-							}
-							GriddedGeoDataSet pDiff = pDiff(maps[i], maps[compIndex]);
-							DiffStats stats = new DiffStats(pDiff);
-							
-							GriddedGeoDataSet zoomPDiff = null;
-							double mean = stats.mean;
-							double meanAbs = stats.meanAbs;
-							double medianAbs = stats.medianAbs;
-							double maxSigned = stats.maxSigned;
-							if (zoomMaps[i] != null && zoomMaps[compIndex] != null) {
-								zoomPDiff = pDiff(zoomMaps[i], zoomMaps[compIndex]);
-								DiffStats zoomStats = new DiffStats(zoomPDiff);
-								if (Math.abs(zoomStats.maxSigned) > Math.abs(maxSigned))
-									maxSigned = zoomStats.maxSigned;
+						if (plotModelMaps && doSeis && (replot || !new File(zoomMapsDir, model.name()+"_seis.pdf").exists())) {
+							if (seisZoomScatterLocs == null) {
+								seisZoomScatterLocs = new LocationList(zoomScatterLocs);
+								seisZoomScatterChars = new ArrayList<>(zoomScatterChars);
+								fetchComcatEvents(seisZoomScatterLocs, seisZoomScatterChars);
 							}
 							
-							Boolean tight = compForceTights.get(model, comp);
-							if (tight == null)
-								tight = compForceTights.get(comp, model);
-							if (tight == null)
-								tight = Math.abs(maxSigned) <= maxForTight;
-							
-							CPT cpt = tight ? pDiffTightCPT : pDiffCPT;
-							
-//							System.out.println("\t\t"+stats);
-							System.out.println("\t\tmean="+twoDF.format(mean)
-								+"%;\tmeanAbs="+twoDF.format(meanAbs)
-								+"%;\tmedianAbs="+twoDF.format(medianAbs)
-								+"%;\tmaxSigned="+twoDF.format(maxSigned)+"%");
+							zoomMapMaker.plotScatters(seisZoomScatterLocs, seisZoomScatterChars);
+							zoomMapMaker.plotXYZData(zoomMaps[i], hazardCPT, myMapLabel);
+							zoomMapMaker.plot(zoomMapsDir, model.name()+"_seis", model.getName());
+							zoomMapMaker.plotScatters(zoomScatterLocs, zoomScatterChars);
+						}
+						
+						if (doThird) {
+							mapMaker.setDefaultPlotWidthInches(defaultWidth);
+							mapMaker.setPrintPlotPrefs(plotPrefs);
+							zoomMapMaker.setDefaultPlotWidthInches(defaultWidth);
+							zoomMapMaker.setPrintPlotPrefs(plotPrefs);
+						}
+						
+						List<Models> comps = comparisons.get(model);
+						if (comps != null) {
+							for (Models comp : comps) {
+								int compIndex = comp.ordinal();
+								System.out.println("\tVs "+comp.getName());
+								if (maps[compIndex] == null) {
+									System.err.println("\tSkipping comparison with "+models[compIndex].getName()+", calculations not found");
+									continue;
+								}
+								GriddedGeoDataSet pDiff = pDiff(maps[i], maps[compIndex]);
+								DiffStats stats = new DiffStats(pDiff);
+								
+								boolean plotCompModelMaps = !paper || paperFigs.contains(model, comp);
+								doThird = plotCompModelMaps && paper && paperFigs.get(model, comp);
+								
+								GriddedGeoDataSet zoomPDiff = null;
+								double mean = stats.mean;
+								double meanAbs = stats.meanAbs;
+								double medianAbs = stats.medianAbs;
+								double maxSigned = stats.maxSigned;
+								if (zoomMaps[i] != null && zoomMaps[compIndex] != null) {
+									zoomPDiff = pDiff(zoomMaps[i], zoomMaps[compIndex]);
+									DiffStats zoomStats = new DiffStats(zoomPDiff);
+									if (Math.abs(zoomStats.maxSigned) > Math.abs(maxSigned))
+										maxSigned = zoomStats.maxSigned;
+								}
+								
+								Boolean tight = compForceTights.get(model, comp);
+								if (tight == null)
+									tight = compForceTights.get(comp, model);
+								if (tight == null)
+									tight = Math.abs(maxSigned) <= maxForTight;
+								
+								CPT cpt = tight ? pDiffTightCPT : pDiffCPT;
+								
+//								System.out.println("\t\t"+stats);
+								System.out.println("\t\tmean="+twoDF.format(mean)
+									+"%;\tmeanAbs="+twoDF.format(meanAbs)
+									+"%;\tmedianAbs="+twoDF.format(medianAbs)
+									+"%;\tmaxSigned="+twoDF.format(maxSigned)+"%");
 
-							String prefix = model.name()+"_vs_"+comp.name();
-							String label = mapDiffLabel;
-							if (plotMaps || (alwaysPlots != null && alwaysPlots.contains(comp))) {
-//								String label = model.getName()+" vs "+comp.getName()+", "+mapDiffLabel;
-								if (compLabels.contains(model, comp))
-									label = compLabels.get(model, comp)+", "+label;
+								String prefix = model.name()+"_vs_"+comp.name();
+								String label = mapDiffLabel;
+								String title = model.getName();
+								if (compTitles.contains(model, comp))
+									title = compTitles.get(model, comp);
 								
-								if (replot || !new File(mapCompDir, prefix+".pdf").exists()) {
-									mapMaker.plotXYZData(pDiff, cpt, label);
-									mapMaker.plot(mapCompDir, prefix, " ");
+								if (doThird) {
+									mapMaker.setDefaultPlotWidthInches(thirdWidth);
+									mapMaker.setPrintPlotPrefs(thirdPlotPrefs);
+									zoomMapMaker.setDefaultPlotWidthInches(thirdWidth);
+									zoomMapMaker.setPrintPlotPrefs(thirdPlotPrefs);
+									label = null;
 								}
-								if (zoomPDiff != null && (replot || !new File(zoomMapCompDir, prefix+".pdf").exists())) {
+								
+								if (plotCompModelMaps) {
+//									String label = model.getName()+" vs "+comp.getName()+", "+mapDiffLabel;
+									if (replot || !new File(mapCompDir, prefix+".pdf").exists()) {
+										mapMaker.plotXYZData(pDiff, cpt, label);
+										mapMaker.plot(mapCompDir, prefix, title);
+									}
+									if (zoomPDiff != null && (replot || !new File(zoomMapCompDir, prefix+".pdf").exists())) {
+										zoomMapMaker.plotXYZData(zoomPDiff, cpt, label);
+										zoomMapMaker.plot(zoomMapCompDir, prefix, title);
+									}
+								}
+								
+								if (plotCompModelMaps && doSeis && zoomPDiff != null && (replot || !new File(zoomMapCompDir, prefix+"_seis.pdf").exists())) {
+									if (seisZoomScatterLocs == null) {
+										seisZoomScatterLocs = new LocationList(zoomScatterLocs);
+										seisZoomScatterChars = new ArrayList<>(zoomScatterChars);
+										fetchComcatEvents(seisZoomScatterLocs, seisZoomScatterChars);
+									}
+									
+									zoomMapMaker.plotScatters(seisZoomScatterLocs, seisZoomScatterChars);
 									zoomMapMaker.plotXYZData(zoomPDiff, cpt, label);
-									zoomMapMaker.plot(zoomMapCompDir, prefix, " ");
-								}
-							}
-							
-							if (doSeis && zoomPDiff != null && (replot || !new File(zoomMapCompDir, prefix+"_seis.pdf").exists())) {
-								if (seisZoomScatterLocs == null) {
-									seisZoomScatterLocs = new LocationList(zoomScatterLocs);
-									seisZoomScatterChars = new ArrayList<>(zoomScatterChars);
-									fetchComcatEvents(seisZoomScatterLocs, seisZoomScatterChars);
+									zoomMapMaker.plot(zoomMapCompDir, prefix+"_seis", title);
+									zoomMapMaker.plotScatters(zoomScatterLocs, zoomScatterChars);
 								}
 								
-								zoomMapMaker.plotScatters(seisZoomScatterLocs, seisZoomScatterChars);
-								zoomMapMaker.plotXYZData(zoomPDiff, cpt, label);
-								zoomMapMaker.plot(zoomMapCompDir, prefix+"_seis", " ");
-								zoomMapMaker.plotScatters(zoomScatterLocs, zoomScatterChars);
-							}
-							
-							compCSV.addLine(model.getName(), comp.getName(), twoDF.format(mean)+"%",
-									twoDF.format(meanAbs)+"%", twoDF.format(medianAbs)+"%", twoDF.format(maxSigned)+"%");
-							
-							if (texFW != null) {
-								String texPrefix = model.texName+"Vs"+comp.texName+perTexPrefix+texRPSuffix;
-								texFW.write(LaTeXUtils.defineValueCommand(texPrefix+"Mean", noZeroChangeFormat(oneDF, mean)+"%")+"\n");
-								texFW.write(LaTeXUtils.defineValueCommand(texPrefix+"AbsMean", noZeroChangeFormat(oneDF, Math.abs(mean))+"%")+"\n");
-								texFW.write(LaTeXUtils.defineValueCommand(texPrefix+"MeanAbs", noZeroChangeFormat(oneDF, meanAbs)+"%")+"\n");
-								texFW.write(LaTeXUtils.defineValueCommand(texPrefix+"MedianAbs", noZeroChangeFormat(oneDF, medianAbs)+"%")+"\n");
-								texFW.write(LaTeXUtils.defineValueCommand(texPrefix+"Max", noZeroChangeFormat(oneDF, maxSigned)+"%")+"\n");
-								texFW.write(LaTeXUtils.defineValueCommand(texPrefix+"AbsMax", noZeroChangeFormat(oneDF, Math.abs(maxSigned))+"%")+"\n");
+								if (doThird) {
+									mapMaker.setDefaultPlotWidthInches(defaultWidth);
+									mapMaker.setPrintPlotPrefs(plotPrefs);
+									zoomMapMaker.setDefaultPlotWidthInches(defaultWidth);
+									zoomMapMaker.setPrintPlotPrefs(plotPrefs);
+								}
 								
-								if (model == Models.AS_PUBLISHED && (comp == REF_FINITE_MODEL || comp == PROPOSED_FULL_MODEL)) {
-									// add extra rounded values
-									// always absolute value for these (used in the text)
-									texFW.write(LaTeXUtils.defineValueCommand(texPrefix+"MeanRounded", noZeroChangeFormat(roundedDF, Math.abs(mean))+"%")+"\n");
-									texFW.write(LaTeXUtils.defineValueCommand(texPrefix+"MeanAbsRounded", noZeroChangeFormat(roundedDF, meanAbs)+"%")+"\n");
-									texFW.write(LaTeXUtils.defineValueCommand(texPrefix+"MedianAbsRounded", noZeroChangeFormat(roundedDF, Math.abs(medianAbs))+"%")+"\n");
-									texFW.write(LaTeXUtils.defineValueCommand(texPrefix+"MaxRounded", noZeroChangeFormat(roundedDF, Math.abs(maxSigned))+"%")+"\n");
+								compCSV.addLine(model.getName(), comp.getName(), twoDF.format(mean)+"%",
+										twoDF.format(meanAbs)+"%", twoDF.format(medianAbs)+"%", twoDF.format(maxSigned)+"%");
+								
+								if (texFW != null) {
+									String texPrefix = model.texName+"Vs"+comp.texName+perTexPrefix+texRPSuffix;
+									texFW.write(LaTeXUtils.defineValueCommand(texPrefix+"Mean", noZeroChangeFormat(oneDF, mean)+"%")+"\n");
+									texFW.write(LaTeXUtils.defineValueCommand(texPrefix+"AbsMean", noZeroChangeFormat(oneDF, Math.abs(mean))+"%")+"\n");
+									texFW.write(LaTeXUtils.defineValueCommand(texPrefix+"MeanAbs", noZeroChangeFormat(oneDF, meanAbs)+"%")+"\n");
+									texFW.write(LaTeXUtils.defineValueCommand(texPrefix+"MedianAbs", noZeroChangeFormat(oneDF, medianAbs)+"%")+"\n");
+									texFW.write(LaTeXUtils.defineValueCommand(texPrefix+"Max", noZeroChangeFormat(oneDF, maxSigned)+"%")+"\n");
+									texFW.write(LaTeXUtils.defineValueCommand(texPrefix+"AbsMax", noZeroChangeFormat(oneDF, Math.abs(maxSigned))+"%")+"\n");
+									
+									if (model == Models.AS_PUBLISHED && (comp == REF_FINITE_MODEL || comp == PROPOSED_FULL_MODEL)) {
+										// add extra rounded values
+										// always absolute value for these (used in the text)
+										texFW.write(LaTeXUtils.defineValueCommand(texPrefix+"MeanRounded", noZeroChangeFormat(roundedDF, Math.abs(mean))+"%")+"\n");
+										texFW.write(LaTeXUtils.defineValueCommand(texPrefix+"MeanAbsRounded", noZeroChangeFormat(roundedDF, meanAbs)+"%")+"\n");
+										texFW.write(LaTeXUtils.defineValueCommand(texPrefix+"MedianAbsRounded", noZeroChangeFormat(roundedDF, Math.abs(medianAbs))+"%")+"\n");
+										texFW.write(LaTeXUtils.defineValueCommand(texPrefix+"MaxRounded", noZeroChangeFormat(roundedDF, Math.abs(maxSigned))+"%")+"\n");
+									}
 								}
 							}
 						}
 					}
+					
+					compCSV.writeToFile(new File(subDir, "hazard_change_stats.csv"));
+					
+					if (texFW != null)
+						texFW.close();
 				}
-				
-				compCSV.writeToFile(new File(subDir, "hazard_change_stats.csv"));
-				
-				if (texFW != null)
-					texFW.close();
 			}
 		}
 	}

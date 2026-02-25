@@ -71,21 +71,25 @@ public class HangingWallFractFigure {
 		EvenlyDiscretizedFunc centeredFunc = calc(gridLoc, distances, centeredCalcSurfs);
 		centeredFunc.setName("Centered");
 		funcs.add(centeredFunc);
-		chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 4f, Colors.tab_blue));
+		chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 2f, Colors.tab_blue));
 		
 		EvenlyDiscretizedFunc uncenteredFunc = calc(gridLoc, distances, uncenteredCalcSurfs);
 		uncenteredFunc.setName("Uncentered");
 		funcs.add(uncenteredFunc);
-		chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 4f, Color.BLACK));
+		chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 2f, Color.BLACK));
 		
-		PlotSpec plot = new PlotSpec(funcs, chars, label, "Grid Node Distance (km)", "Fraction on Hanging Wall");
+		PlotSpec plot = new PlotSpec(funcs, chars, label, "Grid node distance (km)", "Fraction on hanging wall");
 		plot.setLegendInset(true);
 		
-		HeadlessGraphPanel gp = PlotUtils.initHeadless();
+		HeadlessGraphPanel gp = PlotUtils.initPrintHeadless();
+		gp.getPlotPrefs().setPlotLabelFontSize(10);
 		
 		gp.drawGraphPanel(plot, false, false, new Range(0d, distances.getMaxX()), new Range(0.5, 1d));
 		
-		PlotUtils.writePlots(outputDir, prefix, gp, 700, 600, true, true, false);
+		PlotUtils.setXTick(gp, 10d);
+		PlotUtils.setYTick(gp, 0.05);
+		
+		PlotUtils.writePrintPlots(outputDir, prefix, gp, PlotUtils.DEFAULT_USABLE_PAGE_WIDTH/2d, 3d, 300, true, true, false);
 	}
 	
 	private static EvenlyDiscretizedFunc calc(Location gridLoc, EvenlyDiscretizedFunc distances, RectangularSurface[] surfs) {

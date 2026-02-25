@@ -295,7 +295,7 @@ class BValueSumCartoon {
 			PlotSpec spec = new PlotSpec(funcs, chars, "b="+(float)bVal, "Magnitude", "Incremental Nucleation Rate (1/yr)");
 			spec.setLegendInset(true);
 			
-			HeadlessGraphPanel gp = PlotUtils.initHeadless();
+			HeadlessGraphPanel gp = PlotUtils.initScreenHeadless();
 			
 			gp.setTickLabelFontSize(22);
 			gp.setAxisLabelFontSize(26);

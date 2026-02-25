@@ -150,7 +150,7 @@ public class SCECStatewide {
 		}
 		System.out.println("Done, now plotting");
 		
-		HeadlessGraphPanel gp = PlotUtils.initHeadless();
+		HeadlessGraphPanel gp = PlotUtils.initScreenHeadless();
 		
 		mapMaker.setPoliticalBoundaryChar(new PlotCurveCharacterstics(PlotLineType.SOLID, 3f, Color.BLACK));
 		

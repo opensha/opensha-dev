@@ -444,7 +444,7 @@ public class ThreeFaultSegAdjPlot {
 		spec.setLegendVisible(true);
 		spec.setPlotAnnotations(anns);
 		
-		HeadlessGraphPanel gp = PlotUtils.initHeadless();
+		HeadlessGraphPanel gp = PlotUtils.initScreenHeadless();
 		
 		gp.drawGraphPanel(spec, false, true, xRange, yRange);
 

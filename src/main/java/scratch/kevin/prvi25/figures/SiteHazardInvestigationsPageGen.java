@@ -221,7 +221,7 @@ public class SiteHazardInvestigationsPageGen {
 					"Magnitude", "Cumulative Rate (/year)");
 			cmlPlot.setLegendInset(true);
 			
-			HeadlessGraphPanel gp = PlotUtils.initHeadless();
+			HeadlessGraphPanel gp = PlotUtils.initScreenHeadless();
 			gp.setRenderingOrder(DatasetRenderingOrder.REVERSE);
 			
 			gp.drawGraphPanel(incrPlot, false, true, mfdXRange, mfdYRange);
@@ -400,7 +400,7 @@ public class SiteHazardInvestigationsPageGen {
 			plot.setLegendInset(true);
 			plot.setPlotAnnotations(anns);
 			
-			HeadlessGraphPanel gp = PlotUtils.initHeadless();
+			HeadlessGraphPanel gp = PlotUtils.initScreenHeadless();
 			gp.setRenderingOrder(DatasetRenderingOrder.REVERSE);
 			
 			gp.drawGraphPanel(plot, true, true, curveXRange, curveYRange);

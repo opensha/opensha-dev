@@ -780,7 +780,7 @@ public class BayAreaRegionalGroundMotionCalc {
 							new PlotCurveCharacterstics(PlotLineType.SOLID, 3f, Colors.tab_orange)),
 					" ", perLabel, "Annual Exceedance Rate (1/yr)");
 			epiPlot.setLegendVisible(true);
-			HeadlessGraphPanel gp = PlotUtils.initHeadless();
+			HeadlessGraphPanel gp = PlotUtils.initScreenHeadless();
 			gp.drawGraphPanel(epiPlot, false, true, new Range(0d, 1d), new Range(1e-3, 1e1));
 			PlotUtils.writePlots(outputDir, epiPrefix, gp, 800, 750, true, true, false);
 		}

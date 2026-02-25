@@ -743,7 +743,7 @@ public class SimpleFaultInversion {
 		ArrayList<Range> yRanges2 = new ArrayList<Range>();
 		yRanges2.add(yAxisRange4);
 		yRanges2.add(yAxisRange4);
-		PlotPreferences plotPrefs = PlotUtils.getDefaultFigurePrefs();
+		PlotPreferences plotPrefs = PlotPreferences.getDefaultScreenFigurePrefs();
 		plotPrefs.setTickLabelFontSize(9);
 		plotPrefs.setAxisLabelFontSize(11);
 		plotPrefs.setBackgroundColor(Color.WHITE);

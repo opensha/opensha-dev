@@ -53,7 +53,7 @@ public class RegionMapGen {
 		
 		mapMaker.setWritePDFs(true);
 		mapMaker.setWriteGeoJSON(true);
-		mapMaker.setDefaultPlotWidth(1200);
+		mapMaker.setDefaultPlotWidthPixels(1200);
 		mapMaker.plot(dir, "conus_regions", " ");
 	}
 

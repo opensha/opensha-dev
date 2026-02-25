@@ -2001,7 +2001,7 @@ public class PureScratch {
 		
 		PlotSpec spec = new PlotSpec(funcs, chars, " ", "X", "Y");
 		
-		HeadlessGraphPanel gp = PlotUtils.initHeadless();
+		HeadlessGraphPanel gp = PlotUtils.initScreenHeadless();
 		
 		gp.drawGraphPanel(spec);
 		
@@ -2132,7 +2132,7 @@ public class PureScratch {
 			PlotSpec spec = new PlotSpec(funcs, chars, mue ? "Muertos" : "CAR", "Magnitude", "Incremental Rate (1/yr)");
 			spec.setLegendInset(RectangleAnchor.TOP_RIGHT);
 			
-			HeadlessGraphPanel gp = PlotUtils.initHeadless();
+			HeadlessGraphPanel gp = PlotUtils.initScreenHeadless();
 			
 			gp.drawGraphPanel(spec, false, true, new Range(5d, 9.5d), new Range(1e-6, 1));
 			

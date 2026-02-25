@@ -78,7 +78,7 @@ public class CARC_InversionThreadTestPlotter {
 		Range xRange = null;
 		Range yRange = new Range(65d, 100d);
 		
-		HeadlessGraphPanel gp = PlotUtils.initHeadless();
+		HeadlessGraphPanel gp = PlotUtils.initScreenHeadless();
 		gp.drawGraphPanel(timeSpec, false, false, xRange, yRange);
 		PlotUtils.writePlots(mainDir, "energy_vs_time", gp, 1000, 800, true, false, false);
 		gp.drawGraphPanel(iterSpec, false, false, xRange, yRange);
