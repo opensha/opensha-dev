@@ -32,6 +32,7 @@ import org.opensha.sha.faultSurface.utils.ptSrcCorr.PointSourceDistanceCorrectio
 import org.opensha.sha.imr.AttenRelRef;
 
 import com.google.common.base.Preconditions;
+import com.google.common.io.Files;
 
 import edu.usc.kmilner.mpj.taskDispatch.MPJTaskCalculator;
 
@@ -43,6 +44,8 @@ public class PaperHazardScriptWriter {
 		boolean linkFromBase = true;
 		Double vs30 = null;
 		Double sigmaTrunc = 3d;
+		
+		boolean rewriteModSols = false;
 		
 		double[] periods = { 0d, 1d };
 		AttenRelRef[] gmms = new AttenRelRef[] {AttenRelRef.USGS_NSHM23_ACTIVE};
@@ -131,10 +134,17 @@ public class PaperHazardScriptWriter {
 			
 //			boolean[] zooms = model.finiteNum < 50 ? new boolean[] {false,true} : new boolean[] {false};
 			boolean[] zooms = {false, true};
+			if (model.getCustomGridLocationAnchor() != null)
+				zooms = new boolean[] {false};
+			
+			File prevRegModSolFile = null;
 			
 			for (boolean zoom : zooms) {
 				File localDir = zoom ? model.getZoomMapDir() : model.getMapDir();
 				GriddedRegion gridReg = zoom ? ZOOM_GRID_REG : FULL_GRID_REG;
+				
+				if (model.getCustomGridLocationAnchor() != null)
+					gridReg = new GriddedRegion(gridReg, gridReg.getSpacing(), model.getCustomGridLocationAnchor());
 				
 				Preconditions.checkState(localDir.exists() || localDir.mkdir());
 				
@@ -160,10 +170,17 @@ public class PaperHazardScriptWriter {
 					solFilePath = "$DIR/"+modSolFileName;
 					
 					File modSolFile = new File(localDir, modSolFileName);
-					System.out.println("\t\tWriting modified solution to "+modSolFile.getAbsolutePath());
-					
-					// don't copy unkonwn files
-					inputSol.write(ArchiveOutput.getDefaultOutput(modSolFile, inputSol.getArchive().getInput()), false);
+					if (rewriteModSols || !modSolFile.exists()) {
+						System.out.println("\t\tWriting modified solution to "+modSolFile.getAbsolutePath());
+						
+						if (prevRegModSolFile != null)
+							// copy over from the unzoomed
+							Files.copy(prevRegModSolFile, modSolFile);
+						else
+							// actually write it; don't copy unkonwn files
+							inputSol.write(ArchiveOutput.getDefaultOutput(modSolFile, inputSol.getArchive().getInput()), false);
+					}
+					prevRegModSolFile = modSolFile;
 				}
 				setupLines.add("if [[ ! -e results ]];then");
 				setupLines.add("  cp -r $MAIN_DIR/"+refInputsName+"/results .");

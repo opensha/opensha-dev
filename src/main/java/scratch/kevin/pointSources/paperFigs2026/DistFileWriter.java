@@ -30,8 +30,11 @@ public class DistFileWriter {
 		Preconditions.checkState(dataDir.exists() || dataDir.mkdir());
 		
 		boolean origProps = false;
+//		boolean origProps = true;
+//		DistanceDistributionCorrection corr = (DistanceDistributionCorrection)PointSourceDistanceCorrections.FIVE_POINT_SPINNING_DIST.get();
+		DistanceDistributionCorrection corr = (DistanceDistributionCorrection)PointSourceDistanceCorrections.AVERAGE_SPINNING.get();
 		
-		String propPrefix = origProps ? "original-rupture-properties" : "proposed-rupture-properties";
+		String propPrefix = origProps ? "original-rupture-properties" : "updated-rupture-properties";
 		
 		// use these magnitudes
 		EvenlyDiscretizedFunc magFunc = FaultSysTools.initEmptyMFD(3.01, 8.49); // this will still go to 8.55
@@ -43,7 +46,6 @@ public class DistFileWriter {
 		
 		FocalMech[] mechs = {FocalMech.STRIKE_SLIP, FocalMech.REVERSE};
 		
-		DistanceDistributionCorrection corr = (DistanceDistributionCorrection)PointSourceDistanceCorrections.FIVE_POINT_SPINNING_DIST.get();
 		WeightedList<FractileBin> fractiles = corr.getFractiles();
 		
 		Location refLoc = new Location(0d, 0d);
@@ -77,10 +79,14 @@ public class DistFileWriter {
 					hwPrefix = "Footwall ";
 				for (int f=0; f<fractiles.size(); f++) {
 					FractileBin bin = fractiles.getValue(f);
-					String binPrefix = hwPrefix+oDF.format(bin.minimum*100d)+"-"+oDF.format(bin.maximum*100d)+"%";
-					header.add(binPrefix+" Rrup (km)");
-					header.add(binPrefix+" Rjb (km)");
-					header.add(binPrefix+" Rx (km)");
+					String binPrefix;
+					if (fractiles.size() == 1)
+						binPrefix = hwPrefix;
+					else
+						binPrefix = hwPrefix+oDF.format(bin.minimum*100d)+"-"+oDF.format(bin.maximum*100d)+"% ";
+					header.add(binPrefix+"Rrup (km)");
+					header.add(binPrefix+"Rjb (km)");
+					header.add(binPrefix+"Rx (km)");
 				}
 			}
 			
@@ -143,7 +149,7 @@ public class DistFileWriter {
 					csv.addLine(line);
 				}
 			}
-			String outputPrefix = propPrefix + "-" + (mech == FocalMech.STRIKE_SLIP ? "strike-slip" : "dipping");
+			String outputPrefix = propPrefix+"-"+(mech == FocalMech.STRIKE_SLIP ? "strike-slip" : "dipping")+"-"+fractiles.size()+"x";;
 			csv.writeToFile(new File(dataDir, outputPrefix+".csv"));
 		}
 	}

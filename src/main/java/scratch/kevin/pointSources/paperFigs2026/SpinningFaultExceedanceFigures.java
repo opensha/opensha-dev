@@ -105,8 +105,10 @@ public class SpinningFaultExceedanceFigures {
 		double fullW = PlotUtils.DEFAULT_USABLE_PAGE_WIDTH;
 		double fullH = PlotUtils.DEFAULT_USABLE_PAGE_HEIGHT;
 		
-//		FocalMech mech = FocalMech.STRIKE_SLIP;
-		FocalMech mech = FocalMech.REVERSE;
+		FocalMech mech = FocalMech.STRIKE_SLIP;
+//		FocalMech mech = FocalMech.REVERSE;
+		
+		float symbolWidth = 10f;
 		
 		double mag;
 		MagLengthRelationship ml;
@@ -335,7 +337,7 @@ public class SpinningFaultExceedanceFigures {
 			fakeMinMax.setName("Uncentered range");
 			Color polyColor = new Color(0, 0, 0, 40);
 			funcs.add(fakeMinMax);
-			chars.add(new PlotCurveCharacterstics(PlotSymbol.FILLED_SQUARE, 4f, polyColor));
+			chars.add(new PlotCurveCharacterstics(PlotSymbol.FILLED_POLYGON, symbolWidth*1.5f, polyColor));
 			funcs.add(minMax);
 			chars.add(new PlotCurveCharacterstics(PlotLineType.POLYGON_SOLID, 1f, polyColor));
 			
@@ -470,7 +472,7 @@ public class SpinningFaultExceedanceFigures {
 			
 //			funcs.add(uncenteredPoly);
 			funcs.add(fakeMinMax);
-			chars.add(new PlotCurveCharacterstics(PlotSymbol.FILLED_SQUARE, 4f, polyColor));
+			chars.add(new PlotCurveCharacterstics(PlotSymbol.FILLED_POLYGON, symbolWidth*1.5f, polyColor));
 			funcs.add(uncenteredPoly);
 			chars.add(new PlotCurveCharacterstics(PlotLineType.POLYGON_SOLID, 1f, polyColor));
 //			chars.add(new PlotCurveCharacterstics(PlotSymbol.FILLED_CIRCLE, 3f, Color.GRAY));
@@ -562,8 +564,8 @@ public class SpinningFaultExceedanceFigures {
 			List<XY_DataSet> rupVsJBXYs = new ArrayList<>();
 			List<PlotCurveCharacterstics> rupVsJBChars = new ArrayList<>();
 			
-			PlotCurveCharacterstics nshm23FWSymbol = new PlotCurveCharacterstics(PlotSymbol.FILLED_SQUARE, 6f, Colors.tab_lightbrown);
-			PlotCurveCharacterstics nshm23HWSymbol = new PlotCurveCharacterstics(PlotSymbol.FILLED_SQUARE, 6f, Colors.tab_brown);
+			PlotCurveCharacterstics nshm23FWSymbol = new PlotCurveCharacterstics(PlotSymbol.FILLED_SQUARE, symbolWidth, Colors.tab_lightbrown);
+			PlotCurveCharacterstics nshm23HWSymbol = new PlotCurveCharacterstics(PlotSymbol.FILLED_SQUARE, symbolWidth, Colors.tab_brown);
 			
 			if (mech != FocalMech.STRIKE_SLIP) {
 				centeredRupVsJB_fw = thin(centeredRupVsJB_fw, 0.1);
@@ -604,8 +606,8 @@ public class SpinningFaultExceedanceFigures {
 				rupVsJBChars.add(chars.get(chars.size()-1));
 			}
 			
-			PlotCurveCharacterstics averageDistHWSymbol = new PlotCurveCharacterstics(PlotSymbol.FILLED_DIAMOND, 5f, Colors.tab_orange);
-			PlotCurveCharacterstics averageDistFWSymbol = new PlotCurveCharacterstics(PlotSymbol.FILLED_DIAMOND, 5f, Colors.tab_lightorange);
+			PlotCurveCharacterstics averageDistHWSymbol = new PlotCurveCharacterstics(PlotSymbol.FILLED_DIAMOND, symbolWidth, Colors.tab_orange);
+			PlotCurveCharacterstics averageDistFWSymbol = new PlotCurveCharacterstics(PlotSymbol.FILLED_DIAMOND, symbolWidth, Colors.tab_lightorange);
 			for (WeightedValue<SurfaceDistances> dist : averageDists) {
 				DefaultXY_DataSet avgRupVsJB = new DefaultXY_DataSet();
 				avgRupVsJB.set(dist.value.getDistanceJB(), dist.value.getDistanceRup());
@@ -635,8 +637,8 @@ public class SpinningFaultExceedanceFigures {
 					proposedRupVsJB_fw.set(dist.value.getDistanceJB(), dist.value.getDistanceRup());
 				proposedRupVsJB.set(dist.value.getDistanceJB(), dist.value.getDistanceRup());
 			}
-			PlotCurveCharacterstics proposedDistHWSymbol = new PlotCurveCharacterstics(PlotSymbol.FILLED_CIRCLE, 6f, Color.BLACK);
-			PlotCurveCharacterstics proposedDistFWSymbol = new PlotCurveCharacterstics(PlotSymbol.FILLED_CIRCLE, 6f, new Color(80, 80, 80));
+			PlotCurveCharacterstics proposedDistHWSymbol = new PlotCurveCharacterstics(PlotSymbol.FILLED_CIRCLE, symbolWidth, Color.BLACK);
+			PlotCurveCharacterstics proposedDistFWSymbol = new PlotCurveCharacterstics(PlotSymbol.FILLED_CIRCLE, symbolWidth, new Color(80, 80, 80));
 			if (proposedRupVsJB_hw.size() > 0 && proposedRupVsJB_fw.size() > 0) {
 				proposedRupVsJB_fw.setName("Proposed, FW");
 				funcs.add(proposedRupVsJB_fw);
@@ -1012,9 +1014,9 @@ public class SpinningFaultExceedanceFigures {
 					DefaultXY_DataSet scatter = new DefaultXY_DataSet();
 					DefaultXY_DataSet trueAvgScatter = new DefaultXY_DataSet();
 					funcs.add(scatter);
-					chars.add(new PlotCurveCharacterstics(PlotSymbol.FILLED_CIRCLE, 6f, sortable.color));
+					chars.add(new PlotCurveCharacterstics(PlotSymbol.FILLED_CIRCLE, symbolWidth, sortable.color));
 					funcs.add(scatter);
-					chars.add(new PlotCurveCharacterstics(PlotSymbol.CIRCLE, 6f, sortable.color.darker().darker()));
+					chars.add(new PlotCurveCharacterstics(PlotSymbol.CIRCLE, symbolWidth, sortable.color.darker().darker()));
 //					funcs.add(trueAvgScatter);
 //					chars.add(new PlotCurveCharacterstics(PlotSymbol.FILLED_CIRCLE, 2f, Color.BLACK));
 					for (int f=0; f<fractiles.size(); f++) {
@@ -1404,13 +1406,13 @@ public class SpinningFaultExceedanceFigures {
 			gridLocXY.set(projectLoc(gridLoc, gridLoc));
 			gridLocXY.setName("Grid source location");
 			funcs.add(gridLocXY);
-			chars.add(new PlotCurveCharacterstics(PlotSymbol.FILLED_CIRCLE, 6f, Color.BLACK));
+			chars.add(new PlotCurveCharacterstics(PlotSymbol.FILLED_CIRCLE, symbolWidth*1.5f, Color.BLACK));
 			
 			DefaultXY_DataSet siteLocXY = new DefaultXY_DataSet();
 			siteLocXY.set(projectLoc(gridLoc, siteLoc));
 			siteLocXY.setName("Site location ("+oDF.format(distance)+" km away)");
 			funcs.add(siteLocXY);
-			chars.add(new PlotCurveCharacterstics(PlotSymbol.FILLED_INV_TRIANGLE, 6f, Colors.tab_red));
+			chars.add(new PlotCurveCharacterstics(PlotSymbol.FILLED_INV_TRIANGLE, symbolWidth*1.5f, Colors.tab_red));
 			
 			// average Rjb annotations
 			double centeredAvgJB = jbCenteredRange.getAverage();
@@ -1588,7 +1590,7 @@ public class SpinningFaultExceedanceFigures {
 				fakeCircleXY.setName("Centered range");
 				fakeCircleXY.set(-100d, -100d);
 				funcs.add(fakeCircleXY);
-				chars.add(new PlotCurveCharacterstics(PlotSymbol.FILLED_CIRCLE, 6f, centeredHWColor));
+				chars.add(new PlotCurveCharacterstics(PlotSymbol.FILLED_CIRCLE, symbolWidth*1.5f, centeredHWColor));
 				funcs.add(xyCircle);
 				chars.add(new PlotCurveCharacterstics(PlotLineType.POLYGON_SOLID, 1f, centeredHWColor));
 			} else {
@@ -1666,7 +1668,7 @@ public class SpinningFaultExceedanceFigures {
 								fakeCircleXY.setName("Centered strike range");
 							fakeCircleXY.set(-100d, -100d);
 							funcs.add(fakeCircleXY);
-							chars.add(new PlotCurveCharacterstics(PlotSymbol.FILLED_CIRCLE, 6f, color));
+							chars.add(new PlotCurveCharacterstics(PlotSymbol.FILLED_CIRCLE, symbolWidth*1.5f, color));
 						}
 						funcs.add(xyCircle);
 						chars.add(new PlotCurveCharacterstics(PlotLineType.POLYGON_SOLID, 1f, color));
@@ -1682,7 +1684,7 @@ public class SpinningFaultExceedanceFigures {
 			fakeCircleXY.setName("Uncentered range");
 			fakeCircleXY.set(-100d, -100d);
 			funcs.add(fakeCircleXY);
-			chars.add(new PlotCurveCharacterstics(PlotSymbol.FILLED_CIRCLE, 6f, polyColor));
+			chars.add(new PlotCurveCharacterstics(PlotSymbol.FILLED_CIRCLE, symbolWidth*1.5f, polyColor));
 			funcs.add(xyCircle);
 			chars.add(new PlotCurveCharacterstics(PlotLineType.POLYGON_SOLID, 1f, polyColor));
 			

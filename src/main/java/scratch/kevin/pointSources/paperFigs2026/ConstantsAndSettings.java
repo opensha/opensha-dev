@@ -201,73 +201,93 @@ public class ConstantsAndSettings {
 		SPINNING_DIST_5X_UNCENTERED_MOD_ZTOR("Spinning distribution (5x), uncentered, updated Ztor", "SpinningDistUncenteredModZtor",
 				5d, PointSourceDistanceCorrections.FIVE_POINT_SPINNING_DIST, 5d, true, null,
 				"spinning_dist-uncentered-m5-mod_ztor") {
-
 					@Override
 					public Function<GridSourceList, GridSourceList> getGridModFunction() {
 						return original -> { return new GridPropertyUpdate(original, null, true);};
 					}
-			
-		},
+				},
 		SPINNING_DIST_5X_UNCENTERED_MOD_ZTOR_LEN("Spinning distribution (5x), uncentered, updated Ztor and lengths", "SpinningDistUncenteredModZtorLen",
 				5d, PointSourceDistanceCorrections.FIVE_POINT_SPINNING_DIST, 5d, true, null,
 				"spinning_dist-uncentered-m5-mod_ztor_len") {
-
 					@Override
 					public Function<GridSourceList, GridSourceList> getGridModFunction() {
 						return original -> { return new GridPropertyUpdate(original, LEONARD, true);};
 					}
-			
-		},
+				},
 		SPINNING_DIST_5X_UNCENTERED_MOD_ZTOR_LEN_M3p5("Spinning distribution (5x), uncentered, updated Ztor and lengths, M>3.5", "SpinningDistUncenteredModZtorLenMThreeFive",
 				3.5d, PointSourceDistanceCorrections.FIVE_POINT_SPINNING_DIST, 3.5d, true, null,
 				"spinning_dist-uncentered-m3p5-mod_ztor_len") {
-
 					@Override
 					public Function<GridSourceList, GridSourceList> getGridModFunction() {
 						return original -> { return new GridPropertyUpdate(original, LEONARD, true);};
 					}
-			
-		},
+				},
 		SPINNING_DIST_5X_UNCENTERED_MOD_ZTOR_LEN_M4("Spinning distribution (5x), uncentered, updated Ztor and lengths, M>4", "SpinningDistUncenteredModZtorLenMFour",
 				4d, PointSourceDistanceCorrections.FIVE_POINT_SPINNING_DIST, 4d, true, null,
 				"spinning_dist-uncentered-m4-mod_ztor_len") {
-
 					@Override
 					public Function<GridSourceList, GridSourceList> getGridModFunction() {
 						return original -> { return new GridPropertyUpdate(original, LEONARD, true);};
 					}
-			
-		},
+				},
 		SPINNING_DIST_5X_UNCENTERED_MOD_ZTOR_LEN_M3("Spinning distribution (5x), uncentered, updated Ztor and lengths, M>3", "SpinningDistUncenteredModZtorLenMThree",
 				3d, PointSourceDistanceCorrections.FIVE_POINT_SPINNING_DIST, 3d, true, null,
 				"spinning_dist-uncentered-m3-mod_ztor_len") {
-
 					@Override
 					public Function<GridSourceList, GridSourceList> getGridModFunction() {
 						return original -> { return new GridPropertyUpdate(original, LEONARD, true);};
 					}
-			
-		},
+				},
 		SPINNING_DIST_5X_UNCENTERED_MOD_ZTOR_LEN_M4_CORR_M5("Spinning distribution (5x), uncentered, updated Ztor and lengths, M>4, Corr M>5", "SpinningDistUncenteredModZtorLenMFourCorrMFive",
 				4d, PointSourceDistanceCorrections.FIVE_POINT_SPINNING_DIST, 5d, true, null,
 				"spinning_dist-uncentered-m4-mod_ztor_len-corrM5") {
-
 					@Override
 					public Function<GridSourceList, GridSourceList> getGridModFunction() {
 						return original -> { return new GridPropertyUpdate(original, LEONARD, true);};
 					}
-			
-		},
+				},
 		SPINNING_DIST_5X_UNCENTERED_MOD_ZTOR_LEN_M3p5_CORR_M5("Spinning distribution (5x), uncentered, updated Ztor and lengths, M>3.5, Corr M>5", "SpinningDistUncenteredModZtorLenMThreeFiveCorrMFive",
 				3.5d, PointSourceDistanceCorrections.FIVE_POINT_SPINNING_DIST, 5d, true, null,
 				"spinning_dist-uncentered-m3.5-mod_ztor_len-corrM5") {
-
 					@Override
 					public Function<GridSourceList, GridSourceList> getGridModFunction() {
 						return original -> { return new GridPropertyUpdate(original, LEONARD, true);};
 					}
-			
-		},
+				},
+		SPINNING_DIST_5X_UNCENTERED_MOD_ZTOR_LEN_M3p5_NO_SS("Spinning distribution (5x), uncentered, updated Ztor and lengths, M>3.5, no SS", "SpinningDistUncenteredModZtorLenMThreeFiveNoSS",
+				3.5d, PointSourceDistanceCorrections.FIVE_POINT_SPINNING_DIST, 3.5d, false, null,
+				"spinning_dist-uncentered-m3p5-mod_ztor_len-no_ss") {
+					@Override
+					public Function<GridSourceList, GridSourceList> getGridModFunction() {
+						return original -> { return new GridPropertyUpdate(original, LEONARD, true);};
+					}
+				},
+		SPINNING_DIST_5X_UNCENTERED_MOD_ZTOR_LEN_M3p5_OFFSET("Spinning distribution (5x), uncentered, updated Ztor and lengths, M>3.5, offset", "SpinningDistUncenteredModZtorLenMThreeFiveOffset",
+				3.5d, PointSourceDistanceCorrections.FIVE_POINT_SPINNING_DIST, 3.5d, true, null,
+				"spinning_dist-uncentered-m3p5-mod_ztor_len-offset") {
+					@Override
+					public Function<GridSourceList, GridSourceList> getGridModFunction() {
+						return original -> { return new GridPropertyUpdate(original, LEONARD, true);};
+					}
+
+					@Override
+					public Location getCustomGridLocationAnchor() {
+						return new Location(0.05, 0.05);
+					}
+				},
+		SPINNING_DIST_5X_UNCENTERED_MOD_ZTOR_LEN_M3p5_NO_SS_OFFSET("Spinning distribution (5x), uncentered, updated Ztor and lengths, M>3.5, no SS, offset", "SpinningDistUncenteredModZtorLenMThreeFiveOffsetNoSS",
+				3.5d, PointSourceDistanceCorrections.FIVE_POINT_SPINNING_DIST, 3.5d, false, null,
+				"spinning_dist-uncentered-m3p5-mod_ztor_len-no_ss-offset") {
+					@Override
+					public Function<GridSourceList, GridSourceList> getGridModFunction() {
+						return original -> { return new GridPropertyUpdate(original, LEONARD, true);};
+					}
+
+					@Override
+					public Location getCustomGridLocationAnchor() {
+						return new Location(0.05, 0.05);
+					}
+				},
 		;
 		
 		public final String name;
@@ -328,6 +348,10 @@ public class ConstantsAndSettings {
 			this.supersample = supersample;
 			this.customRandSeed = customRandSeed;
 			this.mapDirSuffix = mapDirSuffix;
+		}
+		
+		public Location getCustomGridLocationAnchor() {
+			return null;
 		}
 		
 		public File getMapDir() {

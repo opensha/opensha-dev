@@ -88,6 +88,8 @@ public class HazardMapFigures {
 		Models[] models = Models.values();
 		Models prevModel = null;
 		for (Models model : models) {
+			if (model.getCustomGridLocationAnchor() != null)
+				continue;
 			if (model != REF_FINITE_MODEL && model.ordinal() <= PROPOSED_DIST_CORR_MODEL.ordinal())
 				// this is a distance correction/point surface representation test
 				// include a comparison with our reference model
@@ -122,7 +124,6 @@ public class HazardMapFigures {
 		compAdd(comparisons, Models.FINITE_5X_UNCENTERED, Models.FINITE_5X_UNCENTERED_ALT_RAND);
 		compTitles.put(Models.FINITE_5X_UNCENTERED, Models.FINITE_5X_UNCENTERED_ALT_RAND, "Virtual faults (5x)");
 		compForceTights.put(Models.FINITE_5X_UNCENTERED, Models.FINITE_5X_UNCENTERED_ALT_RAND, true);
-		
 		
 		compAdd(comparisons, Models.FINITE_10X_UNCENTERED, Models.FINITE_10X_UNCENTERED_ALT_RAND);
 		compAdd(comparisons, Models.FINITE_20X_UNCENTERED, Models.FINITE_20X_UNCENTERED_ALT_RAND);
@@ -179,7 +180,6 @@ public class HazardMapFigures {
 		compAdd(comparisons, PROPOSED_DIST_CORR_MODEL, Models.FINITE_100X_UNCENTERED);
 		compTitles.put(PROPOSED_DIST_CORR_MODEL, Models.FINITE_100X_UNCENTERED, "Distribution-based correction");
 		compForceTights.put(PROPOSED_DIST_CORR_MODEL, Models.FINITE_100X_UNCENTERED, true);
-		
 
 		// incremental comps, table 3
 		compAdd(comparisons, Models.SPINNING_DIST_5X_UNCENTERED_MOD_ZTOR, PROPOSED_DIST_CORR_MODEL);
@@ -193,6 +193,21 @@ public class HazardMapFigures {
 		compAdd(comparisons, Models.SPINNING_DIST_5X_UNCENTERED_MOD_ZTOR_LEN_M3p5, Models.SPINNING_DIST_5X_UNCENTERED_MOD_ZTOR_LEN);
 		compTitles.put(Models.SPINNING_DIST_5X_UNCENTERED_MOD_ZTOR_LEN_M3p5, Models.SPINNING_DIST_5X_UNCENTERED_MOD_ZTOR_LEN, "Reduced Mmin=3.5");
 		compForceTights.put(Models.SPINNING_DIST_5X_UNCENTERED_MOD_ZTOR_LEN_M3p5, Models.SPINNING_DIST_5X_UNCENTERED_MOD_ZTOR_LEN, true);
+		
+		// supsersampling/offset comps
+		compAdd(comparisons, Models.SPINNING_DIST_5X_UNCENTERED_MOD_ZTOR_LEN_M3p5_NO_SS_OFFSET,
+				Models.SPINNING_DIST_5X_UNCENTERED_MOD_ZTOR_LEN_M3p5_OFFSET);
+		compTitles.put(Models.SPINNING_DIST_5X_UNCENTERED_MOD_ZTOR_LEN_M3p5_NO_SS_OFFSET,
+				Models.SPINNING_DIST_5X_UNCENTERED_MOD_ZTOR_LEN_M3p5_OFFSET, "No supersampling, offset sites");
+		compForceTights.put(Models.SPINNING_DIST_5X_UNCENTERED_MOD_ZTOR_LEN_M3p5_NO_SS_OFFSET,
+				Models.SPINNING_DIST_5X_UNCENTERED_MOD_ZTOR_LEN_M3p5_OFFSET, true);
+		
+		compAdd(comparisons, Models.SPINNING_DIST_5X_UNCENTERED_MOD_ZTOR_LEN_M3p5_NO_SS,
+				Models.SPINNING_DIST_5X_UNCENTERED_MOD_ZTOR_LEN_M3p5);
+		compTitles.put(Models.SPINNING_DIST_5X_UNCENTERED_MOD_ZTOR_LEN_M3p5_NO_SS,
+				Models.SPINNING_DIST_5X_UNCENTERED_MOD_ZTOR_LEN_M3p5, "No supersampling");
+		compForceTights.put(Models.SPINNING_DIST_5X_UNCENTERED_MOD_ZTOR_LEN_M3p5_NO_SS,
+				Models.SPINNING_DIST_5X_UNCENTERED_MOD_ZTOR_LEN_M3p5, true);
 		
 		EnumSet<Models> seismicityMapModels = EnumSet.of(Models.FINITE_100X_CENTERED);
 		
@@ -232,6 +247,10 @@ public class HazardMapFigures {
 		paperFigs.put(Models.OPENQUAKE_FINITE, Models.FINITE_100X_UNCENTERED, true);
 		paperFigs.put(Models.AS_PUBLISHED, Models.FINITE_100X_UNCENTERED, false); // half width
 		paperFigs.put(Models.FINITE_100X_CENTERED, Models.FINITE_100X_UNCENTERED, false); // half width
+		
+		// offset plots
+		paperFigs.put(Models.SPINNING_DIST_5X_UNCENTERED_MOD_ZTOR_LEN_M3p5_NO_SS_OFFSET, Models.SPINNING_DIST_5X_UNCENTERED_MOD_ZTOR_LEN_M3p5_OFFSET, true);
+		paperFigs.put(Models.SPINNING_DIST_5X_UNCENTERED_MOD_ZTOR_LEN_M3p5_NO_SS, Models.SPINNING_DIST_5X_UNCENTERED_MOD_ZTOR_LEN_M3p5, true);
 		
 //		// + improved Rrup and Rx
 //		compAdd(comparisons, Models.SPINNING_AVG_M6, Models.AS_PUBLISHED);
@@ -314,9 +333,9 @@ public class HazardMapFigures {
 				zoomMapMaker.addAnnotation(ann);
 				
 				zoomScatterLocs.add(loc);
-				zoomScatterChars.add(new PlotCurveCharacterstics(PlotSymbol.FILLED_INV_TRIANGLE, 5f, Colors.tab_brown));
+				zoomScatterChars.add(new PlotCurveCharacterstics(PlotSymbol.FILLED_INV_TRIANGLE, 10f, Colors.tab_brown));
 				zoomScatterLocs.add(loc);
-				zoomScatterChars.add(new PlotCurveCharacterstics(PlotSymbol.INV_TRIANGLE, 5f, Color.BLACK));
+				zoomScatterChars.add(new PlotCurveCharacterstics(PlotSymbol.INV_TRIANGLE, 10f, Color.BLACK));
 			}
 		}
 		zoomMapMaker.plotScatters(zoomScatterLocs, zoomScatterChars);
@@ -336,6 +355,19 @@ public class HazardMapFigures {
 		double maxForTight = 6d;
 		
 		GriddedGeoDataSet landMask = buildLandMask(FULL_GRID_REG);
+		Map<Location, GriddedRegion> customAnchorFullRegs = new HashMap<>();
+		Map<Location, GriddedRegion> customAnchorZoomRegs = new HashMap<>();
+		Map<Location, GriddedGeoDataSet> customAnchorLandMasks = new HashMap<>();
+		for (Models model : models) {
+			Location anchor = model.getCustomGridLocationAnchor();
+			if (anchor != null && !customAnchorFullRegs.containsKey(anchor)) {
+				GriddedRegion fullReg = new GriddedRegion(FULL_GRID_REG, FULL_GRID_REG.getSpacing(), anchor);
+				GriddedRegion zoomReg = new GriddedRegion(ZOOM_GRID_REG, ZOOM_GRID_REG.getSpacing(), anchor);
+				customAnchorFullRegs.put(anchor, fullReg);
+				customAnchorZoomRegs.put(anchor, zoomReg);
+				customAnchorLandMasks.put(anchor, buildLandMask(fullReg));
+			}
+		}
 		
 		DecimalFormat oDF = new DecimalFormat("0.#");
 		
@@ -364,10 +396,19 @@ public class HazardMapFigures {
 				System.out.println("Loading maps for "+perLabel+", "+rp.label);
 				
 				for (int i=0; i<models.length; i++) {
+					GriddedRegion fullReg = FULL_GRID_REG;
+					GriddedRegion zoomReg = ZOOM_GRID_REG;
+					GriddedGeoDataSet modelLandMask = landMask;
+					Location anchor = models[i].getCustomGridLocationAnchor();
+					if (anchor != null) {
+						fullReg = customAnchorFullRegs.get(anchor);
+						zoomReg = customAnchorZoomRegs.get(anchor);
+						modelLandMask = customAnchorLandMasks.get(anchor);
+					}
 					if (modelZips[i] != null)
-						maps[i] = loadXYZ(modelZips[i], FULL_GRID_REG, entryName, landMask);
+						maps[i] = loadXYZ(modelZips[i], fullReg, entryName, modelLandMask);
 					if (modelZoomZips[i] != null)
-						zoomMaps[i] = loadXYZ(modelZoomZips[i], ZOOM_GRID_REG, entryName, null);
+						zoomMaps[i] = loadXYZ(modelZoomZips[i], zoomReg, entryName, null);
 				}
 				
 				String mapLabel = perLabel+" "+perUnits+", "+rp.label;
@@ -397,15 +438,15 @@ public class HazardMapFigures {
 					File cptsDir = new File(subDir, "cpts");
 					Preconditions.checkState(cptsDir.exists() || cptsDir.mkdir());
 					
-					if (replot || !new File(cptsDir, "hazard_cpt.cpt").exists())
+					if (replot || !new File(cptsDir, "hazard_cpt.pdf").exists())
 						PlotUtils.writeScaleLegendOnly(cptsDir, "hazard_cpt",
 								GeographicMapMaker.buildCPTLegend(hazardCPT, mapLabel, mapMaker.getPrintPlotPrefs()),
 								defaultWidth, 300, true, true);
-					if (replot || !new File(cptsDir, "pdiff_cpt.cpt").exists())
+					if (replot || !new File(cptsDir, "pdiff_cpt.pdf").exists())
 						PlotUtils.writeScaleLegendOnly(cptsDir, "pdiff_cpt",
 								GeographicMapMaker.buildCPTLegend(pDiffCPT, mapDiffLabel, mapMaker.getPrintPlotPrefs()),
 								defaultWidth, 300, true, true);
-					if (replot || !new File(cptsDir, "pdiff_tight_cpt.cpt").exists())
+					if (replot || !new File(cptsDir, "pdiff_tight_cpt.pdf").exists())
 						PlotUtils.writeScaleLegendOnly(cptsDir, "pdiff_tight_cpt",
 								GeographicMapMaker.buildCPTLegend(pDiffTightCPT, mapDiffLabel, mapMaker.getPrintPlotPrefs()),
 								defaultWidth, 300, true, true);
