@@ -5,6 +5,7 @@ import static scratch.kevin.pointSources.paperFigs2026.ConstantsAndSettings.*;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.function.Function;
 
@@ -71,6 +72,12 @@ public class PaperHazardScriptWriter {
 		
 		System.out.println("Region has "+FULL_GRID_REG.getNodeCount()+" nodes");
 		System.out.println("Zoom region has "+ZOOM_GRID_REG.getNodeCount()+" nodes");
+		
+		EnumSet<Models> hiresZoomModels = EnumSet.of(
+				Models.AS_PUBLISHED,
+				PROPOSED_DIST_CORR_MODEL,
+				PROPOSED_FULL_MODEL,
+				Models.SPINNING_DIST_5X_UNCENTERED_MOD_ZTOR_LEN_M3p5_NO_SS);
 		
 		File remoteMainDir = new File("/project2/scec_608/kmilner/fss_inversions");
 		int remoteTotalThreads = 20;
@@ -139,12 +146,28 @@ public class PaperHazardScriptWriter {
 			
 			File prevRegModSolFile = null;
 			
-			for (boolean zoom : zooms) {
-				File localDir = zoom ? model.getZoomMapDir() : model.getMapDir();
-				GriddedRegion gridReg = zoom ? ZOOM_GRID_REG : FULL_GRID_REG;
+			List<File> localDirs = new ArrayList<>();
+			List<GriddedRegion> gridRegs = new ArrayList<>();
+			
+			if (model.getCustomGridLocationAnchor() == null) {
+				localDirs.add(model.getMapDir());
+				gridRegs.add(FULL_GRID_REG);
 				
-				if (model.getCustomGridLocationAnchor() != null)
-					gridReg = new GriddedRegion(gridReg, gridReg.getSpacing(), model.getCustomGridLocationAnchor());
+				localDirs.add(model.getZoomMapDir());
+				gridRegs.add(ZOOM_GRID_REG);
+				
+				if (hiresZoomModels.contains(model)) {
+					localDirs.add(model.getZoomHiresMapDir());
+					gridRegs.add(ZOOM_HIRES_GRID_REG);
+				}
+			} else {
+				localDirs.add(model.getMapDir());
+				gridRegs.add(new GriddedRegion(FULL_GRID_REG, FULL_GRID_REG.getSpacing(), model.getCustomGridLocationAnchor()));
+			}
+			
+			for (int d=0; d<localDirs.size(); d++) {
+				File localDir = localDirs.get(d);
+				GriddedRegion gridReg = gridRegs.get(d);
 				
 				Preconditions.checkState(localDir.exists() || localDir.mkdir());
 				

@@ -75,6 +75,8 @@ public class ConstantsAndSettings {
 	}
 	public static final GriddedRegion ZOOM_GRID_REG = new GriddedRegion(
 			new Region(new Location(36, -120), new Location(39, -117)), 0.02, GriddedRegion.ANCHOR_0_0);
+	public static final GriddedRegion ZOOM_HIRES_GRID_REG = new GriddedRegion(
+			new Region(new Location(36, -120), new Location(39, -117)), 0.01, GriddedRegion.ANCHOR_0_0);
 	
 	public static final Map<String, Location> ZOOM_CITIES;
 	static {
@@ -360,6 +362,10 @@ public class ConstantsAndSettings {
 		
 		public File getZoomMapDir() {
 			return new File(INV_DIR, HAZARD_MODEL_ZOOM_PREFIX+"-"+mapDirSuffix);
+		}
+		
+		public File getZoomHiresMapDir() {
+			return new File(INV_DIR, HAZARD_MODEL_ZOOM_PREFIX+"-hires-"+mapDirSuffix);
 		}
 
 		@Override

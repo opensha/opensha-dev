@@ -1105,8 +1105,8 @@ public class PointSourceHazardComparison {
 		PointSourceType mainType = PointSourceType.FIVE_POINT_DIST_ALONG;
 
 //		PointSourceType compType = PointSourceType.AVERAGE_ALONG;
-//		PointSourceType compType = PointSourceType.TWENTY_FINITE_RAND_DAS_DD;
-		PointSourceType compType = PointSourceType.FIVE_POINT_DIST_ALONG_BETTER_DEPTHS;
+		PointSourceType compType = PointSourceType.TWENTY_FINITE_RAND_DAS_DD;
+//		PointSourceType compType = PointSourceType.FIVE_POINT_DIST_ALONG_BETTER_DEPTHS;
 		
 //		int sleepMins = 60*6;
 //		System.out.println("Sleeping for "+sleepMins+" mins");
@@ -1122,7 +1122,7 @@ public class PointSourceHazardComparison {
 //		boolean doSupersample = true;
 //		boolean doHighRes = true;
 //		boolean doSupersample = false;
-		boolean doHighRes = false;
+		boolean doHighRes = true;
 		boolean doSupersample = false;
 //		boolean doHighResSupersample = doHighRes && doSupersample;
 		boolean doHighResSupersample = false;

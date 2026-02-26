@@ -166,7 +166,7 @@ public class HazardMapFigures {
 		compForceTights.put(Models.SPINNING_AVG_CENTERED_M6, Models.AS_PUBLISHED, true);
 		
 		compAdd(comparisons, Models.SPINNING_AVG_CENTERED_M5, Models.SPINNING_AVG_CENTERED_M6);
-		compTitles.put(Models.SPINNING_AVG_CENTERED_M5, Models.SPINNING_AVG_CENTERED_M6, "Lower correction M>5");
+		compTitles.put(Models.SPINNING_AVG_CENTERED_M5, Models.SPINNING_AVG_CENTERED_M6, "No correction mag-threshold");
 		compForceTights.put(Models.SPINNING_AVG_CENTERED_M5, Models.SPINNING_AVG_CENTERED_M6, true);
 		
 		compAdd(comparisons, Models.FINITE_100X_CENTERED, Models.SPINNING_AVG_CENTERED_M5);
@@ -283,6 +283,7 @@ public class HazardMapFigures {
 		
 		ZipFile[] modelZips = new ZipFile[models.length];
 		ZipFile[] modelZoomZips = new ZipFile[models.length];
+		ZipFile[] modelZoomHiresZips = new ZipFile[models.length];
 		for (int i=0; i<models.length; i++) {
 			Models model = models[i];
 			File mapFile = new File(model.getMapDir(), mapZipName);
@@ -291,6 +292,9 @@ public class HazardMapFigures {
 			File zoomFile = new File(model.getZoomMapDir(), mapZipName);
 			if (zoomFile.exists())
 				modelZoomZips[i] = new ZipFile(zoomFile);
+			File zoomHiresFile = new File(model.getZoomHiresMapDir(), mapZipName);
+			if (zoomHiresFile.exists())
+				modelZoomHiresZips[i] = new ZipFile(zoomHiresFile);
 		}
 		
 		GeographicMapMaker mapMaker = new GeographicMapMaker(FULL_GRID_REG);
@@ -390,6 +394,7 @@ public class HazardMapFigures {
 			for (ReturnPeriods rp : rps) {
 				GriddedGeoDataSet[] maps = new GriddedGeoDataSet[models.length];
 				GriddedGeoDataSet[] zoomMaps = new GriddedGeoDataSet[models.length];
+				GriddedGeoDataSet[] zoomHiresMaps = new GriddedGeoDataSet[models.length];
 				
 				String entryName = "map_"+perPrefix+"_"+rp.name()+".txt";
 				
@@ -398,6 +403,7 @@ public class HazardMapFigures {
 				for (int i=0; i<models.length; i++) {
 					GriddedRegion fullReg = FULL_GRID_REG;
 					GriddedRegion zoomReg = ZOOM_GRID_REG;
+					GriddedRegion zoomHiresReg = ZOOM_HIRES_GRID_REG;
 					GriddedGeoDataSet modelLandMask = landMask;
 					Location anchor = models[i].getCustomGridLocationAnchor();
 					if (anchor != null) {
@@ -409,6 +415,8 @@ public class HazardMapFigures {
 						maps[i] = loadXYZ(modelZips[i], fullReg, entryName, modelLandMask);
 					if (modelZoomZips[i] != null)
 						zoomMaps[i] = loadXYZ(modelZoomZips[i], zoomReg, entryName, null);
+					if (modelZoomHiresZips[i] != null)
+						zoomHiresMaps[i] = loadXYZ(modelZoomHiresZips[i], zoomHiresReg, entryName, null);
 				}
 				
 				String mapLabel = perLabel+" "+perUnits+", "+rp.label;
@@ -478,7 +486,8 @@ public class HazardMapFigures {
 								mapMaker.plot(mapsDir, model.name(), model.getName());
 							}
 							if (zoomMaps[i] != null && (replot || !new File(zoomMapsDir, model.name()+".pdf").exists())) {
-								zoomMapMaker.plotXYZData(zoomMaps[i], hazardCPT, myMapLabel);
+								GriddedGeoDataSet zoomMap = zoomHiresMaps[i] == null ? zoomMaps[i] : zoomHiresMaps[i];
+								zoomMapMaker.plotXYZData(zoomMap, hazardCPT, myMapLabel);
 								zoomMapMaker.plot(zoomMapsDir, model.name(), model.getName());
 							}
 						}
@@ -491,7 +500,8 @@ public class HazardMapFigures {
 							}
 							
 							zoomMapMaker.plotScatters(seisZoomScatterLocs, seisZoomScatterChars);
-							zoomMapMaker.plotXYZData(zoomMaps[i], hazardCPT, myMapLabel);
+							GriddedGeoDataSet zoomMap = zoomHiresMaps[i] == null ? zoomMaps[i] : zoomHiresMaps[i];
+							zoomMapMaker.plotXYZData(zoomMap, hazardCPT, myMapLabel);
 							zoomMapMaker.plot(zoomMapsDir, model.name()+"_seis", model.getName());
 							zoomMapMaker.plotScatters(zoomScatterLocs, zoomScatterChars);
 						}
@@ -524,7 +534,10 @@ public class HazardMapFigures {
 								double medianAbs = stats.medianAbs;
 								double maxSigned = stats.maxSigned;
 								if (zoomMaps[i] != null && zoomMaps[compIndex] != null) {
-									zoomPDiff = pDiff(zoomMaps[i], zoomMaps[compIndex]);
+									if (zoomHiresMaps[i] != null && zoomHiresMaps[compIndex] != null)
+										zoomPDiff = pDiff(zoomHiresMaps[i], zoomHiresMaps[compIndex]);
+									else
+										zoomPDiff = pDiff(zoomMaps[i], zoomMaps[compIndex]);
 									DiffStats zoomStats = new DiffStats(zoomPDiff);
 									if (Math.abs(zoomStats.maxSigned) > Math.abs(maxSigned))
 										maxSigned = zoomStats.maxSigned;
@@ -754,7 +767,7 @@ public class HazardMapFigures {
 				null, startTime, endTime, -1, 100d, cReg, false, false, minMag);
 		for (ObsEqkRupture event : events) {
 			locs.add(event.getHypocenterLocation());
-			chars.add(new PlotCurveCharacterstics(PlotSymbol.FILLED_CIRCLE, 2f, Colors.tab_purple));
+			chars.add(new PlotCurveCharacterstics(PlotSymbol.FILLED_CIRCLE, 8f, Colors.tab_purple));
 		}
 	}
 
