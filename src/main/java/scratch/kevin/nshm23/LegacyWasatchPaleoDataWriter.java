@@ -80,7 +80,7 @@ lower)/4)
 		// write wasatch sections
 		List<GeoJSONFaultSection> geoSects = new ArrayList<>();
 		for (FaultSectionPrefData sect : sects) {
-			GeoJSONFaultSection geoSect = new GeoJSONFaultSection(sect);
+			GeoJSONFaultSection geoSect = GeoJSONFaultSection.fromFaultSection(sect);
 			if (!Float.isFinite(geoSect.getDipDirection()))
 				geoSect.setDipDirection((float)(geoSect.getFaultTrace().getAveStrike()+90d));
 			geoSects.add(geoSect);
