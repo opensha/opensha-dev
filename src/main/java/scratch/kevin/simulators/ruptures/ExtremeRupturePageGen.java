@@ -339,7 +339,7 @@ public class ExtremeRupturePageGen {
 			xAxisLabel += " ("+metric.units+")";
 		PlotSpec spec = new PlotSpec(funcs, chars, metric.name, xAxisLabel, "Num Events");
 		
-		PlotPreferences plotPrefs = PlotPreferences.getDefault();
+		PlotPreferences plotPrefs = PlotPreferences.getDefaultAppPrefs();
 		plotPrefs.setTickLabelFontSize(18);
 		plotPrefs.setAxisLabelFontSize(20);
 		plotPrefs.setPlotLabelFontSize(21);

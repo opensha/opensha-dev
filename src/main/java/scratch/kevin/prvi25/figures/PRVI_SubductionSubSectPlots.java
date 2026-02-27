@@ -75,8 +75,8 @@ public class PRVI_SubductionSubSectPlots {
 		double maxSlip = 0d;
 		
 		PlotUtils.writeScaleLegendOnly(outputDir, "slip_cpt",
-				GeographicMapMaker.buildCPTLegend(slipCPT, "Slip Deficit Rate (mm/yr)"),
-				GeographicMapMaker.PLOT_WIDTH_DEFAULT, true, true);
+				GeographicMapMaker.buildCPTLegend(slipCPT, "Slip Deficit Rate (mm/yr)", GeographicMapMaker.PLOT_PREFS_SCREEN_DEFAULT),
+				GeographicMapMaker.PLOT_WIDTH_PIXELS_DEFAULT, true, true);
 		for (PRVI25_SubductionFaultModels fm : PRVI25_SubductionFaultModels.values()) {
 			if (fm.getNodeWeight(branch) == 0d)
 				continue;

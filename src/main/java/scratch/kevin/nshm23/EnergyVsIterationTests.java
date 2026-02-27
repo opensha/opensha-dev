@@ -148,7 +148,7 @@ public class EnergyVsIterationTests {
 			List<Boolean> xLogs = List.of(false);
 			List<Range> xRanges = List.of(new Range(0, 1.05*scatter.getMaxX()));
 			
-			HeadlessGraphPanel gp = PlotUtils.initHeadless();
+			HeadlessGraphPanel gp = PlotUtils.initScreenHeadless();
 			
 			gp.drawGraphPanel(specs, xLogs, yLogs, xRanges, yRanges);
 			

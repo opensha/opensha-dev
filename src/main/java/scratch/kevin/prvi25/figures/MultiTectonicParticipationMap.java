@@ -306,11 +306,11 @@ public class MultiTectonicParticipationMap {
 			System.out.println("Actual range: ["+cpt.getMinValue()+", "+cpt.getMaxValue()+"]");
 			// write generic cpt only first
 			PlotUtils.writeScaleLegendOnly(outputDir, "participation_cpt",
-					GeographicMapMaker.buildCPTLegend(cpt, "Participation Rate (/yr)"),
-					mapMaker.getDefaultPlotWidth(), true, true);
+					GeographicMapMaker.buildCPTLegend(cpt, "Participation Rate (/yr)", GeographicMapMaker.PLOT_PREFS_SCREEN_DEFAULT),
+					GeographicMapMaker.PLOT_WIDTH_PIXELS_DEFAULT, true, true);
 			PlotUtils.writeScaleLegendOnly(outputDir, "nucleation_cpt",
-					GeographicMapMaker.buildCPTLegend(cpt, "Nucleation Rate (/yr)"),
-					mapMaker.getDefaultPlotWidth(), true, true);
+					GeographicMapMaker.buildCPTLegend(cpt, "Nucleation Rate (/yr)", GeographicMapMaker.PLOT_PREFS_SCREEN_DEFAULT),
+					GeographicMapMaker.PLOT_WIDTH_PIXELS_DEFAULT, true, true);
 			
 			DecimalFormat oDF = new DecimalFormat("0.##");
 			

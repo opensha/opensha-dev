@@ -157,7 +157,7 @@ public class WUS_EastOfAttenBoundaryMFDs {
 				"Cumulative Participation Rate (1/yr)");
 		cmlSpec.setLegendInset(true);
 		
-		HeadlessGraphPanel gp = PlotUtils.initHeadless();
+		HeadlessGraphPanel gp = PlotUtils.initScreenHeadless();
 		
 		gp.drawGraphPanel(incrSpec, false, true, xRange, yRange);
 		PlotUtils.writePlots(outputDir, "wus_mfds_east_of_atten", gp, 1000, 850, true, true, true);

@@ -117,7 +117,7 @@ public class SegAdjustMisfitsPlot {
 				xLabel, "Average Constraint MAD");
 		spec.setLegendVisible(true);
 		
-		HeadlessGraphPanel gp = PlotUtils.initHeadless();
+		HeadlessGraphPanel gp = PlotUtils.initScreenHeadless();
 		
 		gp.drawGraphPanel(spec, false, false, new Range(StatUtils.min(xVals), StatUtils.max(xVals)), null);
 		

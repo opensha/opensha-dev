@@ -167,6 +167,19 @@ public class LaTeXUtils {
 		return numberExpFormatFixedDecimal(number, decimalPlaces)+LATEX_ESCAPE_MAP.get('%');
 	}
 	
+	public static String numberAsOrdinal(int n) {
+		int mod100 = n % 100;
+		if (mod100 >= 11 && mod100 <= 13)
+			return n + "th";
+
+		switch (n % 10) {
+			case 1: return n + "st";
+			case 2: return n + "nd";
+			case 3: return n + "rd";
+			default: return n + "th";
+		}
+	}
+	
 	public static final String BEGIN_DYNVAL_INCLUDES_HEADER = "% begin dynval includes";
 	public static final String END_DYNVAL_INCLUDES_HEADER = "% end dynval includes";
 	
@@ -195,8 +208,8 @@ public class LaTeXUtils {
 					} else if (line.startsWith("%")) {
 						continue;
 					} else {
-						Preconditions.checkState(line.startsWith("\\include{"),
-								"Inside dynval include block but line doesn't start with an \\include{: %s", line);
+						Preconditions.checkState(line.startsWith("\\include{") || line.startsWith("\\input{"),
+								"Inside dynval include block but line doesn't start with an \\include{ or \\input{: %s", line);
 						String path = line.substring(line.indexOf('{')+1);
 						Preconditions.checkState(path.contains("}"), "Line doesn't close '}': %s", line);
 						path = path.substring(0, path.indexOf('}'));
@@ -284,7 +297,7 @@ public class LaTeXUtils {
 					continue;
 				}
 			}
-			if (line.trim().startsWith("\\include{")) {
+			if (line.trim().startsWith("\\include{") || line.trim().startsWith("\\input{")) {
 				line = line.trim();
 				String path = line.substring(line.indexOf('{')+1);
 				Preconditions.checkState(path.contains("}"), "Line doesn't close '}': %s", line);
@@ -915,9 +928,42 @@ public class LaTeXUtils {
 //		System.out.println(defineValueCommand("SlipRateExample", "\\expnum("+numberExpFormat(3.14)+")", false));
 //		System.out.println(defineValueCommand("SlipRateExample", "\\expnum("+numberExpFormat(3e-10)+")", false));
 		
-		File prviDir = new File("/home/kevin/Documents/papers/2025_PRVI_ERF");
+//		File prviDir = new File("/home/kevin/Documents/papers/2025_PRVI_ERF");
+//		File mainBranch = new File(prviDir, "prvi25-erf-paper");
+//		
+////		File initialBranch = new File(prviDir, "initial-bssa-submission");
+////		File refDir = initialBranch;
+////		File inputFile = new File(mainBranch, "submission/original/main_for_diff.tex");
+////		File outputFile = new File(mainBranch, "submission/original/embedded_for_diff.tex");
+//		
+//		String textWidth = "517.79993pt";
+//		File refDir = mainBranch;
+//		File figpanelDir = new File(refDir, "Figures/figpanel");
+//		File inputFile = new File(mainBranch, "main.tex");
+//		File outputFile = new File(mainBranch, "main_embedded.tex");
+//		
+//		List<String> lines = readTex(inputFile);
+//
+//		lines = embedIncludes(lines, refDir, true); // embed includes first, but skip dynval ones
+//		lines = embedDynvalIncludes(lines, refDir);
+//		lines = embedCommands(lines, true);
+//		lines = embedBibliography(lines, new File(refDir, "refs_compiled.bbl"));
+//		lines = embedFigpanelFigures(lines, refDir, figpanelDir, textWidth);
+//		
+//		writeTex(lines, outputFile);
+//		
+//		File ssaOutputDir = new File(new File(mainBranch, "submission"), "final-bssa-submission");
+////		File ssaOutputDir = new File(prviDir, "final-bssa-submission-tests");
+//		Preconditions.checkState(ssaOutputDir.exists() || ssaOutputDir.mkdir(),
+//				"SSA output dir doesn't exist and could not be created: %s", ssaOutputDir.getAbsolutePath());
+//		reorganizeFiguresForSSA(outputFile, ssaOutputDir);
+//		// rename from embedded to just main
+//		Files.move(new File(ssaOutputDir, outputFile.getName()), new File(ssaOutputDir, inputFile.getName()));
 		
-		File mainBranch = new File(prviDir, "prvi25-erf-paper");
+		File parentDir = new File("/home/kevin/Documents/papers/2026_nshm_grid_seis_dist_corr");
+		File mainBranch = new File(parentDir, "papers-2026-nshm-grid-seis-dist-corrs");
+		
+		File submitDir = new File(mainBranch, "submission/internal_review");
 		
 //		File initialBranch = new File(prviDir, "initial-bssa-submission");
 //		File refDir = initialBranch;
@@ -928,25 +974,25 @@ public class LaTeXUtils {
 		File refDir = mainBranch;
 		File figpanelDir = new File(refDir, "Figures/figpanel");
 		File inputFile = new File(mainBranch, "main.tex");
-		File outputFile = new File(mainBranch, "main_embedded.tex");
+		File outputFile = new File(submitDir, "main_embedded.tex");
 		
 		List<String> lines = readTex(inputFile);
 
 		lines = embedIncludes(lines, refDir, true); // embed includes first, but skip dynval ones
 		lines = embedDynvalIncludes(lines, refDir);
 		lines = embedCommands(lines, true);
-		lines = embedBibliography(lines, new File(refDir, "refs_compiled.bbl"));
-		lines = embedFigpanelFigures(lines, refDir, figpanelDir, textWidth);
+//		lines = embedBibliography(lines, new File(refDir, "refs_compiled.bbl"));
+//		lines = embedFigpanelFigures(lines, refDir, figpanelDir, textWidth);
 		
 		writeTex(lines, outputFile);
 		
-		File ssaOutputDir = new File(new File(mainBranch, "submission"), "final-bssa-submission");
-//		File ssaOutputDir = new File(prviDir, "final-bssa-submission-tests");
-		Preconditions.checkState(ssaOutputDir.exists() || ssaOutputDir.mkdir(),
-				"SSA output dir doesn't exist and could not be created: %s", ssaOutputDir.getAbsolutePath());
-		reorganizeFiguresForSSA(outputFile, ssaOutputDir);
-		// rename from embedded to just main
-		Files.move(new File(ssaOutputDir, outputFile.getName()), new File(ssaOutputDir, inputFile.getName()));
+//		File ssaOutputDir = new File(new File(mainBranch, "submission"), "final-bssa-submission");
+////		File ssaOutputDir = new File(prviDir, "final-bssa-submission-tests");
+//		Preconditions.checkState(ssaOutputDir.exists() || ssaOutputDir.mkdir(),
+//				"SSA output dir doesn't exist and could not be created: %s", ssaOutputDir.getAbsolutePath());
+//		reorganizeFiguresForSSA(outputFile, ssaOutputDir);
+//		// rename from embedded to just main
+//		Files.move(new File(ssaOutputDir, outputFile.getName()), new File(ssaOutputDir, inputFile.getName()));
 	}
 
 }

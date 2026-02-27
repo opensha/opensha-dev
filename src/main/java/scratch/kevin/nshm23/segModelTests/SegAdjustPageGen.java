@@ -414,7 +414,7 @@ public class SegAdjustPageGen {
 				PlotSpec spec = new PlotSpec(funcs, chars, sectName, "Magnitude", "Incremental Rate (1/yr)");
 				spec.setLegendInset(RectangleAnchor.BOTTOM_LEFT);
 				
-				HeadlessGraphPanel gp = PlotUtils.initHeadless();
+				HeadlessGraphPanel gp = PlotUtils.initScreenHeadless();
 				
 				gp.setRenderingOrder(DatasetRenderingOrder.REVERSE);
 				gp.drawGraphPanel(spec, false, true, xRange, yRange);

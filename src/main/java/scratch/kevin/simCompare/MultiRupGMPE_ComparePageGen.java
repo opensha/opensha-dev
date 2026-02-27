@@ -42,6 +42,7 @@ import org.opensha.commons.gui.plot.GeographicMapMaker;
 import org.opensha.commons.gui.plot.HeadlessGraphPanel;
 import org.opensha.commons.gui.plot.PlotCurveCharacterstics;
 import org.opensha.commons.gui.plot.PlotLineType;
+import org.opensha.commons.gui.plot.PlotPreferences;
 import org.opensha.commons.gui.plot.PlotSpec;
 import org.opensha.commons.gui.plot.PlotSymbol;
 import org.opensha.commons.gui.plot.PlotUtils;
@@ -2562,7 +2563,7 @@ public abstract class MultiRupGMPE_ComparePageGen<E> {
 		double maxX = hist.getMaxX();
 		Range xRange = sigFractRange(minX, maxX);
 		
-		HeadlessGraphPanel gp = PlotUtils.initHeadless();
+		HeadlessGraphPanel gp = PlotUtils.initScreenHeadless();
 		
 		gp.setTickLabelFontSize(18);
 		gp.setAxisLabelFontSize(24);
@@ -2620,7 +2621,7 @@ public abstract class MultiRupGMPE_ComparePageGen<E> {
 		
 		PlotSpec spec = new PlotSpec(funcs, chars, title, "z-score", "σ-fract");
 		
-		HeadlessGraphPanel gp = PlotUtils.initHeadless();
+		HeadlessGraphPanel gp = PlotUtils.initScreenHeadless();
 		
 		gp.setTickLabelFontSize(18);
 		gp.setAxisLabelFontSize(24);
@@ -2674,18 +2675,13 @@ public abstract class MultiRupGMPE_ComparePageGen<E> {
 		
 		PlotSpec spec = new PlotSpec(funcs, chars, title, "z-score", "σ-fract");
 		
-		PaintScaleLegend cptLabel = RupSetMapMaker.buildCPTLegend(cpt, zLabel);
+		PlotPreferences prefs = PlotPreferences.getDefaultScreenFigurePrefs();
+		PaintScaleLegend cptLabel = RupSetMapMaker.buildCPTLegend(cpt, zLabel, prefs);
 		Font axisLabelFont = cptLabel.getAxis().getLabelFont();
 //		cptLabel.getAxis().setLabelFont(new Font(axisLabelFont.getFontName(),axisLabelFont.getStyle(),20));
 		spec.addSubtitle(cptLabel);
 		
-		HeadlessGraphPanel gp = PlotUtils.initHeadless();
-		
-		gp.setTickLabelFontSize(18);
-		gp.setAxisLabelFontSize(24);
-		gp.setPlotLabelFontSize(24);
-		gp.setLegendFontSize(20);
-		gp.setBackgroundColor(Color.WHITE);
+		HeadlessGraphPanel gp = PlotUtils.initHeadless(prefs);
 		
 		int width = 900;
 		int height = 900;

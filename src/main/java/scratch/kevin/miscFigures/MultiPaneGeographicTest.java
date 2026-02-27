@@ -73,7 +73,7 @@ public class MultiPaneGeographicTest {
 		for (int i=0; i<specs.size(); i++)
 			yRanges.add(yRange);
 		
-		HeadlessGraphPanel gp = PlotUtils.initHeadless();
+		HeadlessGraphPanel gp = PlotUtils.initScreenHeadless();
 		
 		gp.drawGraphPanel(specs, false, false, xRanges, yRanges);
 		

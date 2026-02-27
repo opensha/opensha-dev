@@ -1,5 +1,7 @@
 package scratch.kevin.pointSources;
 
+import static org.opensha.commons.geo.GeoTools.TO_RAD;
+
 import java.awt.Color;
 import java.awt.Font;
 import java.awt.geom.Point2D;
@@ -65,6 +67,11 @@ import org.opensha.sha.earthquake.PointSource;
 import org.opensha.sha.earthquake.ProbEqkRupture;
 import org.opensha.sha.earthquake.ProbEqkSource;
 import org.opensha.sha.earthquake.faultSysSolution.FaultSystemSolution;
+import org.opensha.sha.earthquake.faultSysSolution.modules.GridSourceList;
+import org.opensha.sha.earthquake.faultSysSolution.modules.GridSourceList.FiniteRuptureConverter;
+import org.opensha.sha.earthquake.faultSysSolution.modules.GridSourceList.GriddedRupture;
+import org.opensha.sha.earthquake.faultSysSolution.modules.GridSourceList.GriddedRuptureProperties;
+import org.opensha.sha.earthquake.faultSysSolution.modules.GridSourceList.GriddedRupturePropertiesCache;
 import org.opensha.sha.earthquake.faultSysSolution.modules.GridSourceProvider;
 import org.opensha.sha.earthquake.faultSysSolution.modules.MFDGridSourceProvider;
 import org.opensha.sha.earthquake.faultSysSolution.util.FaultSysTools;
@@ -72,13 +79,17 @@ import org.opensha.sha.earthquake.faultSysSolution.util.SolHazardMapCalc.ReturnP
 import org.opensha.sha.earthquake.rupForecastImpl.PointSourceNshm;
 import org.opensha.sha.earthquake.rupForecastImpl.PointToFiniteSource;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.gridded.NSHM23_AbstractGridSourceProvider;
-import org.opensha.sha.faultSurface.FiniteApproxPointSurface;
+import org.opensha.sha.earthquake.rupForecastImpl.nshm23.gridded.NSHM23_SingleRegionGridSourceProvider.NSHM23_WUS_FiniteRuptureConverter;
+import org.opensha.sha.earthquake.util.GriddedSeismicitySettings;
 import org.opensha.sha.faultSurface.PointSurface;
+import org.opensha.sha.faultSurface.PointSurface.SiteSpecificDistanceCorrected;
+import org.opensha.sha.faultSurface.PointSurface.DistanceCorrectable;
 import org.opensha.sha.faultSurface.QuadSurface;
+import org.opensha.sha.faultSurface.RectangularSurface;
 import org.opensha.sha.faultSurface.RuptureSurface;
-import org.opensha.sha.faultSurface.utils.PointSourceDistanceCorrection;
-import org.opensha.sha.faultSurface.utils.PointSourceDistanceCorrections;
 import org.opensha.sha.faultSurface.utils.PointSurfaceBuilder;
+import org.opensha.sha.faultSurface.utils.ptSrcCorr.PointSourceDistanceCorrection;
+import org.opensha.sha.faultSurface.utils.ptSrcCorr.PointSourceDistanceCorrections;
 import org.opensha.sha.gui.infoTools.IMT_Info;
 import org.opensha.sha.imr.AttenRelRef;
 import org.opensha.sha.imr.ScalarIMR;
@@ -88,6 +99,7 @@ import org.opensha.sha.imr.param.IntensityMeasureParams.SA_Param;
 import org.opensha.sha.magdist.GutenbergRichterMagFreqDist;
 import org.opensha.sha.magdist.IncrementalMagFreqDist;
 import org.opensha.sha.util.FocalMech;
+import org.opensha.sha.util.TectonicRegionType;
 
 import com.google.common.base.Preconditions;
 import com.google.common.base.Stopwatch;
@@ -99,50 +111,31 @@ import net.mahdilamb.colormap.Colors;
 
 import com.google.common.collect.ImmutableMap.Builder;
 
-import scratch.kevin.pointSources.InvCDF_RJBCorrPointSurface.RJBCorrInvPDFs;
-import scratch.kevin.pointSources.TableBackedDistCorrPointSurface.DistanceCorrTables;
-
 public class PointSourceHazardComparison {
 	
+	private static TectonicRegionType TRT = TectonicRegionType.ACTIVE_SHALLOW;
+	
 	enum PointSourceType {
-		TRUE_POINT_SOURCE("True Point Source", false, PointSourceDistanceCorrections.NONE) {
+		TRUE_POINT_SOURCE("True Point Source", "True point", false, PointSourceDistanceCorrections.NONE) {
 			@Override
 			public ProbEqkSource buildSource(Location centerLoc, IncrementalMagFreqDist mfd,
 					double aveRake, double aveDip, boolean isSupersample, Random r) {
 //				return new PointEqkSource(centerLoc, mfd, 1d, aveRake, aveDip);
 				return PointSource.poissonBuilder(centerLoc)
 						.truePointSources()
-						.forMFDAndFocalMech(mfd, new FocalMechanism(Double.NaN, aveDip, aveRake))
+						.forMFDAndFocalMech(mfd, new FocalMechanism(Double.NaN, aveDip, aveRake), TRT)
 						.duration(1d)
 						.build();
 			}
 		},
-		POINT_SOURCE_NSHM("PointSourceNshm", false, PointSourceDistanceCorrections.NSHM_2013) {
+		POINT_SOURCE_NSHM("PointSourceNshm", "NSHM (2013)", false, PointSourceDistanceCorrections.NSHM_2013) {
 			@Override
 			public ProbEqkSource buildSource(Location centerLoc, IncrementalMagFreqDist mfd,
 					double aveRake, double aveDip, boolean isSupersample, Random r) {
-				return new PointSourceNshm(centerLoc, mfd, 1d, mechWtMapForRake(aveRake), getDistCorrs());
+				return new PointSourceNshm(centerLoc, mfd, 1d, mechWtMapForRake(aveRake), getDistCorr(), 5d);
 			}
 		},
-		APROX_SUPERSAMPLE_POINT_SOURCE_NSHM("Approx. Supersampled PointSourceNshm", false, PointSourceDistanceCorrections.NONE) { // none is fine here, it's baked in
-			@Override
-			public ProbEqkSource buildSource(Location centerLoc, IncrementalMagFreqDist mfd,
-					double aveRake, double aveDip, boolean isSupersample, Random r) {
-				ProbEqkSource source = POINT_SOURCE_NSHM.buildSource(centerLoc, mfd, aveRake, aveDip, isSupersample, r);
-				if (!isSupersample) {
-					// not externally supersampled, approximate it here
-					List<ProbEqkRupture> modRups = new ArrayList<>();
-					for (ProbEqkRupture rup : source) {
-						FiniteApproxPointSurface ptSurf = (FiniteApproxPointSurface)rup.getRuptureSurface();
-						rup.setRuptureSurface(new SupersampledApproxPointSurfaceNshm(ptSurf, rup.getMag(), 0.1, SUPERSAMPLE_SPACING));
-						modRups.add(rup);
-					}
-					source = new RupListSource(modRups, source);
-				}
-				return source;
-			}
-		},
-		POINT_TO_FINITE("PointToFiniteSource", true, PointSourceDistanceCorrections.NONE) {
+		POINT_TO_FINITE("PointToFiniteSource", "PointToFiniteSource", true, PointSourceDistanceCorrections.NONE) {
 			@Override
 			public ProbEqkSource buildSource(Location centerLoc, IncrementalMagFreqDist mfd, double aveRake,
 					double aveDip, boolean isSupersample, Random r) {
@@ -170,76 +163,67 @@ public class PointSourceHazardComparison {
 				return new RupListSource(rups, source0);
 			}
 		},
-		SIMPLE_APPROX_FINITE_POINT_NO_CORR("Simple Approx. Finite, No Dist. Corr.", true, PointSourceDistanceCorrections.NONE) {
-			@Override
-			public ProbEqkSource buildSource(Location centerLoc, IncrementalMagFreqDist mfd, double aveRake,
-					double aveDip, boolean isSupersample, Random r) {
-				return buildPointSource(centerLoc, null, mfd, aveRake, aveDip, r, getDistCorrs());
-			}
-		},
-		SIMPLE_APPROX_FINITE_POINT_NSHMP_CORR("Simple Approx. Finite, NSHMP08 Dist. Corr.", true, PointSourceDistanceCorrections.NSHM_2008) {
-			@Override
-			public ProbEqkSource buildSource(Location centerLoc, IncrementalMagFreqDist mfd, double aveRake,
-					double aveDip, boolean isSupersample, Random r) {
-				return buildPointSource(centerLoc, null, mfd, aveRake, aveDip, r, getDistCorrs());
-			}
-		},
-		SINGLE_QUAD_TRACE_CENTERED("Single Quad Surface, Trace Centered", true, PointSourceDistanceCorrections.NONE) {
+		SINGLE_FINITE_TRACE_CENTERED("Single Finite Surface, Trace Centered", "Single finite, trace centered", true, PointSourceDistanceCorrections.NONE) {
 			@Override
 			public ProbEqkSource buildSource(Location centerLoc, IncrementalMagFreqDist mfd, double aveRake,
 					double aveDip, boolean isSupersample, Random r) {
 				PointSurfaceBuilder builder = new PointSurfaceBuilder(centerLoc);
 				builder.dip(aveDip);
+				builder.fractionalDAS(0.5d);
 				builder.fractionalHypocentralDepth(0d);
 				builder.random(r);
-				return buildQuadSource(builder, mfd, aveRake, aveDip, 1);
+				return buildFiniteRectSource(builder, mfd, aveRake, aveDip, 1);
 			}
 		},
-		SINGLE_QUAD_SURF_CENTER("Single Quad Surface", true, PointSourceDistanceCorrections.NONE) {
+		SINGLE_FINITE_SURF_CENTER("Single Finite Surface", "Single finite", true, PointSourceDistanceCorrections.NONE) {
 			@Override
 			public ProbEqkSource buildSource(Location centerLoc, IncrementalMagFreqDist mfd, double aveRake,
 					double aveDip, boolean isSupersample, Random r) {
 				PointSurfaceBuilder builder = new PointSurfaceBuilder(centerLoc);
 				builder.dip(aveDip);
+				builder.fractionalDAS(0.5d);
 				builder.fractionalHypocentralDepth(0.5);
 				builder.random(r);
-				return buildQuadSource(builder, mfd, aveRake, aveDip, 1);
+				return buildFiniteRectSource(builder, mfd, aveRake, aveDip, 1);
 			}
 		},
-		CROSSHAIR_QUAD("Crosshair Quad Surface", true, PointSourceDistanceCorrections.NONE) {
+		CROSSHAIR_FINITE("Crosshair Finite Surface", "Crosshair finite", true, PointSourceDistanceCorrections.NONE) {
 			@Override
 			public ProbEqkSource buildSource(Location centerLoc, IncrementalMagFreqDist mfd, double aveRake,
 					double aveDip, boolean isSupersample, Random r) {
 				PointSurfaceBuilder builder = new PointSurfaceBuilder(centerLoc);
 				builder.dip(aveDip);
+				builder.fractionalDAS(0.5d);
 				builder.fractionalHypocentralDepth(0.5d);
 				builder.random(r);
-				return buildQuadSource(builder, mfd, aveRake, aveDip, 2);
+				return buildFiniteRectSource(builder, mfd, aveRake, aveDip, 2);
 			}
 		},
-		QUAD_QUAD("4x Quad Surface", true, PointSourceDistanceCorrections.NONE) {
+		QUAD_FINITE("4x Finite Surface", "4x finite", true, PointSourceDistanceCorrections.NONE) {
 			@Override
 			public ProbEqkSource buildSource(Location centerLoc, IncrementalMagFreqDist mfd, double aveRake,
 					double aveDip, boolean isSupersample, Random r) {
 				PointSurfaceBuilder builder = new PointSurfaceBuilder(centerLoc);
 				builder.dip(aveDip);
+				builder.fractionalDAS(0.5d);
 				builder.fractionalHypocentralDepth(0.5d);
 				builder.random(r);
-				return buildQuadSource(builder, mfd, aveRake, aveDip, isSupersample ? 2 : 4);
+				return buildFiniteRectSource(builder, mfd, aveRake, aveDip, isSupersample ? 2 : 4);
 			}
 		},
-		OCT_QUAD("8x Quad Surface", true, PointSourceDistanceCorrections.NONE) {
+		OCT_FINITE("8x Finite Surface", "8x finite", true, PointSourceDistanceCorrections.NONE) {
 			@Override
 			public ProbEqkSource buildSource(Location centerLoc, IncrementalMagFreqDist mfd, double aveRake,
 					double aveDip, boolean isSupersample, Random r) {
 				PointSurfaceBuilder builder = new PointSurfaceBuilder(centerLoc);
 				builder.dip(aveDip);
+				builder.fractionalDAS(0.5d);
 				builder.fractionalHypocentralDepth(0.5d);
 				builder.random(r);
-				return buildQuadSource(builder, mfd, aveRake, aveDip, isSupersample ? 2 : 8);
+				return buildFiniteRectSource(builder, mfd, aveRake, aveDip, isSupersample ? 2 : 8);
 			}
 		},
-		OCT_QUAD_RAND_DAS_DD("8x Quad Surface, Random DAS & DD", true, PointSourceDistanceCorrections.NONE) {
+		OCT_FINITE_RAND_DAS_DD("8x Finite Surface, Random DAS & DD", "8x finite, rand DAS & DD", true, PointSourceDistanceCorrections.NONE) {
 			@Override
 			public ProbEqkSource buildSource(Location centerLoc, IncrementalMagFreqDist mfd, double aveRake,
 					double aveDip, boolean isSupersample, Random r) {
@@ -247,10 +231,10 @@ public class PointSourceHazardComparison {
 				builder.dip(aveDip);
 				builder.sampleDASs().sampleHypocentralDepths();
 				builder.random(r);
-				return buildQuadSource(builder, mfd, aveRake, aveDip, isSupersample ? 2 : 8);
+				return buildFiniteRectSource(builder, mfd, aveRake, aveDip, isSupersample ? 2 : 8);
 			}
 		},
-		OCT_QUAD_RAND_CELL("8x Quad Surface, Random Cell Locations", true, PointSourceDistanceCorrections.NONE) {
+		OCT_FINITE_RAND_CELL("8x Finite Surface, Random Cell Locations", "8x finite, rand loc", true, PointSourceDistanceCorrections.NONE) {
 			@Override
 			public ProbEqkSource buildSource(Location centerLoc, IncrementalMagFreqDist mfd, double aveRake,
 					double aveDip, boolean isSupersample, Random r) {
@@ -260,10 +244,10 @@ public class PointSourceHazardComparison {
 				if (!isSupersample)
 					builder.sampleFromCell(cellRegion(centerLoc));
 				builder.random(r);
-				return buildQuadSource(builder, mfd, aveRake, aveDip, isSupersample ? 2 : 8);
+				return buildFiniteRectSource(builder, mfd, aveRake, aveDip, isSupersample ? 2 : 8);
 			}
 		},
-		OCT_QUAD_RAND_DAS_DD_CELL("8x Quad Surface, Random DAS, DD, & Cell Locations", true, PointSourceDistanceCorrections.NONE) {
+		OCT_FINITE_RAND_DAS_DD_CELL("8x Finite Surface, Random DAS, DD, & Cell Locations", "8x finite, rand DAS & DD & Loc", true, PointSourceDistanceCorrections.NONE) {
 			@Override
 			public ProbEqkSource buildSource(Location centerLoc, IncrementalMagFreqDist mfd, double aveRake,
 					double aveDip, boolean isSupersample, Random r) {
@@ -273,62 +257,115 @@ public class PointSourceHazardComparison {
 				if (!isSupersample)
 					builder.sampleFromCell(cellRegion(centerLoc));
 				builder.random(r);
-				return buildQuadSource(builder, mfd, aveRake, aveDip, isSupersample ? 2 : 8);
+				return buildFiniteRectSource(builder, mfd, aveRake, aveDip, isSupersample ? 2 : 8);
 			}
 		},
-		TABLE_FINITE_APPROX_POINT_SOURCE("Table-Based Finite Approx", false, PointSourceDistanceCorrections.NONE) {
+		TWENTY_FINITE("20x Finite Surface", "20x finite", true, PointSourceDistanceCorrections.NONE) {
 			@Override
 			public ProbEqkSource buildSource(Location centerLoc, IncrementalMagFreqDist mfd, double aveRake,
 					double aveDip, boolean isSupersample, Random r) {
-				return buildTableBackedSource(centerLoc, mfd, aveRake, aveDip, false, r);
+				PointSurfaceBuilder builder = new PointSurfaceBuilder(centerLoc);
+				builder.dip(aveDip);
+				builder.fractionalDAS(0.5d);
+				builder.fractionalHypocentralDepth(0.5d);
+				builder.random(r);
+				return buildFiniteRectSource(builder, mfd, aveRake, aveDip, isSupersample ? 5 : 20);
 			}
 		},
-		TABLE_FINITE_APPROX_POINT_SOURCE_SUPERSAMPLE("Table-Based Finite Supersample Approx", false, PointSourceDistanceCorrections.NONE) {
+		TWENTY_FINITE_RAND_DAS_DD("20x Finite Surface, Random DAS & DD", "20x finite, rand DAS & DD", true, PointSourceDistanceCorrections.NONE) {
 			@Override
 			public ProbEqkSource buildSource(Location centerLoc, IncrementalMagFreqDist mfd, double aveRake,
 					double aveDip, boolean isSupersample, Random r) {
-				return buildTableBackedSource(centerLoc, mfd, aveRake, aveDip, isSupersample ? false : true, r);
+				PointSurfaceBuilder builder = new PointSurfaceBuilder(centerLoc);
+				builder.dip(aveDip);
+				builder.sampleDASs().sampleHypocentralDepths();
+				builder.random(r);
+				return buildFiniteRectSource(builder, mfd, aveRake, aveDip, isSupersample ? 5 : 20);
 			}
 		},
-		HAZ_EQUIV_APPROX_POINT_SOURCE("Hazard Equivalent Finite Approx", false, PointSourceDistanceCorrections.NONE) {
+		AVERAGE("Spinning Average", "Average", false, PointSourceDistanceCorrections.AVERAGE_SPINNING_CENTERED) {
 			@Override
 			public ProbEqkSource buildSource(Location centerLoc, IncrementalMagFreqDist mfd, double aveRake,
 					double aveDip, boolean isSupersample, Random r) {
-				return buildHazEquivSource(centerLoc, mfd, aveRake, aveDip, this);
+				return buildDistCorrSource(centerLoc, mfd, aveRake, aveDip,
+						GriddedSeismicitySettings.DEFAULT.forDistanceCorrection(getDistCorr()),
+						new NSHM23_WUS_FiniteRuptureConverter());
 			}
 		},
-		CDF_BASED_RJB_CORR_APPROX_POINT_SOURCE("RJB Distribution Approx Finite Point Source", false, PointSourceDistanceCorrections.NONE) {
+		AVERAGE_ALONG("Spinning Average (sample along)", "Average (sample along)", false, PointSourceDistanceCorrections.AVERAGE_SPINNING) {
 			@Override
 			public ProbEqkSource buildSource(Location centerLoc, IncrementalMagFreqDist mfd, double aveRake,
 					double aveDip, boolean isSupersample, Random r) {
-				return buildRJBCorrSource(centerLoc, mfd, aveRake, aveDip, OCT_QUAD, 5);
+				return buildDistCorrSource(centerLoc, mfd, aveRake, aveDip,
+						GriddedSeismicitySettings.DEFAULT.forDistanceCorrection(getDistCorr()),
+						new NSHM23_WUS_FiniteRuptureConverter());
 			}
 		},
-		CDF_BASED_RJB_CORR_APPROX_SUPERSAMPLED_POINT_SOURCE("RJB Distribution Approx Supersampled Finite Point Source", false, PointSourceDistanceCorrections.NONE) {
+		FIVE_POINT_DIST("5-pt Distribution", "5-pt dist", false, PointSourceDistanceCorrections.FIVE_POINT_SPINNING_DIST_CENTERED) {
 			@Override
 			public ProbEqkSource buildSource(Location centerLoc, IncrementalMagFreqDist mfd, double aveRake,
 					double aveDip, boolean isSupersample, Random r) {
-				return buildRJBCorrSource(centerLoc, mfd, aveRake, aveDip, isSupersample ? OCT_QUAD : OCT_QUAD_RAND_CELL, 5);
+				return buildDistCorrSource(centerLoc, mfd, aveRake, aveDip,
+						GriddedSeismicitySettings.DEFAULT.forDistanceCorrection(getDistCorr()),
+						new NSHM23_WUS_FiniteRuptureConverter());
+			}
+		},
+		FIVE_POINT_DIST_ALONG("5-pt Distribution (sample along)", "5-pt dist (sample along)", false, PointSourceDistanceCorrections.FIVE_POINT_SPINNING_DIST) {
+			@Override
+			public ProbEqkSource buildSource(Location centerLoc, IncrementalMagFreqDist mfd, double aveRake,
+					double aveDip, boolean isSupersample, Random r) {
+				return buildDistCorrSource(centerLoc, mfd, aveRake, aveDip,
+						GriddedSeismicitySettings.DEFAULT.forDistanceCorrection(getDistCorr()),
+						new NSHM23_WUS_FiniteRuptureConverter());
+			}
+		},
+		FIVE_POINT_DIST_ALONG_BETTER_DEPTHS("5-pt Distribution (sample along) better depths", "5-pt dist (sample along, better depths)", false, PointSourceDistanceCorrections.FIVE_POINT_SPINNING_DIST) {
+			@Override
+			public ProbEqkSource buildSource(Location centerLoc, IncrementalMagFreqDist mfd, double aveRake,
+					double aveDip, boolean isSupersample, Random r) {
+				return buildDistCorrSource(centerLoc, mfd, aveRake, aveDip,
+						GriddedSeismicitySettings.DEFAULT.forDistanceCorrection(getDistCorr()),
+						new NSHMFiveCentRuptureConverter());
+			}
+		},
+		TWENTY_POINT_DIST("20-pt Distribution", "20-pt dist", false, PointSourceDistanceCorrections.TWENTY_POINT_SPINNING_DIST_CENTERED) {
+			@Override
+			public ProbEqkSource buildSource(Location centerLoc, IncrementalMagFreqDist mfd, double aveRake,
+					double aveDip, boolean isSupersample, Random r) {
+				return buildDistCorrSource(centerLoc, mfd, aveRake, aveDip,
+						GriddedSeismicitySettings.DEFAULT.forDistanceCorrection(getDistCorr()),
+						new NSHM23_WUS_FiniteRuptureConverter());
+			}
+		},
+		TWENTY_POINT_DIST_ALONG("20-pt Distribution (sample along)", "20-pt dist (sample along)", false, PointSourceDistanceCorrections.TWENTY_POINT_SPINNING_DIST) {
+			@Override
+			public ProbEqkSource buildSource(Location centerLoc, IncrementalMagFreqDist mfd, double aveRake,
+					double aveDip, boolean isSupersample, Random r) {
+				return buildDistCorrSource(centerLoc, mfd, aveRake, aveDip,
+						GriddedSeismicitySettings.DEFAULT.forDistanceCorrection(getDistCorr()),
+						new NSHM23_WUS_FiniteRuptureConverter());
 			}
 		};
 		
 		private String label;
+		private String shortName;
 		private boolean stochastic;
-		private WeightedList<PointSourceDistanceCorrection> distCorrs;
+		private PointSourceDistanceCorrection distCorr;
 
-		private PointSourceType(String label, boolean stochastic, PointSourceDistanceCorrections distCorrType) {
-			this(label, stochastic, distCorrType.get());
+		private PointSourceType(String label, String shortName, boolean stochastic, PointSourceDistanceCorrections distCorrType) {
+			this(label, shortName, stochastic, distCorrType.get());
 		}
 
-		private PointSourceType(String label, boolean stochastic, WeightedList<PointSourceDistanceCorrection> distCorrs) {
+		private PointSourceType(String label, String shortName, boolean stochastic, PointSourceDistanceCorrection distCorr) {
 			this.label = label;
+			this.shortName = shortName;
 			this.stochastic = stochastic;
-			Preconditions.checkNotNull(distCorrs);
-			this.distCorrs = distCorrs;
+//			Preconditions.checkNotNull(distCorrs);
+			this.distCorr = distCorr;
 		}
 		
-		public WeightedList<PointSourceDistanceCorrection> getDistCorrs() {
-			return distCorrs;
+		public PointSourceDistanceCorrection getDistCorr() {
+			return distCorr;
 		}
 		
 		public abstract ProbEqkSource buildSource(Location centerLoc, IncrementalMagFreqDist mfd,
@@ -373,251 +410,321 @@ public class PointSourceHazardComparison {
 		return new Region(new Location(loc.lat-half, loc.lon-half), new Location(loc.lat+half, loc.lon+half));
 	}
 	
-	private static ProbEqkSource buildQuadSource(PointSurfaceBuilder builder, IncrementalMagFreqDist mfd,
+	private static List<GriddedRupture> buildGriddedRupList(Location loc, IncrementalMagFreqDist mfd,
+			double aveRake, double aveDip, FiniteRuptureConverter converter) {
+		List<GriddedRupture> rups = new ArrayList<>();
+		FocalMech mech = FocalMech.forFocalMechanism(new FocalMechanism(Double.NaN, aveDip, aveRake));
+		Preconditions.checkNotNull(mech);
+		
+		GriddedRupturePropertiesCache cache = new GriddedRupturePropertiesCache();
+		
+		for (int i=0; i<mfd.size(); i++) {
+			double mag = mfd.getX(i);
+			double rate = mfd.getY(i);
+			if (rate == 0d)
+				continue;
+			rups.add(converter.buildFiniteRupture(0, loc, mag, rate, mech, TRT, null, null, cache));
+		}
+		return rups;
+	}
+	
+	private static ProbEqkSource buildDistCorrSource(Location centerLoc, IncrementalMagFreqDist mfd, double aveRake,
+			double aveDip, GriddedSeismicitySettings gridSettings, FiniteRuptureConverter converter) {
+		return PointSource.poissonBuilder(centerLoc)
+				.data(GridSourceList.buildPointSourceData(centerLoc, buildGriddedRupList(centerLoc, mfd, aveRake, aveDip, converter),
+						null, gridSettings))
+				.duration(1d)
+				.distCorr(gridSettings.distanceCorrection, gridSettings.pointSourceMagnitudeCutoff)
+				.build();
+	}
+	
+	private static ProbEqkSource buildFiniteRectSource(PointSurfaceBuilder builder, IncrementalMagFreqDist mfd,
 			double aveRake, double aveDip, int numEach) {
 		double dipRad = Math.toRadians(aveDip);
 		List<ProbEqkRupture> rups = new ArrayList<>(mfd.size()*numEach);
 		for (int i=0; i<mfd.size(); i++) {
 			double mag = mfd.getX(i);
-			double depth = (float)mag < 6.5f ? 5d : 1d;
-			double length = WC94.getMedianLength(mag);
-			double aspectWidth = length / 1.5;
-			double ddWidth = (14.0 - depth) / Math.sin(dipRad);
-			ddWidth = Math.min(aspectWidth, ddWidth);
-			double lower = depth + ddWidth * Math.sin(dipRad);
+//			double depth = (float)mag < 6.5f ? 5d : 1d;
+//			double length = WC94.getMedianLength(mag);
+//			double aspectWidth = length / 1.5;
+//			double ddWidth = (14.0 - depth) / Math.sin(dipRad);
+//			ddWidth = Math.min(aspectWidth, ddWidth);
+//			double lower = depth + ddWidth * Math.sin(dipRad);
+			
+			double zTop = PointSourceNshm.SURF_BUILDER_DEFAULT.depthForMag(mag);
+			double widthDD = PointSourceNshm.SURF_BUILDER_DEFAULT.calcWidth(mag, zTop, dipRad);
+			double length = PointSourceNshm.SURF_BUILDER_DEFAULT.calcLength(mag);
+			builder.upperDepthWidthAndDip(zTop, widthDD, aveDip);
 
 			builder.length(length);
-			builder.upperDepth(depth).lowerDepth(lower);
 			
 			double rateEach = mfd.getY(i)/(double)numEach;
 			double probEach = 1-Math.exp(-rateEach);
-			for (QuadSurface surf : builder.buildRandQuadSurfaces(numEach))
+			for (RectangularSurface surf : builder.buildRandRectSurfaces(numEach))
 				rups.add(new ProbEqkRupture(mag, aveRake, probEach, surf, null));
 		}
 		return new RupListSource(rups, null);
 	}
 	
-	private static ProbEqkSource buildPointSource(Location centerLoc, Region cell, IncrementalMagFreqDist mfd,
-			double aveRake, double aveDip, Random r, WeightedList<PointSourceDistanceCorrection> distCorrs) {
-		PointSurfaceBuilder builder = new PointSurfaceBuilder(centerLoc);
-		builder.dip(aveDip);
-		builder.random(r);
-		builder.sampleFromCell(cell);
-		double dipRad = Math.toRadians(aveDip);
-		int expectedSize = mfd.size();
-		if (aveDip != 90d)
-			expectedSize *= 2;
-		if (distCorrs != null)
-			expectedSize *= distCorrs.size();
-		List<ProbEqkRupture> rups = new ArrayList<>(expectedSize);
-		for (int i=0; i<mfd.size(); i++) {
-			double mag = mfd.getX(i);
-			double depth = (float)mag < 6.5f ? 5d : 1d;
-			double length = WC94.getMedianLength(mag);
-			double aspectWidth = length / 1.5;
-			double ddWidth = (14.0 - depth) / Math.sin(dipRad);
-			ddWidth = Math.min(aspectWidth, ddWidth);
-			double lower = depth + ddWidth * Math.sin(dipRad);
+	public static class NSHMFiveCentRuptureConverter implements FiniteRuptureConverter {
+		
+		private WC1994_MagLengthRelationship WC94 = new WC1994_MagLengthRelationship();
 
-			builder.length(length);
-			builder.upperDepth(depth).lowerDepth(lower);
+		@Override
+		public GriddedRupture buildFiniteRupture(int gridIndex, Location loc, double magnitude, double rate,
+				FocalMech focalMech, TectonicRegionType trt, int[] associatedSections, double[] associatedSectionFracts,
+				GriddedRupturePropertiesCache cache) {
+			double dipRad = Math.toRadians(focalMech.dip());
 			
-			double totRate = mfd.getY(i);
-			WeightedList<FiniteApproxPointSurface> surfs = builder.buildFiniteApproxPointSurfaces(distCorrs);
+			double middleDepth = 5d;
+			double minDepth = 1d;
+			double maxDepth = 14d;
 			
-			for (WeightedValue<FiniteApproxPointSurface> surfWeight : surfs) {
-				double myRate = totRate*surfWeight.weight;
-				double myProb = 1-Math.exp(-myRate);
-				ProbEqkRupture rup = new ProbEqkRupture(mag, aveRake, myProb, surfWeight.value, null);
-				rups.add(rup);
+			double length = WC94.getMedianLength(magnitude);
+			double aspectWidth = length / 1.5;
+			
+			double ddWidth = (maxDepth - minDepth) / Math.sin(dipRad);
+			ddWidth = Math.min(aspectWidth, ddWidth);
+			double halfVertDepth = 0.5 * ddWidth * Math.sin(dipRad);
+			double upper = middleDepth - halfVertDepth;
+			double lower = middleDepth + halfVertDepth;
+			if (upper < minDepth) {
+				lower += (minDepth - upper);
+				upper = minDepth;
 			}
+			
+//			System.out.println("M"+magnitude+"; middle="+middleDepth+", range=["+upper+", "+lower+"]");
+			
+			GriddedRuptureProperties props = cache.getCached(new GriddedRuptureProperties(magnitude,
+					focalMech.rake(), focalMech.dip(), Double.NaN, null, upper, lower, length, Double.NaN, Double.NaN,
+					trt));
+			
+			return new GriddedRupture(gridIndex, loc, props, rate, associatedSections, associatedSectionFracts);
 		}
-		return new RupListSource(rups, null);
+		
 	}
+	
+//	private static ProbEqkSource buildPointSource(Location centerLoc, Region cell, IncrementalMagFreqDist mfd,
+//			double aveRake, double aveDip, Random r, PointSourceDistanceCorrection distCorr) {
+//		PointSurfaceBuilder builder = new PointSurfaceBuilder(centerLoc);
+//		builder.dip(aveDip);
+//		builder.random(r);
+//		builder.sampleFromCell(cell);
+//		double dipRad = Math.toRadians(aveDip);
+//		int expectedSize = mfd.size();
+//		if (aveDip != 90d)
+//			expectedSize *= 2;
+//		List<ProbEqkRupture> rups = new ArrayList<>(expectedSize);
+//		for (int i=0; i<mfd.size(); i++) {
+//			double mag = mfd.getX(i);
+//			double depth = (float)mag < 6.5f ? 5d : 1d;
+//			double length = WC94.getMedianLength(mag);
+//			double aspectWidth = length / 1.5;
+//			double ddWidth = (14.0 - depth) / Math.sin(dipRad);
+//			ddWidth = Math.min(aspectWidth, ddWidth);
+//			double lower = depth + ddWidth * Math.sin(dipRad);
+//
+//			builder.length(length);
+//			builder.upperDepth(depth).lowerDepth(lower);
+//			
+//			double totRate = mfd.getY(i);
+//			
+//			RuptureSurface surf = builder.buildPointSurface();
+//			WeightedList<FiniteApproxPointSurface> surfs = builder.buildFiniteApproxPointSurfaces(distCorrs);
+//			
+//			for (WeightedValue<FiniteApproxPointSurface> surfWeight : surfs) {
+//				double myRate = totRate*surfWeight.weight;
+//				double myProb = 1-Math.exp(-myRate);
+//				ProbEqkRupture rup = new ProbEqkRupture(mag, aveRake, myProb, surfWeight.value, null);
+//				rups.add(rup);
+//			}
+//		}
+//		return new RupListSource(rups, null);
+//	}
 	
 	private static File REF_MAIN_DIR = new File("/home/kevin/markdown/nshm23-misc/point_source_corr");
 	
-	private static DistanceCorrTables vertCenteredTables = null;
-	private static DistanceCorrTables vertSupersampleTables = null;
-	private static DistanceCorrTables dippingCenteredTables = null;
-	private static DistanceCorrTables dippingSupersampleTables = null;
-	private static File refTablesDir = new File(REF_MAIN_DIR, "OCT_QUAD/resources/");
-	
-	public static ProbEqkSource buildTableBackedSource(Location centerLoc, IncrementalMagFreqDist mfd, double aveRake,
-			double aveDip, boolean isSupersample, Random r) {
-		DistanceCorrTables distCorr = getLoadTables(aveDip, isSupersample);
-		
-		double dipRad = Math.toRadians(aveDip);
-		List<ProbEqkRupture> rups = new ArrayList<>();
-		ProbEqkSource source0 = null;
-		for (int i=0; i<mfd.size(); i++) {
-			double mag = mfd.getX(i);
-			double depth = (float)mag <= 6.5f ? 5d : 1d;
-			double length = WC94.getMedianLength(mag);
-			double aspectWidth = length / 1.5;
-			double ddWidth = (14.0 - depth) / Math.sin(dipRad);
-			ddWidth = Math.min(aspectWidth, ddWidth);
-			double lower = depth + ddWidth * Math.sin(dipRad);
-
-			TableBackedDistCorrPointSurface surf = new TableBackedDistCorrPointSurface(
-					distCorr, centerLoc, aveDip, depth, lower, length, mag, r);
-			double prob = 1-Math.exp(-mfd.getY(i));
-			rups.add(new ProbEqkRupture(mag, aveRake, prob, surf, null));
-		}
-		return new RupListSource(rups, source0);
-	}
-	
-	private static synchronized DistanceCorrTables getLoadTables(double aveDip, boolean isSupersample) {
-		try {
-			if (aveDip == 90d) {
-				if (isSupersample) {
-					if (vertSupersampleTables == null)
-						vertSupersampleTables = TableBackedDistCorrPointSurface.loadCorrTables(refTablesDir, "STRIKE_SLIP_supersampled");
-					return vertSupersampleTables;
-				} else {
-					if (vertCenteredTables == null)
-						vertCenteredTables = TableBackedDistCorrPointSurface.loadCorrTables(refTablesDir, "STRIKE_SLIP_centered");
-					return vertCenteredTables;
-				}
-			} else {
-				if (isSupersample) {
-					if (dippingSupersampleTables == null)
-						dippingSupersampleTables = TableBackedDistCorrPointSurface.loadCorrTables(refTablesDir, "REVERSE_supersampled");
-					return dippingSupersampleTables;
-				} else {
-					if (dippingCenteredTables == null)
-						dippingCenteredTables = TableBackedDistCorrPointSurface.loadCorrTables(refTablesDir, "REVERSE_centered");
-					return dippingCenteredTables;
-				}
-			}
-		} catch (IOException e) {
-			throw ExceptionUtils.asRuntimeException(e);
-		}
-	}
-
-	private static Table<PointSourceType, Double, EvenlyDiscrXYZ_DataSet> refHazEquivRJBs = HashBasedTable.create();
-	private static Map<PointSourceType, File> refHazEquivDirs = new EnumMap<>(PointSourceType.class);
-	static {
-		refHazEquivDirs.put(PointSourceType.HAZ_EQUIV_APPROX_POINT_SOURCE,
-				new File(REF_MAIN_DIR, "SIMPLE_APPROX_FINITE_POINT_NO_CORR_vs_OCT_QUAD/hazard_equiv_rJBs"));
-	}
-	
-	public static ProbEqkSource buildHazEquivSource(Location centerLoc, IncrementalMagFreqDist mfd, double aveRake,
-			double aveDip, PointSourceType type) {
-		EvenlyDiscrXYZ_DataSet distCorr = getHazEquivRJBTable(type, aveDip);
-		
-		double dipRad = Math.toRadians(aveDip);
-		List<ProbEqkRupture> rups = new ArrayList<>();
-		ProbEqkSource source0 = null;
-		for (int i=0; i<mfd.size(); i++) {
-			double mag = mfd.getX(i);
-			double depth = (float)mag <= 6.5f ? 5d : 1d;
-			double length = WC94.getMedianLength(mag);
-			double aspectWidth = length / 1.5;
-			double ddWidth = (14.0 - depth) / Math.sin(dipRad);
-			ddWidth = Math.min(aspectWidth, ddWidth);
-			double lower = depth + ddWidth * Math.sin(dipRad);
-			
-			if (aveDip < 90d) {
-				// one for each footwall boolean
-				for (boolean footwall : new boolean[] {false,true}) {
-					HazardEquivalentRJBCorrPointSurface surf = new HazardEquivalentRJBCorrPointSurface(
-							distCorr, centerLoc, aveDip, depth, lower, length, mag, footwall);
-					double prob = 1-Math.exp(-mfd.getY(i)*0.5);
-					rups.add(new ProbEqkRupture(mag, aveRake, prob, surf, null));
-				}
-			} else {
-				HazardEquivalentRJBCorrPointSurface surf = new HazardEquivalentRJBCorrPointSurface(
-						distCorr, centerLoc, aveDip, depth, lower, length, mag, true);
-				double prob = 1-Math.exp(-mfd.getY(i));
-				rups.add(new ProbEqkRupture(mag, aveRake, prob, surf, null));
-			}
-		}
-		return new RupListSource(rups, source0);
-	}
-	
-	private static synchronized EvenlyDiscrXYZ_DataSet getHazEquivRJBTable(PointSourceType type, double aveDip) {
-		File refDir = refHazEquivDirs.get(type);
-		Preconditions.checkNotNull(refDir, "no refDir for type %s", type);
-		Preconditions.checkState(refDir.exists(), "Doesn't exist: %s", refDir.getAbsolutePath());
-		EvenlyDiscrXYZ_DataSet ret = refHazEquivRJBs.get(type, aveDip);
-		if (ret != null)
-			return ret;
-		try {
-			if (aveDip == 90d)
-				ret = TableBackedDistCorrPointSurface.loadXYZ_CSV(new File(refDir, "STRIKE_SLIP_equiv_rJBs.csv"));
-			else
-				ret = TableBackedDistCorrPointSurface.loadXYZ_CSV(new File(refDir, "REVERSE_equiv_rJBs.csv"));
-		} catch (IOException e) {
-			throw ExceptionUtils.asRuntimeException(e);
-		}
-		refHazEquivRJBs.put(type, aveDip, ret);
-		return ret;
-	}
-	
-	private static Table<PointSourceType, Double, RJBCorrInvPDFs> refRJBCorrInvPDFs = HashBasedTable.create();
-	
-	public static ProbEqkSource buildRJBCorrSource(Location centerLoc, IncrementalMagFreqDist mfd, double aveRake,
-			double aveDip, PointSourceType type, int numProbs) {
-		RJBCorrInvPDFs corrTable = getRJBCorrTable(type, aveDip);
-		
-		DiscretizedFunc cdfProbs = InvCDF_RJBCorrPointSurface.getEvenlySpacedProbs(numProbs);
-//		DiscretizedFunc cdfProbs = InvCDF_RJBCorrPointSurface.getEvenlySpacedProbs(501);
-//		DiscretizedFunc cdfProbs = InvCDF_RJBCorrPointSurface.getSigmaSpacedProbs(5);
-		
-		boolean[] footwalls = aveDip == 90d ? new boolean[] {true} : new boolean[] {false,true};
-		
-		double dipRad = Math.toRadians(aveDip);
-		List<ProbEqkRupture> rups = new ArrayList<>();
-		ProbEqkSource source0 = null;
-		for (int i=0; i<mfd.size(); i++) {
-			double mag = mfd.getX(i);
-			double depth = (float)mag <= 6.5f ? 5d : 1d;
-			double length = WC94.getMedianLength(mag);
-			double aspectWidth = length / 1.5;
-			double ddWidth = (14.0 - depth) / Math.sin(dipRad);
-			ddWidth = Math.min(aspectWidth, ddWidth);
-			double lower = depth + ddWidth * Math.sin(dipRad);
-			
-			double totRate = mfd.getY(i);
-			for (Point2D cdfPt : cdfProbs) {
-				double cdfProb = cdfPt.getX();
-				double weight =  cdfPt.getY();
-				double rateEach = weight*totRate/(double)footwalls.length;
-				double probEach = 1-Math.exp(-rateEach);
-				for (boolean footwall : footwalls) {
-					InvCDF_RJBCorrPointSurface surf = new InvCDF_RJBCorrPointSurface(corrTable, centerLoc, aveDip,
-							depth, lower, footwall, length, mag, cdfProb);
-					rups.add(new ProbEqkRupture(mag, aveRake, probEach, surf, null));
-				}
-			}
-			
-		}
-		return new RupListSource(rups, source0);
-	}
-	
-	private static synchronized RJBCorrInvPDFs getRJBCorrTable(PointSourceType type, double aveDip) {
-		File refDir = new File(REF_MAIN_DIR, type.name()+"/rjb_dists");
-		Preconditions.checkNotNull(refDir, "no refDir for type %s", type);
-		Preconditions.checkState(refDir.exists(), "Doesn't exist: %s", refDir.getAbsolutePath());
-		RJBCorrInvPDFs ret = refRJBCorrInvPDFs.get(type, aveDip);
-		if (ret != null)
-			return ret;
-		try {
-			File csvFile;
-			if (aveDip == 90d)
-				csvFile = new File(refDir, "STRIKE_SLIP_rJB_cumDists.csv");
-			else
-				csvFile = new File(refDir, "REVERSE_rJB_cumDists.csv");
-			Preconditions.checkState(csvFile.exists());
-			CSVFile<String> csv = CSVFile.readFile(csvFile, true);
-			ret = new RJBCorrInvPDFs(csv);
-		} catch (IOException e) {
-			throw ExceptionUtils.asRuntimeException(e);
-		}
-		refRJBCorrInvPDFs.put(type, aveDip, ret);
-		return ret;
-	}
+//	private static DistanceCorrTables vertCenteredTables = null;
+//	private static DistanceCorrTables vertSupersampleTables = null;
+//	private static DistanceCorrTables dippingCenteredTables = null;
+//	private static DistanceCorrTables dippingSupersampleTables = null;
+//	private static File refTablesDir = new File(REF_MAIN_DIR, "OCT_QUAD/resources/");
+//	
+//	public static ProbEqkSource buildTableBackedSource(Location centerLoc, IncrementalMagFreqDist mfd, double aveRake,
+//			double aveDip, boolean isSupersample, Random r) {
+//		DistanceCorrTables distCorr = getLoadTables(aveDip, isSupersample);
+//		
+//		double dipRad = Math.toRadians(aveDip);
+//		List<ProbEqkRupture> rups = new ArrayList<>();
+//		ProbEqkSource source0 = null;
+//		for (int i=0; i<mfd.size(); i++) {
+//			double mag = mfd.getX(i);
+//			double depth = (float)mag <= 6.5f ? 5d : 1d;
+//			double length = WC94.getMedianLength(mag);
+//			double aspectWidth = length / 1.5;
+//			double ddWidth = (14.0 - depth) / Math.sin(dipRad);
+//			ddWidth = Math.min(aspectWidth, ddWidth);
+//			double lower = depth + ddWidth * Math.sin(dipRad);
+//
+//			TableBackedDistCorrPointSurface surf = new TableBackedDistCorrPointSurface(
+//					distCorr, centerLoc, aveDip, depth, lower, length, mag, r);
+//			double prob = 1-Math.exp(-mfd.getY(i));
+//			rups.add(new ProbEqkRupture(mag, aveRake, prob, surf, null));
+//		}
+//		return new RupListSource(rups, source0);
+//	}
+//	
+//	private static synchronized DistanceCorrTables getLoadTables(double aveDip, boolean isSupersample) {
+//		try {
+//			if (aveDip == 90d) {
+//				if (isSupersample) {
+//					if (vertSupersampleTables == null)
+//						vertSupersampleTables = TableBackedDistCorrPointSurface.loadCorrTables(refTablesDir, "STRIKE_SLIP_supersampled");
+//					return vertSupersampleTables;
+//				} else {
+//					if (vertCenteredTables == null)
+//						vertCenteredTables = TableBackedDistCorrPointSurface.loadCorrTables(refTablesDir, "STRIKE_SLIP_centered");
+//					return vertCenteredTables;
+//				}
+//			} else {
+//				if (isSupersample) {
+//					if (dippingSupersampleTables == null)
+//						dippingSupersampleTables = TableBackedDistCorrPointSurface.loadCorrTables(refTablesDir, "REVERSE_supersampled");
+//					return dippingSupersampleTables;
+//				} else {
+//					if (dippingCenteredTables == null)
+//						dippingCenteredTables = TableBackedDistCorrPointSurface.loadCorrTables(refTablesDir, "REVERSE_centered");
+//					return dippingCenteredTables;
+//				}
+//			}
+//		} catch (IOException e) {
+//			throw ExceptionUtils.asRuntimeException(e);
+//		}
+//	}
+//
+//	private static Table<PointSourceType, Double, EvenlyDiscrXYZ_DataSet> refHazEquivRJBs = HashBasedTable.create();
+//	private static Map<PointSourceType, File> refHazEquivDirs = new EnumMap<>(PointSourceType.class);
+//	static {
+//		refHazEquivDirs.put(PointSourceType.HAZ_EQUIV_APPROX_POINT_SOURCE,
+//				new File(REF_MAIN_DIR, "SIMPLE_APPROX_FINITE_POINT_NO_CORR_vs_OCT_QUAD/hazard_equiv_rJBs"));
+//	}
+//	
+//	public static ProbEqkSource buildHazEquivSource(Location centerLoc, IncrementalMagFreqDist mfd, double aveRake,
+//			double aveDip, PointSourceType type) {
+//		EvenlyDiscrXYZ_DataSet distCorr = getHazEquivRJBTable(type, aveDip);
+//		
+//		double dipRad = Math.toRadians(aveDip);
+//		List<ProbEqkRupture> rups = new ArrayList<>();
+//		ProbEqkSource source0 = null;
+//		for (int i=0; i<mfd.size(); i++) {
+//			double mag = mfd.getX(i);
+//			double depth = (float)mag <= 6.5f ? 5d : 1d;
+//			double length = WC94.getMedianLength(mag);
+//			double aspectWidth = length / 1.5;
+//			double ddWidth = (14.0 - depth) / Math.sin(dipRad);
+//			ddWidth = Math.min(aspectWidth, ddWidth);
+//			double lower = depth + ddWidth * Math.sin(dipRad);
+//			
+//			if (aveDip < 90d) {
+//				// one for each footwall boolean
+//				for (boolean footwall : new boolean[] {false,true}) {
+//					HazardEquivalentRJBCorrPointSurface surf = new HazardEquivalentRJBCorrPointSurface(
+//							distCorr, centerLoc, aveDip, depth, lower, length, mag, footwall);
+//					double prob = 1-Math.exp(-mfd.getY(i)*0.5);
+//					rups.add(new ProbEqkRupture(mag, aveRake, prob, surf, null));
+//				}
+//			} else {
+//				HazardEquivalentRJBCorrPointSurface surf = new HazardEquivalentRJBCorrPointSurface(
+//						distCorr, centerLoc, aveDip, depth, lower, length, mag, true);
+//				double prob = 1-Math.exp(-mfd.getY(i));
+//				rups.add(new ProbEqkRupture(mag, aveRake, prob, surf, null));
+//			}
+//		}
+//		return new RupListSource(rups, source0);
+//	}
+//	
+//	private static synchronized EvenlyDiscrXYZ_DataSet getHazEquivRJBTable(PointSourceType type, double aveDip) {
+//		File refDir = refHazEquivDirs.get(type);
+//		Preconditions.checkNotNull(refDir, "no refDir for type %s", type);
+//		Preconditions.checkState(refDir.exists(), "Doesn't exist: %s", refDir.getAbsolutePath());
+//		EvenlyDiscrXYZ_DataSet ret = refHazEquivRJBs.get(type, aveDip);
+//		if (ret != null)
+//			return ret;
+//		try {
+//			if (aveDip == 90d)
+//				ret = TableBackedDistCorrPointSurface.loadXYZ_CSV(new File(refDir, "STRIKE_SLIP_equiv_rJBs.csv"));
+//			else
+//				ret = TableBackedDistCorrPointSurface.loadXYZ_CSV(new File(refDir, "REVERSE_equiv_rJBs.csv"));
+//		} catch (IOException e) {
+//			throw ExceptionUtils.asRuntimeException(e);
+//		}
+//		refHazEquivRJBs.put(type, aveDip, ret);
+//		return ret;
+//	}
+//	
+//	private static Table<PointSourceType, Double, RJBCorrInvPDFs> refRJBCorrInvPDFs = HashBasedTable.create();
+//	
+//	public static ProbEqkSource buildRJBCorrSource(Location centerLoc, IncrementalMagFreqDist mfd, double aveRake,
+//			double aveDip, PointSourceType type, int numProbs) {
+//		RJBCorrInvPDFs corrTable = getRJBCorrTable(type, aveDip);
+//		
+//		DiscretizedFunc cdfProbs = InvCDF_RJBCorrPointSurface.getEvenlySpacedProbs(numProbs);
+////		DiscretizedFunc cdfProbs = InvCDF_RJBCorrPointSurface.getEvenlySpacedProbs(501);
+////		DiscretizedFunc cdfProbs = InvCDF_RJBCorrPointSurface.getSigmaSpacedProbs(5);
+//		
+//		boolean[] footwalls = aveDip == 90d ? new boolean[] {true} : new boolean[] {false,true};
+//		
+//		double dipRad = Math.toRadians(aveDip);
+//		List<ProbEqkRupture> rups = new ArrayList<>();
+//		ProbEqkSource source0 = null;
+//		for (int i=0; i<mfd.size(); i++) {
+//			double mag = mfd.getX(i);
+//			double depth = (float)mag <= 6.5f ? 5d : 1d;
+//			double length = WC94.getMedianLength(mag);
+//			double aspectWidth = length / 1.5;
+//			double ddWidth = (14.0 - depth) / Math.sin(dipRad);
+//			ddWidth = Math.min(aspectWidth, ddWidth);
+//			double lower = depth + ddWidth * Math.sin(dipRad);
+//			
+//			double totRate = mfd.getY(i);
+//			for (Point2D cdfPt : cdfProbs) {
+//				double cdfProb = cdfPt.getX();
+//				double weight =  cdfPt.getY();
+//				double rateEach = weight*totRate/(double)footwalls.length;
+//				double probEach = 1-Math.exp(-rateEach);
+//				for (boolean footwall : footwalls) {
+//					InvCDF_RJBCorrPointSurface surf = new InvCDF_RJBCorrPointSurface(corrTable, centerLoc, aveDip,
+//							depth, lower, footwall, length, mag, cdfProb);
+//					rups.add(new ProbEqkRupture(mag, aveRake, probEach, surf, null));
+//				}
+//			}
+//			
+//		}
+//		return new RupListSource(rups, source0);
+//	}
+//	
+//	private static synchronized RJBCorrInvPDFs getRJBCorrTable(PointSourceType type, double aveDip) {
+//		File refDir = new File(REF_MAIN_DIR, type.name()+"/rjb_dists");
+//		Preconditions.checkNotNull(refDir, "no refDir for type %s", type);
+//		Preconditions.checkState(refDir.exists(), "Doesn't exist: %s", refDir.getAbsolutePath());
+//		RJBCorrInvPDFs ret = refRJBCorrInvPDFs.get(type, aveDip);
+//		if (ret != null)
+//			return ret;
+//		try {
+//			File csvFile;
+//			if (aveDip == 90d)
+//				csvFile = new File(refDir, "STRIKE_SLIP_rJB_cumDists.csv");
+//			else
+//				csvFile = new File(refDir, "REVERSE_rJB_cumDists.csv");
+//			Preconditions.checkState(csvFile.exists());
+//			CSVFile<String> csv = CSVFile.readFile(csvFile, true);
+//			ret = new RJBCorrInvPDFs(csv);
+//		} catch (IOException e) {
+//			throw ExceptionUtils.asRuntimeException(e);
+//		}
+//		refRJBCorrInvPDFs.put(type, aveDip, ret);
+//		return ret;
+//	}
 	
 	private static class RupListSource extends ProbEqkSource {
 		
@@ -665,46 +772,46 @@ public class PointSourceHazardComparison {
 		
 	}
 	
-	private static class CorrOverrideProbEqkSource extends ProbEqkSource {
-		
-		private ProbEqkSource source;
-		private PointSourceDistanceCorrection distCorr;
-
-		public CorrOverrideProbEqkSource(ProbEqkSource source, WeightedList<PointSourceDistanceCorrection> distCorrs) {
-			this.source = source;
-			Preconditions.checkState(distCorrs.size() == 1);
-			this.distCorr = distCorrs.getValue(0);
-		}
-
-		@Override
-		public LocationList getAllSourceLocs() {
-			return source.getAllSourceLocs();
-		}
-
-		@Override
-		public RuptureSurface getSourceSurface() {
-			return source.getSourceSurface();
-		}
-
-		@Override
-		public double getMinDistance(Site site) {
-			return source.getMinDistance(site);
-		}
-
-		@Override
-		public int getNumRuptures() {
-			return source.getNumRuptures();
-		}
-
-		@Override
-		public ProbEqkRupture getRupture(int nRupture) {
-			ProbEqkRupture rup = source.getRupture(nRupture);
-			Preconditions.checkState(rup.getRuptureSurface() instanceof PointSurface);
-			((PointSurface)rup.getRuptureSurface()).setDistanceCorrection(distCorr, rup);
-			return rup;
-		}
-		
-	}
+//	private static class CorrOverrideProbEqkSource extends ProbEqkSource {
+//		
+//		private ProbEqkSource source;
+//		private PointSourceDistanceCorrection distCorr;
+//
+//		public CorrOverrideProbEqkSource(ProbEqkSource source, WeightedList<PointSourceDistanceCorrection> distCorrs) {
+//			this.source = source;
+//			Preconditions.checkState(distCorrs.size() == 1);
+//			this.distCorr = distCorrs.getValue(0);
+//		}
+//
+//		@Override
+//		public LocationList getAllSourceLocs() {
+//			return source.getAllSourceLocs();
+//		}
+//
+//		@Override
+//		public RuptureSurface getSourceSurface() {
+//			return source.getSourceSurface();
+//		}
+//
+//		@Override
+//		public double getMinDistance(Site site) {
+//			return source.getMinDistance(site);
+//		}
+//
+//		@Override
+//		public int getNumRuptures() {
+//			return source.getNumRuptures();
+//		}
+//
+//		@Override
+//		public ProbEqkRupture getRupture(int nRupture) {
+//			ProbEqkRupture rup = source.getRupture(nRupture);
+//			Preconditions.checkState(rup.getRuptureSurface() instanceof PointSurface);
+//			((PointSurface)rup.getRuptureSurface()).setDistanceCorrection(distCorr, rup);
+//			return rup;
+//		}
+//		
+//	}
 	
 	static class PointSourceCalcERF extends AbstractERF {
 		
@@ -863,17 +970,18 @@ public class PointSourceHazardComparison {
 	}
 	
 	enum RupSurfProps {
-		ZTOP("Top Depth (km)") {
+		ZTOP("Top Depth (km)", true) {
 			@Override
 			public double calcForRupture(ProbEqkRupture rup) {
 				return rup.getRuptureSurface().getAveRupTopDepth();
 			}
 		},
-		ZBOT("Bottom Depth (km)") {
+		ZBOT("Bottom Depth (km)", true) {
 			@Override
 			public double calcForRupture(ProbEqkRupture rup) {
-				RuptureSurface surf = rup.getRuptureSurface();
-				return surf.getAveRupTopDepth() + surf.getAveWidth() * Math.sin(Math.toRadians(surf.getAveDip()));
+//				RuptureSurface surf = rup.getRuptureSurface();
+//				return surf.getAveRupTopDepth() + surf.getAveWidth() * Math.sin(Math.toRadians(surf.getAveDip()));
+				return rup.getRuptureSurface().getAveRupBottomDepth();
 			}
 		},
 		WIDTH("Width (km)") {
@@ -902,26 +1010,48 @@ public class PointSourceHazardComparison {
 		};
 		
 		private String label;
+		private boolean flipY;
 
 		private RupSurfProps(String label) {
+			this(label, false);
+		}
+
+		private RupSurfProps(String label, boolean flipY) {
 			this.label = label;
+			this.flipY = flipY;
 		}
 		
 		public abstract double calcForRupture(ProbEqkRupture rup);
+		
+		public boolean isFlipY() {
+			return flipY;
+		}
 	}
 	
 	enum RupSurfMapProps {
 		FRACT_FOOTWALL("Fraction On Hanging Wall (rX>=0)") {
 			@Override
 			public double calcForRuptureAndLocation(ProbEqkRupture rup, Location siteLoc) {
-				if (rup.getRuptureSurface().getDistanceX(siteLoc) >= 0d)
+				RuptureSurface surf = rup.getRuptureSurface();
+				if (surf instanceof DistanceCorrectable) {
+					WeightedList<SiteSpecificDistanceCorrected> corrSurfs = ((DistanceCorrectable)surf).getCorrectedSurfaces(siteLoc);
+					Preconditions.checkState(corrSurfs.isNormalized());
+					double fractFW = 0d;
+					for (WeightedValue<SiteSpecificDistanceCorrected> value : corrSurfs)
+						if (value.value.getDistanceX(siteLoc) >= 0d)
+							fractFW += value.weight;
+//					System.out.println("FractFW="+fractFW+" for "+corrSurfs.size()+" corr surfs");
+					return fractFW;
+				} else if (rup.getRuptureSurface().getDistanceX(siteLoc) >= 0d) {
 					return 1d;
-				return 0;
+				} else {
+					return 0;
+				}
 			}
 
 			@Override
 			public CPT getCPT() throws IOException {
-				return GMT_CPT_Files.MAX_SPECTRUM.instance().rescale(0d, 1d);
+				return GMT_CPT_Files.RAINBOW_UNIFORM.instance().rescale(0d, 1d);
 			}
 		};
 		
@@ -940,33 +1070,43 @@ public class PointSourceHazardComparison {
 
 	// TODO: this is just a marker to make it easy to find the top of main
 	public static void main(String[] args) throws IOException {
-//		PointSourceType mainType = PointSourceType.POINT_SOURCE_13b_NSHMP_CORR;
-		PointSourceType mainType = PointSourceType.POINT_SOURCE_NSHM;
-//		PointSourceType mainType = PointSourceType.QUAD_QUAD;
-//		PointSourceType mainType = PointSourceType.QUAD_QUAD_RAND_CELL;
-//		PointSourceType mainType = PointSourceType.OCT_QUAD_RAND_CELL;
-//		PointSourceType mainType = PointSourceType.OCT_QUAD;
-//		PointSourceType mainType = PointSourceType.APROX_SUPERSAMPLE_POINT_SOURCE_NSHM;
-//		PointSourceType mainType = PointSourceType.POINT_TO_FINITE;
-//		PointSourceType mainType = PointSourceType.CROSSHAIR_QUAD;
-//		PointSourceType mainType = PointSourceType.QUAD_QUAD;
-//		PointSourceType compType = null;
-//		PointSourceType compType = PointSourceType.TABLE_FINITE_APPROX_POINT_SOURCE;
-//		PointSourceType compType = PointSourceType.HAZ_EQUIV_APPROX_POINT_SOURCE;
-//		PointSourceType compType = PointSourceType.CDF_BASED_RJB_CORR_APPROX_POINT_SOURCE;
-//		PointSourceType compType = PointSourceType.CDF_BASED_RJB_CORR_APPROX_SUPERSAMPLED_POINT_SOURCE;
-//		PointSourceType compType = PointSourceType.SIMPLE_APPROX_FINITE_POINT_NSHMP_CORR;
-//		PointSourceType compType = PointSourceType.SIMPLE_APPROX_FINITE_POINT_NO_CORR;
-//		PointSourceType compType = PointSourceType.TABLE_FINITE_APPROX_POINT_SOURCE_SUPERSAMPLE;
-		PointSourceType compType = PointSourceType.OCT_QUAD;
-//		PointSourceType compType = PointSourceType.OCT_QUAD_RAND_CELL;
-//		PointSourceType compType = PointSourceType.OCT_QUAD_RAND_DAS_DD;
+//		double pDiffMax = 20;
+		double pDiffMax = 5;
+		double latitude = 0d;
+//		double latitude = 45d;
+		
+		// centered
+//		PointSourceType mainType = PointSourceType.FIVE_POINT_DIST;
+////		PointSourceType mainType = PointSourceType.TWENTY_POINT_DIST;
+//
+////		PointSourceType compType = PointSourceType.OCT_FINITE;
+//		PointSourceType compType = PointSourceType.TWENTY_FINITE;
+		
+		// sample along
+//		PointSourceType mainType = PointSourceType.FIVE_POINT_DIST_ALONG;
+////		PointSourceType mainType = PointSourceType.TWENTY_POINT_DIST_ALONG;
+//		
+////		PointSourceType compType = PointSourceType.OCT_FINITE_RAND_DAS_DD;
+//		PointSourceType compType = PointSourceType.TWENTY_FINITE_RAND_DAS_DD;
+		
+		// compared betweent the two
+//		PointSourceType mainType = PointSourceType.FIVE_POINT_DIST;
+//		
+//		PointSourceType compType = PointSourceType.FIVE_POINT_DIST_ALONG;
+		
+		// proposed vs old
+//		pDiffMax = 20;
+//		PointSourceType mainType = PointSourceType.FIVE_POINT_DIST_ALONG;
+//		
 //		PointSourceType compType = PointSourceType.POINT_SOURCE_NSHM;
-//		PointSourceType compType = PointSourceType.POINT_SOURCE_13b_NSHMP_CORR;
-//		PointSourceType compType = PointSourceType.POINT_SOURCE_13b_NO_CORR;
-//		PointSourceType compType = PointSourceType.POINT_TO_FINITE;
-//		PointSourceType compType = PointSourceType.POINT_TO_SIMPLE_QUAD;
-//		PointSourceType compType = PointSourceType.QUAD_QUAD_RAND_CELL;
+		
+		// misc
+//		PointSourceType mainType = PointSourceType.AVERAGE;
+		PointSourceType mainType = PointSourceType.FIVE_POINT_DIST_ALONG;
+
+//		PointSourceType compType = PointSourceType.AVERAGE_ALONG;
+		PointSourceType compType = PointSourceType.TWENTY_FINITE_RAND_DAS_DD;
+//		PointSourceType compType = PointSourceType.FIVE_POINT_DIST_ALONG_BETTER_DEPTHS;
 		
 //		int sleepMins = 60*6;
 //		System.out.println("Sleeping for "+sleepMins+" mins");
@@ -976,15 +1116,29 @@ public class PointSourceHazardComparison {
 		
 		boolean doSingleCellHazard = true;
 		boolean doNSHMModelHazard = true;
-		boolean doHighRes = false;
-		boolean doSupersample = true;
+//		boolean doHighRes = true;
+//		boolean doSupersample = true;
+//		boolean doHighRes = false;
+//		boolean doSupersample = true;
+//		boolean doHighRes = true;
+//		boolean doSupersample = false;
+		boolean doHighRes = true;
+		boolean doSupersample = false;
+//		boolean doHighResSupersample = doHighRes && doSupersample;
+		boolean doHighResSupersample = false;
 		boolean forceWriteIntermediate = true;
 		boolean writeTables = false;
-		boolean strikeSlipOnly = true;
+	
+		FocalMech[] mechs = { FocalMech.STRIKE_SLIP, FocalMech.REVERSE };
+//		FocalMech[] mechs = { FocalMech.STRIKE_SLIP };
+//		FocalMech[] mechs = { FocalMech.REVERSE };
 		
-		AttenRelRef gmmRef = AttenRelRef.NGAWest_2014_AVG_NOIDRISS;
+		boolean remapNSHMrakes = false;
+		
+//		AttenRelRef gmmRef = AttenRelRef.NGAWest_2014_AVG_NOIDRISS;
+		AttenRelRef gmmRef = AttenRelRef.USGS_NSHM23_ACTIVE;
 		double[] periods = {0d, 1d};
-		double[] rakes = strikeSlipOnly ? new double[] {0d} : new double[] {0d, 90d};
+//		double[] periods = {0d};
 		
 		ReturnPeriods[] rps = { ReturnPeriods.TWO_IN_50, ReturnPeriods.TEN_IN_50 };
 		
@@ -1000,10 +1154,10 @@ public class PointSourceHazardComparison {
 			outputDir = new File(mainOutputDir, mainType.name());
 		else
 			outputDir = new File(mainOutputDir, mainType.name()+"_vs_"+compType.name());
+		if (latitude > 0d)
+			outputDir = new File(mainOutputDir, outputDir.getName()+"_lat"+oDF.format(latitude));
 		if (!doSupersample)
 			outputDir = new File(mainOutputDir, outputDir.getName()+"_no_supersample");
-		if (strikeSlipOnly)
-			outputDir = new File(mainOutputDir, outputDir.getName()+"_ss_only");
 		Preconditions.checkState(outputDir.exists() || outputDir.mkdir());
 		
 		boolean writeIntermediate = forceWriteIntermediate || !new File(outputDir, "index.html").exists();
@@ -1011,11 +1165,11 @@ public class PointSourceHazardComparison {
 		File resourcesDir = new File(outputDir, "resources");
 		Preconditions.checkState(resourcesDir.exists() || resourcesDir.mkdir());
 		
-		Region calcRegion = new Region(new Location(0d, 0d), new Location(1d, 1d));
+		Region calcRegion = new Region(new Location(latitude, 0d), new Location(latitude+1d, 1d));
 		double spacing = 0.1;
 		double halfSpacing = 0.5*spacing;
 		GriddedRegion colocatedGridded = new GriddedRegion(calcRegion, spacing, GriddedRegion.ANCHOR_0_0);
-		Location gridCenter = new Location(0.5d, 0.5d);
+		Location gridCenter = new Location(latitude+0.5d, 0.5d);
 		int gridCenterIndex = colocatedGridded.indexForLocation(gridCenter);
 		Preconditions.checkState(LocationUtils.areSimilar(gridCenter, colocatedGridded.getLocation(gridCenterIndex)));
 		
@@ -1024,7 +1178,8 @@ public class PointSourceHazardComparison {
 		
 		EvenlyDiscretizedFunc tableDistFunc = writeTables ?
 				new EvenlyDiscretizedFunc(0d, 300d, 301) : new EvenlyDiscretizedFunc(0d, 100d, 101);
-		EvenlyDiscretizedFunc distFunc = new EvenlyDiscretizedFunc(0d, 100d, 101);
+//		EvenlyDiscretizedFunc distFunc = new EvenlyDiscretizedFunc(0d, 100d, 101);
+		EvenlyDiscretizedFunc distFunc = new EvenlyDiscretizedFunc(0d, 100d, 51);
 		Range distPlotRange = new Range(0d, 100d);
 		List<List<Location>> tableDistFuncLocs = new ArrayList<>();
 		int numEachDist = 10;
@@ -1071,7 +1226,7 @@ public class PointSourceHazardComparison {
 			System.out.println("Will do "+numPerStochasticCentered+" stocastic relizations ("+numPerStochasticSupersampled+" when supersampling)");
 		
 		GutenbergRichterMagFreqDist mfd = new GutenbergRichterMagFreqDist(5.05, 30, 0.1);
-		mfd.setAllButTotMoRate(mfd.getMinX(), mfd.getMaxX(), 1d, 1d);
+		mfd.setAllButTotMoRate(mfd.getMinX(), mfd.getMaxX(), 0.1d, 1d);
 //		GriddedRegion calcRegion = new GriddedR
 		
 		double[] distPlotMags = { 5.05, 6.05, 7.05, mfd.getMaxX() };
@@ -1186,7 +1341,7 @@ public class PointSourceHazardComparison {
 //		
 //		mapMaker.setCustomLegendItems(legendItems, legendChars);
 		
-		CPT pDiffCPT = GMT_CPT_Files.DIVERGING_VIK_UNIFORM.instance().rescale(-50d, 50d);
+		CPT pDiffCPT = GMT_CPT_Files.DIVERGING_VIK_UNIFORM.instance().rescale(-pDiffMax, pDiffMax);
 		
 		String[] perLabels = new String[periods.length];
 		String[] perPrefixes = new String[periods.length];
@@ -1231,8 +1386,8 @@ public class PointSourceHazardComparison {
 		boolean[] falseTrue = {false,true};
 		boolean[] falseOnly = {false};
 		
-		for (double rake : rakes) {
-			FocalMech mech = mechForRake(rake);
+		for (FocalMech mech : mechs) {
+			double rake = mech.rake();
 			String mechLabel = mech.toString();
 			String mechPrefix = mech.name();
 			
@@ -1305,23 +1460,23 @@ public class PointSourceHazardComparison {
 						compSupersampledFunc = rRup ? compSupersampledRRupFunc : compSupersampledRJBFunc;
 					}
 					
-					centeredFunc.setName("Centered Source");
+					centeredFunc.setName(mainType.shortName);
 					funcs.add(asDistRatio(centeredFunc));
 					chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 3f, mainColor));
 					
 					if (compType != null) {
-						compCenteredFunc.setName("Comparison Cenetered Source");
+						compCenteredFunc.setName(compType.shortName);
 						funcs.add(asDistRatio(compCenteredFunc));
 						chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 3f, compColor));
 					}
 					
 					if (doSupersample) {
-						supersampledFunc.setName("Supersampled Source");
+						supersampledFunc.setName("Supersampled "+mainType.shortName);
 						funcs.add(asDistRatio(supersampledFunc));
 						chars.add(new PlotCurveCharacterstics(PlotLineType.DASHED, 3f, mainColor));
 						
 						if (compType != null) {
-							compSupersampledFunc.setName("Comparison Supersampled Source");
+							compSupersampledFunc.setName("Supersampled "+compType.shortName);
 							funcs.add(asDistRatio(compSupersampledFunc));
 							chars.add(new PlotCurveCharacterstics(PlotLineType.DASHED, 3f, compColor));
 						}
@@ -1356,9 +1511,9 @@ public class PointSourceHazardComparison {
 					
 					PlotSpec diffSpec = new PlotSpec(funcs, chars, title,
 							xAxisLabel, rRup ? "DistanceRup Difference" : "DistanceJB Difference");
-					diffSpec.setLegendInset(RectangleAnchor.BOTTOM_RIGHT);
+//					diffSpec.setLegendInset(RectangleAnchor.BOTTOM_RIGHT);
 					
-					HeadlessGraphPanel gp = PlotUtils.initHeadless();
+					HeadlessGraphPanel gp = PlotUtils.initScreenHeadless();
 					
 					gp.drawGraphPanel(List.of(ratioSpec, diffSpec), false, false, List.of(distPlotRange), List.of(ratioRange, diffRange));
 					
@@ -1429,23 +1584,23 @@ public class PointSourceHazardComparison {
 					funcs.add(fixedDist);
 					chars.add(new PlotCurveCharacterstics(PlotLineType.DOTTED, 3f, Color.GRAY));
 					
-					centeredFunc.setName("Centered Source");
+					centeredFunc.setName(mainType.shortName);
 					funcs.add(centeredFunc);
 					chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 3f, mainColor));
 					
 					if (compType != null) {
-						compCenteredFunc.setName("Comparison Cenetered Source");
+						compCenteredFunc.setName(compType.shortName);
 						funcs.add(compCenteredFunc);
 						chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 3f, compColor));
 					}
 					
 					if (doSupersample) {
-						supersampledFunc.setName("Supersampled Source");
+						supersampledFunc.setName("Supersampled "+mainType.shortName);
 						funcs.add(supersampledFunc);
 						chars.add(new PlotCurveCharacterstics(PlotLineType.DASHED, 3f, mainColor));
 						
 						if (compType != null) {
-							compSupersampledFunc.setName("Comparison Supersampled Source");
+							compSupersampledFunc.setName("Supersampled "+compType.shortName);
 							funcs.add(compSupersampledFunc);
 							chars.add(new PlotCurveCharacterstics(PlotLineType.DASHED, 3f, compColor));
 						}
@@ -1488,7 +1643,7 @@ public class PointSourceHazardComparison {
 			table.initNewLine();
 			for (boolean rRup : falseTrue) {
 				List<PlotSpec> specs = rRup ? magSpecsRRup : magSpecsRJB;
-				HeadlessGraphPanel gp = PlotUtils.initHeadless();
+				HeadlessGraphPanel gp = PlotUtils.initScreenHeadless();
 				
 				gp.drawGraphPanel(specs, false, false, List.of(magRange), magPlotYRanges);
 				
@@ -1527,13 +1682,13 @@ public class PointSourceHazardComparison {
 				
 				EvenlyDiscretizedFunc centeredFunc = calcMagProps(centerERF, mfd, prop);
 				
-				centeredFunc.setName("Centered Source");
+				centeredFunc.setName(mainType.shortName);
 				funcs.add(centeredFunc);
 				chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 3f, mainColor));
 				
 				if (compType != null) {
 					EvenlyDiscretizedFunc compCenteredFunc = calcMagProps(compCenterERF, mfd, prop);
-					compCenteredFunc.setName("Comparison Cenetered Source");
+					compCenteredFunc.setName(compType.shortName);
 					funcs.add(compCenteredFunc);
 					chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 3f, compColor));
 				}
@@ -1561,6 +1716,8 @@ public class PointSourceHazardComparison {
 				
 				String xAxisLabel = "Magnitude";
 				PlotSpec spec = new PlotSpec(funcs, chars, title, xAxisLabel, prop.label);
+				if (prop.isFlipY())
+					spec.setYAxisInverted(true);
 				if (curSpecBundle.isEmpty())
 					spec.setLegendInset(RectangleAnchor.TOP_RIGHT);
 				
@@ -1574,7 +1731,7 @@ public class PointSourceHazardComparison {
 				List<PlotSpec> specs = magPropSpecs.get(i);
 				List<Range> yRanges = magPropYRanges.get(i);
 				
-				HeadlessGraphPanel gp = PlotUtils.initHeadless();
+				HeadlessGraphPanel gp = PlotUtils.initScreenHeadless();
 				
 				gp.drawGraphPanel(specs, false, false, List.of(magRange), yRanges);
 				
@@ -1613,6 +1770,7 @@ public class PointSourceHazardComparison {
 					
 					String gridPrefix = propPrefix+"_"+grid.prefix;
 					
+					System.out.println("Calculating "+props+" for primary, "+grid);
 					GriddedGeoDataSet centeredXYZ = calcMapProps(centerERF, siteGrid, props);
 					
 					mapMaker.plotXYZData(centeredXYZ, cpt, props.label);
@@ -1620,7 +1778,12 @@ public class PointSourceHazardComparison {
 					mapMaker.plot(resourcesDir, gridPrefix+"_centered", grid.label+", Centered Sources");
 					mapMaker.clearAnnotations();
 					
-					if (doSupersample) {
+					boolean mySupersample = doSupersample;
+					if (grid == GridType.HIGH_RES && !doHighResSupersample)
+						mySupersample = false;
+					
+					if (mySupersample) {
+						System.out.println("Calculating "+props+" for primary, "+grid+", supersampled");
 						GriddedGeoDataSet supersampledXYZ = calcMapProps(supersampledERF, siteGrid, props);
 						addRangeAnns(mapMaker, supersampledXYZ, grid == GridType.COLOCATED ? gridCenterIndex : -1, true);
 						mapMaker.plotXYZData(supersampledXYZ, cpt, props.label);
@@ -1629,6 +1792,7 @@ public class PointSourceHazardComparison {
 					}
 					
 					if (compType != null) {
+						System.out.println("Calculating "+props+" for comparison, "+grid);
 						GriddedGeoDataSet compCenteredXYZ = calcMapProps(compCenterERF, siteGrid, props);
 						
 						mapMaker.plotXYZData(compCenteredXYZ, cpt, props.label);
@@ -1636,7 +1800,8 @@ public class PointSourceHazardComparison {
 						mapMaker.plot(resourcesDir, gridPrefix+"_centered_comp", grid.label+", Centered Sources");
 						mapMaker.clearAnnotations();
 						
-						if (doSupersample) {
+						if (mySupersample) {
+							System.out.println("Calculating "+props+" for comparison, "+grid+", supersampled");
 							GriddedGeoDataSet compSupersampledXYZ = calcMapProps(compSupersampledERF, siteGrid, props);
 							addRangeAnns(mapMaker, compSupersampledXYZ, grid == GridType.COLOCATED ? gridCenterIndex : -1, true);
 							mapMaker.plotXYZData(compSupersampledXYZ, cpt, props.label);
@@ -1650,11 +1815,11 @@ public class PointSourceHazardComparison {
 					if (compType != null) {
 						table.addColumn("![Map]("+resourcesDir.getName()+"/"+gridPrefix+"_centered_comp.png)");
 						table.finalizeLine();
-						if (doSupersample)
+						if (mySupersample)
 							table.initNewLine();
 					}
 					
-					if (doSupersample) {
+					if (mySupersample) {
 						table.addColumn("![Map]("+resourcesDir.getName()+"/"+gridPrefix+"_supersampled.png)");
 						
 						if (compType != null)
@@ -1694,6 +1859,10 @@ public class PointSourceHazardComparison {
 				for (GridType grid : siteGrids.keySet()) {
 					GriddedRegion siteGrid = siteGrids.get(grid);
 					
+					boolean mySupersample = doSupersample;
+					if (grid == GridType.HIGH_RES && !doHighResSupersample)
+						mySupersample = false;
+					
 					for (boolean comp : compBools) {
 						PointSourceCalcERF myCenterERF = comp ? compCenterERF : centerERF;
 						System.out.println("Calculating "+grid.label+", centered, "+mechLabel+", "+perLabels[p]+", comp="+comp);
@@ -1701,7 +1870,7 @@ public class PointSourceHazardComparison {
 								gmmDeque, calcDeque, period, xVals[p], logXVals[p], exec);
 						
 						List<DiscretizedFunc> supersampledCurves = null;
-						if (doSupersample) {
+						if (mySupersample) {
 							PointSourceCalcERF mySupersampledERF = comp ? compSupersampledERF : supersampledERF;
 							System.out.println("Calculating "+grid.label+", supersampled, "+mechLabel+", "+perLabels[p]+", comp="+comp);
 							supersampledCurves = calcCurves(siteGrid.getNodeList(), mySupersampledERF, gmmRef,
@@ -1709,21 +1878,21 @@ public class PointSourceHazardComparison {
 						}
 						
 						GriddedGeoDataSet[] myCenteredMaps = new GriddedGeoDataSet[rps.length];
-						GriddedGeoDataSet[] mySupersampledMaps = doSupersample ? new GriddedGeoDataSet[rps.length] : null;
+						GriddedGeoDataSet[] mySupersampledMaps = mySupersample ? new GriddedGeoDataSet[rps.length] : null;
 						
 						for (int r=0; r<rps.length; r++) {
 							myCenteredMaps[r] = curvesToMap(siteGrid, centeredCurves, rps[r]);
-							if (doSupersample)
+							if (mySupersample)
 								mySupersampledMaps[r] = curvesToMap(siteGrid, supersampledCurves, rps[r]);
 						}
 						
 						if (comp) {
 							compCenteredMaps.put(grid, myCenteredMaps);
-							if (doSupersample)
+							if (mySupersample)
 								compSupersampledMaps.put(grid, mySupersampledMaps);
 						} else {
 							centeredMaps.put(grid, myCenteredMaps);
-							if (doSupersample)
+							if (mySupersample)
 								supersampledMaps.put(grid, mySupersampledMaps);
 						}
 					}
@@ -1773,23 +1942,23 @@ public class PointSourceHazardComparison {
 				List<XY_DataSet> funcs = new ArrayList<>();
 				List<PlotCurveCharacterstics> chars = new ArrayList<>();
 				
-				colocatedCurve.setName("Centered Source");
+				colocatedCurve.setName(mainType.shortName);
 				funcs.add(colocatedCurve);
 				chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 3f, mainColor));
 				
 				if (compType != null) {
-					compColocatedCurve.setName("Comparison Cenetered Source");
+					compColocatedCurve.setName(compType.shortName);
 					funcs.add(compColocatedCurve);
 					chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 3f, compColor));
 				}
 				
 				if (doSupersample) {
-					colocatedSupersampledCurve.setName("Supersampled Source");
+					colocatedSupersampledCurve.setName("Supersampled "+mainType.shortName);
 					funcs.add(colocatedSupersampledCurve);
 					chars.add(new PlotCurveCharacterstics(PlotLineType.DASHED, 3f, mainColor));
 					
 					if (compType != null) {
-						compColocatedSupersampledCurve.setName("Comparison Supersampled Source");
+						compColocatedSupersampledCurve.setName("Supersampled "+compType.shortName);
 						funcs.add(compColocatedSupersampledCurve);
 						chars.add(new PlotCurveCharacterstics(PlotLineType.DASHED, 3f, compColor));
 					}
@@ -1799,7 +1968,7 @@ public class PointSourceHazardComparison {
 						perLabels[p]+" ("+perUnits[p]+")", "Annual Probability of Exceedance");
 				spec.setLegendInset(RectangleAnchor.TOP_RIGHT);
 				
-				HeadlessGraphPanel gp = PlotUtils.initHeadless();
+				HeadlessGraphPanel gp = PlotUtils.initScreenHeadless();
 				
 				gp.drawGraphPanel(spec, true, true, curveXRanges[p], curveYRange);
 				
@@ -1816,26 +1985,26 @@ public class PointSourceHazardComparison {
 					chars = new ArrayList<>();
 					
 					EvenlyDiscretizedFunc xy = distValFunc(distFunc, distFuncCenteredCurves, rps[r]);
-					xy.setName("Centered Source");
+					xy.setName(mainType.shortName);
 					funcs.add(xy);
 					chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 3f, mainColor));
 					
 					if (compType != null) {
 						EvenlyDiscretizedFunc compXY = distValFunc(distFunc, compDistFuncCenteredCurves, rps[r]);
-						compXY.setName("Comparison Centered Source");
+						compXY.setName(compType.shortName);
 						funcs.add(compXY);
 						chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 3f, compColor));
 					}
 					
 					if (doSupersample) {
 						xy = distValFunc(distFunc, distFuncSupersampledCurves, rps[r]);
-						xy.setName("Supersampled Source");
+						xy.setName("Supersampled "+mainType.shortName);
 						funcs.add(xy);
 						chars.add(new PlotCurveCharacterstics(PlotLineType.DASHED, 3f, mainColor));
 						
 						if (compType != null) {
 							EvenlyDiscretizedFunc compXY = distValFunc(distFunc, compDistFuncSupersampledCurves, rps[r]);
-							compXY.setName("Comparison Supersampled Source");
+							compXY.setName("Supersampled "+compType.shortName);
 							funcs.add(compXY);
 							chars.add(new PlotCurveCharacterstics(PlotLineType.DASHED, 3f, compColor));
 						}
@@ -1882,7 +2051,11 @@ public class PointSourceHazardComparison {
 						else
 							table.initNewLine();
 						
-						boolean[] superBools = doSupersample ? falseTrue : falseOnly;
+						boolean mySupersample = doSupersample;
+						if (grid == GridType.HIGH_RES && !doHighResSupersample)
+							mySupersample = false;
+						
+						boolean[] superBools = mySupersample ? falseTrue : falseOnly;
 						for (boolean supersampled : superBools) {
 							String mainPrefix = mapPrefix;
 							String title;
@@ -1925,7 +2098,7 @@ public class PointSourceHazardComparison {
 						}
 						
 						// now add centered vs supersampled
-						if (doSupersample) {
+						if (mySupersample) {
 							String title = "Centered vs Supersampled Source";
 							String diffPrefix = mapPrefix+"_centered_supersampled_pDiff";
 							
@@ -1974,7 +2147,7 @@ public class PointSourceHazardComparison {
 			GridSourceProvider gridProv = FaultSystemSolution.load(new File("/home/kevin/OpenSHA/nshm23/batch_inversions/"
 					+ "2024_02_02-nshm23_branches-WUS_FM_v3/results_WUS_FM_v3_branch_averaged_gridded.zip")).getGridSourceProvider();
 			
-			if (strikeSlipOnly) {
+			if (remapNSHMrakes && mechs.length == 1) {
 				GriddedRegion region = gridProv.getGriddedRegion();
 				int nodeCount = region.getNodeCount();
 				Builder<Integer, IncrementalMagFreqDist> subSeisBuilder = ImmutableMap.builder();
@@ -1989,9 +2162,9 @@ public class PointSourceHazardComparison {
 					IncrementalMagFreqDist unassociated = gridProv.getMFD_Unassociated(i);
 					if (unassociated != null)
 						unassociatedBuilder.put(i, unassociated);
-					fracStrikeSlip[i] = 1d;
-					fracNormal[i] = 0d;
-					fracReverse[i] = 0d;
+					fracStrikeSlip[i] = mechs[0] == FocalMech.STRIKE_SLIP ? 1d : 0d;
+					fracNormal[i] = mechs[0] == FocalMech.NORMAL ? 1d : 0d;
+					fracReverse[i] = mechs[0] == FocalMech.REVERSE ? 1d : 0d;
 				}
 				ImmutableMap<Integer, IncrementalMagFreqDist> nodeSubSeisMFDs = subSeisBuilder.build();
 				ImmutableMap<Integer, IncrementalMagFreqDist> nodeUnassociatedMFDs = unassociatedBuilder.build();
@@ -2399,8 +2572,11 @@ public class PointSourceHazardComparison {
 				DiscretizedFunc curve = xVals.deepClone();
 				for (int x=0; x<curve.size(); x++) {
 					double sumY = 0d;
-					for (DiscretizedFunc subCurve : curves)
+					for (DiscretizedFunc subCurve : curves) {
 						sumY += subCurve.getY(x);
+						Preconditions.checkState(Double.isFinite(sumY),
+								"Bad sumY=%s after adding curve:\n%s", sumY, subCurve);
+					}
 					curve.set(x, sumY*scalar);
 				}
 				ret.add(curve);
@@ -2480,8 +2656,11 @@ public class PointSourceHazardComparison {
 			}
 			
 			DiscretizedFunc ret = new ArbitrarilyDiscretizedFunc();
-			for (int i=0; i<xVals.size(); i++)
-				ret.set(xVals.getX(i), logCurve.getY(i));
+			for (int i=0; i<xVals.size(); i++) {
+				double val = logCurve.getY(i);
+				Preconditions.checkState(Double.isFinite(val) && val >= 0, "Bad curveVal=%s", val);
+				ret.set(xVals.getX(i), val);
+			}
 			return ret;
 		}
 		
@@ -2584,11 +2763,22 @@ public class PointSourceHazardComparison {
 			double sumWeightedRRup = 0d;
 			for (Location loc : distLocs.get(i)) {
 				for (ProbEqkRupture rup : rupsAtMag) {
-					double weight = rup.getMeanAnnualRate(1);
-					RuptureSurface surf = rup.getRuptureSurface();
-					sumWeight += weight;
-					sumWeightedRJB += weight*surf.getDistanceJB(loc);
-					sumWeightedRRup += weight*surf.getDistanceRup(loc);
+					double rate = rup.getMeanAnnualRate(1);
+					WeightedList<? extends RuptureSurface> surfs;
+					RuptureSurface origSurf = rup.getRuptureSurface();
+					if (origSurf instanceof DistanceCorrectable) {
+						surfs = ((DistanceCorrectable)origSurf).getCorrectedSurfaces(loc);
+					} else {
+						surfs = WeightedList.evenlyWeighted(origSurf);
+					}
+					for (WeightedValue<? extends RuptureSurface> weightedSurf : surfs) {
+						RuptureSurface surf = weightedSurf.value;
+						double weight = rate * weightedSurf.weight;
+						
+						sumWeight += weight;
+						sumWeightedRJB += weight*surf.getDistanceJB(loc);
+						sumWeightedRRup += weight*surf.getDistanceRup(loc);
+					}
 				}
 			}
 			rJB.set(i, sumWeightedRJB/sumWeight);
@@ -2605,11 +2795,22 @@ public class PointSourceHazardComparison {
 			double sumWeightedRRup = 0d;
 			for (Location loc : distLocs) {
 				for (ProbEqkRupture rup : rupsAtMag) {
-					double weight = rup.getMeanAnnualRate(1);
-					RuptureSurface surf = rup.getRuptureSurface();
-					sumWeight += weight;
-					sumWeightedRJB += weight*surf.getDistanceJB(loc);
-					sumWeightedRRup += weight*surf.getDistanceRup(loc);
+					double rate = rup.getMeanAnnualRate(1);
+					WeightedList<? extends RuptureSurface> surfs;
+					RuptureSurface origSurf = rup.getRuptureSurface();
+					if (origSurf instanceof DistanceCorrectable) {
+						surfs = ((DistanceCorrectable)origSurf).getCorrectedSurfaces(loc);
+					} else {
+						surfs = WeightedList.evenlyWeighted(origSurf);
+					}
+					for (WeightedValue<? extends RuptureSurface> weightedSurf : surfs) {
+						RuptureSurface surf = weightedSurf.value;
+						double weight = rate * weightedSurf.weight;
+						
+						sumWeight += weight;
+						sumWeightedRJB += weight*surf.getDistanceJB(loc);
+						sumWeightedRRup += weight*surf.getDistanceRup(loc);
+					}
 				}
 			}
 			rJB.set(i, sumWeightedRJB/sumWeight);
@@ -2637,17 +2838,24 @@ public class PointSourceHazardComparison {
 	private static GriddedGeoDataSet calcMapProps(PointSourceCalcERF erf, GriddedRegion gridReg,
 			RupSurfMapProps prop) {
 		GriddedGeoDataSet xyz = new GriddedGeoDataSet(gridReg);
+//		IntStream.range(0, gridReg.getNodeCount()).forEach(i -> {
 		IntStream.range(0, gridReg.getNodeCount()).parallel().forEach(i -> {
 			Location loc = gridReg.getLocation(i);
 			double sumWeight = 0d;
 			double sumWeightedProps = 0d;
 			for (ProbEqkSource source : erf) {
 				for (ProbEqkRupture rup : source) {
-					double weight = rup.getMeanAnnualRate(1);
+//					double weight = rup.getMeanAnnualRate(1);
+					// weight by rupture count
+					// weighting by rate woudl give all weighted to the smallest ruptures
+					double weight = 1d;
+					double val = prop.calcForRuptureAndLocation(rup, loc);
+//					System.out.println("\t"+val+" (wt="+weight+")");
 					sumWeight += weight;
-					sumWeightedProps += weight*prop.calcForRuptureAndLocation(rup, loc);
+					sumWeightedProps += weight*val;
 				}
 			}
+//			System.out.println("Loc "+i+"; "+sumWeightedProps+"/"+sumWeight+" = "+(sumWeightedProps/sumWeight));
 			xyz.set(i, sumWeightedProps/sumWeight);
 		});
 		return xyz;

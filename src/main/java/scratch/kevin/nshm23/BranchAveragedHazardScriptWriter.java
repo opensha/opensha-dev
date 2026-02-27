@@ -3,9 +3,11 @@ package scratch.kevin.nshm23;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 
 import org.opensha.commons.geo.GriddedRegion;
+import org.opensha.commons.geo.Location;
 import org.opensha.commons.geo.Region;
 import org.opensha.commons.geo.json.Feature;
 import org.opensha.commons.hpc.JavaShellScriptWriter;
@@ -14,10 +16,13 @@ import org.opensha.commons.hpc.mpj.NoMPJSingleNodeShellScriptWriter;
 import org.opensha.commons.hpc.pbs.BatchScriptWriter;
 import org.opensha.commons.hpc.pbs.HovenweepScriptWriter;
 import org.opensha.commons.hpc.pbs.USC_CARC_ScriptWriter;
+import org.opensha.sha.earthquake.faultSysSolution.erf.BaseFaultSystemSolutionERF;
 import org.opensha.sha.earthquake.faultSysSolution.hazard.mpj.MPJ_SingleSolHazardCalc;
+import org.opensha.sha.earthquake.param.BackgroundRupType;
 import org.opensha.sha.earthquake.param.IncludeBackgroundOption;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.util.NSHM23_RegionLoader;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.util.PRVI25_RegionLoader;
+import org.opensha.sha.faultSurface.utils.ptSrcCorr.PointSourceDistanceCorrections;
 import org.opensha.sha.imr.AttenRelRef;
 
 import com.google.common.base.Preconditions;
@@ -36,12 +41,23 @@ public class BranchAveragedHazardScriptWriter {
 		double gridSpacing = 0.1;
 		boolean supersample = false;
 		boolean supersampleQuick = false;
+		boolean supersampleFinite = false;
 		boolean quickGridded = false;
 		
 		double[] periods = { 0d, 0.2d, 1d, 5d };
 		AttenRelRef[] gmms = null;
 		
+		PointSourceDistanceCorrections distCorr = null;
+		BackgroundRupType bgRupType = null;
+		Integer bgFiniteNum = null;
+		String extraGridArgs = null;
+		Double pointFiniteMinMag = null;
+		
+		Integer forceMaxDispatch = null;
+		
 		Region region = NSHM23_RegionLoader.loadFullConterminousWUS();
+		
+		String forceOutputName = null;
 		
 		/*
 		 * NSHM23
@@ -61,6 +77,20 @@ public class BranchAveragedHazardScriptWriter {
 		
 //		String suffix = "ba_only-mod_gridded";
 //		String solFileName = "results_WUS_FM_v3_branch_averaged_mod_gridded.zip";
+
+//		forceOutputName = "2025_04_01-nshm23_pt_src_tests";
+//		String solFileName = "results_WUS_FM_v3_branch_averaged_gridded.zip";
+//		gmms = new AttenRelRef[] {AttenRelRef.USGS_NSHM23_ACTIVE};
+////		gmms = new AttenRelRef[] {AttenRelRef.NGAWest_2014_AVG_NOIDRISS};
+//		region = new Region(new Location(36, -120), new Location(39, -117)); gridSpacing = 0.02; forceOutputName += "-zoom";
+////		region = new Region(new Location(37, -119), new Location(37.6, -118.4)); gridSpacing = 0.01; forceOutputName += "-tiny_zoom";
+//		sigmaTrunc = 3d;
+//		supersample = true;
+//		supersampleFinite = true; // only applies if supersample == true
+//		pointFiniteMinMag = 5d;
+//		forceMaxDispatch = 100;
+//		if (supersample)
+//			forceOutputName += "-supersample";
 		
 		/*
 		 * PRVI
@@ -147,7 +177,7 @@ public class BranchAveragedHazardScriptWriter {
 //				PRVI25_RegionLoader.loadPRVI_ModelBroad(), gridSpacing, GriddedRegion.ANCHOR_0_0);
 		System.out.println("Region has "+gridReg.getNodeCount()+" nodes");
 		
-		String dirName = baseDirName;
+		String dirName = forceOutputName == null ? baseDirName : forceOutputName;
 		if (suffix != null && !suffix.isBlank())
 			dirName += "-"+suffix;
 		if (noMFDs)
@@ -239,7 +269,9 @@ public class BranchAveragedHazardScriptWriter {
 				mpjWrite = parallelMPJWrite;
 				
 				int maxDispatch;
-				if (gridReg.getNodeCount() > 50000)
+				if (forceMaxDispatch != null)
+					maxDispatch = forceMaxDispatch;
+				else if (gridReg.getNodeCount() > 50000)
 					maxDispatch = Integer.max(remoteTotalThreads*20, 1000);
 				else if (gridReg.getNodeCount() > 10000)
 					maxDispatch = Integer.max(remoteTotalThreads*10, 500);
@@ -259,6 +291,18 @@ public class BranchAveragedHazardScriptWriter {
 				argz += " --no-mfds";
 			
 			argz += " --gridded-seis "+bgOp.name();
+			if (bgOp != IncludeBackgroundOption.EXCLUDE) {
+				if (distCorr != null)
+					argz += " --dist-corr "+distCorr.name();
+				if (bgRupType != null)
+					argz += " --point-source-type "+bgRupType.name();
+				if (bgFiniteNum != null)
+					argz += " --point-finite-num-rand-surfaces "+bgFiniteNum;
+				if (pointFiniteMinMag != null)
+					argz += " --point-finite-min-mag "+pointFiniteMinMag.floatValue();
+				if (extraGridArgs != null && !extraGridArgs.isBlank())
+					argz += " "+extraGridArgs;
+			}
 			if (gmms != null)
 				for (AttenRelRef gmm : gmms)
 					argz += " --gmpe "+gmm.name();
@@ -272,10 +316,14 @@ public class BranchAveragedHazardScriptWriter {
 			}
 			if (vs30 != null)
 				argz += " --vs30 "+vs30.floatValue();
-			if (supersampleQuick)
-				argz += " --supersample-quick";
-			else if (supersample)
-				argz += " --supersample";
+			if (supersampleQuick || supersample) {
+				if (supersampleQuick)
+					argz += " --supersample-quick";
+				if (supersampleFinite)
+					argz += " --supersample-finite";
+				else if (!supersampleQuick)
+					argz += " --supersample";
+			}
 			if (sigmaTrunc != null)
 				argz += " --gmm-sigma-trunc-one-sided "+sigmaTrunc.floatValue();
 			if (quickGridded && bgOp != IncludeBackgroundOption.EXCLUDE)

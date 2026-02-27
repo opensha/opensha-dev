@@ -1478,7 +1478,7 @@ public class HazardMapComparePlotter {
 	}
 	
 	private static PlotPreferences buildPlotPrefs() {
-		PlotPreferences plotPrefs = PlotPreferences.getDefault();
+		PlotPreferences plotPrefs = PlotPreferences.getDefaultAppPrefs();
 		plotPrefs.setTickLabelFontSize(24);
 		plotPrefs.setAxisLabelFontSize(26);
 		plotPrefs.setPlotLabelFontSize(28);

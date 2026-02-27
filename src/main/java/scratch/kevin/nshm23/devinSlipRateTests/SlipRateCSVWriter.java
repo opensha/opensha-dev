@@ -189,7 +189,7 @@ public class SlipRateCSVWriter {
 		PlotSpec spec = new PlotSpec(funcs, chars, "Sierra Madre/Cucamonga Slips", "Longitude", "Slip Rate (mm/yr)");
 		spec.setLegendVisible(true);
 		
-		HeadlessGraphPanel gp = PlotUtils.initHeadless();
+		HeadlessGraphPanel gp = PlotUtils.initScreenHeadless();
 		
 		gp.drawGraphPanel(spec);
 		

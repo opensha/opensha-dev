@@ -234,7 +234,7 @@ public class TectonicSettingPlot {
 			if (elem instanceof XY_DataSet && ((XY_DataSet)elem).getName().contains("Proxy Fault"))
 				((XY_DataSet)elem).setName(null);
 		
-		HeadlessGraphPanel gp = PlotUtils.initHeadless();
+		HeadlessGraphPanel gp = PlotUtils.initScreenHeadless();
 		
 		gp.getPlotPrefs().setLegendFontSize(19);
 		

@@ -28,9 +28,9 @@ import com.google.common.base.Stopwatch;
 class DistCalcBenchmark {
 	
 	private enum SurfType {
-		PT_SURF_FOOTWALL("Point Surface (footwall)"),
-		PT_SURF_HANGING_WALL("Point Surface (hanging wall)"),
+		PT_SURF("Point Surface"),
 		FINITE_QUAD("Finite Quad Surface"),
+		FINITE_RECT("Finite Rect Surface"),
 		FINITE_GRIDDED("Finite Gridded Surface");
 		
 		private String label;
@@ -41,16 +41,14 @@ class DistCalcBenchmark {
 		
 		public RuptureSurface buildSurface(PointSurfaceBuilder builder) {
 			switch (this) {
-			case PT_SURF_FOOTWALL:
-				builder.footwall(true);
-				return builder.buildFiniteApproxPointSurface();
-			case PT_SURF_HANGING_WALL:
-				builder.footwall(false);
-				return builder.buildFiniteApproxPointSurface();
+			case PT_SURF:
+				return builder.buildPointSurface();
 			case FINITE_GRIDDED:
 				return builder.buildGriddedSurface();
 			case FINITE_QUAD:
 				return builder.buildQuadSurface();
+			case FINITE_RECT:
+				return builder.buildRectSurface();
 
 			default:
 				throw new IllegalStateException();
@@ -124,7 +122,7 @@ class DistCalcBenchmark {
 		PlotSpec spec = new PlotSpec(funcs, chars, " ", "Magnitude", "Time For "+testLocs.length+" Distance Calcs (s)");
 		spec.setLegendVisible(true);
 		
-		HeadlessGraphPanel gp = PlotUtils.initHeadless();
+		HeadlessGraphPanel gp = PlotUtils.initScreenHeadless();
 		
 		Range xRange = new Range(refFunc.getMinX(), refFunc.getMaxX());
 		Range yRange = new Range(0d, maxY*1.2);

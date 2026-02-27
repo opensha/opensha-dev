@@ -173,7 +173,7 @@ public class BulgeContributionMFDPlot {
 //			plot.setLegendInset(RectangleAnchor.BOTTOM_LEFT);
 			plot.setLegendInset(RectangleAnchor.TOP, 0.5, 0.98, 0.9, false);
 			
-			HeadlessGraphPanel gp = PlotUtils.initHeadless();
+			HeadlessGraphPanel gp = PlotUtils.initScreenHeadless();
 			
 			gp.getPlotPrefs().setLegendFontSize(18);
 			

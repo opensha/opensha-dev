@@ -279,7 +279,7 @@ public class OccupancyCopulaCalculator {
 		}
 		copulaSpec.setCPTVisible(false);
 		
-		HeadlessGraphPanel copulaGP = PlotUtils.initHeadless();
+		HeadlessGraphPanel copulaGP = PlotUtils.initScreenHeadless();
 		copulaGP.drawGraphPanel(copulaSpec, false, false, copulaRange, copulaRange);
 		ChartPanel copulaChart = copulaGP.getChartPanel();
 		
@@ -292,7 +292,7 @@ public class OccupancyCopulaCalculator {
 		}
 		occSpec.setCPTVisible(false);
 		
-		HeadlessGraphPanel occGP = PlotUtils.initHeadless();
+		HeadlessGraphPanel occGP = PlotUtils.initScreenHeadless();
 		occGP.drawGraphPanel(occSpec, false, false, oiRange, oiRange);
 		ChartPanel occChart = occGP.getChartPanel();
 		
@@ -302,7 +302,7 @@ public class OccupancyCopulaCalculator {
 		List<PlotCurveCharacterstics> cumChars = Lists.newArrayList();
 		cumChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 2f, Color.BLACK));
 		PlotSpec cum1Spec = new PlotSpec(cum1Funcs, cumChars, name1+" Marginal", null, "Cumulative Density");
-		PlotPreferences prefs = PlotPreferences.getDefault();
+		PlotPreferences prefs = PlotPreferences.getDefaultAppPrefs();
 		prefs.setBackgroundColor(Color.WHITE);
 		
 		GraphPanel cumGP1 = new GraphPanel(prefs);

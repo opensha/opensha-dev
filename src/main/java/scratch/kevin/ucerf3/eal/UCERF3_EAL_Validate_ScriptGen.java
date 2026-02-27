@@ -15,6 +15,7 @@ import org.opensha.sha.earthquake.param.BackgroundRupParam;
 import org.opensha.sha.earthquake.param.BackgroundRupType;
 import org.opensha.sha.earthquake.param.IncludeBackgroundOption;
 import org.opensha.sha.earthquake.param.IncludeBackgroundParam;
+import org.opensha.sha.earthquake.util.GriddedFiniteRuptureSettings;
 import org.opensha.sha.imr.AttenRelRef;
 import org.opensha.sha.imr.ScalarIMR;
 import org.opensha.sra.calc.parallel.MPJ_CondLossCalc;
@@ -92,7 +93,9 @@ public class UCERF3_EAL_Validate_ScriptGen {
 		
 		FaultSystemSolutionERF erf = new FaultSystemSolutionERF();
 		erf.setParameter(IncludeBackgroundParam.NAME, IncludeBackgroundOption.INCLUDE);
-		erf.setParameter(BackgroundRupParam.NAME, BackgroundRupType.CROSSHAIR);
+//		erf.setParameter(BackgroundRupParam.NAME, BackgroundRupType.CROSSHAIR);
+		erf.setGriddedSeismicitySettings(erf.getGriddedSeismicitySettings().forSurfaceType(BackgroundRupType.FINITE)
+				.forFiniteRuptureSettings(GriddedFiniteRuptureSettings.DEFAULT_CROSSHAIR));
 		
 		Random r = new Random();
 		List<U3LogicTreeBranch> branches = Lists.newArrayList(cfss.getBranches());

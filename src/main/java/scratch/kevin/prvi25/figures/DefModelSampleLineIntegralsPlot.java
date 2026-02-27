@@ -226,7 +226,7 @@ public class DefModelSampleLineIntegralsPlot {
 				
 				Range yRange = FaultSystemLineIntegralCalculator.getPlotYRange(plot);
 				
-				HeadlessGraphPanel gp = PlotUtils.initHeadless();
+				HeadlessGraphPanel gp = PlotUtils.initScreenHeadless();
 				
 				int width = 900;
 				int height = 650;

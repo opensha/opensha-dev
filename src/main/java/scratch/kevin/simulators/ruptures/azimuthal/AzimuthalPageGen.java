@@ -285,7 +285,7 @@ public class AzimuthalPageGen {
 			List<Integer> rups, CPT cpt, String zLabel, boolean rescaleCPT) throws IOException {
 		File[] ret = new File[periods.length];
 		
-		PlotPreferences plotPrefs = PlotPreferences.getDefault();
+		PlotPreferences plotPrefs = PlotPreferences.getDefaultAppPrefs();
 		plotPrefs.setTickLabelFontSize(20);
 		plotPrefs.setAxisLabelFontSize(22);
 		plotPrefs.setPlotLabelFontSize(24);

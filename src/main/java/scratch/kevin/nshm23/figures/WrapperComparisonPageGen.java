@@ -65,7 +65,7 @@ public class WrapperComparisonPageGen {
 		Preconditions.checkState(resourcesDir.exists() || resourcesDir.mkdir());
 		
 		GeographicMapMaker mapMaker = new RupSetMapMaker(List.of(), reg);
-		mapMaker.setDefaultPlotWidth(1200);
+		mapMaker.setDefaultPlotWidthPixels(1200);
 		
 		HazardModel model1 = HazardModel.load(new File(modelsDir, dirName1).toPath());
 		HazardModel model2 = HazardModel.load(new File(modelsDir, dirName2).toPath());

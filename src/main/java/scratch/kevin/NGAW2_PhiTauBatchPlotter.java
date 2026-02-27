@@ -316,7 +316,7 @@ public class NGAW2_PhiTauBatchPlotter {
 		PlotSpec spec = new PlotSpec(funcs, chars, null, xAxisLabel, "Standard Deviation");
 		spec.setLegendVisible(true);
 
-		PlotPreferences plotPrefs = PlotPreferences.getDefault();
+		PlotPreferences plotPrefs = PlotPreferences.getDefaultAppPrefs();
 		plotPrefs.setTickLabelFontSize(18);
 		plotPrefs.setAxisLabelFontSize(20);
 		plotPrefs.setPlotLabelFontSize(21);
