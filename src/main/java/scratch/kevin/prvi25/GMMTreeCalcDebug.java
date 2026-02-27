@@ -21,9 +21,10 @@ import org.opensha.commons.logicTree.LogicTreeBranch;
 import org.opensha.commons.logicTree.LogicTreeLevel;
 import org.opensha.commons.logicTree.LogicTreeNode;
 import org.opensha.sha.calc.HazardCurveCalculator;
-import org.opensha.sha.calc.params.filters.SourceFilter;
-import org.opensha.sha.calc.params.filters.SourceFilterManager;
-import org.opensha.sha.calc.params.filters.SourceFilters;
+import org.opensha.sha.calc.sourceFilters.SourceFilter;
+import org.opensha.sha.calc.sourceFilters.SourceFilterManager;
+import org.opensha.sha.calc.sourceFilters.SourceFilterUtils;
+import org.opensha.sha.calc.sourceFilters.SourceFilters;
 import org.opensha.sha.earthquake.AbstractERF;
 import org.opensha.sha.earthquake.ERF;
 import org.opensha.sha.earthquake.EqkRupture;
@@ -323,11 +324,11 @@ public class GMMTreeCalcDebug {
 		LightFixedXFunc exceedProbs = new LightFixedXFunc(curve.getXVals(), new double[curve.size()]);
 		
 		for (ProbEqkSource source : erf) {
-			if (HazardCurveCalculator.canSkipSource(filters, source, site))
+			if (SourceFilterUtils.canSkipSource(filters, source, site))
 				continue;
 			for (int rupID=0; rupID<source.getNumRuptures(); rupID++) {
 				ProbEqkRupture rup = source.getRupture(rupID);
-				if (HazardCurveCalculator.canSkipRupture(filters, rup, site))
+				if (SourceFilterUtils.canSkipRupture(filters, rup, site))
 					continue;
 				
 				double rate;

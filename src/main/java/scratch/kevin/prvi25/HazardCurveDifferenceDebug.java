@@ -27,9 +27,9 @@ import org.opensha.commons.logicTree.LogicTreeNode;
 import org.opensha.commons.param.Parameter;
 import org.opensha.commons.util.ClassUtils;
 import org.opensha.sha.calc.HazardCurveCalculator;
-import org.opensha.sha.calc.params.filters.FixedDistanceCutoffFilter;
-import org.opensha.sha.calc.params.filters.SourceFilterManager;
-import org.opensha.sha.calc.params.filters.SourceFilters;
+import org.opensha.sha.calc.sourceFilters.FixedDistanceCutoffFilter;
+import org.opensha.sha.calc.sourceFilters.SourceFilterManager;
+import org.opensha.sha.calc.sourceFilters.SourceFilters;
 import org.opensha.sha.earthquake.AbstractERF;
 import org.opensha.sha.earthquake.ProbEqkSource;
 import org.opensha.sha.earthquake.faultSysSolution.FaultSystemSolution;
@@ -131,7 +131,7 @@ public class HazardCurveDifferenceDebug {
 			System.out.println(trt+": "+gmm.getName());
 			TectonicRegionTypeParam trtParam = (TectonicRegionTypeParam)gmm.getParameter(TectonicRegionTypeParam.NAME);
 			Preconditions.checkState(trtParam != null, "Multiple GMPEs supplied, but GMPE "+gmm.getShortName()+" doesn't have a TRT");
-			System.out.println("\tGMM reports TRT: "+trtParam.getValueAsTRT());
+			System.out.println("\tGMM reports TRT: "+trtParam.getValue());
 			for (Parameter<?> param : gmm.getSiteParams())
 				if (!site.containsParameter(param.getName()))
 					site.addParameter((Parameter<?>)param.clone());

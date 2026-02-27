@@ -77,7 +77,7 @@ public class BunceMainRidgeConnectionTests {
 	}
 	
 	private static FaultSection setDip(FaultSection sect, double dip) {
-		Feature feature = new GeoJSONFaultSection(sect).toFeature();
+		Feature feature = GeoJSONFaultSection.fromFaultSection(sect).toFeature();
 		feature.properties.set(GeoJSONFaultSection.DIP, dip);
 		return GeoJSONFaultSection.fromFeature(feature);
 	}
