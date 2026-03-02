@@ -108,7 +108,7 @@ public class DownDipRupSetBuildingTests {
 		RectangularDownDipGrowingStrategy growingStrat = new RectangularDownDipGrowingStrategy();
 		
 		RupSetScalingRelationship scale = PRVI25_SubductionScalingRelationships.LOGA_C4p0;
-		HeadlessGraphPanel gp = PlotUtils.initHeadless();
+		HeadlessGraphPanel gp = PlotUtils.initScreenHeadless();
 		int gifWidth = 800;
 		double gifFPS = 5;
 		
