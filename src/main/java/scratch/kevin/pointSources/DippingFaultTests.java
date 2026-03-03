@@ -48,7 +48,6 @@ import org.opensha.sha.faultSurface.PointSurface.SiteSpecificDistanceCorrected;
 import org.opensha.sha.faultSurface.RectangularSurface;
 import org.opensha.sha.faultSurface.RuptureSurface;
 import org.opensha.sha.faultSurface.utils.PointSurfaceBuilder;
-import org.opensha.sha.faultSurface.utils.RjbDistributionDistanceCorrection;
 import org.opensha.sha.faultSurface.utils.ptSrcCorr.PointSourceDistanceCorrection;
 import org.opensha.sha.faultSurface.utils.ptSrcCorr.PointSourceDistanceCorrections;
 import org.opensha.sha.imr.AttenRelRef;
@@ -527,9 +526,9 @@ public class DippingFaultTests {
 						System.out.println("\tcloseJB="+(float)closestTestJB);
 						System.out.println("\trRup="+(float)closestRupToTestJB);
 						System.out.println("Doing pt src equiv");
-						double ptRrup = RjbDistributionDistanceCorrection.getCorrDistRup(closestTestJB, dist, zTop,
-								pointSurf.getAveRupBottomDepth(), dipRad, length, pointSurf.getAveHorizontalWidth(), false);
-						System.out.println("\tPt rRup="+(float)ptRrup);
+//						double ptRrup = RjbDistributionDistanceCorrection.getCorrDistRup(closestTestJB, dist, zTop,
+//								pointSurf.getAveRupBottomDepth(), dipRad, length, pointSurf.getAveHorizontalWidth(), false);
+//						System.out.println("\tPt rRup="+(float)ptRrup);
 					}
 					
 					if (finite)
