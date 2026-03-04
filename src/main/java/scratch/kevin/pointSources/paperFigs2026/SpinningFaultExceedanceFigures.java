@@ -393,8 +393,8 @@ public class SpinningFaultExceedanceFigures {
 					System.out.println("\tweight="+(float)corrDist.weight+"; "+corrDist.value);
 				
 				// calculate distance corrected
-				rup.setRuptureSurface(ptSurf.getDistancedProtected(corr, TectonicRegionType.ACTIVE_SHALLOW, mag));
-				RuptureExceedProbCalculator.calcExceedanceProbabilities(gmm0, rup, logXVals);
+				rup.setRuptureSurface(ptSurf.getForDistanceCorrection(corr, TectonicRegionType.ACTIVE_SHALLOW, mag));
+				gmm0.getExceedProbabilities(rup, logXVals);
 				DiscretizedFunc corrExceedProbs = new ArbitrarilyDiscretizedFunc();
 				for (int i=0; i<logXVals.size(); i++)
 					corrExceedProbs.set(xVals.getX(i), logXVals.getY(i));
