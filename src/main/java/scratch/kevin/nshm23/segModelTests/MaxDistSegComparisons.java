@@ -38,7 +38,7 @@ public class MaxDistSegComparisons {
 				+ "results_FM3_1_CoulombRupSet_branch_averaged_reweight_r0_3.0.zip");
 //				+ "node_branch_averaged/MaxDist_MaxDist3km.zip");
 		FaultSystemSolution sol = FaultSystemSolution.load(inputFile);
-		ClusterRuptures cRups = ClusterRuptures.singleStranged(sol.getRupSet());
+		ClusterRuptures cRups = ClusterRuptures.singleStranded(sol.getRupSet());
 		PlausibilityConfiguration config = sol.getRupSet().getModule(PlausibilityConfiguration.class);
 		ClusterConnectionStrategy connStrat = config.getConnectionStrategy();
 		SegmentationCalculator calc = new SegmentationCalculator(sol, cRups.getAll(),

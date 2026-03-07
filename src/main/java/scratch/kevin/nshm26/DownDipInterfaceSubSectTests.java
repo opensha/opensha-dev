@@ -51,38 +51,39 @@ public class DownDipInterfaceSubSectTests {
 		File baseOutputDir = new File("/home/kevin/OpenSHA/nshm26/down-dip-subsectioning");
 		Preconditions.checkState(baseOutputDir.exists() || baseOutputDir.mkdir());
 		
-		String faultName = "Kermadec";
-		int faultID = 0;
-		String resourcePrefix = "/data/erf/nshm26/amsam/fault_models/subduction/";
-		BufferedReader countoursIn = new BufferedReader(new InputStreamReader(
-				resourceClass.getResourceAsStream(resourcePrefix+"ker_slab2_dep_10km_contours.xyz")));
-		CSVFile<String> traceCSV = CSVFile.readStream(
-				resourceClass.getResourceAsStream(resourcePrefix+"trenches_usgs_2017_depths_ker.csv"), true);
-		boolean smoothTraceForDDW = true;
-		String prefix = "ker_slab2";
-		Range<Double> depthRange = Range.closed(0d, 60d);
-		Range<Double> lonFilter = null;
-		Range<Double> latFilter = Range.atLeast(-30d);
-		
-//		String faultName = "Izu-Bonin";
+//		String faultName = "Kermadec";
 //		int faultID = 0;
-//		String resourcePrefix = "/data/erf/nshm26/gnmi/fault_models/subduction/";
+//		String resourcePrefix = "/data/erf/nshm26/amsam/fault_models/subduction/";
 //		BufferedReader countoursIn = new BufferedReader(new InputStreamReader(
-//				GeoJSONFaultSection.class.getResourceAsStream(resourcePrefix+"izu_slab2_dep_10km_contours.xyz")));
+//				resourceClass.getResourceAsStream(resourcePrefix+"ker_slab2_dep_10km_contours.xyz")));
 //		CSVFile<String> traceCSV = CSVFile.readStream(
-//				resourceClass.getResourceAsStream(resourcePrefix+"trenches_usgs_2017_depths_izu.csv"), true);
+//				resourceClass.getResourceAsStream(resourcePrefix+"trenches_usgs_2017_depths_ker.csv"), true);
 //		boolean smoothTraceForDDW = true;
-//		String prefix = "izu_slab2";
+//		String prefix = "ker_slab2";
 //		Range<Double> depthRange = Range.closed(0d, 60d);
 //		Range<Double> lonFilter = null;
-//		Range<Double> latFilter = Range.atMost(27d);
+//		Range<Double> latFilter = Range.atLeast(-30d);
+		
+		String faultName = "Izu-Bonin";
+		int faultID = 0;
+		String resourcePrefix = "/data/erf/nshm26/gnmi/fault_models/subduction/";
+		BufferedReader countoursIn = new BufferedReader(new InputStreamReader(
+				GeoJSONFaultSection.class.getResourceAsStream(resourcePrefix+"izu_slab2_dep_10km_contours.xyz")));
+		CSVFile<String> traceCSV = CSVFile.readStream(
+				resourceClass.getResourceAsStream(resourcePrefix+"trenches_usgs_2017_depths_izu.csv"), true);
+		boolean smoothTraceForDDW = true;
+		String prefix = "izu_slab2";
+		Range<Double> depthRange = Range.closed(0d, 60d);
+		Range<Double> lonFilter = null;
+		Range<Double> latFilter = Range.atMost(27d);
 		
 		File outputDir = new File(baseOutputDir, prefix);
 		Preconditions.checkArgument(outputDir.exists() || outputDir.mkdir());
 		
 		double traceSmoothDist = 200d;
-		
+
 		double scaleLength = 20d;
+//		double scaleLength = 15d;
 		boolean scaleIsMax = false;
 		boolean constantCount = false;
 		
@@ -299,6 +300,7 @@ public class DownDipInterfaceSubSectTests {
 		MinMaxAveTracker ddwRange = new MinMaxAveTracker();
 		MinMaxAveTracker areaRange = new MinMaxAveTracker();
 		MinMaxAveTracker magRange = new MinMaxAveTracker();
+		MinMaxAveTracker slipAtMminRange = new MinMaxAveTracker();
 		MinMaxAveTracker dipRange = new MinMaxAveTracker();
 		MinMaxAveTracker perRowRange = new MinMaxAveTracker();
 		for (GeoJSONFaultSection[] row : subSects) {
@@ -311,6 +313,7 @@ public class DownDipInterfaceSubSectTests {
 				ddwRange.addValue(ddw);
 				areaRange.addValue(area);
 				magRange.addValue(PRVI25_SubductionScalingRelationships.LOGA_C4p0.getMag(area*1e6, length*1e3, ddw*1e3, ddw*1e3, 90d));
+				slipAtMminRange.addValue(PRVI25_SubductionScalingRelationships.LOGA_C4p0.getAveSlip(area*1e6, length*1e3, ddw*1e3, ddw*1e3, 90d));
 				dipRange.addValue(sect.getAveDip());
 				allSects.add(sect);
 			}
@@ -346,6 +349,7 @@ public class DownDipInterfaceSubSectTests {
 		System.out.println("Sub-Sect DDWs:\t"+ddwRange);
 		System.out.println("Sub-Sect Areas:\t"+areaRange);
 		System.out.println("Sub-Sect Mmin:\t"+magRange);
+		System.out.println("Sub-Sect slip at Mmin:\t"+slipAtMminRange);
 		System.out.println("Sub-Sect Dip:\t"+dipRange);
 		System.out.println("Sub-Sect Row counts:\t"+perRowRange);
 		
@@ -753,7 +757,6 @@ public class DownDipInterfaceSubSectTests {
 			double depth = -Double.parseDouble(tok.nextToken());
 			curTrace.add(new Location(lat, lon, depth));;
 		}
-		Collections.reverse(ret);
 		return ret;
 	}
 	

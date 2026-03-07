@@ -16,10 +16,12 @@ import com.google.common.base.Preconditions;
 public class SlipProjectionTests {
 
 	public static void main(String[] args) throws IOException {
+		File baseOutputDir = new File("/home/kevin/OpenSHA/nshm26/down-dip-subsectioning");
+		
 		String prefix = "ker_slab2";
 //		String prefix = "izu_slab2";
 		
-		File inDir = new File("/tmp/"+prefix);
+		File inDir = new File(baseOutputDir, prefix);
 		File subSectsFile = new File(inDir, prefix+"_sub_sects.geojson");
 		List<GeoJSONFaultSection> sects = GeoJSONFaultReader.readFaultSections(subSectsFile);
 		File outDir = new File(inDir, "slip_projection");

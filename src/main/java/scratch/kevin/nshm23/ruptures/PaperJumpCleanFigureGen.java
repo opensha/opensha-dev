@@ -93,7 +93,7 @@ public class PaperJumpCleanFigureGen {
 			
 			if (!rupSet.hasAvailableModule(ClusterRuptures.class)) {
 				if (rupSet.getNumRuptures() == 253706)
-					rupSet.addModule(ClusterRuptures.singleStranged(rupSet));
+					rupSet.addModule(ClusterRuptures.singleStranded(rupSet));
 				else
 					rupSet.addAvailableModule(new Callable<ClusterRuptures>() {
 						

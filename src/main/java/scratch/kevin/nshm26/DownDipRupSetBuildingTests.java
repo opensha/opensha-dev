@@ -29,11 +29,13 @@ import org.opensha.sha.earthquake.faultSysSolution.ruptures.downDip.RectangularD
 import org.opensha.sha.earthquake.faultSysSolution.ruptures.downDip.RectangularDownDipGrowingStrategy.NeighborOverlaps;
 import org.opensha.sha.earthquake.faultSysSolution.ruptures.util.GeoJSONFaultReader;
 import org.opensha.sha.earthquake.faultSysSolution.util.FaultSysTools;
+import org.opensha.sha.earthquake.rupForecastImpl.nshm26.logicTree.NSHM26_SubductionInterfaceFaultModels;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_SubductionScalingRelationships;
 import org.opensha.sha.faultSurface.FaultSection;
 import org.opensha.sha.faultSurface.GeoJSONFaultSection;
 
 import com.google.common.base.Preconditions;
+import com.google.common.collect.Range;
 
 import net.mahdilamb.colormap.Colors;
 
@@ -43,35 +45,40 @@ public class DownDipRupSetBuildingTests {
 		File baseOutputDir = new File("/home/kevin/OpenSHA/nshm26/down-dip-subsectioning");
 		Preconditions.checkState(baseOutputDir.exists() || baseOutputDir.mkdir());
 		
-		String prefix = "ker_slab2";
-//		String prefix = "izu_slab2";
+//		NSHM26_SubductionInterfaceFaultModels fm = NSHM26_SubductionInterfaceFaultModels.KERMADEC;
+//		String prefix = "ker_slab2";
+		
+		NSHM26_SubductionInterfaceFaultModels fm = NSHM26_SubductionInterfaceFaultModels.MARIANA;
+		String prefix = "izu_slab2";
+		
+		Range<Double> minSupraRange = Range.closed(10d, 40d);
 		
 		File inDir = new File(baseOutputDir, prefix);
-		File subSectsFile = new File(inDir, prefix+"_sub_sects.geojson");
-		List<GeoJSONFaultSection> sects = GeoJSONFaultReader.readFaultSections(subSectsFile);
+		List<? extends FaultSection> sects = fm.buildSubSects(fm);
 		File outDir = new File(inDir, "rup_set_debug");
 		Preconditions.checkState(outDir.exists() || outDir.mkdir());
 		
 		boolean doAnimation = true;
 		boolean doSubSeisAnimation = false;
 		boolean writeIndvFrames = true;
-		boolean doMiddleRowOverlaps = true;
+		boolean doMiddleRowOverlaps = false;
 		boolean buildRupSet = true;
 		
 		FaultSubsectionCluster fullCluster = new FaultSubsectionCluster(sects);
 		NeighborOverlaps neighborOverlaps = new NeighborOverlaps(fullCluster, false);
 		NeighborOverlaps neighborOverlapsDD = new NeighborOverlaps(fullCluster, true);
 		
-		List<GeoJSONFaultSection> debugSects = new ArrayList<>();
+		List<FaultSection> debugSects = new ArrayList<>();
+		debugSects.add(sects.get(276));
 		
 		int numRows = sects.stream().mapToInt(s-> s.getSubSectionIndexDownDip()).max().getAsInt()+1;
-		List<List<GeoJSONFaultSection>> rowColOrganized = new ArrayList<>(numRows);
+		List<List<FaultSection>> rowColOrganized = new ArrayList<>(numRows);
 		for (int i=0; i<numRows; i++)
 			rowColOrganized.add(new ArrayList<>());
-		for (GeoJSONFaultSection sect : sects) {
+		for (FaultSection sect : sects) {
 			int row = sect.getSubSectionIndexDownDip();
 			int col = sect.getSubSectionIndexAlong();
-			List<GeoJSONFaultSection> rowSects = rowColOrganized.get(row);
+			List<FaultSection> rowSects = rowColOrganized.get(row);
 			while (rowSects.size() <= col)
 				rowSects.add(null);
 			rowSects.set(col, sect);
@@ -80,14 +87,14 @@ public class DownDipRupSetBuildingTests {
 			System.out.println("Row "+row+" has "+rowColOrganized.get(row).size()+" sects");
 		
 		// add corners
-		List<GeoJSONFaultSection> topRow = rowColOrganized.get(0);
-		List<GeoJSONFaultSection> bottomRow = rowColOrganized.get(numRows-1);
+		List<FaultSection> topRow = rowColOrganized.get(0);
+		List<FaultSection> bottomRow = rowColOrganized.get(numRows-1);
 		debugSects.add(topRow.get(0));
 		debugSects.add(topRow.get(topRow.size()-1));
 		debugSects.add(bottomRow.get(0));
 		debugSects.add(bottomRow.get(bottomRow.size()-1));
 		
-		List<GeoJSONFaultSection> middleRow = rowColOrganized.get(numRows/2);
+		List<FaultSection> middleRow = rowColOrganized.get(numRows/2);
 		debugSects.add(middleRow.get(0));
 		for (int i=1; i<5; i++)
 			debugSects.add(middleRow.get((int)(middleRow.size() * i/5d)));
@@ -105,7 +112,7 @@ public class DownDipRupSetBuildingTests {
 		Color participatingColor = overlapCPT.getMaxColor();
 		Color otherColor = overlapCPT.getMinColor();
 		
-		RectangularDownDipGrowingStrategy growingStrat = new RectangularDownDipGrowingStrategy();
+		RectangularDownDipGrowingStrategy growingStrat = new RectangularDownDipGrowingStrategy(minSupraRange);
 		
 		RupSetScalingRelationship scale = PRVI25_SubductionScalingRelationships.LOGA_C4p0;
 		HeadlessGraphPanel gp = PlotUtils.initScreenHeadless();
