@@ -1,47 +1,54 @@
 package scratch.kevin.nshm23;
 
-import java.awt.Color;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
 
+import org.apache.commons.math3.util.Precision;
 import org.opensha.commons.geo.GriddedRegion;
 import org.opensha.commons.geo.Location;
 import org.opensha.commons.geo.LocationList;
 import org.opensha.commons.geo.LocationUtils;
 import org.opensha.commons.geo.LocationUtils.LocationAverager;
-import org.opensha.commons.geo.LocationVector;
 import org.opensha.commons.gui.plot.GeographicMapMaker;
 import org.opensha.commons.gui.plot.PlotCurveCharacterstics;
 import org.opensha.commons.gui.plot.PlotLineType;
 import org.opensha.commons.gui.plot.PlotSymbol;
-import org.opensha.commons.mapping.gmt.elements.GMT_CPT_Files;
-import org.opensha.commons.util.cpt.CPT;
 import org.opensha.sha.earthquake.faultSysSolution.FaultSystemRupSet;
 import org.opensha.sha.earthquake.faultSysSolution.FaultSystemSolution;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.util.NSHM23_RegionLoader;
-import org.opensha.sha.faultSurface.CompoundSurface;
+import org.opensha.sha.faultSurface.OldCompoundSurface;
 import org.opensha.sha.faultSurface.FaultSection;
 import org.opensha.sha.faultSurface.NewCompoundSurface;
 import org.opensha.sha.faultSurface.RuptureSurface;
+import org.opensha.sha.faultSurface.cache.SurfaceCachingPolicy;
+import org.opensha.sha.faultSurface.cache.SurfaceDistances;
+import org.opensha.sha.faultSurface.cache.SurfaceCachingPolicy.CacheTypes;
 
 import com.google.common.base.Preconditions;
+import com.google.common.base.Stopwatch;
 
 import net.mahdilamb.colormap.Colors;
 
 public class NewCompoundSurfaceComparisons {
 
 	public static void main(String[] args) throws IOException {
+		SurfaceCachingPolicy.force(CacheTypes.THREAD_LOCAL);
 		FaultSystemSolution sol = FaultSystemSolution.load(new File("/home/kevin/OpenSHA/nshm23/batch_inversions/"
 				+ "2024_02_02-nshm23_branches-WUS_FM_v3/results_WUS_FM_v3_branch_averaged.zip"));
 		FaultSystemRupSet rupSet = sol.getRupSet();
+		
+		surfBuildTime(rupSet, 50);
+		System.exit(0);
 		
 		GriddedRegion sitesGrid = new GriddedRegion(NSHM23_RegionLoader.loadFullConterminousWUS(), 0.25, GriddedRegion.ANCHOR_0_0);
 		
 		System.out.println("Have "+sitesGrid.getNodeCount()+" sites");
 		
-		CompoundSurface[] origSurfs = new CompoundSurface[rupSet.getNumRuptures()];
+		OldCompoundSurface[] origSurfs = new OldCompoundSurface[rupSet.getNumRuptures()];
 		NewCompoundSurface[] newSurfs = new NewCompoundSurface[rupSet.getNumRuptures()];
 		
 		File outputDir = new File("/tmp/compound_surf_test");
@@ -53,20 +60,30 @@ public class NewCompoundSurfaceComparisons {
 		for (int r=0; r<rupSet.getNumRuptures(); r++) {
 			if (r < 10000 && r % 1000 == 0 || r % 10000 == 0)
 				System.out.println("Processing rupture "+r);
-			CompoundSurface origSurf = (CompoundSurface)rupSet.getSurfaceForRupture(r, 1d);
-//			NewCompoundSurface newSurf = new NewCompoundSurface.Simple(origSurf.getSurfaceList());
-			NewCompoundSurface newSurf = new NewCompoundSurface.Simple(origSurf.getSurfaceList(), rupSet.getFaultSectionDataForRupture(r));
+			RuptureSurface surf = rupSet.getSurfaceForRupture(r, 1d);
+			OldCompoundSurface origSurf;
+			NewCompoundSurface newSurf;
+			if (surf instanceof OldCompoundSurface) {
+				origSurf = (OldCompoundSurface)surf;
+				newSurf = new NewCompoundSurface.Simple(origSurf.getSurfaceList(), rupSet.getFaultSectionDataForRupture(r));
+			} else if (surf instanceof NewCompoundSurface) {
+				newSurf = (NewCompoundSurface)surf;
+				origSurf = new OldCompoundSurface(newSurf.getSurfaceList());
+			} else {
+				throw new IllegalStateException("Unexpected surface type: "+surf.getClass());
+			}
 			
-			if (!LocationUtils.areSimilar(origSurf.getFirstLocOnUpperEdge(), newSurf.getFirstLocOnUpperEdge())
-					|| !LocationUtils.areSimilar(origSurf.getLastLocOnUpperEdge(), newSurf.getLastLocOnUpperEdge())
-					|| !LocationUtils.areSimilar(origSurf.getFirstLocOnLowerEdge(), newSurf.getFirstLocOnLowerEdge())
-					|| !LocationUtils.areSimilar(origSurf.getLastLocOnLowerEdge(), newSurf.getLastLocOnLowerEdge())) {
-				System.out.println("Ordering mismatch for "+r);
-				debugSurf(outputDir, rupSet, r, origSurf, newSurf);
-				numDebug++;
-				if (numDebug == maxNumDebug) {
-					System.out.println("Bailing after "+numDebug+" debugs");
-					System.exit(0);
+			if (numDebug < maxNumDebug) {
+				if (!LocationUtils.areSimilar(origSurf.getFirstLocOnUpperEdge(), newSurf.getFirstLocOnUpperEdge())
+						|| !LocationUtils.areSimilar(origSurf.getLastLocOnUpperEdge(), newSurf.getLastLocOnUpperEdge())
+						|| !LocationUtils.areSimilar(origSurf.getFirstLocOnLowerEdge(), newSurf.getFirstLocOnLowerEdge())
+						|| !LocationUtils.areSimilar(origSurf.getLastLocOnLowerEdge(), newSurf.getLastLocOnLowerEdge())) {
+					System.out.println("Ordering mismatch for "+r);
+					debugSurf(outputDir, rupSet, r, origSurf, newSurf);
+					numDebug++;
+					if (numDebug == maxNumDebug) {
+						System.out.println("Bailing after "+numDebug+" debugs");
+					}
 				}
 			}
 			
@@ -74,11 +91,39 @@ public class NewCompoundSurfaceComparisons {
 			newSurfs[r] = newSurf;
 		}
 		
-		System.out.println("DONE");
+		System.out.println("DONE building");
+		
+		System.out.println("Testing distances for "+sitesGrid.getNodeCount()+" sites");
+		final double tol = 1e-4;
+		List<CompletableFuture<Void>> futures = new ArrayList<>();
+		for (Location loc : sitesGrid.getNodeList()) {
+			futures.add(CompletableFuture.runAsync(() -> {
+				for (int r=0; r<origSurfs.length; r++) {
+					SurfaceDistances origDists = origSurfs[r].getDistances(loc);
+					SurfaceDistances newDists = newSurfs[r].getDistances(loc);
+					Preconditions.checkState(Precision.equals(origSurfs[r].getQuickDistance(loc), newSurfs[r].getQuickDistance(loc), tol),
+							"Rquick mismatch for %s: %s != %s", r, origSurfs[r].getQuickDistance(loc), newSurfs[r].getQuickDistance(loc));
+					Preconditions.checkState(Precision.equals(origDists.getDistanceRup(), newDists.getDistanceRup(), tol),
+							"Rrup mismatch for %s: %s != %s", r, origDists.getDistanceRup(), newDists.getDistanceRup());
+					Preconditions.checkState(Precision.equals(origDists.getDistanceJB(), newDists.getDistanceJB(), tol),
+							"Rjb mismatch for %s: %s != %s", r, origDists.getDistanceJB(), newDists.getDistanceJB());
+					Preconditions.checkState(Precision.equals(origDists.getDistanceX(), newDists.getDistanceX(), tol),
+							"Rx mismatch for %s: %s != %s", r, origDists.getDistanceX(), newDists.getDistanceX());
+				}
+			}));
+		}
+		for (int i=0; i<futures.size(); i++) {
+			CompletableFuture<Void> future = futures.get(i);
+			future.join();
+			System.out.print(".");
+			if (i > 0 && i % 100 == 0)
+				System.out.println(" "+i+"/"+futures.size());
+		}
+		System.out.println(" DONE "+futures.size());
 	}
 	
 	private static void debugSurf(File outputDir, FaultSystemRupSet rupSet, int rupIndex,
-			CompoundSurface origSurf, NewCompoundSurface newSurf) throws IOException {
+			OldCompoundSurface origSurf, NewCompoundSurface newSurf) throws IOException {
 		List<FaultSection> sects = rupSet.getFaultSectionDataForRupture(rupIndex);
 		GeographicMapMaker mapMaker = new GeographicMapMaker(sects);
 		mapMaker.setWriteGeoJSON(false);
@@ -153,6 +198,21 @@ public class NewCompoundSurfaceComparisons {
 		mapMaker.plotScatters(scatters, scatterChars);
 		
 		mapMaker.plot(outputDir, "rupture_"+rupIndex, " ");
+	}
+	
+	private static void surfBuildTime(FaultSystemRupSet rupSet, int trials) {
+		Stopwatch watch = Stopwatch.createUnstarted();
+		for (int i=0; i<trials; i++) {
+			System.out.println("Surf build trial "+i);
+			rupSet.clearCache();
+			watch.start();
+			for (int r=0; r<rupSet.getNumRuptures(); r++) {
+				rupSet.getSurfaceForRupture(r, 1d);
+			}
+			watch.stop();
+		}
+		double timeSecs = watch.elapsed(TimeUnit.MILLISECONDS)/1000d;
+		System.out.println("Built "+rupSet.getNumRuptures()+" rutures "+trials+" time(s) in "+(float)timeSecs+" s");
 	}
 	
 	private static Location middle(RuptureSurface surf) {

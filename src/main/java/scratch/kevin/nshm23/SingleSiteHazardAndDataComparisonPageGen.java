@@ -64,7 +64,7 @@ import org.opensha.sha.earthquake.param.IncludeBackgroundOption;
 import org.opensha.sha.earthquake.param.IncludeBackgroundParam;
 import org.opensha.sha.earthquake.param.ProbabilityModelOptions;
 import org.opensha.sha.earthquake.param.ProbabilityModelParam;
-import org.opensha.sha.faultSurface.CompoundSurface;
+import org.opensha.sha.faultSurface.OldCompoundSurface;
 import org.opensha.sha.faultSurface.RuptureSurface;
 import org.opensha.sha.gui.infoTools.IMT_Info;
 import org.opensha.sha.imr.AttenRelRef;
@@ -957,8 +957,8 @@ public class SingleSiteHazardAndDataComparisonPageGen {
 						double moment = rate*MagUtils.magToMoment(mag);
 						int fullIndexCount = 0;
 						List<int[]> fullIndexes = new ArrayList<>();
-						if (surf instanceof CompoundSurface) {
-							List<? extends RuptureSurface> subSurfs = ((CompoundSurface)surf).getSurfaceList();
+						if (surf instanceof OldCompoundSurface) {
+							List<? extends RuptureSurface> subSurfs = ((OldCompoundSurface)surf).getSurfaceList();
 							for (RuptureSurface subSurf : subSurfs) {
 								int[] indexes;
 									indexes = mappedIndexes.get(subSurf);
@@ -1049,8 +1049,8 @@ public class SingleSiteHazardAndDataComparisonPageGen {
 				return false;
 			}
 			return !reg.contains(centroid);
-		} else if (surf instanceof CompoundSurface) {
-			for (RuptureSurface subSurf : ((CompoundSurface)surf).getSurfaceList()) {
+		} else if (surf instanceof OldCompoundSurface) {
+			for (RuptureSurface subSurf : ((OldCompoundSurface)surf).getSurfaceList()) {
 				if (!canSkipNshmSurf(reg, subSurf))
 					// at least one is false, return false
 					return false;

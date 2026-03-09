@@ -49,7 +49,7 @@ import org.opensha.sha.earthquake.ProbEqkRupture;
 import org.opensha.sha.earthquake.ProbEqkSource;
 import org.opensha.sha.earthquake.faultSysSolution.RupSetDeformationModel;
 import org.opensha.sha.earthquake.faultSysSolution.RupSetFaultModel;
-import org.opensha.sha.faultSurface.CompoundSurface;
+import org.opensha.sha.faultSurface.OldCompoundSurface;
 import org.opensha.sha.faultSurface.FaultSection;
 import org.opensha.sha.faultSurface.RuptureSurface;
 import org.opensha.sha.simulators.EventRecord;
@@ -491,7 +491,7 @@ public class RSQSimSectBundledERF extends AbstractERF {
 		if (rupSurfs.size() == 1)
 			surf = rupSurfs.get(0);
 		else
-			surf = new CompoundSurface(rupSurfs);
+			surf = new OldCompoundSurface(rupSurfs);
 		return surf;
 	}
 	
@@ -756,7 +756,7 @@ public class RSQSimSectBundledERF extends AbstractERF {
 				if (surfs.size() == 1)
 					compound = surfs.get(0);
 				else
-					compound = new CompoundSurface(surfs);
+					compound = new OldCompoundSurface(surfs);
 				LocationList trace = compound.getEvenlyDiscritizedUpperEdge();
 				// this can have duplicates in it, remove those
 				for (int p=trace.size(); --p>0;) {

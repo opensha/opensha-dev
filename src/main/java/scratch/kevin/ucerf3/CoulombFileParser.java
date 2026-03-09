@@ -15,7 +15,7 @@ import org.opensha.commons.geo.LocationUtils;
 import org.opensha.commons.util.FileUtils;
 import org.opensha.sha.earthquake.observedEarthquake.ObsEqkRupList;
 import org.opensha.sha.earthquake.observedEarthquake.ObsEqkRupture;
-import org.opensha.sha.faultSurface.CompoundSurface;
+import org.opensha.sha.faultSurface.OldCompoundSurface;
 import org.opensha.sha.faultSurface.EvenlyGriddedSurface;
 import org.opensha.sha.faultSurface.FaultTrace;
 import org.opensha.sha.faultSurface.RuptureSurface;
@@ -116,7 +116,7 @@ public class CoulombFileParser {
 		if (surfs.size() == 1)
 			return surfs.get(0);
 		
-		return new CompoundSurface(surfs);
+		return new OldCompoundSurface(surfs);
 	}
 	
 	private static Location getRelativeLocation(Location origin, double xOffset, double yOffset) {

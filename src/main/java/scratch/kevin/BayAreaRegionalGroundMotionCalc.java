@@ -78,7 +78,7 @@ import org.opensha.sha.earthquake.util.GridCellSuperSamplingPoissonPointSourceDa
 import org.opensha.sha.earthquake.util.GridCellSupersamplingSettings;
 import org.opensha.sha.earthquake.util.GriddedSeismicitySettings;
 import org.opensha.sha.faultSurface.ApproxEvenlyGriddedSurface;
-import org.opensha.sha.faultSurface.CompoundSurface;
+import org.opensha.sha.faultSurface.OldCompoundSurface;
 import org.opensha.sha.faultSurface.FaultTrace;
 import org.opensha.sha.faultSurface.GriddedSurfaceImpl;
 import org.opensha.sha.faultSurface.PointSurface;
@@ -659,8 +659,8 @@ public class BayAreaRegionalGroundMotionCalc {
 				RuptureSurface fullSurf = rup.getRuptureSurface();
 				BitSet hypoBitSet = new BitSet(sitesAtNodes.size());
 				List<? extends RuptureSurface> surfsToCheck;
-				if (fullSurf instanceof CompoundSurface) {
-					surfsToCheck = ((CompoundSurface)fullSurf).getSurfaceList();
+				if (fullSurf instanceof OldCompoundSurface) {
+					surfsToCheck = ((OldCompoundSurface)fullSurf).getSurfaceList();
 				} else {
 					surfsToCheck = List.of(fullSurf);
 				}
@@ -1095,7 +1095,7 @@ public class BayAreaRegionalGroundMotionCalc {
 			List<ProbEqkRupture> rups = new ArrayList<>(events.size());
 			for (ProbEqkRupture rup : events) {
 				RuptureSurface surf = rup.getRuptureSurface();
-				if (surf instanceof CompoundSurface) {
+				if (surf instanceof OldCompoundSurface) {
 					ProbEqkRupture origRup = rup;
 					RuptureSurface wrappedSurf = DistCachedERFWrapper.getWrappedSurface(wrappedMap, surf);
 					rup = new DistCacheWrapperRupture(rup, wrappedSurf);
@@ -1184,7 +1184,7 @@ public class BayAreaRegionalGroundMotionCalc {
 			Preconditions.checkNotNull(sites);
 			
 			RuptureSurface surf = event.getRuptureSurface();
-			if (surf instanceof CompoundSurface) {
+			if (surf instanceof OldCompoundSurface) {
 				RuptureSurface wrappedSurf = DistCachedERFWrapper.getWrappedSurface(wrappedMap, surf);
 				event = new DistCacheWrapperRupture(event, wrappedSurf);
 			}
