@@ -46,7 +46,7 @@ public class VDO_StateColorScalePlot {
 		
 		XYZPlotSpec xyzSpec = new XYZPlotSpec(xyz, cpt, " ", " ", " ", cptLabel);
 		
-		HeadlessGraphPanel gp = PlotUtils.initHeadless();
+		HeadlessGraphPanel gp = PlotUtils.initScreenHeadless();
 		
 		gp.drawGraphPanel(xyzSpec);
 		

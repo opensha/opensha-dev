@@ -41,7 +41,7 @@ public class DemoDirectivityImpl extends AbstractAttenRelMod {
 		Location siteLoc = site.getLocation();
 		
 		// here's rx for the site location relative to the rupture trace:
-		double rx = surf.getDistanceSeis(siteLoc);
+		double rx = surf.getDistanceX(siteLoc);
 		// here's ry for the site location relative to the rupture trace
 		double ry = GriddedSurfaceUtils.getDistanceY(surf.getUpperEdge(), siteLoc);
 		

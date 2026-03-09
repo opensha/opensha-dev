@@ -782,7 +782,7 @@ public class OutlierReplacementPageGen {
 		
 		PlotSpec spec = new PlotSpec(funcs, chars, title, refName, filteredName);
 		
-		HeadlessGraphPanel gp = PlotUtils.initHeadless();
+		HeadlessGraphPanel gp = PlotUtils.initScreenHeadless();
 		
 		gp.drawGraphPanel(spec, true, true, range, range);
 		

@@ -2537,7 +2537,7 @@ public abstract class RotatedRupVariabilityPageGen<E> {
 		PlotSpec spec = new PlotSpec(funcs, chars, title, xAxisLabel, yAxisLabel);
 		spec.setLegendVisible(true);
 
-		PlotPreferences plotPrefs = PlotPreferences.getDefault();
+		PlotPreferences plotPrefs = PlotPreferences.getDefaultAppPrefs();
 		plotPrefs.setTickLabelFontSize(18);
 		plotPrefs.setAxisLabelFontSize(20);
 		plotPrefs.setPlotLabelFontSize(21);
@@ -3872,7 +3872,7 @@ public abstract class RotatedRupVariabilityPageGen<E> {
 		PlotSpec spec = new PlotSpec(funcs, chars, title, "Period (s)", "Standard Deviation");
 		spec.setLegendVisible(true);
 
-		PlotPreferences plotPrefs = PlotPreferences.getDefault();
+		PlotPreferences plotPrefs = PlotPreferences.getDefaultAppPrefs();
 		plotPrefs.setTickLabelFontSize(18);
 		plotPrefs.setAxisLabelFontSize(20);
 		plotPrefs.setPlotLabelFontSize(21);
@@ -4021,7 +4021,7 @@ public abstract class RotatedRupVariabilityPageGen<E> {
 		PlotSpec spec = new PlotSpec(funcs, chars, title, "Period (s)", type.symbol);
 		spec.setLegendVisible(true);
 
-		PlotPreferences plotPrefs = PlotPreferences.getDefault();
+		PlotPreferences plotPrefs = PlotPreferences.getDefaultAppPrefs();
 		plotPrefs.setTickLabelFontSize(18);
 		plotPrefs.setAxisLabelFontSize(20);
 		plotPrefs.setPlotLabelFontSize(21);
@@ -4074,7 +4074,7 @@ public abstract class RotatedRupVariabilityPageGen<E> {
 		PlotSpec spec = new PlotSpec(funcs, chars, title, "Standard Deviation", "");
 		spec.setLegendVisible(true);
 
-		PlotPreferences plotPrefs = PlotPreferences.getDefault();
+		PlotPreferences plotPrefs = PlotPreferences.getDefaultAppPrefs();
 		plotPrefs.setTickLabelFontSize(18);
 		plotPrefs.setAxisLabelFontSize(20);
 		plotPrefs.setPlotLabelFontSize(21);
@@ -4115,7 +4115,7 @@ public abstract class RotatedRupVariabilityPageGen<E> {
 		PlotSpec spec = new PlotSpec(funcs, chars, title, "Event Term", "");
 		spec.setLegendVisible(true);
 
-		PlotPreferences plotPrefs = PlotPreferences.getDefault();
+		PlotPreferences plotPrefs = PlotPreferences.getDefaultAppPrefs();
 		plotPrefs.setTickLabelFontSize(18);
 		plotPrefs.setAxisLabelFontSize(20);
 		plotPrefs.setPlotLabelFontSize(21);
@@ -4148,7 +4148,7 @@ public abstract class RotatedRupVariabilityPageGen<E> {
 		
 		double delta = 0.05;
 
-		PlotPreferences plotPrefs = PlotPreferences.getDefault();
+		PlotPreferences plotPrefs = PlotPreferences.getDefaultAppPrefs();
 		plotPrefs.setTickLabelFontSize(18);
 		plotPrefs.setAxisLabelFontSize(20);
 		plotPrefs.setPlotLabelFontSize(21);
@@ -4268,7 +4268,7 @@ public abstract class RotatedRupVariabilityPageGen<E> {
 				PlotSpec spec = new PlotSpec(funcs, chars, periodStr+" "+scatterQuantity.name+" Scatter", scatterQuantity.name, yLabels[yI]);
 				spec.setLegendVisible(false);
 
-				PlotPreferences plotPrefs = PlotPreferences.getDefault();
+				PlotPreferences plotPrefs = PlotPreferences.getDefaultAppPrefs();
 				plotPrefs.setTickLabelFontSize(18);
 				plotPrefs.setAxisLabelFontSize(20);
 				plotPrefs.setPlotLabelFontSize(21);
@@ -4432,7 +4432,7 @@ public abstract class RotatedRupVariabilityPageGen<E> {
 			}
 		}
 		
-		PlotPreferences plotPrefs = PlotPreferences.getDefault();
+		PlotPreferences plotPrefs = PlotPreferences.getDefaultAppPrefs();
 		plotPrefs.setTickLabelFontSize(18);
 		plotPrefs.setAxisLabelFontSize(20);
 		plotPrefs.setPlotLabelFontSize(21);
@@ -4598,7 +4598,7 @@ public abstract class RotatedRupVariabilityPageGen<E> {
 			}
 		}
 		
-		PlotPreferences plotPrefs = PlotPreferences.getDefault();
+		PlotPreferences plotPrefs = PlotPreferences.getDefaultAppPrefs();
 		plotPrefs.setTickLabelFontSize(18);
 		plotPrefs.setAxisLabelFontSize(20);
 		plotPrefs.setPlotLabelFontSize(21);
@@ -4789,7 +4789,7 @@ public abstract class RotatedRupVariabilityPageGen<E> {
 			}
 		}
 		
-		PlotPreferences plotPrefs = PlotPreferences.getDefault();
+		PlotPreferences plotPrefs = PlotPreferences.getDefaultAppPrefs();
 		plotPrefs.setTickLabelFontSize(18);
 		plotPrefs.setAxisLabelFontSize(20);
 		plotPrefs.setPlotLabelFontSize(21);
@@ -5125,7 +5125,7 @@ public abstract class RotatedRupVariabilityPageGen<E> {
 				new Color(0,0,255,80)));
 		spec.setPlotAnnotations(anns);
 		
-		PlotPreferences plotPrefs = PlotPreferences.getDefault();
+		PlotPreferences plotPrefs = PlotPreferences.getDefaultAppPrefs();
 		plotPrefs.setTickLabelFontSize(18);
 		plotPrefs.setAxisLabelFontSize(20);
 		plotPrefs.setPlotLabelFontSize(21);
@@ -5258,7 +5258,7 @@ public abstract class RotatedRupVariabilityPageGen<E> {
 		PlotSpec spec = new PlotSpec(funcs, chars, " ",
 				"Bayless & Sommerville (2013) fD", "Within-Event Residual");
 		
-		PlotPreferences plotPrefs = PlotPreferences.getDefault();
+		PlotPreferences plotPrefs = PlotPreferences.getDefaultAppPrefs();
 		plotPrefs.setTickLabelFontSize(18);
 		plotPrefs.setAxisLabelFontSize(20);
 		plotPrefs.setPlotLabelFontSize(21);
@@ -5477,7 +5477,7 @@ public abstract class RotatedRupVariabilityPageGen<E> {
 			specs.add(spec);
 		}
 		
-		PlotPreferences plotPrefs = PlotPreferences.getDefault();
+		PlotPreferences plotPrefs = PlotPreferences.getDefaultAppPrefs();
 		plotPrefs.setTickLabelFontSize(18);
 		plotPrefs.setAxisLabelFontSize(20);
 		plotPrefs.setPlotLabelFontSize(21);

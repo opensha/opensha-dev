@@ -675,7 +675,7 @@ public class SynchParamCalculator {
 		}
 
 		List<XYZPlotSpec> xyzSpecs = Lists.newArrayList(gSpec, weightSpec, gWeightedSpec);
-		HeadlessGraphPanel xyzGP = PlotUtils.initHeadless();
+		HeadlessGraphPanel xyzGP = PlotUtils.initScreenHeadless();
 		xyzGP.drawGraphPanel(xyzSpecs, false, false, xyzXRanges, xyzYRanges);
 		xyzGP.getChartPanel().setSize(1000, 1500);
 		synch2DPlotFile = new File(synchXYZDir, PeriodicityPlotter.getFileSafeString(name1)
@@ -745,7 +745,7 @@ public class SynchParamCalculator {
 			// write poster images
 
 			// G
-			xyzGP = PlotUtils.initHeadless();
+			xyzGP = PlotUtils.initScreenHeadless();
 			xyzXRange = xyzYRange;
 			gSpec.setTitle("Gain Factor");
 			xyzGP.drawGraphPanel(gSpec, false, false, xyzXRange, xyzYRange);
@@ -776,7 +776,7 @@ public class SynchParamCalculator {
 			XYZPlotSpec occSpec = new XYZPlotSpec(occFreqXYZ, occCPT, "State Occupancy Frequency",
 					gSpec.getXAxisLabel(), gSpec.getYAxisLabel(), null);
 
-			xyzGP = PlotUtils.initHeadless();
+			xyzGP = PlotUtils.initScreenHeadless();
 			xyzXRange = xyzYRange;
 			xyzGP.drawGraphPanel(occSpec, false, false, xyzXRange, xyzYRange);
 			xyzGP.getChartPanel().setSize(1000, 1000);

@@ -370,7 +370,7 @@ public class ASK_EventData {
 		
 		XYZPlotSpec xyzSpec = new XYZPlotSpec(xyz, cpt, title, xLabel, yLabel, zLabel);
 		xyzSpec.setCPTTickUnit(0.5d);
-		HeadlessGraphPanel xyzGP = PlotUtils.initHeadless();
+		HeadlessGraphPanel xyzGP = PlotUtils.initScreenHeadless();
 		xyzGP.drawGraphPanel(xyzSpec, false, false, new org.jfree.data.Range(Math.log10(minDist), Math.log10(maxDist)),
 				new org.jfree.data.Range(minMag, maxMag));
 //		xyzGP.getChartPanel().getChart().setBackgroundPaint(Color.WHITE);

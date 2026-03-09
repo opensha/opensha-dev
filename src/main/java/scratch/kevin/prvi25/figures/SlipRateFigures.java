@@ -129,12 +129,12 @@ public class SlipRateFigures {
 			mapMaker.plot(dmOutputDir, prefix+"_log", " ");
 			PlotSpec logPlot = mapMaker.buildPlot(" ");
 			
-			HeadlessGraphPanel gp = PlotUtils.initHeadless();
+			HeadlessGraphPanel gp = PlotUtils.initScreenHeadless();
 			
 			gp.drawGraphPanel(List.of(linearPlot, logPlot), false, false, List.of(mapMaker.getXRange()),
 					List.of(mapMaker.getYRange(), mapMaker.getYRange()));
 			
-			PlotUtils.writePlots(dmOutputDir, prefix+"_combined", gp, mapMaker.getDefaultPlotWidth(), true, true, true, false);
+			PlotUtils.writePlots(dmOutputDir, prefix+"_combined", gp, GeographicMapMaker.PLOT_WIDTH_PIXELS_DEFAULT, true, true, true, false);
 		}
 
 		FaultSystemRupSet rupSet = sol.getRupSet();
@@ -660,7 +660,7 @@ public class SlipRateFigures {
 		if (solSlips != null && solParentSlips != null)
 			plot.setLegendInset(RectangleAnchor.TOP_LEFT);
 		
-		HeadlessGraphPanel gp = PlotUtils.initHeadless();
+		HeadlessGraphPanel gp = PlotUtils.initScreenHeadless();
 		
 		plot.setPlotAnnotations(linearAnns);
 		gp.drawGraphPanel(plot, false, false, linearRange, linearRange);

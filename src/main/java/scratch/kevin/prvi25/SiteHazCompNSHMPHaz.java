@@ -197,7 +197,7 @@ public class SiteHazCompNSHMPHaz {
 			PlotSpec plot = new PlotSpec(List.of(theirs, ours), List.of(theirChar, ourChar), name, xName, "Annual Probability of Exceedance");
 			plot.setLegendInset(RectangleAnchor.BOTTOM_LEFT);
 			
-			HeadlessGraphPanel gp = PlotUtils.initHeadless();
+			HeadlessGraphPanel gp = PlotUtils.initScreenHeadless();
 			
 			gp.drawGraphPanel(plot, true, true, xRange, yRange);
 			

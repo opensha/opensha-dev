@@ -323,7 +323,7 @@ public class WestCacheConnectivityFigures {
 				"Incremental Nucleation Rate (/yr)");
 		spec.setPlotAnnotations(anns);
 		spec.setLegendVisible(true);
-		HeadlessGraphPanel gp = PlotUtils.initHeadless();
+		HeadlessGraphPanel gp = PlotUtils.initScreenHeadless();
 		
 		gp.drawGraphPanel(spec, false, true, xRange, yRange);
 		
@@ -384,7 +384,7 @@ public class WestCacheConnectivityFigures {
 		
 		mapMaker.setSectHighlights(highlightSects, new PlotCurveCharacterstics(PlotLineType.SOLID, 6f, Color.BLACK));
 		mapMaker.setSkipNaNs(true);
-		mapMaker.setDefaultPlotWidth(650);
+		mapMaker.setDefaultPlotWidthPixels(650);
 		
 		mapMaker.plotSectScalars(sectMinConnectedMags, magCPT, "Minimum Connected Magnitude");
 		mapMaker.plot(outputDir, "map_min_mag", " ");

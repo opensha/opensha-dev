@@ -178,7 +178,7 @@ class MisfitsVsU3 {
 		
 		Range xRange = new Range(u3Hist.getMinX()-0.5*u3Hist.getDelta(), u3Hist.getMaxX()+0.5*u3Hist.getDelta());
 		
-		HeadlessGraphPanel gp = PlotUtils.initHeadless();
+		HeadlessGraphPanel gp = PlotUtils.initScreenHeadless();
 		
 		gp.setTickLabelFontSize(24);
 		gp.setAxisLabelFontSize(26);

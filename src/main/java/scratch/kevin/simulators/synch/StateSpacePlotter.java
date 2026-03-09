@@ -255,7 +255,7 @@ public class StateSpacePlotter {
 						panel = widget.getGraphPanel();
 					} else {
 						// write plot
-						panel = PlotUtils.initHeadless();
+						panel = PlotUtils.initScreenHeadless();
 						panel.drawGraphPanel(specs, false, false, null, null);
 						panel.getChartPanel().setSize(width, height);
 						File out = new File(outputDir, prefix+"_"+PeriodicityPlotter.getFileSafeString(name1)
@@ -596,7 +596,7 @@ public class StateSpacePlotter {
 					new PlotCurveCharacterstics(PlotLineType.SOLID, 2f, Color.BLACK));
 			PlotSpec marginal1 = new PlotSpec(marginals1, chars, name1+" Marginal "+zLabel, "Years", zLabel);
 			PlotSpec marginal2 = new PlotSpec(marginals2, chars, name2+" Marginal "+zLabel, "Years", zLabel);
-			GraphPanel margGP = new GraphPanel(PlotPreferences.getDefault());
+			GraphPanel margGP = new GraphPanel(PlotPreferences.getDefaultAppPrefs());
 			margGP.drawGraphPanel(marginal1, false, false);
 			extraPlots = Lists.newArrayList(margGP.getPlot());
 			margGP.drawGraphPanel(marginal2, false, false);

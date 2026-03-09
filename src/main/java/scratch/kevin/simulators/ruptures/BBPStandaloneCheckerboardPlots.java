@@ -494,7 +494,7 @@ public class BBPStandaloneCheckerboardPlots {
 		
 		DecimalFormat oDF = new DecimalFormat("0.##");
 		
-		HeadlessGraphPanel gp = PlotUtils.initHeadless();
+		HeadlessGraphPanel gp = PlotUtils.initScreenHeadless();
 		
 		gp.getPlotPrefs().setPlotLabelFontSize(36);
 		gp.getPlotPrefs().setAxisLabelFontSize(28);
@@ -505,8 +505,7 @@ public class BBPStandaloneCheckerboardPlots {
 		CPT magCPT = GMT_CPT_Files.RAINBOW_UNIFORM.instance().rescale(6.5d, 8d);
 		magCPT.setBelowMinColor(magCPT.getMinColor());
 		magCPT.setAboveMaxColor(magCPT.getMaxColor());
-		PaintScaleLegend magSubtitle = GraphPanel.getLegendForCPT(magCPT, "Magnitude", gp.getPlotPrefs().getAxisLabelFontSize(),
-				gp.getPlotPrefs().getTickLabelFontSize(), 0.5, RectangleEdge.LEFT);
+		PaintScaleLegend magSubtitle = GraphPanel.getLegendForCPT(magCPT, "Magnitude", gp.getPlotPrefs(), 0.5, RectangleEdge.LEFT);
 		
 		List<String> lines = new ArrayList<>();
 		

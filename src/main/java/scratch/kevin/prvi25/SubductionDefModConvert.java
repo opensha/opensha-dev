@@ -897,7 +897,7 @@ public class SubductionDefModConvert {
 		yRanges.add(1, new Range(0d, maxY));
 		specWeights.add(1, 10);
 		
-		HeadlessGraphPanel gp = PlotUtils.initHeadless();
+		HeadlessGraphPanel gp = PlotUtils.initScreenHeadless();
 		gp.drawGraphPanel(specs, false, false, List.of(new Range(0d, dasSlipFunc.getMaxX())), yRanges);
 		
 		PlotUtils.setSubPlotWeights(gp, Ints.toArray(specWeights));

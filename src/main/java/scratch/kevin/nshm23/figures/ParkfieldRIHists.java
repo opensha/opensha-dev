@@ -88,7 +88,7 @@ public class ParkfieldRIHists {
 		PlotSpec spec = new PlotSpec(funcs, chars, " ", "Parkfield M~6 Recurrence Interval (yrs)", "Weighted-Fraction");
 		spec.setLegendInset(RectangleAnchor.TOP_RIGHT);
 		
-		HeadlessGraphPanel gp = PlotUtils.initHeadless();
+		HeadlessGraphPanel gp = PlotUtils.initScreenHeadless();
 		
 		gp.setAxisLabelFontSize(26);
 		gp.setTickLabelFontSize(24);

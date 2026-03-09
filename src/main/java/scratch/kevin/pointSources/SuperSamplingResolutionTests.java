@@ -396,7 +396,6 @@ public class SuperSamplingResolutionTests {
 					}
 					if (calc == null) {
 						calc = new HazardCurveCalculator(sourceFilters);
-						calc.setTrackProgress(false);
 					}
 					if (gmm == null)
 						gmm = gmmRef.get();

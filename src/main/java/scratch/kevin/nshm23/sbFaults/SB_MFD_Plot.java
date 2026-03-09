@@ -216,7 +216,7 @@ public class SB_MFD_Plot {
 			PlotSpec plot = new PlotSpec(funcs, chars, nodeTitles.get(n), "Magnitude", "Cumulative Rate (1/yr)");
 			plot.setLegendInset(RectangleAnchor.TOP_RIGHT);
 			
-			HeadlessGraphPanel gp = PlotUtils.initHeadless();
+			HeadlessGraphPanel gp = PlotUtils.initScreenHeadless();
 			
 			gp.drawGraphPanel(plot, false, true, magRange, rateRange);
 			

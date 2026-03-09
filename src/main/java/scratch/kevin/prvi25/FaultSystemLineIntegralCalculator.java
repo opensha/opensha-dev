@@ -669,7 +669,7 @@ public class FaultSystemLineIntegralCalculator {
 			List<LineIntegralResult> integrals, VectorComponent... components) throws IOException {
 		PlotSpec plot = buildIntegralPlot(title, byLatitude, integrals, components);
 		
-		HeadlessGraphPanel gp = PlotUtils.initHeadless();
+		HeadlessGraphPanel gp = PlotUtils.initScreenHeadless();
 		
 		if (components == null || components.length != 1) {
 			// build our own ranges to leave room for the legend
@@ -778,7 +778,7 @@ public class FaultSystemLineIntegralCalculator {
 			yRanges.add(getPlotYRange(integralPlot));
 		}
 
-		HeadlessGraphPanel gp = PlotUtils.initHeadless();
+		HeadlessGraphPanel gp = PlotUtils.initScreenHeadless();
 		
 		gp.drawGraphPanel(specs, false, false, xRanges, yRanges);
 		
@@ -849,7 +849,7 @@ public class FaultSystemLineIntegralCalculator {
 			}
 		}
 
-		HeadlessGraphPanel gp = PlotUtils.initHeadless();
+		HeadlessGraphPanel gp = PlotUtils.initScreenHeadless();
 		
 		gp.drawGraphPanel(specs, false, false, xRanges, yRanges);
 		

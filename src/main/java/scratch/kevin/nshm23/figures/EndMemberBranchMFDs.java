@@ -187,7 +187,7 @@ public class EndMemberBranchMFDs {
 		Range magRage = new Range(6d, 8.5d);
 		Range yRange = new Range(1e-6, 2e0);
 		
-		HeadlessGraphPanel gp = PlotUtils.initHeadless();
+		HeadlessGraphPanel gp = PlotUtils.initScreenHeadless();
 		
 		gp.drawGraphPanel(spec, false, true, magRage, yRange);
 		

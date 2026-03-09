@@ -773,7 +773,7 @@ public class CrustalAndSubductionPageGen {
 			
 			PlotSpec spec = new PlotSpec(funcs, chars, title, "Full Ground Motion (g)", yAxisLabel+" (g)");
 			
-			HeadlessGraphPanel gp = PlotUtils.initHeadless();
+			HeadlessGraphPanel gp = PlotUtils.initScreenHeadless();
 			
 			gp.drawGraphPanel(spec, log, log, range, range);
 			
@@ -943,7 +943,7 @@ public class CrustalAndSubductionPageGen {
 		sdAnn.setTextAnchor(TextAnchor.TOP_RIGHT);
 		spec.addPlotAnnotation(sdAnn);
 		
-		HeadlessGraphPanel gp = PlotUtils.initHeadless();
+		HeadlessGraphPanel gp = PlotUtils.initScreenHeadless();
 		
 		gp.drawGraphPanel(spec, false, false, xRange, yRange);
 		

@@ -91,7 +91,7 @@ public class ComcatMFDPlot {
 		PlotSpec spec = new PlotSpec(funcs, chars, title, "Magnitude", "Event Count");
 		spec.setLegendInset(true);
 		
-		HeadlessGraphPanel gp = PlotUtils.initHeadless();
+		HeadlessGraphPanel gp = PlotUtils.initScreenHeadless();
 		
 		double maxY = cmlMFD.getY(0);
 		

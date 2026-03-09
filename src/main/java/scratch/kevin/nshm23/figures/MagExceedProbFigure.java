@@ -143,7 +143,7 @@ public class MagExceedProbFigure {
 		PlotSpec spec = new PlotSpec(funcs, chars, " ", "Magnitude", "Probability of Exceedance");
 		spec.setLegendInset(true);
 		
-		HeadlessGraphPanel gp = PlotUtils.initHeadless();
+		HeadlessGraphPanel gp = PlotUtils.initScreenHeadless();
 		gp.getPlotPrefs().scaleFontSizes(1.3d);
 		
 		gp.setRenderingOrder(DatasetRenderingOrder.REVERSE);

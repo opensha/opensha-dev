@@ -234,7 +234,7 @@ public class SingleLocSlipRateVarPlot {
 			Range xRange = new Range(0d, windowSize);
 			Range yRange = new Range(0d, Math.ceil(maxFinalSlip/5d)*5d);
 			
-			HeadlessGraphPanel gp = PlotUtils.initHeadless();
+			HeadlessGraphPanel gp = PlotUtils.initScreenHeadless();
 			
 			gp.drawGraphPanel(spec, false, false, xRange, yRange);
 			

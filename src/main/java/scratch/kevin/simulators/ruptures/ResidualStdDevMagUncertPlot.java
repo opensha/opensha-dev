@@ -434,7 +434,7 @@ public class ResidualStdDevMagUncertPlot {
 		Range xRange = new Range(0d, sdFunc.getMaxX());
 		Range yRange = new Range(0d, 1d);
 		
-		HeadlessGraphPanel gp = PlotUtils.initHeadless();
+		HeadlessGraphPanel gp = PlotUtils.initScreenHeadless();
 		
 		gp.drawGraphPanel(spec, false, false, xRange, yRange);
 		

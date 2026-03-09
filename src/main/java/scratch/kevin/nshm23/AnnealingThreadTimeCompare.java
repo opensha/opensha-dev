@@ -322,7 +322,7 @@ public class AnnealingThreadTimeCompare {
 					List<Range> xRanges = List.of(xRange);
 					List<Range> yRanges = List.of(yRange, yRange);
 					
-					HeadlessGraphPanel gp = PlotUtils.initHeadless();
+					HeadlessGraphPanel gp = PlotUtils.initScreenHeadless();
 					
 					gp.drawGraphPanel(specs, false, isSpread, xRanges, yRanges);
 					

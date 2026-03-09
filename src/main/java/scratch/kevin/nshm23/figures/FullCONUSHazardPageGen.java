@@ -1384,7 +1384,7 @@ public class FullCONUSHazardPageGen {
 				PlotSpec scatterSpec = new PlotSpec(funcs, chars, label+" Hazard and "+rateName+" Change Comparison",
 						moLabel+" % Change", label+" Hazard % Change");
 				
-				HeadlessGraphPanel gp = PlotUtils.initHeadless();
+				HeadlessGraphPanel gp = PlotUtils.initScreenHeadless();
 				gp.drawGraphPanel(scatterSpec, false, false, range, range);
 				
 				table.addLine(MarkdownUtils.boldCentered("Scatter Plot"), MarkdownUtils.boldCentered("Hazard Change Comparison"));

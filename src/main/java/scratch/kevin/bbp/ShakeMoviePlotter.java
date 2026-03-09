@@ -238,7 +238,7 @@ public class ShakeMoviePlotter {
 			anns.add(timeAnnotation);
 			spec.setPlotAnnotations(anns);
 			
-			PlotPreferences plotPrefs = PlotPreferences.getDefault();
+			PlotPreferences plotPrefs = PlotPreferences.getDefaultAppPrefs();
 			plotPrefs.setTickLabelFontSize(18);
 			plotPrefs.setAxisLabelFontSize(20);
 			plotPrefs.setPlotLabelFontSize(21);
@@ -276,7 +276,7 @@ public class ShakeMoviePlotter {
 			CPT slipCPT = new CPT(0d, maxSlip, new Color(200, 255, 200, 30), new Color(100, 255, 100, 80),
 					new Color(0, 255, 0, 110), new Color(0, 150, 0, 140));
 			PaintScaleLegend slipCPTbar = GraphPanel.getLegendForCPT(slipCPT, "Slip (m)",
-					plotPrefs.getAxisLabelFontSize(), plotPrefs.getTickLabelFontSize(), 1d, RectangleEdge.BOTTOM);
+					plotPrefs, 1d, RectangleEdge.BOTTOM);
 			
 			int maxDigits = ((numFrames-1)+"").length();
 			

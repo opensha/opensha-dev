@@ -384,7 +384,7 @@ public class ResidualScatterPlot {
 		xyzSpec.setXYChars(chars);
 		xyzSpec.setPlotAnnotations(buildAnnotations());
 		
-		PlotPreferences plotPrefs = PlotPreferences.getDefault();
+		PlotPreferences plotPrefs = PlotPreferences.getDefaultAppPrefs();
 		plotPrefs.setTickLabelFontSize(18);
 		plotPrefs.setAxisLabelFontSize(20);
 		plotPrefs.setPlotLabelFontSize(21);

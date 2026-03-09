@@ -105,7 +105,7 @@ public class ExternalHazardCompPageGen {
 		DiscretizedFunc[] withSub18 = add(fault23, grid23, sub18);
 		
 		GeographicMapMaker mapMaker = new RupSetMapMaker(List.of(), mapReg);
-		mapMaker.setDefaultPlotWidth(1000);
+		mapMaker.setDefaultPlotWidthPixels(1000);
 		
 		Color transparent = new Color(255, 255, 255, 0);
 		

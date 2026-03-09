@@ -24,6 +24,7 @@ import org.opensha.sha.imr.AttenRelRef;
 import org.opensha.sha.imr.ScalarIMR;
 import org.opensha.sha.magdist.GutenbergRichterMagFreqDist;
 import org.opensha.sha.util.FocalMech;
+import org.opensha.sha.util.TectonicRegionType;
 import org.opensha.sra.gui.portfolioeal.Asset;
 import org.opensha.sra.gui.portfolioeal.PortfolioParser;
 import org.opensha.sra.vulnerability.VulnerabilityFetcher;
@@ -96,7 +97,7 @@ public class U3_EAL_ExampleCalc {
 		double duration = 1d;
 		grMFD.setAllButTotMoRate(grMFD.getMinX(), grMFD.getMaxX(), totRate, b);
 		PointSource ptSrc = PointSource.poissonBuilder(srcLoc).truePointSources()
-				.forMFDAndFocalMech(grMFD, FocalMech.STRIKE_SLIP.mechanism).duration(duration).build();
+				.forMFDAndFocalMech(grMFD, FocalMech.STRIKE_SLIP.mechanism, TectonicRegionType.ACTIVE_SHALLOW).duration(duration).build();
 		System.out.println("Simple ERF ruptures:");
 		for (ProbEqkRupture rup : ptSrc)
 			System.out.println("\tM"+(float)rup.getMag()+" with P="+(float)rup.getProbability()+" and rate="+(float)rup.getMeanAnnualRate(duration));

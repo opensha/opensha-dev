@@ -142,7 +142,7 @@ public class LogicTreeMisfitsCompare {
 		
 		PlotSpec spec = new PlotSpec(funcs, chars, title, "Reference "+quantity, "Comparison "+quantity);
 		
-		HeadlessGraphPanel gp = PlotUtils.initHeadless();
+		HeadlessGraphPanel gp = PlotUtils.initScreenHeadless();
 		
 		gp.drawGraphPanel(spec, false, false, range, range);
 		

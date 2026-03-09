@@ -367,7 +367,7 @@ public class ToyVariabilityCalc {
 		PlotSpec spec = new PlotSpec(incrMFDs, chars, "MFD Comparison", "Magnitude", "Incremental Rate (1/yr)");
 		spec.setLegendInset(RectangleAnchor.BOTTOM_LEFT);
 		
-		HeadlessGraphPanel gp = PlotUtils.initHeadless();
+		HeadlessGraphPanel gp = PlotUtils.initScreenHeadless();
 
 		gp.setLegendFontSize(24);
 //		gp.setLegendFontSize(18);

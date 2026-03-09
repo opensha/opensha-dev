@@ -152,7 +152,7 @@ public class StitchedCatalogTransitionsDebug {
 			PlotSpec spec = new PlotSpec(funcs, chars, title, "Δ Time (s)", yAxisLabel);
 			spec.setLegendVisible(true);
 			
-			PlotPreferences plotPrefs = PlotPreferences.getDefault();
+			PlotPreferences plotPrefs = PlotPreferences.getDefaultAppPrefs();
 			plotPrefs.setTickLabelFontSize(18);
 			plotPrefs.setAxisLabelFontSize(20);
 			plotPrefs.setPlotLabelFontSize(21);

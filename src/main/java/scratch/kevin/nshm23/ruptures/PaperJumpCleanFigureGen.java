@@ -116,7 +116,7 @@ public class PaperJumpCleanFigureGen {
 		plotAzimuths(new File("/tmp"), "jump_az_rsqsim", "RSQSim Jump Azimuths", true, rupSetJumpTables.get(1));
 		plotAzimuths(new File("/tmp"), "jump_az_coulomb", "Proposed Model Jump Azimuths", true, rupSetJumpTables.get(2));
 		
-		PlotPreferences prefs = PlotUtils.getDefaultFigurePrefs();
+		PlotPreferences prefs = PlotPreferences.getDefaultScreenFigurePrefs();
 		prefs.setTickLabelFontSize(24);
 		prefs.setAxisLabelFontSize(26);
 		prefs.setLegendFontSize(24);
@@ -138,7 +138,7 @@ public class PaperJumpCleanFigureGen {
 		RupHistogramPlots.plotRuptureHistogram(dir, prefix+"b", valsB, valsA, uniquesA, Color.RED, false, false);
 		
 		prefix = "figure_15";
-		GeographicMapMaker.PLOT_PREFS_DEFAULT = prefs;
+		GeographicMapMaker.PLOT_PREFS_SCREEN_DEFAULT = prefs;
 		SectMaxValuesPlot.plotScalarMaxMapView(rupSets[0], dir, prefix+"a", " ", valsA, valsB,
 				new CaliforniaRegions.RELM_TESTING(), Color.BLUE, false, false);
 		SectMaxValuesPlot.plotScalarMaxMapView(rupSets[2], dir, prefix+"b", " ", valsB, valsA,
@@ -279,7 +279,7 @@ public class PaperJumpCleanFigureGen {
 		funcs.add(newFunc);
 		chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 3f, PlotSymbol.FILLED_SQUARE, 8f, Color.RED.darker()));
 		
-		HeadlessGraphPanel gp = PlotUtils.initHeadless();
+		HeadlessGraphPanel gp = PlotUtils.initScreenHeadless();
 		
 		gp.setLegendFontSize(20);
 		gp.setAxisLabelFontSize(26);

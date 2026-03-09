@@ -137,9 +137,6 @@ public class DistanceMethodsComparePageGen {
 							case R_RUP:
 								dists[j] = mapped.getRuptureSurface().getDistanceRup(siteLoc);
 								break;
-							case R_SEIS:
-								dists[j] = mapped.getRuptureSurface().getDistanceSeis(siteLoc);
-								break;
 
 							default:
 								throw new IllegalStateException("Not yet implemented");
