@@ -172,10 +172,10 @@ public class HardcodedInversionFactoryRunner {
 //			branch.setValue(node);
 //		writeGridProv = true;
 
-		LogicTreeBranch<LogicTreeNode> branch = NSHM26_LogicTree.DEFAULT_GNMI_SUBDUCTION_INTERFACE;
-		dirName += "-gnmi";
-//		LogicTreeBranch<LogicTreeNode> branch = NSHM26_LogicTree.DEFAULT_AMSAM_SUBDUCTION_INTERFACE;
-//		dirName += "-amsam";
+//		LogicTreeBranch<LogicTreeNode> branch = NSHM26_LogicTree.DEFAULT_GNMI_SUBDUCTION_INTERFACE;
+//		dirName += "-gnmi";
+		LogicTreeBranch<LogicTreeNode> branch = NSHM26_LogicTree.DEFAULT_AMSAM_SUBDUCTION_INTERFACE;
+		dirName += "-amsam";
 		
 		branch.setValue(PRVI25_SubductionBValues.B_1p0);
 
