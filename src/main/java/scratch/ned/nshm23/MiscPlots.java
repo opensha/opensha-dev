@@ -34,7 +34,7 @@ import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_Scalin
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_ScalingRelationships_StableContinental;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.util.NSHM23_RegionLoader.AnalysisRegions;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.util.NSHM23_RegionLoader.SeismicityRegions;
-import org.opensha.sha.faultSurface.OldCompoundSurface;
+import org.opensha.sha.faultSurface.CompoundSurface;
 import org.opensha.sha.faultSurface.FaultSection;
 import org.opensha.sha.faultSurface.RuptureSurface;
 import org.opensha.sha.magdist.GutenbergRichterMagFreqDist;
@@ -921,7 +921,7 @@ public class MiscPlots {
 					}
 				}
 				else {	// it's a CompoundSurface
-					OldCompoundSurface compSurf = (OldCompoundSurface) surf;
+					CompoundSurface compSurf = (CompoundSurface) surf;
 					List<? extends RuptureSurface> surfList = compSurf.getSurfaceList();
 					double ptRate = equivRate/surfList.size();
 					for(RuptureSurface surface: surfList) {

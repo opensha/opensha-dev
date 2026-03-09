@@ -15,7 +15,7 @@ import org.opensha.sha.earthquake.observedEarthquake.ObsEqkRupList;
 import org.opensha.sha.earthquake.observedEarthquake.ObsEqkRupture;
 import org.opensha.sha.earthquake.observedEarthquake.parsers.UCERF3_CatalogParser;
 import org.opensha.sha.earthquake.observedEarthquake.parsers.ngaWest.NGAWestParser;
-import org.opensha.sha.faultSurface.OldCompoundSurface;
+import org.opensha.sha.faultSurface.CompoundSurface;
 import org.opensha.sha.faultSurface.EvenlyGriddedSurface;
 import org.opensha.sha.faultSurface.RuptureSurface;
 
@@ -30,8 +30,8 @@ public class CatalogWriter {
 	protected static void writeFiniteSurfaceFile(RuptureSurface rupSurf, File file, double distCutoff) throws IOException {
 		ArrayList<RuptureSurface> surfs = new ArrayList<RuptureSurface>();
 		
-		if (rupSurf instanceof OldCompoundSurface) 
-			surfs.addAll(((OldCompoundSurface)rupSurf).getSurfaceList());
+		if (rupSurf instanceof CompoundSurface) 
+			surfs.addAll(((CompoundSurface)rupSurf).getSurfaceList());
 		else
 			surfs.add(rupSurf);
 		

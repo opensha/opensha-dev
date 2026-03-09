@@ -24,7 +24,7 @@ import org.opensha.refFaultParamDb.vo.FaultSectionPrefData;
 import org.opensha.sha.calc.ScenarioShakeMapCalculator;
 import org.opensha.sha.earthquake.ProbEqkRupture;
 import org.opensha.sha.earthquake.faultSysSolution.FaultSystemSolution;
-import org.opensha.sha.faultSurface.OldCompoundSurface;
+import org.opensha.sha.faultSurface.CompoundSurface;
 import org.opensha.sha.faultSurface.EvenlyGriddedSurface;
 import org.opensha.sha.faultSurface.FaultSection;
 import org.opensha.sha.faultSurface.RuptureSurface;
@@ -213,7 +213,7 @@ public class JorgeShakeMapCalc {
 				map.setCustomScaleMin((double)myCPT.getMinValue());
 				map.setCustomScaleMax((double)myCPT.getMaxValue());
 				map.setCustomLabel(label);
-				OldCompoundSurface surf = (OldCompoundSurface)rup.getRuptureSurface();
+				CompoundSurface surf = (CompoundSurface)rup.getRuptureSurface();
 				for (RuptureSurface gridSurf : surf.getSurfaceList())
 					GMT_MapGeneratorForShakeMaps.addRupture(map, (EvenlyGriddedSurface)gridSurf, rup.getHypocenterLocation(),
 							GMT_MapGeneratorForShakeMaps.RUP_PLOT_PARAM_PERIMETER);

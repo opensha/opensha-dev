@@ -20,9 +20,8 @@ import org.opensha.commons.gui.plot.PlotSymbol;
 import org.opensha.sha.earthquake.faultSysSolution.FaultSystemRupSet;
 import org.opensha.sha.earthquake.faultSysSolution.FaultSystemSolution;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.util.NSHM23_RegionLoader;
-import org.opensha.sha.faultSurface.OldCompoundSurface;
+import org.opensha.sha.faultSurface.CompoundSurface;
 import org.opensha.sha.faultSurface.FaultSection;
-import org.opensha.sha.faultSurface.NewCompoundSurface;
 import org.opensha.sha.faultSurface.RuptureSurface;
 import org.opensha.sha.faultSurface.cache.SurfaceCachingPolicy;
 import org.opensha.sha.faultSurface.cache.SurfaceDistances;
@@ -48,8 +47,8 @@ public class NewCompoundSurfaceComparisons {
 		
 		System.out.println("Have "+sitesGrid.getNodeCount()+" sites");
 		
-		OldCompoundSurface[] origSurfs = new OldCompoundSurface[rupSet.getNumRuptures()];
-		NewCompoundSurface[] newSurfs = new NewCompoundSurface[rupSet.getNumRuptures()];
+		CompoundSurface[] origSurfs = new CompoundSurface[rupSet.getNumRuptures()];
+		CompoundSurface[] newSurfs = new CompoundSurface[rupSet.getNumRuptures()];
 		
 		File outputDir = new File("/tmp/compound_surf_test");
 		Preconditions.checkState(outputDir.exists() || outputDir.mkdir());
@@ -61,25 +60,18 @@ public class NewCompoundSurfaceComparisons {
 			if (r < 10000 && r % 1000 == 0 || r % 10000 == 0)
 				System.out.println("Processing rupture "+r);
 			RuptureSurface surf = rupSet.getSurfaceForRupture(r, 1d);
-			OldCompoundSurface origSurf;
-			NewCompoundSurface newSurf;
-			if (surf instanceof OldCompoundSurface) {
-				origSurf = (OldCompoundSurface)surf;
-				newSurf = new NewCompoundSurface.Simple(origSurf.getSurfaceList(), rupSet.getFaultSectionDataForRupture(r));
-			} else if (surf instanceof NewCompoundSurface) {
-				newSurf = (NewCompoundSurface)surf;
-				origSurf = new OldCompoundSurface(newSurf.getSurfaceList());
-			} else {
-				throw new IllegalStateException("Unexpected surface type: "+surf.getClass());
-			}
+			Preconditions.checkState(surf instanceof CompoundSurface);
+			
+			newSurfs[r] = (CompoundSurface)surf;
+			origSurfs[r] = new CompoundSurface.Simple(newSurfs[r].getSurfaceList()); // retains original ordering
 			
 			if (numDebug < maxNumDebug) {
-				if (!LocationUtils.areSimilar(origSurf.getFirstLocOnUpperEdge(), newSurf.getFirstLocOnUpperEdge())
-						|| !LocationUtils.areSimilar(origSurf.getLastLocOnUpperEdge(), newSurf.getLastLocOnUpperEdge())
-						|| !LocationUtils.areSimilar(origSurf.getFirstLocOnLowerEdge(), newSurf.getFirstLocOnLowerEdge())
-						|| !LocationUtils.areSimilar(origSurf.getLastLocOnLowerEdge(), newSurf.getLastLocOnLowerEdge())) {
+				if (!LocationUtils.areSimilar(origSurfs[r].getFirstLocOnUpperEdge(), newSurfs[r].getFirstLocOnUpperEdge())
+						|| !LocationUtils.areSimilar(origSurfs[r].getLastLocOnUpperEdge(), newSurfs[r].getLastLocOnUpperEdge())
+						|| !LocationUtils.areSimilar(origSurfs[r].getFirstLocOnLowerEdge(), newSurfs[r].getFirstLocOnLowerEdge())
+						|| !LocationUtils.areSimilar(origSurfs[r].getLastLocOnLowerEdge(), newSurfs[r].getLastLocOnLowerEdge())) {
 					System.out.println("Ordering mismatch for "+r);
-					debugSurf(outputDir, rupSet, r, origSurf, newSurf);
+					debugSurf(outputDir, rupSet, r, origSurfs[r], newSurfs[r]);
 					numDebug++;
 					if (numDebug == maxNumDebug) {
 						System.out.println("Bailing after "+numDebug+" debugs");
@@ -87,8 +79,8 @@ public class NewCompoundSurfaceComparisons {
 				}
 			}
 			
-			origSurfs[r] = origSurf;
-			newSurfs[r] = newSurf;
+			origSurfs[r] = origSurfs[r];
+			newSurfs[r] = newSurfs[r];
 		}
 		
 		System.out.println("DONE building");
@@ -123,7 +115,7 @@ public class NewCompoundSurfaceComparisons {
 	}
 	
 	private static void debugSurf(File outputDir, FaultSystemRupSet rupSet, int rupIndex,
-			OldCompoundSurface origSurf, NewCompoundSurface newSurf) throws IOException {
+			CompoundSurface origSurf, CompoundSurface newSurf) throws IOException {
 		List<FaultSection> sects = rupSet.getFaultSectionDataForRupture(rupIndex);
 		GeographicMapMaker mapMaker = new GeographicMapMaker(sects);
 		mapMaker.setWriteGeoJSON(false);

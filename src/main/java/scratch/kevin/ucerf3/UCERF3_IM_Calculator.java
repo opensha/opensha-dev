@@ -28,7 +28,7 @@ import org.opensha.sha.earthquake.faultSysSolution.erf.BaseFaultSystemSolutionER
 import org.opensha.sha.earthquake.faultSysSolution.modules.GridSourceProvider;
 import org.opensha.sha.earthquake.param.IncludeBackgroundOption;
 import org.opensha.sha.earthquake.param.IncludeBackgroundParam;
-import org.opensha.sha.faultSurface.OldCompoundSurface;
+import org.opensha.sha.faultSurface.CompoundSurface;
 import org.opensha.sha.faultSurface.FaultTrace;
 import org.opensha.sha.faultSurface.RuptureSurface;
 import org.opensha.sha.imr.AttenRelRef;
@@ -324,10 +324,10 @@ public class UCERF3_IM_Calculator {
 	}
 	
 	private RuptureSurface closestSubSurf(RuptureSurface surf, Location loc) {
-		if (surf instanceof OldCompoundSurface) {
+		if (surf instanceof CompoundSurface) {
 			double minDist = Double.POSITIVE_INFINITY;
 			RuptureSurface closest = null;
-			for (RuptureSurface subSurf : ((OldCompoundSurface)surf).getSurfaceList()) {
+			for (RuptureSurface subSurf : ((CompoundSurface)surf).getSurfaceList()) {
 				double dist = subSurf.getDistanceRup(loc);
 				if (dist < minDist) {
 					minDist = dist;

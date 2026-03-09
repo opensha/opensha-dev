@@ -9,7 +9,7 @@ import org.opensha.commons.geo.LocationList;
 import org.opensha.commons.geo.LocationUtils;
 import org.opensha.sha.earthquake.ProbEqkRupture;
 import org.opensha.sha.earthquake.ProbEqkSource;
-import org.opensha.sha.faultSurface.OldCompoundSurface;
+import org.opensha.sha.faultSurface.CompoundSurface;
 import org.opensha.sha.faultSurface.RuptureSurface;
 
 import gov.usgs.earthquake.nshmp.Maths;
@@ -149,7 +149,7 @@ public abstract class NshmSource extends ProbEqkSource {
           delegate.rate(),
           weight,
           duration,
-          new OldCompoundSurface(surfaces));
+          CompoundSurface.get(surfaces));
     }
 
     @Override

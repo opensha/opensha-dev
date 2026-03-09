@@ -61,7 +61,7 @@ import org.opensha.sha.earthquake.rupForecastImpl.nshm23.util.NSHM23_RegionLoade
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.util.NSHM23_RegionLoader.NSHM23_BaseRegion;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.util.NSHM23_RegionLoader.SeismicityRegions;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.util.NSHM23_RegionLoader.StitchedRegions;
-import org.opensha.sha.faultSurface.OldCompoundSurface;
+import org.opensha.sha.faultSurface.CompoundSurface;
 import org.opensha.sha.faultSurface.RuptureSurface;
 import org.opensha.sha.magdist.IncrementalMagFreqDist;
 import org.opensha.sha.util.TectonicRegionType;
@@ -943,8 +943,8 @@ class Regional_MFD_Plots {
 				RuptureSurface surf = rup.getRuptureSurface();
 				int[] countsInside = new int[regions.length];
 				int count = 0;
-				if (surf instanceof OldCompoundSurface) {
-					for (RuptureSurface subSurf : ((OldCompoundSurface)surf).getSurfaceList()) {
+				if (surf instanceof CompoundSurface) {
+					for (RuptureSurface subSurf : ((CompoundSurface)surf).getSurfaceList()) {
 						SurfInRegionsResult cached = subSurfInsideCache.get(subSurf);
 						if (cached == null) {
 							int subCount = 0;

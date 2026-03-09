@@ -14,7 +14,7 @@ import org.opensha.commons.geo.LocationUtils;
 import org.opensha.commons.geo.Region;
 import org.opensha.refFaultParamDb.vo.FaultSectionPrefData;
 import org.opensha.sha.earthquake.faultSysSolution.FaultSystemRupSet;
-import org.opensha.sha.faultSurface.OldCompoundSurface;
+import org.opensha.sha.faultSurface.CompoundSurface;
 import org.opensha.sha.faultSurface.FaultSection;
 import org.opensha.sha.faultSurface.RuptureSurface;
 
@@ -132,7 +132,7 @@ public class MapStorageCalcs {
 							if (surfs.size() == 1)
 								compound = surfs.get(0);
 							else
-								compound = new OldCompoundSurface(surfs);
+								compound = CompoundSurface.get(surfs);
 							LocationList trace = compound.getEvenlyDiscritizedUpperEdge();
 							// this can have duplicates in it, remove those
 							for (int p=trace.size(); --p>0;) {

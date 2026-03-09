@@ -11,7 +11,7 @@ import org.opensha.commons.geo.LocationUtils;
 import org.opensha.commons.geo.LocationVector;
 import org.opensha.sha.earthquake.observedEarthquake.parsers.ngaWest.NGAWestParser;
 import org.opensha.sha.faultSurface.ApproxEvenlyGriddedSurface;
-import org.opensha.sha.faultSurface.OldCompoundSurface;
+import org.opensha.sha.faultSurface.CompoundSurface;
 import org.opensha.sha.faultSurface.EvenlyGriddedSurface;
 import org.opensha.sha.faultSurface.FaultTrace;
 import org.opensha.sha.faultSurface.GriddedSubsetSurface;
@@ -200,7 +200,7 @@ public class QuadToEvenlyGridded {
 				}
 				surfs.add(gridded);
 			} else {
-				for (RuptureSurface rupSurf : ((OldCompoundSurface)surf).getSurfaceList()) {
+				for (RuptureSurface rupSurf : ((CompoundSurface)surf).getSurfaceList()) {
 					EvenlyGriddedSurface gridded = (EvenlyGriddedSurface)rupSurf;
 					if (gridded.getNumCols() < 2 || gridded.getNumRows() < 2) {
 						System.out.println("Weird size: "+gridded.getNumRows()+"x"+gridded.getNumCols());
