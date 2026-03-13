@@ -32,8 +32,8 @@ import org.opensha.commons.logicTree.BranchWeightProvider;
 import org.opensha.commons.logicTree.LogicTree;
 import org.opensha.commons.logicTree.LogicTreeBranch;
 import org.opensha.commons.logicTree.LogicTreeLevel;
-import org.opensha.commons.logicTree.LogicTreeLevel.RandomlySampledLevel;
-import org.opensha.commons.logicTree.LogicTreeNode.RandomlySampledNode;
+import org.opensha.commons.logicTree.LogicTreeLevel.RandomlyGeneratedLevel;
+import org.opensha.commons.logicTree.LogicTreeNode.RandomlyGeneratedNode;
 import org.opensha.commons.logicTree.LogicTreeNode;
 import org.opensha.commons.util.ClassUtils;
 import org.opensha.sha.earthquake.faultSysSolution.RupSetFaultModel;
@@ -166,7 +166,7 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 		
 		AttenRelRef[] gmpes = null;
 		
-		List<RandomlySampledLevel<?>> individualRandomLevels = new ArrayList<>();
+		List<RandomlyGeneratedLevel<?>> individualRandomLevels = new ArrayList<>();
 		int samplingBranchCountMultiplier = 1;
 
 		String dirName = new SimpleDateFormat("yyyy_MM_dd").format(new Date());
@@ -797,8 +797,8 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 			int numBranches = logicTree.size()*samplingBranchCountMultiplier;
 			System.out.println("\tnumBranches = "+logicTree.size()+" x "+samplingBranchCountMultiplier+" = "+numBranches);
 			
-			List<List<? extends RandomlySampledNode>> levelNodes = new ArrayList<>();
-			for (RandomlySampledLevel<?> level : individualRandomLevels) {
+			List<List<? extends RandomlyGeneratedNode>> levelNodes = new ArrayList<>();
+			for (RandomlyGeneratedLevel<?> level : individualRandomLevels) {
 				level.buildNodes(rand, numBranches, 1d);
 				levelNodes.add(level.getNodes());
 			}
@@ -811,7 +811,7 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 					for (LogicTreeNode val : branch)
 						modValues.add(val);
 					int randIndex = modBranches.size();
-					for (List<? extends RandomlySampledNode> randNodes : levelNodes)
+					for (List<? extends RandomlyGeneratedNode> randNodes : levelNodes)
 						modValues.add(randNodes.get(randIndex));
 					LogicTreeBranch<LogicTreeNode> modBranch = new LogicTreeBranch<>(modLevels, modValues);
 					modBranch.setOrigBranchWeight(branch.getOrigBranchWeight());

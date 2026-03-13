@@ -31,7 +31,7 @@ import org.opensha.commons.logicTree.LogicTreeLevel;
 import org.opensha.commons.logicTree.LogicTreeNode;
 import org.opensha.commons.logicTree.LogicTreeLevel.FileBackedLevel;
 import org.opensha.commons.logicTree.LogicTreeNode.FileBackedNode;
-import org.opensha.commons.logicTree.LogicTreeNode.RandomlySampledNode;
+import org.opensha.commons.logicTree.LogicTreeNode.RandomlyGeneratedNode;
 import org.opensha.commons.util.DataUtils.MinMaxAveTracker;
 import org.opensha.commons.util.io.archive.ArchiveOutput;
 import org.opensha.sha.earthquake.faultSysSolution.FaultSystemRupSet;
@@ -513,13 +513,8 @@ public class GriddedRateDistributionSolutionWriter {
 	@Affects(MFDGridSourceProvider.ARCHIVE_SUB_SEIS_FILE_NAME)
 	@Affects(MFDGridSourceProvider.ARCHIVE_UNASSOCIATED_FILE_NAME)
 	@Affects(GridSourceList.ARCHIVE_GRID_SOURCES_FILE_NAME)
-	private static class CrustalSamplingNode implements RandomlySampledNode {
+	private static class CrustalSamplingNode extends RandomlyGeneratedNode {
 
-		private String name;
-		private String shortName;
-		private String prefix;
-		private double weight;
-		private long seed;
 		private double rate;
 		private double b;
 
@@ -528,53 +523,14 @@ public class GriddedRateDistributionSolutionWriter {
 		}
 		
 		private CrustalSamplingNode(String name, String shortName, String prefix, double weight, long seed, double rate, double b) {
-			super();
-			this.name = name;
-			this.shortName = shortName;
-			this.prefix = prefix;
-			this.weight = weight;
-			this.seed = seed;
+			super(name, shortName, prefix, weight, seed);
 			this.rate = rate;
 			this.b = b;
-		}
-
-		@Override
-		public double getNodeWeight(LogicTreeBranch<?> fullBranch) {
-			return weight;
-		}
-
-		@Override
-		public String getFilePrefix() {
-			return prefix;
-		}
-
-		@Override
-		public String getShortName() {
-			return shortName;
-		}
-
-		@Override
-		public String getName() {
-			return name;
-		}
-
-		@Override
-		public long getSeed() {
-			return seed;
-		}
-
-		@Override
-		public void init(String name, String shortName, String prefix, double weight, long seed) {
-			this.name = name;
-			this.shortName = shortName;
-			this.prefix = prefix;
-			this.weight = weight;
-			this.seed = seed;
 		}
 		
 	}
 	
-	private static class CrustalRateSamplingLevel extends LogicTreeLevel.RandomlySampledLevel<CrustalSamplingNode> {
+	private static class CrustalRateSamplingLevel extends LogicTreeLevel.RandomlyGeneratedLevel<CrustalSamplingNode> {
 		
 		private List<double[]> samples;
 		private List<double[]> randomizedSamples;
@@ -602,13 +558,28 @@ public class GriddedRateDistributionSolutionWriter {
 				Collections.shuffle(randomizedSamples, new Random(seed));
 			}
 			double[] sample = randomizedSamples.get(index);
-			return new CrustalSamplingNode("Crustal Sample "+index, "Crustal-Sample"+index, "crustal_sample_"+index, weight, seed,
+			return new CrustalSamplingNode(getNodeName(index), getNodeShortName(index), getNodeFilePrefix(index), weight, seed,
 					sample[0], sample[1]);
 		}
 
 		@Override
 		public Class<? extends CrustalSamplingNode> getType() {
 			return CrustalSamplingNode.class;
+		}
+
+		@Override
+		protected String getNodeNamePrefix() {
+			return "Crustal Sample ";
+		}
+
+		@Override
+		protected String getNodeShortNamePrefix() {
+			return "Crustal-Sample";
+		}
+
+		@Override
+		protected String getNodeFilePrefix() {
+			return "crustal_sample_";
 		}
 		
 	}
@@ -623,13 +594,7 @@ public class GriddedRateDistributionSolutionWriter {
 	@Affects(MFDGridSourceProvider.ARCHIVE_SUB_SEIS_FILE_NAME)
 	@Affects(MFDGridSourceProvider.ARCHIVE_UNASSOCIATED_FILE_NAME)
 	@Affects(GridSourceList.ARCHIVE_GRID_SOURCES_FILE_NAME)
-	private static class CarSlabSamplingNode implements RandomlySampledNode {
-
-		private String name;
-		private String shortName;
-		private String prefix;
-		private double weight;
-		private long seed;
+	private static class CarSlabSamplingNode extends RandomlyGeneratedNode {
 		private double slabRate;
 		private double slabB;
 		private double interfaceRate;
@@ -637,60 +602,21 @@ public class GriddedRateDistributionSolutionWriter {
 
 
 		private CarSlabSamplingNode() {
-			
+			super();
 		}
 		
 		private CarSlabSamplingNode(String name, String shortName, String prefix, double weight, long seed,
 				double slabRate, double slabB, double interfaceRate, double interfaceB) {
-			super();
-			this.name = name;
-			this.shortName = shortName;
-			this.prefix = prefix;
-			this.weight = weight;
-			this.seed = seed;
+			super(name, shortName, prefix, weight, seed);
 			this.slabRate = slabRate;
 			this.slabB = slabB;
 			this.interfaceRate = interfaceRate;
 			this.interfaceB = interfaceB;
 		}
-
-		@Override
-		public double getNodeWeight(LogicTreeBranch<?> fullBranch) {
-			return weight;
-		}
-
-		@Override
-		public String getFilePrefix() {
-			return prefix;
-		}
-
-		@Override
-		public String getShortName() {
-			return shortName;
-		}
-
-		@Override
-		public String getName() {
-			return name;
-		}
-
-		@Override
-		public long getSeed() {
-			return seed;
-		}
-
-		@Override
-		public void init(String name, String shortName, String prefix, double weight, long seed) {
-			this.name = name;
-			this.shortName = shortName;
-			this.prefix = prefix;
-			this.weight = weight;
-			this.seed = seed;
-		}
 		
 	}
 	
-	private static class CarSlabRateSamplingLevel extends LogicTreeLevel.RandomlySampledLevel<CarSlabSamplingNode> {
+	private static class CarSlabRateSamplingLevel extends LogicTreeLevel.RandomlyGeneratedLevel<CarSlabSamplingNode> {
 
 		private List<double[]> slabSamples;
 		private List<double[]> interfaceSamples;
@@ -727,13 +653,28 @@ public class GriddedRateDistributionSolutionWriter {
 			int randIndex = randomizedIndexes.get(index);
 			double[] slabSample = slabSamples.get(randIndex);
 			double[] interfaceSample = interfaceSamples.get(randIndex);
-			return new CarSlabSamplingNode("CAR Sample "+index, "CAR-Sample"+index, "car_sample_"+index, weight, seed,
+			return new CarSlabSamplingNode(getNodeName(index), getNodeShortName(index), getNodeFilePrefix(index), weight, seed,
 					slabSample[0], slabSample[1], interfaceSample[0], interfaceSample[1]);
 		}
 
 		@Override
 		public Class<? extends CarSlabSamplingNode> getType() {
 			return CarSlabSamplingNode.class;
+		}
+
+		@Override
+		protected String getNodeNamePrefix() {
+			return "CAR Sample ";
+		}
+
+		@Override
+		protected String getNodeShortNamePrefix() {
+			return "CAR-Sample";
+		}
+
+		@Override
+		protected String getNodeFilePrefix() {
+			return "car_sample_";
 		}
 		
 	}
@@ -748,13 +689,8 @@ public class GriddedRateDistributionSolutionWriter {
 	@Affects(MFDGridSourceProvider.ARCHIVE_SUB_SEIS_FILE_NAME)
 	@Affects(MFDGridSourceProvider.ARCHIVE_UNASSOCIATED_FILE_NAME)
 	@Affects(GridSourceList.ARCHIVE_GRID_SOURCES_FILE_NAME)
-	private static class MueSamplingNode implements RandomlySampledNode {
-
-		private String name;
-		private String shortName;
-		private String prefix;
-		private double weight;
-		private long seed;
+	private static class MueSamplingNode extends RandomlyGeneratedNode {
+		
 		private double slabRate;
 		private double slabB;
 		private double interfaceRate;
@@ -766,55 +702,16 @@ public class GriddedRateDistributionSolutionWriter {
 		
 		private MueSamplingNode(String name, String shortName, String prefix, double weight, long seed,
 				double slabRate, double slabB, double interfaceRate, double interfaceB) {
-			super();
-			this.name = name;
-			this.shortName = shortName;
-			this.prefix = prefix;
-			this.weight = weight;
-			this.seed = seed;
+			super(name, shortName, prefix, weight, seed);
 			this.slabRate = slabRate;
 			this.slabB = slabB;
 			this.interfaceRate = interfaceRate;
 			this.interfaceB = interfaceB;
 		}
-
-		@Override
-		public double getNodeWeight(LogicTreeBranch<?> fullBranch) {
-			return weight;
-		}
-
-		@Override
-		public String getFilePrefix() {
-			return prefix;
-		}
-
-		@Override
-		public String getShortName() {
-			return shortName;
-		}
-
-		@Override
-		public String getName() {
-			return name;
-		}
-
-		@Override
-		public long getSeed() {
-			return seed;
-		}
-
-		@Override
-		public void init(String name, String shortName, String prefix, double weight, long seed) {
-			this.name = name;
-			this.shortName = shortName;
-			this.prefix = prefix;
-			this.weight = weight;
-			this.seed = seed;
-		}
 		
 	}
 	
-	private static class MueRateSamplingLevel extends LogicTreeLevel.RandomlySampledLevel<MueSamplingNode> {
+	private static class MueRateSamplingLevel extends LogicTreeLevel.RandomlyGeneratedLevel<MueSamplingNode> {
 
 		private List<double[]> slabSamples;
 		private List<double[]> interfaceSamples;
@@ -851,13 +748,28 @@ public class GriddedRateDistributionSolutionWriter {
 			int randIndex = randomizedIndexes.get(index);
 			double[] slabSample = slabSamples.get(randIndex);
 			double[] interfaceSample = interfaceSamples.get(randIndex);
-			return new MueSamplingNode("MUE Sample "+index, "MUE-Sample"+index, "mue_sample_"+index, weight, seed,
+			return new MueSamplingNode(getNodeName(index), getNodeShortName(index), getNodeFilePrefix(index), weight, seed,
 					slabSample[0], slabSample[1], interfaceSample[0], interfaceSample[1]);
 		}
 
 		@Override
 		public Class<? extends MueSamplingNode> getType() {
 			return MueSamplingNode.class;
+		}
+
+		@Override
+		protected String getNodeNamePrefix() {
+			return "MUE Sample ";
+		}
+
+		@Override
+		protected String getNodeShortNamePrefix() {
+			return "MUE-Sample";
+		}
+
+		@Override
+		protected String getNodeFilePrefix() {
+			return "mue_sample_";
 		}
 		
 	}

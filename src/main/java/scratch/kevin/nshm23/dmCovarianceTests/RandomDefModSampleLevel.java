@@ -2,9 +2,9 @@ package scratch.kevin.nshm23.dmCovarianceTests;
 
 import java.util.Random;
 
-import org.opensha.commons.logicTree.LogicTreeLevel.RandomlySampledLevel;
+import org.opensha.commons.logicTree.LogicTreeLevel.RandomlyGeneratedLevel;
 
-public class RandomDefModSampleLevel extends RandomlySampledLevel<RandomDefModSampleNode> {
+public class RandomDefModSampleLevel extends RandomlyGeneratedLevel<RandomDefModSampleNode> {
 	
 	public RandomDefModSampleLevel() {
 		
@@ -30,12 +30,27 @@ public class RandomDefModSampleLevel extends RandomlySampledLevel<RandomDefModSa
 
 	@Override
 	public RandomDefModSampleNode buildNodeInstance(int index, long seed, double weight) {
-		return new RandomDefModSampleNode(index, seed, weight);
+		return new RandomDefModSampleNode(getNodeName(index), getNodeShortName(index), getNodeFilePrefix(index), weight, seed);
 	}
 
 	@Override
 	public Class<? extends RandomDefModSampleNode> getType() {
 		return RandomDefModSampleNode.class;
+	}
+
+	@Override
+	protected String getNodeNamePrefix() {
+		return "Deformation Model Sample ";
+	}
+
+	@Override
+	protected String getNodeShortNamePrefix() {
+		return "DMSample";
+	}
+
+	@Override
+	protected String getNodeFilePrefix() {
+		return "DMSample";
 	}
 
 }

@@ -10,7 +10,7 @@ import java.util.List;
 import org.opensha.commons.logicTree.LogicTreeBranch;
 import org.opensha.commons.logicTree.LogicTreeLevel;
 import org.opensha.commons.logicTree.LogicTreeNode;
-import org.opensha.commons.logicTree.LogicTreeNode.RandomlySampledNode;
+import org.opensha.commons.logicTree.LogicTreeNode.RandomlyGeneratedNode;
 import org.opensha.commons.util.modules.OpenSHA_Module;
 import org.opensha.sha.earthquake.faultSysSolution.FaultSystemRupSet;
 import org.opensha.sha.earthquake.faultSysSolution.FaultSystemSolution;
@@ -350,7 +350,7 @@ public class HardcodedInversionFactoryRunner {
 		for (int i=0; i<branch.size(); i++) {
 			LogicTreeNode node = branch.getValue(i);
 			if (node != null) {
-				if (!(node instanceof RandomlySampledNode) && node.getNodeWeight(branch) > 0d) {
+				if (!(node instanceof RandomlyGeneratedNode) && node.getNodeWeight(branch) > 0d) {
 					// only include its name if there are other alternatives (unless we have chosen a zero-weight option)
 					boolean hasOthers = false;
 					for (LogicTreeNode oNode : branch.getLevel(i).getNodes()) {

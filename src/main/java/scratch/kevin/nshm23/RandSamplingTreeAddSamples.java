@@ -14,9 +14,9 @@ import java.util.Random;
 import org.opensha.commons.logicTree.LogicTree;
 import org.opensha.commons.logicTree.LogicTreeBranch;
 import org.opensha.commons.logicTree.LogicTreeLevel;
-import org.opensha.commons.logicTree.LogicTreeLevel.RandomlySampledLevel;
+import org.opensha.commons.logicTree.LogicTreeLevel.RandomlyGeneratedLevel;
 import org.opensha.commons.logicTree.LogicTreeNode;
-import org.opensha.commons.logicTree.LogicTreeNode.RandomlySampledNode;
+import org.opensha.commons.logicTree.LogicTreeNode.RandomlyGeneratedNode;
 import org.opensha.commons.util.ExceptionUtils;
 
 import com.google.common.base.Preconditions;
@@ -44,17 +44,17 @@ public class RandSamplingTreeAddSamples {
 		Random rand = new Random(987654321l);
 		
 		int numLevels = origTree.getLevels().size();
-		List<LinkedList<RandomlySampledNode>> randNodeStacks = new ArrayList<>();
+		List<LinkedList<RandomlyGeneratedNode>> randNodeStacks = new ArrayList<>();
 		for (int l=0; l<numLevels; l++) {
 			LogicTreeLevel<?> sourceLevel = origTree.getLevels().get(l);
-			if (sourceLevel instanceof RandomlySampledLevel<?>) {
+			if (sourceLevel instanceof RandomlyGeneratedLevel<?>) {
 				System.out.println("Building node list for "+sourceLevel.getName());
 				HashSet<Long> prevSeeds = new HashSet<>(newSize);
 				List<Long> seeds = new ArrayList<>();
 				// add the original nodes
 				for (LogicTreeNode sourceNode : sourceLevel.getNodes()) {
-					Preconditions.checkState(sourceNode instanceof RandomlySampledNode);
-					RandomlySampledNode randNode = (RandomlySampledNode)sourceNode;
+					Preconditions.checkState(sourceNode instanceof RandomlyGeneratedNode);
+					RandomlyGeneratedNode randNode = (RandomlyGeneratedNode)sourceNode;
 					Preconditions.checkState(!prevSeeds.contains(randNode.getSeed()));
 					prevSeeds.add(randNode.getSeed());
 					seeds.add(randNode.getSeed());
@@ -67,9 +67,9 @@ public class RandSamplingTreeAddSamples {
 					seeds.add(seed);
 				}
 				try {
-					Constructor<? extends RandomlySampledLevel> constructor = ((RandomlySampledLevel<?>)sourceLevel).getClass().getConstructor();
+					Constructor<? extends RandomlyGeneratedLevel> constructor = ((RandomlyGeneratedLevel<?>)sourceLevel).getClass().getConstructor();
 					constructor.setAccessible(true);
-					RandomlySampledLevel<?> modLevel = constructor.newInstance();
+					RandomlyGeneratedLevel<?> modLevel = constructor.newInstance();
 					modLevel.buildNodes(seeds, 1d);
 					modLevels.add(modLevel);
 					randNodeStacks.add(new LinkedList<>(modLevel.getNodes()));
@@ -93,10 +93,10 @@ public class RandSamplingTreeAddSamples {
 				LogicTreeBranch<LogicTreeNode> modBranch = new LogicTreeBranch<>(modLevels);
 				for (int l=0; l<numLevels; l++) {
 					LogicTreeNode node = origBranch.getValue(l);
-					if (node instanceof RandomlySampledNode) {
-						RandomlySampledNode stackNode = randNodeStacks.get(l).removeFirst();
+					if (node instanceof RandomlyGeneratedNode) {
+						RandomlyGeneratedNode stackNode = randNodeStacks.get(l).removeFirst();
 						if (round == 0) {
-							Preconditions.checkState(stackNode.getSeed() == ((RandomlySampledNode)node).getSeed());
+							Preconditions.checkState(stackNode.getSeed() == ((RandomlyGeneratedNode)node).getSeed());
 							Preconditions.checkState(stackNode.getFilePrefix().equals(node.getFilePrefix()));
 						}
 						modBranch.setValue(l, stackNode);

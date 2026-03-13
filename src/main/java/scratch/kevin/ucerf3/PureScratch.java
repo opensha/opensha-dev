@@ -83,9 +83,9 @@ import org.opensha.commons.logicTree.BranchWeightProvider;
 import org.opensha.commons.logicTree.LogicTree;
 import org.opensha.commons.logicTree.LogicTreeBranch;
 import org.opensha.commons.logicTree.LogicTreeLevel;
-import org.opensha.commons.logicTree.LogicTreeLevel.RandomlySampledLevel;
+import org.opensha.commons.logicTree.LogicTreeLevel.RandomlyGeneratedLevel;
 import org.opensha.commons.logicTree.LogicTreeNode;
-import org.opensha.commons.logicTree.LogicTreeNode.RandomlySampledNode;
+import org.opensha.commons.logicTree.LogicTreeNode.RandomlyGeneratedNode;
 import org.opensha.commons.mapping.PoliticalBoundariesData;
 import org.opensha.commons.mapping.gmt.elements.GMT_CPT_Files;
 import org.opensha.commons.param.Parameter;
@@ -712,10 +712,10 @@ public class PureScratch {
 				System.out.println("\t\tAffected: "+level.getAffected());
 				System.out.println("\t\tNot affected: "+level.getNotAffected());
 			}
-			if (level instanceof RandomlySampledLevel<?>) {
+			if (level instanceof RandomlyGeneratedLevel<?>) {
 				System.out.println("\tIt's a random level: "+level.getName());
-				RandomlySampledLevel<? extends RandomlySampledNode> randLevel = (RandomlySampledLevel<?>)level;
-				List<? extends RandomlySampledNode> nodes = randLevel.getNodes();
+				RandomlyGeneratedLevel<? extends RandomlyGeneratedNode> randLevel = (RandomlyGeneratedLevel<?>)level;
+				List<? extends RandomlyGeneratedNode> nodes = randLevel.getNodes();
 				System.out.println("\t\tNode count: "+nodes.size());
 				System.out.println("\t\tNode 0:\tseed="+nodes.get(0).getSeed()+"; weight="+nodes.get(0).getNodeWeight(null));
 				int lastIndex = nodes.size()-1;
@@ -729,8 +729,8 @@ public class PureScratch {
 			LogicTreeBranch<?> branch = tree.getBranch(index);
 			System.out.println("Branch "+index+": "+branch);
 			for (LogicTreeNode val : branch) {
-				if (val instanceof RandomlySampledNode) {
-					RandomlySampledNode randNode = (RandomlySampledNode)val;
+				if (val instanceof RandomlyGeneratedNode) {
+					RandomlyGeneratedNode randNode = (RandomlyGeneratedNode)val;
 					System.out.println("\t"+val.getName()+":\t"+randNode.getSeed()+"; weight="+(float)randNode.getNodeWeight(null));
 				}
 				
