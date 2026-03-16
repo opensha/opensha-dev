@@ -380,6 +380,20 @@ public class LongTermTD_2026_Analyses {
 //		generateRenewalModelPlots(true);
 //		generateRenewalModelPlots(false);
 		
+		// This tests expm1 and log1p
+		for(double i=-16;i<=0;i++) {
+			double expt = Math.pow(10, i);
+			double prob = 1-Math.exp(-expt);
+			double expt2 = -Math.log(1-prob);
+			System.out.println(i+"\t"+expt+"\t"+prob+"\t"+expt2+"\t"+(expt2/expt));
+		}
+		for(double i=-16;i<=0;i++) {
+			double expt = Math.pow(10, i);
+			double prob = -Math.expm1(-expt);
+			double expt2 = -Math.log1p(-prob);
+			System.out.println(i+"\t"+expt+"\t"+prob+"\t"+expt2+"\t"+(expt2/expt));
+		}
+		System.exit(0);
 		
 //		// second term does not add anything
 //		double v1=0.9999999999997521;
