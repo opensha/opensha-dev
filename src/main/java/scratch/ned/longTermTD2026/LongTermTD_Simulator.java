@@ -1204,8 +1204,8 @@ public class LongTermTD_Simulator {
 				dateOfLastForSect[s]= Long.MIN_VALUE;
 
 		// this is to track progress
-		int percDoneThresh=0;
-		int percDoneIncrement=5;
+		double percDoneThresh=0;
+		double percDoneIncrement=5;
 
 		long startRunTime = System.currentTimeMillis();	
 		if(verbose) System.out.println("Starting simulation loop");
@@ -1217,10 +1217,9 @@ public class LongTermTD_Simulator {
 
 		
 		while (currentYear<numYears+origStartYear) {
-			
 			// write progress
 			if(verbose) {
-				int percDone = (int)Math.round(100*(currentYear-origStartYear)/numYears);
+				double percDone = 100d*(currentYear-origStartYear)/numYears;
 				if(percDone >= percDoneThresh) {
 					double timeInMin = ((double)(System.currentTimeMillis()-startRunTime)/(1000.0*60.0));
 					int numGoodDateOfLast=0;
@@ -1229,7 +1228,7 @@ public class LongTermTD_Simulator {
 							numGoodDateOfLast+=1;					
 					}
 					int percentGood = (int)Math.round((100.0*(double)numGoodDateOfLast/(double)dateOfLastForSect.length));
-					System.out.println("\n"+percDoneThresh+"% done in "+(float)timeInMin+" minutes"+"; yr="+(float)currentYear+";  % sect with date of last = "+percentGood);	
+					System.out.println("\n"+(float)percDoneThresh+"% done in "+(float)timeInMin+" minutes"+"; yr="+(float)currentYear+";  % sect with date of last = "+percentGood);	
 					System.out.println("\tFraction of sections that ruptured: "+ (double)numSectThatRuptured/(double)numSections+"\n");
 			
 					percDoneThresh += percDoneIncrement;
@@ -1546,6 +1545,10 @@ public class LongTermTD_Simulator {
 		
 		// this is for storing section normalized RIs
 		ArrayList<Double> normalizedSectRecurIntervals = new ArrayList<Double>();
+		ArrayList<Double> normalizedSubductionSectRIs = new ArrayList<Double>();
+		RupSetTectonicRegimes tectonicRegimes = fltSysRupSet.getModule(RupSetTectonicRegimes.class);
+		if(tectonicRegimes==null)
+			throw new RuntimeException("RupSetTectonicRegimes cannot be null");
 
 		// Norm RIs at paleo sites
 		PaleoseismicConstraintData paleoDataMod = erf.getSolution().getRupSet().getModule(PaleoseismicConstraintData.class);
@@ -1643,7 +1646,7 @@ public class LongTermTD_Simulator {
 				dateOfLastForSect[s]= Long.MIN_VALUE;
 
 		long startRunTime = System.currentTimeMillis();	
-		if(verbose) System.out.println("Starting simulation loop");
+		if(verbose) System.out.println("Starting rupture loop");
 		
 		int numSectThatRuptured = 0;
 		int numSimulatedRups=0;
@@ -1728,6 +1731,8 @@ public class LongTermTD_Simulator {
 					if(timeOfLastMillis != Long.MIN_VALUE) {
 						double normYrsSinceLast = ((eventTimeMillis-timeOfLastMillis)/MILLISEC_PER_YEAR)*longTermPartRateForSectArray[sect];
 						normalizedSectRecurIntervals.add(normYrsSinceLast);
+						if(tectonicRegimes.get(fltSystRupIndex) == TectonicRegionType.SUBDUCTION_INTERFACE)
+							normalizedSubductionSectRIs.add(normYrsSinceLast);
 						double normDistAlong = ((double)ithSectInRup+0.5)/(double)numSectInRup;
 						sumRI_AlongHist.add(normDistAlong, normYrsSinceLast);
 						numRI_AlongHist.add(normDistAlong, 1.0);
@@ -1867,9 +1872,6 @@ public class LongTermTD_Simulator {
 		}
 		// normalize RIs for subduction zone events
 		ArrayList<Double> subductionNormRupRIs = new ArrayList<Double>();
-		RupSetTectonicRegimes tectonicRegimes = fltSysRupSet.getModule(RupSetTectonicRegimes.class);
-		if(tectonicRegimes==null)
-			throw new RuntimeException("RupSetTectonicRegimes cannot be null");
 
 		for(int e=0;e<normRI_ForEventList.size();e++) {
 			double normRI = normRI_ForEventList.get(e);
@@ -1894,7 +1896,7 @@ public class LongTermTD_Simulator {
 
 		// for subduction zones
 		infoString += ProbModelsPlottingUtils.writeNormalizedDistPlotWithFits(subductionNormRupRIs, aper, 
-				plotsDir, "Subduction Norm Rup RIs", "normalizedRupRecurIntervalsForSubductionZones");		
+				plotsDir, "Subduction Norm Rup RIs", "normalizedRupRecurIntervals_SubductionZones");		
 		
 		// now mag-dep:
 		if(numAperValues >1) {
@@ -1909,7 +1911,11 @@ public class LongTermTD_Simulator {
 		// make normalized section recurrence interval plots
 		aper=Double.NaN;
 		infoString += ProbModelsPlottingUtils.writeNormalizedDistPlotWithFits(normalizedSectRecurIntervals, aper, 
-				plotsDir, "Normalized Section RIs", "normalizedSectRecurIntervals");		
+				plotsDir, "Normalized Section RIs", "normalizedSectRecurIntervals");	
+		// now for subduction zones
+		infoString += ProbModelsPlottingUtils.writeNormalizedDistPlotWithFits(normalizedSubductionSectRIs, aper, 
+				plotsDir, "Subduction Norm Section RIs", "normalizedSectRIs_SubductionZones");	
+
 		// now mag-dep:
 		//			if(numAperValues >1) {
 		//				for(int i=0;i<numAperValues;i++) {
@@ -1922,6 +1928,9 @@ public class LongTermTD_Simulator {
 		// make normalized section hazard rate  plots
 		ProbModelsPlottingUtils.writeNormalizedDistHazardRatePlotWithFits(normalizedSectRecurIntervals, 
 				plotsDir, "Normalized Section Hazard Rate", "normalizedSectHazardRate");
+		// Subduction
+		ProbModelsPlottingUtils.writeNormalizedDistHazardRatePlotWithFits(normalizedSubductionSectRIs, 
+				plotsDir, "Subduction Section Hazard Rate", "normalizedSectHazardRate_SubductionZones");
 		
 		// paleo sites norm RIs
 //		paleoPlotsDir
@@ -1947,7 +1956,8 @@ public class LongTermTD_Simulator {
 		}			
 
 		// plot long-term rate versus time
-		ProbModelsPlottingUtils.writeSimExpRateVsTime(nthRupAtEpochMap,totExpRateAtEventTimeList,
+		if(numYears<1e5)
+			ProbModelsPlottingUtils.writeSimExpRateVsTime(nthRupAtEpochMap,totExpRateAtEventTimeList,
 				totalLongTermRate, plotsDir);
 
 

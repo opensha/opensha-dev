@@ -225,7 +225,7 @@ public class LongTermTD2026_AnalysesOLD {
 			u3ProbModel.setAperiodicityModelChoice(AperiodicityModels.UCERF3_MIDDLE);
 			
 			if(matchU3_Calcs) {  // diescretizations in old ProbabilityModelCalc to match U3
-				u3ProbModel.setProbDistsDiscretization(9, 18001, false);
+				u3ProbModel.setProbDistsDiscretization(9, 18001, false); 
 				u3ProbModel.setIntegrationNormCDFsDiscretization(5d, 501);				
 			}
 			
@@ -298,6 +298,7 @@ public class LongTermTD2026_AnalysesOLD {
 		headerString += "fractRupAreaWithDateOfLast,";
 		headerString += "aper,";
 		headerString += "numSubsectForRup,";
+		headerString += "extrapolated,";
 
 
 //		double minRatio = Double.MAX_VALUE;
@@ -1053,23 +1054,23 @@ public class LongTermTD2026_AnalysesOLD {
 		File tdMainDir = new File("/Users/field/markdown/nshm23_time_dependence_"+dateString);
 
 		try {
-			TimeDependentReportPageGen.generatePage(new File(tdMainDir, "allDOLE_fullParent"), sol, PaleoMappingAlgorithm.FULL_PARENT, DataToInclude.ALL_DATA);
+			TimeDependentReportPageGen.generateOldPage(new File(tdMainDir, "allDOLE_fullParent"), sol, PaleoMappingAlgorithm.FULL_PARENT, DataToInclude.ALL_DATA);
 
 			// recreating solution to avoid propagating previous DOLE settings
 //			sol = FaultSystemSolution.load(new File(full_FSS_fileName));
-			TimeDependentReportPageGen.generatePage(new File(tdMainDir, "allDOLE_neighbors"), sol, PaleoMappingAlgorithm.NEIGHBORING_SECTS, DataToInclude.ALL_DATA);
+			TimeDependentReportPageGen.generateOldPage(new File(tdMainDir, "allDOLE_neighbors"), sol, PaleoMappingAlgorithm.NEIGHBORING_SECTS, DataToInclude.ALL_DATA);
 
 //			sol = FaultSystemSolution.load(new File(full_FSS_fileName));
-			TimeDependentReportPageGen.generatePage(new File(tdMainDir, "forDebugging_onlyPaleoDOLE_nearestSubsect"), sol, PaleoMappingAlgorithm.CLOSEST_SECT, DataToInclude.PALEO_ONLY);
+			TimeDependentReportPageGen.generateOldPage(new File(tdMainDir, "forDebugging_onlyPaleoDOLE_nearestSubsect"), sol, PaleoMappingAlgorithm.CLOSEST_SECT, DataToInclude.PALEO_ONLY);
 			
 //			sol = FaultSystemSolution.load(new File(full_FSS_fileName));
-			TimeDependentReportPageGen.generatePage(new File(tdMainDir, "onlyHistoricRupDOLE"), sol, PaleoMappingAlgorithm.NEIGHBORING_SECTS, DataToInclude.HIST_RUPS_ONLY);
+			TimeDependentReportPageGen.generateOldPage(new File(tdMainDir, "onlyHistoricRupDOLE"), sol, PaleoMappingAlgorithm.NEIGHBORING_SECTS, DataToInclude.HIST_RUPS_ONLY);
 
 //			sol = FaultSystemSolution.load(new File(full_FSS_fileName));
-			TimeDependentReportPageGen.generatePage(new File(tdMainDir, "onlyPaleoDOLE_fullParent"), sol, PaleoMappingAlgorithm.FULL_PARENT, DataToInclude.PALEO_ONLY);
+			TimeDependentReportPageGen.generateOldPage(new File(tdMainDir, "onlyPaleoDOLE_fullParent"), sol, PaleoMappingAlgorithm.FULL_PARENT, DataToInclude.PALEO_ONLY);
 
 //			sol = FaultSystemSolution.load(new File(full_FSS_fileName));
-			TimeDependentReportPageGen.generatePage(new File(tdMainDir, "onlyPaleoDOLE_neighbors"), sol, PaleoMappingAlgorithm.NEIGHBORING_SECTS, DataToInclude.PALEO_ONLY);
+			TimeDependentReportPageGen.generateOldPage(new File(tdMainDir, "onlyPaleoDOLE_neighbors"), sol, PaleoMappingAlgorithm.NEIGHBORING_SECTS, DataToInclude.PALEO_ONLY);
 
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
