@@ -646,7 +646,7 @@ public class DoAnaylysis {
 	public static U3FaultSystemSolution getClassicFSS(FaultSectionPrefData faultData, double ddw,
 			GutenbergRichterMagFreqDist grMFD, GaussianMagFreqDist charMFD, Ellsworth_B_WG02_MagAreaRel ellB_magArea) {
 		
-		ArrayList<FaultSectionPrefData> faultSectionDataList = faultData.getSubSectionsList(ddw/2.0+0.01); // add a bit to get the correct number of subsections
+		List<FaultSectionPrefData> faultSectionDataList = faultData.getSubSectionsList(ddw/2.0+0.01); // add a bit to get the correct number of subsections
 		
 //		System.out.println(faultSectionDataList.get(0).toString());
 //		System.exit(0);
@@ -799,7 +799,7 @@ public class DoAnaylysis {
 			mfdSigma.scale(0.1); // uncertainty is 10%
 		}
 		
-		ArrayList<FaultSectionPrefData> faultSectionDataList = faultData.getSubSectionsList(ddw/NUM_SUBSECT_PER_RUP+0.01); // add a bit to get the correct number of subsections
+		List<FaultSectionPrefData> faultSectionDataList = faultData.getSubSectionsList(ddw/NUM_SUBSECT_PER_RUP+0.01); // add a bit to get the correct number of subsections
 		
 		// set all the section ids and compute length
 		double lengthSum = 0;

@@ -491,7 +491,7 @@ public class RSQSimSectBundledERF extends AbstractERF {
 		if (rupSurfs.size() == 1)
 			surf = rupSurfs.get(0);
 		else
-			surf = new CompoundSurface(rupSurfs);
+			surf = CompoundSurface.get(rupSurfs);
 		return surf;
 	}
 	
@@ -756,7 +756,7 @@ public class RSQSimSectBundledERF extends AbstractERF {
 				if (surfs.size() == 1)
 					compound = surfs.get(0);
 				else
-					compound = new CompoundSurface(surfs);
+					compound = CompoundSurface.get(surfs);
 				LocationList trace = compound.getEvenlyDiscritizedUpperEdge();
 				// this can have duplicates in it, remove those
 				for (int p=trace.size(); --p>0;) {

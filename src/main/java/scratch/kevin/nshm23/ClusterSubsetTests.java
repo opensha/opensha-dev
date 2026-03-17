@@ -94,7 +94,7 @@ public class ClusterSubsetTests {
 					.forScalingRelationship(scale).build();
 			if (plausibility != null)
 				rupSet.addModule(plausibility);
-			rupSet.addModule(ClusterRuptures.singleStranged(rupSet));
+			rupSet.addModule(ClusterRuptures.singleStranded(rupSet));
 		} else {
 			rupSet = ClusterRuptureBuilder.buildClusterRupSet(scale, rupSet.getFaultSectionDataList(), plausibility, cRups.getAll());
 		}

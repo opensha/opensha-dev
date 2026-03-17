@@ -116,7 +116,7 @@ public class CoulombFileParser {
 		if (surfs.size() == 1)
 			return surfs.get(0);
 		
-		return new CompoundSurface(surfs);
+		return CompoundSurface.get(surfs);
 	}
 	
 	private static Location getRelativeLocation(Location origin, double xOffset, double yOffset) {

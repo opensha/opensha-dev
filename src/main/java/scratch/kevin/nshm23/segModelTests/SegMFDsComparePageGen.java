@@ -331,7 +331,7 @@ public class SegMFDsComparePageGen {
 		}
 		
 		if (!rupSet.hasModule(ClusterRuptures.class))
-			rupSet.addModule(ClusterRuptures.singleStranged(rupSet));
+			rupSet.addModule(ClusterRuptures.singleStranded(rupSet));
 		ClusterRuptures cRups = rupSet.requireModule(ClusterRuptures.class);
 		
 		SolutionSlipRates primarySolSlips = primarySol.getModule(SolutionSlipRates.class);

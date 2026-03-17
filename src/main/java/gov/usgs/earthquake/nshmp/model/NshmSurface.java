@@ -121,6 +121,20 @@ public class NshmSurface implements CacheEnabledSurface {
 				.getLastLocOnUpperEdge());
 	}
 
+	@Override
+	public Location getFirstLocOnLowerEdge() {
+		// this will only be asked for by OpenSHA CompoundSurface
+		gov.usgs.earthquake.nshmp.fault.surface.GriddedSurface gridDelegate = (gov.usgs.earthquake.nshmp.fault.surface.GriddedSurface) delegate;
+		return NshmUtil.toOpenShaLocation(gridDelegate.getLocation(gridDelegate.getNumRows()-1, 0));
+	}
+
+	@Override
+	public Location getLastLocOnLowerEdge() {
+		// this will only be asked for by OpenSHA CompoundSurface
+		gov.usgs.earthquake.nshmp.fault.surface.GriddedSurface gridDelegate = (gov.usgs.earthquake.nshmp.fault.surface.GriddedSurface) delegate;
+		return NshmUtil.toOpenShaLocation(gridDelegate.getLocation(gridDelegate.getNumRows()-1, gridDelegate.getNumCols()-1));
+	}
+
 	// Caching
 
 	@Override
