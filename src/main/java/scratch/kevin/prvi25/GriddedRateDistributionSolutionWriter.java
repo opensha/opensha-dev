@@ -149,15 +149,15 @@ public class GriddedRateDistributionSolutionWriter {
 		fullRandLevels.add(crustalSmoothingLevel);
 		fullRandLevels.add(PRVI25_LogicTree.MMAX_OFF);
 		CrustalRateSamplingLevel crustalSampler = new CrustalRateSamplingLevel(crustalPairs);
-		crustalSampler.buildNodes(rand, numTotalSamples);
+		crustalSampler.build(rand.nextLong(), numTotalSamples);
 		fullRandLevels.add(crustalSampler);
 		fullRandLevels.add(interfaceDeclusterLevel);
 		fullRandLevels.add(interfaceSmoothingLevel);
 		fullRandLevels.add(PRVI25_LogicTree.SUB_SCALE);
 		CarSlabRateSamplingLevel carSampler = new CarSlabRateSamplingLevel(carSlabPairs, carInterfacePairs);
-		carSampler.buildNodes(rand, numTotalSamples);
+		carSampler.build(rand.nextLong(), numTotalSamples);
 		MueRateSamplingLevel mueSampler = new MueRateSamplingLevel(mueSlabPairs, mueInterfacePairs);
-		mueSampler.buildNodes(rand, numTotalSamples);
+		mueSampler.build(rand.nextLong(), numTotalSamples);
 		fullRandLevels.add(carSampler);
 		fullRandLevels.add(mueSampler);
 		List<LogicTreeLevel<? extends LogicTreeNode>> threeBranchLevels = new ArrayList<>();

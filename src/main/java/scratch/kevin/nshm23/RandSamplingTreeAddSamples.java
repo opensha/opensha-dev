@@ -70,9 +70,10 @@ public class RandSamplingTreeAddSamples {
 					Constructor<? extends RandomlyGeneratedLevel> constructor = ((RandomlyGeneratedLevel<?>)sourceLevel).getClass().getConstructor();
 					constructor.setAccessible(true);
 					RandomlyGeneratedLevel<?> modLevel = constructor.newInstance();
-					modLevel.buildNodes(seeds, 1d);
+//					modLevel.buildNodes(seeds, 1d); // TODO
 					modLevels.add(modLevel);
 					randNodeStacks.add(new LinkedList<>(modLevel.getNodes()));
+					throw new IllegalStateException("Not implemented");
 				} catch (InstantiationException | IllegalAccessException | IllegalArgumentException
 						| InvocationTargetException | NoSuchMethodException | SecurityException e) {
 					throw ExceptionUtils.asRuntimeException(e);

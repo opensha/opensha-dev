@@ -799,7 +799,7 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 			
 			List<List<? extends RandomlyGeneratedNode>> levelNodes = new ArrayList<>();
 			for (RandomlyGeneratedLevel<?> level : individualRandomLevels) {
-				level.buildNodes(rand, numBranches, 1d);
+				level.build(rand.nextLong(), numBranches);
 				levelNodes.add(level.getNodes());
 			}
 			

@@ -11,11 +11,11 @@ public class RandomDefModSampleLevel extends RandomlyGeneratedLevel<RandomDefMod
 	}
 	
 	public RandomDefModSampleLevel(int numSamples) {
-		this(numSamples, new Random());
+		this(numSamples, new Random().nextLong());
 	}
 	
-	public RandomDefModSampleLevel(int numSamples, Random r) {
-		buildNodes(r, numSamples);
+	public RandomDefModSampleLevel(int numSamples, long seed) {
+		build(seed, numSamples);
 	}
 
 	@Override
