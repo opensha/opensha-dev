@@ -542,7 +542,7 @@ public class MultifaultSeparatePageGen {
 			
 			PlotSpec spec = new PlotSpec(funcs, chars, title, "Full Ground Motion (g)", yAxisLabel+" (g)");
 			
-			HeadlessGraphPanel gp = PlotUtils.initHeadless();
+			HeadlessGraphPanel gp = PlotUtils.initScreenHeadless();
 			
 			gp.drawGraphPanel(spec, log, log, range, range);
 			
@@ -582,7 +582,7 @@ public class MultifaultSeparatePageGen {
 		
 		PlotSpec spec = new PlotSpec(funcs, chars, title, "Log Residual vs Full Simulated GM (g)", "Count");
 		
-		HeadlessGraphPanel gp = PlotUtils.initHeadless();
+		HeadlessGraphPanel gp = PlotUtils.initScreenHeadless();
 		
 		title += ", " + (Double.isFinite(period) ? oDF.format(period)+"s SA" : "All Periods");
 		

@@ -28,8 +28,8 @@ import org.opensha.commons.geo.Region;
 import org.opensha.commons.util.ComparablePairing;
 import org.opensha.commons.util.DataUtils.MinMaxAveTracker;
 import org.opensha.sha.calc.HazardCurveCalculator;
-import org.opensha.sha.calc.params.filters.SourceFilterManager;
-import org.opensha.sha.calc.params.filters.SourceFilters;
+import org.opensha.sha.calc.sourceFilters.SourceFilterManager;
+import org.opensha.sha.calc.sourceFilters.SourceFilters;
 import org.opensha.sha.earthquake.faultSysSolution.FaultSystemSolution;
 import org.opensha.sha.earthquake.faultSysSolution.modules.GridSourceList;
 import org.opensha.sha.earthquake.faultSysSolution.util.FaultSysTools;
@@ -396,7 +396,6 @@ public class SuperSamplingResolutionTests {
 					}
 					if (calc == null) {
 						calc = new HazardCurveCalculator(sourceFilters);
-						calc.setTrackProgress(false);
 					}
 					if (gmm == null)
 						gmm = gmmRef.get();

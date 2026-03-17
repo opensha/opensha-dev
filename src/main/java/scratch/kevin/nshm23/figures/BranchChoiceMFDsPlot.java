@@ -171,7 +171,7 @@ class BranchChoiceMFDsPlot {
 			PlotSpec cmlSpec = new PlotSpec(cmlFuncs, cmlChars, " ", "Magnitude", "Cumulative Rate (/yr)");
 			cmlSpec.setLegendInset(RectangleAnchor.BOTTOM_LEFT);
 			
-			HeadlessGraphPanel gp = PlotUtils.initHeadless();
+			HeadlessGraphPanel gp = PlotUtils.initScreenHeadless();
 			
 			gp.setPlotLabelFontSize(26);
 			gp.setAxisLabelFontSize(28);

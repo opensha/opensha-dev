@@ -143,7 +143,7 @@ class SupraBValFigure {
 			cmlChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 3f, PlotSymbol.FILLED_CIRCLE, 4f, Color.BLACK));
 		}
 		
-		HeadlessGraphPanel gp = PlotUtils.initHeadless();
+		HeadlessGraphPanel gp = PlotUtils.initScreenHeadless();
 		
 		gp.setTickLabelFontSize(22);
 		gp.setAxisLabelFontSize(26);

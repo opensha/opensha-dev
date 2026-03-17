@@ -14,6 +14,7 @@ import org.opensha.commons.geo.Region;
 import org.opensha.commons.gui.plot.GeographicMapMaker;
 import org.opensha.commons.gui.plot.PlotCurveCharacterstics;
 import org.opensha.commons.gui.plot.PlotLineType;
+import org.opensha.commons.gui.plot.PlotPreferences;
 import org.opensha.commons.gui.plot.PlotUtils;
 import org.opensha.commons.util.cpt.CPT;
 import org.opensha.sha.simulators.RSQSimEvent;
@@ -108,11 +109,15 @@ public class RSQSimGeographicMapMaker extends GeographicMapMaker {
 	}
 
 	@Override
-	protected PlotBuilder initPlotBuilder() {
-		return new RSQSimPlotBuilder();
+	protected PlotBuilder initPlotBuilder(boolean printSizing) {
+		return new RSQSimPlotBuilder(printSizing ? printPrefs : screenPrefs);
 	}
 	
 	protected class RSQSimPlotBuilder extends PlotBuilder {
+
+		public RSQSimPlotBuilder(PlotPreferences plotPrefs) {
+			super(plotPrefs);
+		}
 
 		@Override
 		protected void plotFirst() {
@@ -159,7 +164,7 @@ public class RSQSimGeographicMapMaker extends GeographicMapMaker {
 						}
 					}
 					if (elemScalarLabel != null)
-						cptLegend.add(buildCPTLegend(elemCPT, elemScalarLabel));
+						cptLegend.add(buildCPTLegend(elemCPT, elemScalarLabel, plotPrefs));
 				} else {
 					// constant color
 					if (elemFillColor != null) {

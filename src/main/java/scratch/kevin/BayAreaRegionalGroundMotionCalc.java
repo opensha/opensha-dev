@@ -52,9 +52,9 @@ import org.opensha.commons.util.cpt.CPT;
 import org.opensha.commons.util.io.archive.ArchiveOutput;
 import org.opensha.commons.util.io.archive.ArchiveOutput.ParallelZipFileOutput;
 import org.opensha.sha.calc.HazardCurveCalculator;
-import org.opensha.sha.calc.params.filters.FixedDistanceCutoffFilter;
-import org.opensha.sha.calc.params.filters.SourceFilterManager;
-import org.opensha.sha.calc.params.filters.SourceFilters;
+import org.opensha.sha.calc.sourceFilters.FixedDistanceCutoffFilter;
+import org.opensha.sha.calc.sourceFilters.SourceFilterManager;
+import org.opensha.sha.calc.sourceFilters.SourceFilters;
 import org.opensha.sha.earthquake.AbstractERF;
 import org.opensha.sha.earthquake.DistCachedERFWrapper;
 import org.opensha.sha.earthquake.DistCachedERFWrapper.DistCacheWrapperRupture;
@@ -338,8 +338,8 @@ public class BayAreaRegionalGroundMotionCalc {
 							new GridCellSuperSamplingPoissonPointSourceData(data, center, gridCell, regionalSupersampling);
 					PoissonPointSourceData sampledData = samplingData.getForDistance(minDist);
 					if (sampledData != data) {
-						source = new PoissonPointSource(center, source.getTectonicRegionType(),
-								pointSource.getDuration(), sampledData, pointSource.getDistCorrs());
+						source = new PoissonPointSource(center,
+								pointSource.getDuration(), sampledData, pointSource.getDistCorr(), gridSettings.pointSourceMagnitudeCutoff);
 						numSupersampled++;
 //						System.out.println("Supersampling with minDist="+(float)minDist);
 //					} else if (minDist < 50d){
@@ -577,7 +577,7 @@ public class BayAreaRegionalGroundMotionCalc {
 					Preconditions.checkNotNull(surf, "Didn't find it");
 				} else {
 //					surf = new PointSurface(lat, lon, depth);
-					surf = new PointSurface(lat, lon, 0d);
+					surf = new PointSurface(new Location(lat, lon, 0d));
 					((PointSurface)surf).setAveDip(90d);
 				}
 				ProbEqkRupture rup = new ProbEqkRupture(mag, rake, probEach, surf, loc);
@@ -780,7 +780,7 @@ public class BayAreaRegionalGroundMotionCalc {
 							new PlotCurveCharacterstics(PlotLineType.SOLID, 3f, Colors.tab_orange)),
 					" ", perLabel, "Annual Exceedance Rate (1/yr)");
 			epiPlot.setLegendVisible(true);
-			HeadlessGraphPanel gp = PlotUtils.initHeadless();
+			HeadlessGraphPanel gp = PlotUtils.initScreenHeadless();
 			gp.drawGraphPanel(epiPlot, false, true, new Range(0d, 1d), new Range(1e-3, 1e1));
 			PlotUtils.writePlots(outputDir, epiPrefix, gp, 800, 750, true, true, false);
 		}

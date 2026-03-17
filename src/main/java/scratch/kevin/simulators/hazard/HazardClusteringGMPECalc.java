@@ -353,7 +353,7 @@ public class HazardClusteringGMPECalc {
 				
 				String prefix = name.replaceAll(" ", "_")+"_"+lenStr;
 				
-				PlotPreferences plotPrefs = PlotPreferences.getDefault();
+				PlotPreferences plotPrefs = PlotPreferences.getDefaultAppPrefs();
 				plotPrefs.setTickLabelFontSize(18);
 				plotPrefs.setAxisLabelFontSize(20);
 				plotPrefs.setPlotLabelFontSize(21);
@@ -489,7 +489,7 @@ public class HazardClusteringGMPECalc {
 					PlotSpec spec = new PlotSpec(funcs, chars, title, "Count", "Num Sub-Catalogs");
 					spec.setLegendVisible(true);
 					
-					PlotPreferences plotPrefs = PlotPreferences.getDefault();
+					PlotPreferences plotPrefs = PlotPreferences.getDefaultAppPrefs();
 					plotPrefs.setTickLabelFontSize(18);
 					plotPrefs.setAxisLabelFontSize(20);
 					plotPrefs.setPlotLabelFontSize(21);
@@ -594,7 +594,7 @@ public class HazardClusteringGMPECalc {
 			
 			String prefix = name.replaceAll(" ", "_")+"_rp_func";
 			
-			PlotPreferences plotPrefs = PlotPreferences.getDefault();
+			PlotPreferences plotPrefs = PlotPreferences.getDefaultAppPrefs();
 			plotPrefs.setTickLabelFontSize(18);
 			plotPrefs.setAxisLabelFontSize(20);
 			plotPrefs.setPlotLabelFontSize(21);

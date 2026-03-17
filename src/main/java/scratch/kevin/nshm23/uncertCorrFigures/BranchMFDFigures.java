@@ -396,7 +396,7 @@ public class BranchMFDFigures {
 			PlotSpec spec = new PlotSpec(funcs, chars, title, "Magnitude", "Cumulative Rate (1/yr)");
 			spec.setLegendInset(RectangleAnchor.BOTTOM_LEFT);
 			
-			HeadlessGraphPanel gp = PlotUtils.initHeadless();
+			HeadlessGraphPanel gp = PlotUtils.initScreenHeadless();
 			
 			gp.getPlotPrefs().scaleFontSizes(1.25);
 			

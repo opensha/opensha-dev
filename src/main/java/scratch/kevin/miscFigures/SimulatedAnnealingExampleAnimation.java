@@ -374,7 +374,7 @@ public class SimulatedAnnealingExampleAnimation {
 		int energyHeight = height/2;
 		int energyWidth = width/2;
 		
-		HeadlessGraphPanel gp = PlotUtils.initHeadless();
+		HeadlessGraphPanel gp = PlotUtils.initScreenHeadless();
 		
 		gp.drawGraphPanel(slipPlot, false, false, slipXRange, slipYRange);
 		gp.getChartPanel().setSize(slipWidth, slipHeight);

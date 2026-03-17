@@ -209,7 +209,7 @@ public class RotatedRupVelModelScenarioComparePageGen {
 			PlotSpec spec = new PlotSpec(funcs, chars, "Full Velocity Profiles", "Velocity (km/s)", "Depth (km)");
 			spec.setLegendVisible(true);
 			
-			PlotPreferences plotPrefs = PlotPreferences.getDefault();
+			PlotPreferences plotPrefs = PlotPreferences.getDefaultAppPrefs();
 			plotPrefs.setTickLabelFontSize(18);
 			plotPrefs.setAxisLabelFontSize(20);
 			plotPrefs.setPlotLabelFontSize(21);
@@ -356,7 +356,7 @@ public class RotatedRupVelModelScenarioComparePageGen {
 						"Period (s)", "Median Ground Motion (g)");
 				spec.setLegendVisible(true);
 				
-				PlotPreferences plotPrefs = PlotPreferences.getDefault();
+				PlotPreferences plotPrefs = PlotPreferences.getDefaultAppPrefs();
 				plotPrefs.setTickLabelFontSize(18);
 				plotPrefs.setAxisLabelFontSize(20);
 				plotPrefs.setPlotLabelFontSize(21);

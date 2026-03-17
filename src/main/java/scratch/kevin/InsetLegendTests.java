@@ -54,7 +54,7 @@ public class InsetLegendTests {
 		PlotSpec spec = new PlotSpec(funcs, chars, "Title", "X", "Y");
 		spec.setLegendInset(RectangleAnchor.TOP_RIGHT, relX, relY, 0.35, true);
 		
-		HeadlessGraphPanel gp = PlotUtils.initHeadless();
+		HeadlessGraphPanel gp = PlotUtils.initScreenHeadless();
 		
 		gp.drawGraphPanel(spec, xLog, yLog, xRange, yRange);
 		

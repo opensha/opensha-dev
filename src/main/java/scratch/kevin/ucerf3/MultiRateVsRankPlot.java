@@ -96,7 +96,7 @@ public class MultiRateVsRankPlot {
 			chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 3, color));
 		}
 		
-		HeadlessGraphPanel gp = PlotUtils.initHeadless();
+		HeadlessGraphPanel gp = PlotUtils.initScreenHeadless();
 		
 		PlotSpec rateSpec = new PlotSpec(rateFuncs, chars, "Rate vs Rank", "Rank", "Annual Rate");
 		rateSpec.setLegendInset(true);

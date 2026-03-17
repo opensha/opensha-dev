@@ -581,7 +581,7 @@ class Regional_MFD_Plots {
 		PlotSpec cmlSpec = new PlotSpec(cmlFuncs, cmlChars, title, "Magnitude", "Cumulative Rate (/yr)");
 		cmlSpec.setLegendInset(RectangleAnchor.BOTTOM_LEFT);
 		
-		HeadlessGraphPanel gp = PlotUtils.initHeadless();
+		HeadlessGraphPanel gp = PlotUtils.initScreenHeadless();
 		
 		gp.setPlotLabelFontSize(26);
 		gp.setAxisLabelFontSize(28);

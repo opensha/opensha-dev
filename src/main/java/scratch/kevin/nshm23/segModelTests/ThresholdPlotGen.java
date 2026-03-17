@@ -102,7 +102,7 @@ public class ThresholdPlotGen {
 		spec.setLegendVisible(true);
 		spec.setPlotAnnotations(anns);
 		
-		HeadlessGraphPanel gp = PlotUtils.initHeadless();
+		HeadlessGraphPanel gp = PlotUtils.initScreenHeadless();
 		
 		gp.drawGraphPanel(spec, false, true, new Range(-0.2, maxX), new Range(minY, maxY));
 		

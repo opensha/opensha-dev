@@ -186,7 +186,7 @@ public class SlipRateScattersPaleoSects {
 					
 					PlotSpec spec = new PlotSpec(funcs, chars, title, "Target Slip Rate (mm/yr)", "Solution Slip Rate (mm/yr)");
 					
-					HeadlessGraphPanel gp = PlotUtils.initHeadless();
+					HeadlessGraphPanel gp = PlotUtils.initScreenHeadless();
 					
 					gp.drawGraphPanel(spec, log, log, range, range);
 					
@@ -263,7 +263,7 @@ public class SlipRateScattersPaleoSects {
 			
 			PlotSpec spec = new PlotSpec(funcs, chars, name, "Slip Rate Fit z-score", "Paleoseismic Rate Fit z-score");
 			
-			HeadlessGraphPanel gp = PlotUtils.initHeadless();
+			HeadlessGraphPanel gp = PlotUtils.initScreenHeadless();
 			
 			gp.drawGraphPanel(spec, false, false, range, range);
 			
@@ -434,7 +434,7 @@ public class SlipRateScattersPaleoSects {
 		PlotSpec spec = new PlotSpec(funcs, chars, " ", "Slip Rate Fit z-score", "Paleoseismic Rate Fit z-score");
 		spec.setLegendInset(RectangleAnchor.BOTTOM_LEFT);
 		
-		HeadlessGraphPanel gp = PlotUtils.initHeadless();
+		HeadlessGraphPanel gp = PlotUtils.initScreenHeadless();
 		
 		gp.getPlotPrefs().scaleFontSizes(1.4d);
 		

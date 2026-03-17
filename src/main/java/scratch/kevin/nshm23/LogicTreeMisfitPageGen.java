@@ -454,7 +454,7 @@ public class LogicTreeMisfitPageGen {
 						funcs.add(fullMean);
 						chars.add(new PlotCurveCharacterstics(PlotLineType.DOTTED, 3f, Color.DARK_GRAY));
 						
-						HeadlessGraphPanel gp = PlotUtils.initHeadless();
+						HeadlessGraphPanel gp = PlotUtils.initScreenHeadless();
 						
 						PlotSpec spec = new PlotSpec(funcs, chars, " ",
 								"Constraint "+quantity, "Count");
@@ -706,7 +706,7 @@ public class LogicTreeMisfitPageGen {
 				funcs.add(fullMean);
 				chars.add(new PlotCurveCharacterstics(PlotLineType.DOTTED, 3f, Color.DARK_GRAY));
 				
-				HeadlessGraphPanel gp = PlotUtils.initHeadless();
+				HeadlessGraphPanel gp = PlotUtils.initScreenHeadless();
 				
 				String shortName = constraintShortNames.get(constraintName);
 				String title = constraintName;
@@ -784,7 +784,7 @@ public class LogicTreeMisfitPageGen {
 				funcs.add(fullMean);
 				chars.add(new PlotCurveCharacterstics(PlotLineType.DOTTED, 3f, Color.DARK_GRAY));
 				
-				HeadlessGraphPanel gp = PlotUtils.initHeadless();
+				HeadlessGraphPanel gp = PlotUtils.initScreenHeadless();
 				
 				PlotSpec spec = new PlotSpec(funcs, chars, constraintName+" Misfits", quantity.toString(), "Count");
 				
@@ -859,7 +859,7 @@ public class LogicTreeMisfitPageGen {
 					PlotSpec spec = new PlotSpec(funcs, chars, shortName+" Relative Fits",
 							"Average Other Constraint "+quantity, shortName+" "+quantity);
 					
-					HeadlessGraphPanel gp = PlotUtils.initHeadless();
+					HeadlessGraphPanel gp = PlotUtils.initScreenHeadless();
 					
 					Range range = new Range(min, max);
 					gp.drawGraphPanel(spec, false, false, range, range);
@@ -1013,7 +1013,7 @@ public class LogicTreeMisfitPageGen {
 						funcs.add(nodeMean);
 						chars.add(new PlotCurveCharacterstics(PlotLineType.DOTTED, 3f, color.darker().darker()));
 						
-						HeadlessGraphPanel gp = PlotUtils.initHeadless();
+						HeadlessGraphPanel gp = PlotUtils.initScreenHeadless();
 						
 						PlotSpec spec = new PlotSpec(funcs, chars, constraintName+" Misfits", quantity.toString(), "Count");
 						

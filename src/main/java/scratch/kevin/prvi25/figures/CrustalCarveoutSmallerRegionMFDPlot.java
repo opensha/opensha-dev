@@ -146,7 +146,7 @@ public class CrustalCarveoutSmallerRegionMFDPlot {
 			PlotSpec spec = new PlotSpec(funcs, chars, names.get(r), "Magnitude", "Incremental Rate (1/yr)");
 			spec.setLegendInset(RectangleAnchor.TOP_RIGHT);
 			
-			HeadlessGraphPanel gp = PlotUtils.initHeadless();
+			HeadlessGraphPanel gp = PlotUtils.initScreenHeadless();
 			
 			gp.drawGraphPanel(spec, false, true, new Range(5d, 8d), new Range(1e-6, 1e1));
 			

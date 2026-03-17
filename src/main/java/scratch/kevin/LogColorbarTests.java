@@ -40,7 +40,7 @@ public class LogColorbarTests {
 		Range xRange = new Range(data.getMinX(), data.getMaxX());
 		Range yRange = new Range(1d, data.getMaxY());
 		
-		HeadlessGraphPanel gp = PlotUtils.initHeadless();
+		HeadlessGraphPanel gp = PlotUtils.initScreenHeadless();
 		
 		// create a multi plot with the same data, but the top one in
 		// linear-linear and the bottom linear-log
@@ -68,7 +68,7 @@ public class LogColorbarTests {
 		XYZPlotSpec plot = new XYZPlotSpec(data, colorscale, "XYZ Plot Demo", "X", "Y", "Log10 Z");
 		plot.setCPTPosition(RectangleEdge.BOTTOM);
 		
-		HeadlessGraphPanel gp = PlotUtils.initHeadless();
+		HeadlessGraphPanel gp = PlotUtils.initScreenHeadless();
 
 		gp.drawGraphPanel(plot, false, false, new Range(data.getMinX(), data.getMaxX()),
 				new Range(data.getMinY(), data.getMaxY()));

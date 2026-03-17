@@ -186,7 +186,7 @@ public class CurveDebugPlot {
 		if (legend)
 			spec.setLegendInset(RectangleAnchor.BOTTOM_LEFT);
 		
-		HeadlessGraphPanel gp = PlotUtils.initHeadless();
+		HeadlessGraphPanel gp = PlotUtils.initScreenHeadless();
 		
 		gp.drawGraphPanel(spec, true, true, new Range(1e-2, 1e1), new Range(1e-6, 1e0));
 		

@@ -460,7 +460,7 @@ public class MultiRunSummaryCompare {
 				}
 			}
 			
-			HeadlessGraphPanel gp = PlotUtils.initHeadless();
+			HeadlessGraphPanel gp = PlotUtils.initScreenHeadless();
 			
 			for (boolean zoom : new boolean[] {false, true}) {
 				Range myXRange, myYRange;

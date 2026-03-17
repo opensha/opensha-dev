@@ -214,7 +214,7 @@ public class MisfitComparisonOverTime {
 			PlotSpec spec = new PlotSpec(funcs, chars, "Convergence Test",
 					maxCount+" Iterations Per Rupture Misfits", count+" Iterations Per Rupture Misfits");
 			
-			HeadlessGraphPanel gp = PlotUtils.initHeadless();
+			HeadlessGraphPanel gp = PlotUtils.initScreenHeadless();
 			
 			gp.drawGraphPanel(spec, false, false, range, range);
 			
@@ -253,7 +253,7 @@ public class MisfitComparisonOverTime {
 						Math.min(yRange.getUpperBound(), Math.pow(10, Math.ceil(Math.log10(yTrack.getMax())))));
 				
 			
-			HeadlessGraphPanel gp = PlotUtils.initHeadless();
+			HeadlessGraphPanel gp = PlotUtils.initScreenHeadless();
 			
 			gp.drawGraphPanel(spec, false, logY, null, yRange);
 			

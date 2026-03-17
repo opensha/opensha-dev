@@ -12,6 +12,7 @@ import java.util.function.Function;
 
 import org.apache.commons.math3.stat.StatUtils;
 import org.jfree.chart.annotations.XYTextAnnotation;
+import org.jfree.chart.ui.RectangleEdge;
 import org.jfree.chart.ui.TextAnchor;
 import org.jfree.data.Range;
 import org.opensha.commons.data.function.DefaultXY_DataSet;
@@ -294,7 +295,7 @@ public class GridCubeRatePlot {
 		XYZPlotSpec assocPlot = buildPlot(assocXYZ, cellXRanges, cellAssocs, new FormatFunc(fractDF),
 				sectXY, polyXY, assocCPT, "Fractional Association", " ");
 		
-		HeadlessGraphPanel gp = PlotUtils.initHeadless();
+		HeadlessGraphPanel gp = PlotUtils.initScreenHeadless();
 		
 		Range yRange = new Range(CELL_TOP_Z, assocXYZ.getMaxY()+0.5*cubeSpacingZ);
 		gp.drawGraphPanel(assocPlot, false, false, xRange, yRange);
@@ -483,6 +484,7 @@ public class GridCubeRatePlot {
 		XYZPlotSpec plot = new XYZPlotSpec(xyz, funcs, chars, cpt, title, "X (km)", "Depth (km)", zLabel);
 		plot.setYAxisInverted(true);
 		plot.setPlotAnnotations(cellAnns);
+		plot.setCPTPosition(RectangleEdge.BOTTOM);
 		return plot;
 	}
 

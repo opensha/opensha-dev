@@ -682,7 +682,7 @@ public class CombinedMFDsPlot {
 					cmlSpec.addPlotAnnotation(obsAnn);
 				}
 				
-				HeadlessGraphPanel gp = PlotUtils.initHeadless();
+				HeadlessGraphPanel gp = PlotUtils.initScreenHeadless();
 				if (includeObs)
 					gp.getPlotPrefs().setLegendFontSize(16);
 				

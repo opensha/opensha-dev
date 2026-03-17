@@ -262,7 +262,7 @@ public class SlipRateSegAdjTests {
 		
 		PlotSpec spec = new PlotSpec(funcs, chars, " ", "Magnitude", "Incremental Rate (1/yr)");
 		
-		HeadlessGraphPanel gp = PlotUtils.initHeadless();
+		HeadlessGraphPanel gp = PlotUtils.initScreenHeadless();
 		
 		gp.drawGraphPanel(spec, false, true, new Range(6d, 8d), new Range(1e-7, 1e-3));
 		

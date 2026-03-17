@@ -498,7 +498,7 @@ public abstract class SourceSiteDetailPageGen {
 //			System.out.println("\test height each: "+estHeightEach);
 			
 			PaintScaleLegend particBar = GraphPanel.getLegendForCPT(countCPT, "Log₁₀ Participation Count",
-					prefs.getAxisLabelFontSize(), prefs.getTickLabelFontSize(), 1d, RectangleEdge.TOP);
+					prefs, 1d, RectangleEdge.TOP);
 			particBar.setBackgroundPaint(new Color(255, 255, 255, 127));
 			XYDrawableAnnotation particBarAnn = new XYDrawableAnnotation(
 					scaleAnnX, scaleAnnY, scaleWidth, scaleHeight, particBar);
@@ -506,7 +506,7 @@ public abstract class SourceSiteDetailPageGen {
 			
 			PaintScaleLegend dirBar = GraphPanel.getLegendForCPT(directivityCPT,
 					"⇦Leftward   Ave-Prop-Dir  Rightward⇨",
-					prefs.getAxisLabelFontSize(), prefs.getTickLabelFontSize(), 1d, RectangleEdge.TOP);
+					prefs, 1d, RectangleEdge.TOP);
 			dirBar.setBackgroundPaint(new Color(255, 255, 255, 127));
 			XYDrawableAnnotation dirBarAnn = new XYDrawableAnnotation(
 					scaleAnnX, scaleAnnY, scaleWidth, scaleHeight, dirBar);

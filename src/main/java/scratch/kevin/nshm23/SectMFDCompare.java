@@ -172,7 +172,7 @@ public class SectMFDCompare {
 					"Magnitude", "Incremental Rate");
 			spec.setLegendInset(true);
 			
-			HeadlessGraphPanel gp = PlotUtils.initHeadless();
+			HeadlessGraphPanel gp = PlotUtils.initScreenHeadless();
 			
 			double maxVal = 0d;
 			double minNonZero = Double.POSITIVE_INFINITY;

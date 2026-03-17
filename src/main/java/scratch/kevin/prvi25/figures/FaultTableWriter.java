@@ -98,7 +98,7 @@ public class FaultTableWriter {
 		fw.write("\\textbf{Name} "
 				+ "& \\multicolumn{1}{c}{\\textbf{Magnitude range}} "
 				+ "& \\multicolumn{1}{c}{\\textbf{Recurrence interval (years)}} "
-				+ "& \\multicolumn{1}{c}{\\textbf{Branch recurrence 95\\% bounds (years)}} "
+				+ "& \\multicolumn{1}{c}{\\textbf{Recurrence 95\\% bounds (years)}} "
 				+ "\\\\\n");
 		fw.write("\\colrule\n");
 		DecimalFormat magDF = new DecimalFormat("0.0");

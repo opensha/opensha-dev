@@ -61,7 +61,7 @@ public class BvalAndSegConnectivityCorrelationSampler extends SectionCovarianceS
 			if (segModel != null) {
 				JumpProbabilityCalc segModelCalc = segModel.getModel(rupSet, null);
 //				if (segModelCalc instanceof BinaryJumpProbabilityCalc)
-//					builder.forBinaryRupProbModel((BinaryJumpProbabilityCalc)segModel.getExclusionModel(rupSet, null));
+//					builder.forBinaryRupProbModel((BinaryJumpProbabilityCalc)segModel);
 //				else
 					builder.adjustTargetsForData(new ThresholdAveragingSectNuclMFD_Estimator.RelGRWorstJumpProb(segModelCalc, 100, true));
 			}

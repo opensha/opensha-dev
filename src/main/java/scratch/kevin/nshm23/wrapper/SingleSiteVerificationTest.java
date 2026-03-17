@@ -38,8 +38,8 @@ import org.opensha.sha.earthquake.param.ProbabilityModelOptions;
 import org.opensha.sha.earthquake.param.ProbabilityModelParam;
 import org.opensha.sha.earthquake.util.GriddedSeismicitySettings;
 import org.opensha.sha.faultSurface.RuptureSurface;
-import org.opensha.sha.faultSurface.utils.PointSourceDistanceCorrection;
-import org.opensha.sha.faultSurface.utils.PointSourceDistanceCorrections;
+import org.opensha.sha.faultSurface.utils.ptSrcCorr.PointSourceDistanceCorrection;
+import org.opensha.sha.faultSurface.utils.ptSrcCorr.PointSourceDistanceCorrections;
 import org.opensha.sha.gui.infoTools.IMT_Info;
 import org.opensha.sha.imr.AttenRelRef;
 import org.opensha.sha.imr.ScalarIMR;
@@ -276,7 +276,7 @@ public class SingleSiteVerificationTest {
 		
 		PlotSpec rangeSpec = new PlotSpec(funcs, chars, title, spec.getXAxisLabel(), "Wrapper / Model, % Difference");
 		
-		HeadlessGraphPanel gp = PlotUtils.initHeadless();
+		HeadlessGraphPanel gp = PlotUtils.initScreenHeadless();
 		
 		gp.drawGraphPanel(List.of(spec, rangeSpec), List.of(true), List.of(true, false),
 				List.of(xRange), List.of(yRange, diffRange));
@@ -332,7 +332,7 @@ public class SingleSiteVerificationTest {
 		PlotSpec spec = new PlotSpec(funcs, chars, title, "PGA (g)", "Annual Probability of Exceedance");
 		spec.setLegendInset(RectangleAnchor.BOTTOM_LEFT);
 		
-		HeadlessGraphPanel gp = PlotUtils.initHeadless();
+		HeadlessGraphPanel gp = PlotUtils.initScreenHeadless();
 		
 		gp.drawGraphPanel(spec, true, true, xRange, yRange);
 		

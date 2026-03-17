@@ -49,7 +49,7 @@ public class RateEpochComparison {
 		double mfdMmax = 10d;
 		EvenlyDiscretizedFunc refMFD = FaultSysTools.initEmptyMFD(5.01, mfdMmax-0.01);
 		
-		HeadlessGraphPanel gp = PlotUtils.initHeadless();
+		HeadlessGraphPanel gp = PlotUtils.initScreenHeadless();
 		
 		gp.getPlotPrefs().setLegendFontSize(16);
 		

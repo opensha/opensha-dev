@@ -841,7 +841,7 @@ public class FollowerReturnPeriodProvider implements
 		PlotSpec intereventSpec = new PlotSpec(intereventElems, intereventChars, title, xAxisLabel, yAxisLabel);
 		specs.add(intereventSpec);
 		
-		HeadlessGraphPanel xyzGP = PlotUtils.initHeadless();
+		HeadlessGraphPanel xyzGP = PlotUtils.initScreenHeadless();
 		
 		xyzGP.drawGraphPanel(specs, false, false, xRanges, yRanges);
 		xyzGP.getChartPanel().setSize(1000, 2500);

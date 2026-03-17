@@ -74,7 +74,7 @@ public class GriddedRateDistributionPlotter {
 		trts.add(null);
 		trts.addAll(randMFDs.columnKeySet());
 		
-		HeadlessGraphPanel gp = PlotUtils.initHeadless();
+		HeadlessGraphPanel gp = PlotUtils.initScreenHeadless();
 		
 		Range xRange = new Range(5d, 8.5d);
 		Range yRange = new Range(1e-6d, 1e1d);

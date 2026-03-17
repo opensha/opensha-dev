@@ -214,7 +214,7 @@ public class SubSeismoCharComparison {
 		charRatioFunc.scale(1d/numRatios);
 		anticharRatioFunc.scale(1d/numRatios);
 		
-		HeadlessGraphPanel gp = PlotUtils.initHeadless();
+		HeadlessGraphPanel gp = PlotUtils.initScreenHeadless();
 		List<DiscretizedFunc> funcs = new ArrayList<>();
 		List<PlotCurveCharacterstics> chars = new ArrayList<>();
 

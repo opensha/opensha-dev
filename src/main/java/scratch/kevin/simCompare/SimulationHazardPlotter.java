@@ -1011,7 +1011,7 @@ public class SimulationHazardPlotter<E> {
 		spec.setLegendVisible(true);
 		spec.setPlotAnnotations(anns);
 		
-		PlotPreferences plotPrefs = PlotPreferences.getDefault();
+		PlotPreferences plotPrefs = PlotPreferences.getDefaultAppPrefs();
 		plotPrefs.setTickLabelFontSize(18);
 		plotPrefs.setAxisLabelFontSize(20);
 		plotPrefs.setPlotLabelFontSize(21);
@@ -1244,7 +1244,7 @@ public class SimulationHazardPlotter<E> {
 		PlotSpec spec = new PlotSpec(funcs, chars, site.getName()+" Hazard Spectra", xAxisLabel, yAxisLabel);
 		spec.setLegendVisible(true);
 
-		PlotPreferences plotPrefs = PlotPreferences.getDefault();
+		PlotPreferences plotPrefs = PlotPreferences.getDefaultAppPrefs();
 		plotPrefs.setTickLabelFontSize(18);
 		plotPrefs.setAxisLabelFontSize(20);
 		plotPrefs.setPlotLabelFontSize(21);
@@ -1388,7 +1388,7 @@ public class SimulationHazardPlotter<E> {
 		PlotSpec spec = new PlotSpec(funcs, chars, site.getName()+" Hazard Spectrum", xAxisLabel, yAxisLabel);
 		spec.setLegendVisible(true);
 
-		PlotPreferences plotPrefs = PlotPreferences.getDefault();
+		PlotPreferences plotPrefs = PlotPreferences.getDefaultAppPrefs();
 		plotPrefs.setTickLabelFontSize(18);
 		plotPrefs.setAxisLabelFontSize(20);
 		plotPrefs.setPlotLabelFontSize(21);

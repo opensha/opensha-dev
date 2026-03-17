@@ -229,7 +229,7 @@ public class PredictionTests {
 					
 					List<XYZPlotSpec> specs = Lists.newArrayList(xSpec, ySpec);
 					
-					HeadlessGraphPanel xyzGP = PlotUtils.initHeadless();
+					HeadlessGraphPanel xyzGP = PlotUtils.initScreenHeadless();
 					xyzGP.drawGraphPanel(specs, false, false, null, null);
 					xyzGP.getChartPanel().setSize(1000, 2000);
 					String prefix = PeriodicityPlotter.getFileSafeString(name1)

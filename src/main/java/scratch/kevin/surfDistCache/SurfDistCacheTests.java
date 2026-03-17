@@ -96,7 +96,6 @@ public class SurfDistCacheTests {
 								surf.getDistanceJB(loc);
 								surf.getDistanceRup(loc);
 								surf.getDistanceX(loc);
-								surf.getDistanceSeis(loc);
 							}
 						}
 						break;

@@ -247,7 +247,7 @@ public class AnegadaMFDTests {
 				PlotSpec plot = new PlotSpec(funcs, chars, " ", "Magnitude", "Incremental Rate (1/yr)");
 				plot.setLegendInset(RectangleAnchor.BOTTOM_LEFT);
 				
-				HeadlessGraphPanel gp = PlotUtils.initHeadless();
+				HeadlessGraphPanel gp = PlotUtils.initScreenHeadless();
 				
 				gp.drawGraphPanel(plot, false, true, new Range(6.5d, 8d), new Range(1e-5, 1e-1));
 				

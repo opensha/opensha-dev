@@ -275,7 +275,7 @@ public class ObservedMFDComparisons {
 						reg.getName(), "Magnitude", "Cumulative Rate (/yr)");
 				cmlSpec.setLegendInset(RectangleAnchor.BOTTOM_LEFT);
 				
-				HeadlessGraphPanel gp = PlotUtils.initHeadless();
+				HeadlessGraphPanel gp = PlotUtils.initScreenHeadless();
 				
 				gp.getPlotPrefs().scaleFontSizes(1.2d);
 

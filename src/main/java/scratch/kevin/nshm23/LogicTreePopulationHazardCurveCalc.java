@@ -283,7 +283,7 @@ public class LogicTreePopulationHazardCurveCalc {
 				maxX = Math.pow(10, Math.ceil(Math.log10(maxX)));
 				Range xRange = new Range(minX, maxX);
 				
-				HeadlessGraphPanel gp = PlotUtils.initHeadless();
+				HeadlessGraphPanel gp = PlotUtils.initScreenHeadless();
 				
 				gp.setRenderingOrder(DatasetRenderingOrder.REVERSE);
 				

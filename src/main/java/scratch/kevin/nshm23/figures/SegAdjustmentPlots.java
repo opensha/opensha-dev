@@ -542,7 +542,7 @@ public class SegAdjustmentPlots {
 			}
 		}
 		
-		HeadlessGraphPanel gp = PlotUtils.initHeadless();
+		HeadlessGraphPanel gp = PlotUtils.initScreenHeadless();
 		Range xRange = new Range(minSupraMag-0.05, maxMag+0.05);
 		Range yRange = new Range(Math.pow(10, Math.floor(Math.log10(minNonZero))), Math.pow(10, Math.ceil(Math.log10(maxY)+0.8)));
 		

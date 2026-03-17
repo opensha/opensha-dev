@@ -43,8 +43,8 @@ import org.opensha.sha.calc.disaggregation.DisaggregationCalculator;
 import org.opensha.sha.calc.disaggregation.DisaggregationCalculator.EpsilonCategories;
 import org.opensha.sha.calc.disaggregation.DisaggregationPlotData;
 import org.opensha.sha.calc.disaggregation.chart3d.PureJavaDisaggPlotter;
-import org.opensha.sha.calc.params.filters.SourceFilterManager;
-import org.opensha.sha.calc.params.filters.SourceFilters;
+import org.opensha.sha.calc.sourceFilters.SourceFilterManager;
+import org.opensha.sha.calc.sourceFilters.SourceFilters;
 import org.opensha.sha.earthquake.AbstractERF;
 import org.opensha.sha.earthquake.ProbEqkRupture;
 import org.opensha.sha.earthquake.ProbEqkSource;
@@ -221,7 +221,7 @@ public class SiteHazardInvestigationsPageGen {
 					"Magnitude", "Cumulative Rate (/year)");
 			cmlPlot.setLegendInset(true);
 			
-			HeadlessGraphPanel gp = PlotUtils.initHeadless();
+			HeadlessGraphPanel gp = PlotUtils.initScreenHeadless();
 			gp.setRenderingOrder(DatasetRenderingOrder.REVERSE);
 			
 			gp.drawGraphPanel(incrPlot, false, true, mfdXRange, mfdYRange);
@@ -400,7 +400,7 @@ public class SiteHazardInvestigationsPageGen {
 			plot.setLegendInset(true);
 			plot.setPlotAnnotations(anns);
 			
-			HeadlessGraphPanel gp = PlotUtils.initHeadless();
+			HeadlessGraphPanel gp = PlotUtils.initScreenHeadless();
 			gp.setRenderingOrder(DatasetRenderingOrder.REVERSE);
 			
 			gp.drawGraphPanel(plot, true, true, curveXRange, curveYRange);

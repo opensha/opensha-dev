@@ -74,7 +74,7 @@ public class InvCDF_RJBTableWriter {
 //		int numPerStochastic = 2000;
 //		PointSourceType sourceType = PointSourceType.OCT_QUAD_RAND_CELL;
 //		int numPerStochastic = 2000;
-		PointSourceType sourceType = PointSourceType.OCT_QUAD_RAND_DAS_DD_CELL;
+		PointSourceType sourceType = PointSourceType.OCT_FINITE_RAND_DAS_DD_CELL;
 		int numPerStochastic = 5000;
 		
 		File mainDir = new File("/data/kevin/markdown/nshm23-misc/point_source_corr/");
@@ -158,7 +158,7 @@ public class InvCDF_RJBTableWriter {
 				PlotSpec spec = new PlotSpec(funcs, chars, "rEPI="+oDF.format(plotDist)+" km", "Inverse Cumulative Probability", "rJB (km)");
 				spec.setLegendInset(RectangleAnchor.BOTTOM_RIGHT);
 				
-				HeadlessGraphPanel gp = PlotUtils.initHeadless();
+				HeadlessGraphPanel gp = PlotUtils.initScreenHeadless();
 				
 				gp.drawGraphPanel(spec, false, false, new Range(0d, 1d), new Range(0d, plotDist+10d));
 				

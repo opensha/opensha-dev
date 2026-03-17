@@ -1,6 +1,3 @@
-# This workflow will build a Java project with Gradle
-# For more information see: https://help.github.com/actions/language-and-framework-guides/building-and-testing-java-with-gradle
-
 name: Java CI with Gradle
 
 on:
@@ -11,27 +8,35 @@ on:
 
 jobs:
   build:
-
     runs-on: ubuntu-latest
+    env:
+      GRADLE_OPTS: >-
+        -Dorg.gradle.internal.http.connectionTimeout=60000
+        -Dorg.gradle.internal.http.socketTimeout=300000
 
     steps:
-    - name: Checkout primary repo
-      uses: actions/checkout@v2
-      with:
-        repository: opensha/opensha
-        path: 'opensha'
-    - name: Checkout dev repo
-      uses: actions/checkout@v2
-      with:
-        path: 'opensha-dev'
-    - name: Set up JDK 11
-      uses: actions/setup-java@v2
-      with:
-        java-version: '11'
-        distribution: 'adopt'
-    - name: Grant execute permission for gradlew
-      run: chmod +x gradlew
-      working-directory: opensha-dev
-    - name: Build with Gradle
-      run: ./gradlew -Dorg.gradle.internal.http.connectionTimeout=60000 -Dorg.gradle.internal.http.socketTimeout=300000 assemble
-      working-directory: opensha-dev
+      - name: Checkout primary repo
+        uses: actions/checkout@v4
+        with:
+          repository: opensha/opensha
+          path: opensha
+
+      - name: Checkout dev repo
+        uses: actions/checkout@v4
+        with:
+          path: opensha-dev
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: gradle
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
+        working-directory: opensha-dev
+
+      - name: Build with Gradle
+        run: ./gradlew assemble
+        working-directory: opensha-dev

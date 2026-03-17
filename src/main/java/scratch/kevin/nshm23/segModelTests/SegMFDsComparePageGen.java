@@ -522,7 +522,7 @@ public class SegMFDsComparePageGen {
 			PlotSpec magDistSpec = new PlotSpec(funcs, chars, sect.getName(),
 					"Magnitude", "Smallest Controlling Jump Distance (km)");
 			
-			HeadlessGraphPanel gp = PlotUtils.initHeadless();
+			HeadlessGraphPanel gp = PlotUtils.initScreenHeadless();
 			
 			// convert empty bins to NaNs
 			for (int i=0; i<binMinJumps.size(); i++)
@@ -685,7 +685,7 @@ public class SegMFDsComparePageGen {
 		}
 		Range yRange = new Range(Math.pow(10, Math.floor(Math.log10(minY))), Math.pow(10, Math.ceil(Math.log10(maxY))));
 		
-		HeadlessGraphPanel gp = PlotUtils.initHeadless();
+		HeadlessGraphPanel gp = PlotUtils.initScreenHeadless();
 		
 		gp.drawGraphPanel(spec, false, true, mfdXRange, yRange);
 		
@@ -732,7 +732,7 @@ public class SegMFDsComparePageGen {
 		
 		PlotSpec spec = new PlotSpec(funcs, chars, title, xAxisName, yAxisName);
 		
-		HeadlessGraphPanel gp = PlotUtils.initHeadless();
+		HeadlessGraphPanel gp = PlotUtils.initScreenHeadless();
 		
 		gp.drawGraphPanel(spec, true, true, range, range);
 		

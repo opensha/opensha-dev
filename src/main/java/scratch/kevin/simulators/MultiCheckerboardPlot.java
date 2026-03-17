@@ -116,15 +116,14 @@ public class MultiCheckerboardPlot {
 		
 		DecimalFormat oDF = new DecimalFormat("0.##");
 		
-		HeadlessGraphPanel gp = PlotUtils.initHeadless();
+		HeadlessGraphPanel gp = PlotUtils.initScreenHeadless();
 		
 		gp.getPlotPrefs().setPlotLabelFontSize(36);
 		gp.getPlotPrefs().setAxisLabelFontSize(28);
 		gp.getPlotPrefs().setTickLabelFontSize(26);
 		Font annFont = new Font(Font.SANS_SERIF, Font.BOLD, 36);
 		
-		PaintScaleLegend magSubtitle = GraphPanel.getLegendForCPT(magCPT, "Magnitude", gp.getPlotPrefs().getAxisLabelFontSize(),
-				gp.getPlotPrefs().getTickLabelFontSize(), 0.5, RectangleEdge.LEFT);
+		PaintScaleLegend magSubtitle = GraphPanel.getLegendForCPT(magCPT, "Magnitude", gp.getPlotPrefs(), 0.5, RectangleEdge.LEFT);
 		
 		for (int n=0; n<refDirs.size(); n++) {
 			File refDir = refDirs.get(n);
