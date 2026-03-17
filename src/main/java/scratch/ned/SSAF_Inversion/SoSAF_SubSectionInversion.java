@@ -9,6 +9,7 @@ import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.List;
 
 import org.apache.poi.hssf.usermodel.HSSFCell;
 import org.apache.poi.hssf.usermodel.HSSFRow;
@@ -954,7 +955,7 @@ public class SoSAF_SubSectionInversion {
 		for(int i=0; i<faultSectionIds.size(); ++i) {
 			FaultSectionPrefData faultSectionPrefData = 
 				deformationModelPrefDB.getFaultSectionPrefData(deformationModelId, faultSectionIds.get(i));
-			ArrayList list = faultSectionPrefData.getSubSectionsList(this.maxSubsectionLength);
+			List list = faultSectionPrefData.getSubSectionsList(this.maxSubsectionLength);
 			// check to see if we need to reverse order the sections
 			FaultTrace tr = faultSectionPrefData.getFaultTrace();
 			double latFirst = tr.get(0).getLatitude();

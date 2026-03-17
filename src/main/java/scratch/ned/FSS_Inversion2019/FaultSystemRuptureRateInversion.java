@@ -115,8 +115,8 @@ public class FaultSystemRuptureRateInversion {
 	String modelSetUpInfoString, modelRunInfoString;
 	
 	// input data
-	private ArrayList<FaultSectionPrefData> fltSectionDataList;
-	private ArrayList<SectionRateConstraint> sectionRateConstraints; // using old class for "segments"
+	private List<FaultSectionPrefData> fltSectionDataList;
+	private List<SectionRateConstraint> sectionRateConstraints; // using old class for "segments"
 	private int[][] rupSectionMatrix;
 	
 	// section attributes
@@ -158,11 +158,11 @@ public class FaultSystemRuptureRateInversion {
 	
 	// segmentation (rup rate = 0) constraints
 	int num_segConstraints;
-	ArrayList<SegmentationConstraint> segmentationConstraintList;
-	ArrayList<SlipRateSegmentationConstraint> slipRateSegmentationConstraintList;
+	List<SegmentationConstraint> segmentationConstraintList;
+	List<SlipRateSegmentationConstraint> slipRateSegmentationConstraintList;
 	
 	// the following specifies fault section indices where a Laplacian smoothness constraint should be applied
-	ArrayList<int[]> smoothnessConstraintList;
+	List<int[]> smoothnessConstraintList;
 
 
 	
@@ -497,12 +497,12 @@ public class FaultSystemRuptureRateInversion {
 	 */
 	public FaultSystemRuptureRateInversion( String modelName,
 			String slipRateModelName,
-			ArrayList<FaultSectionPrefData> fltSectionDataList, 
+			List<FaultSectionPrefData> fltSectionDataList, 
 			int[][] rupSectionMatrix, 
 			SlipAlongRuptureModelEnum slipModelType, 
 			ScalingRelationshipEnum scalingRel, 
-			ArrayList<SlipRateSegmentationConstraint> slipRateSegmentationConstraintList,
-			ArrayList<SectionRateConstraint> sectionRateConstraints,
+			List<SlipRateSegmentationConstraint> slipRateSegmentationConstraintList,
+			List<SectionRateConstraint> sectionRateConstraints,
 			double relativeSectRateWt, 
 			double relative_aPrioriRupWt, 
 			String aPrioriRupRatesFilename,
@@ -513,12 +513,12 @@ public class FaultSystemRuptureRateInversion {
 			IncrementalMagFreqDist mfdConstraint,
 			IncrementalMagFreqDist mfdSigma, // uncertainty of the MFD (1 sigma)
 			double relativeMFD_constraintWt,
-			ArrayList<SegmentationConstraint> segmentationConstraintList,
+			List<SegmentationConstraint> segmentationConstraintList,
 			double relative_segConstraintWt,
 			double totalRateConstraint,
 			double totalRateSigma,
 			double relativeTotalRateConstraintWt,
-			ArrayList<int[]> smoothnessConstraintList,
+			List<int[]> smoothnessConstraintList,
 			double relativeSmoothnessConstraintWt,
 			double magAareaAleatoryVariability) {
 		

@@ -132,7 +132,7 @@ public class MapStorageCalcs {
 							if (surfs.size() == 1)
 								compound = surfs.get(0);
 							else
-								compound = new CompoundSurface(surfs);
+								compound = CompoundSurface.get(surfs);
 							LocationList trace = compound.getEvenlyDiscritizedUpperEdge();
 							// this can have duplicates in it, remove those
 							for (int p=trace.size(); --p>0;) {

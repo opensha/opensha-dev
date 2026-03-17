@@ -10,6 +10,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Iterator;
+import java.util.List;
 
 import org.opensha.commons.data.NamedComparator;
 import org.opensha.commons.geo.Location;
@@ -25,15 +26,15 @@ public class CreateRupturesFromSections {
     protected final static boolean D = false;  // for debugging
 
 	
-	ArrayList<FaultSectionPrefData> allFaultSectionPrefData;
+	List<FaultSectionPrefData> allFaultSectionPrefData;
 	double subSectionDistances[][],subSectionAzimuths[][];;
 	String endPointNames[];
 	Location endPointLocs[];
 	int numSections, numSubSections, minNumSubSectInRup;
-	ArrayList<ArrayList<Integer>> subSectionConnectionsListList, endToEndSectLinksList;
+	List<List<Integer>> subSectionConnectionsListList, endToEndSectLinksList;
 	double maxJumpDist, maxAzimuthChange, maxTotAzimuthChange, maxSubSectionLength;
-	ArrayList<ArrayList<FaultSectionPrefData>> subSectionPrefDataListList;
-	ArrayList<FaultSectionPrefData> subSectionPrefDataList; // same as above, but a sequential list (not list of lists)
+	List<List<FaultSectionPrefData>> subSectionPrefDataListList;
+	List<FaultSectionPrefData> subSectionPrefDataList; // same as above, but a sequential list (not list of lists)
 	
 	// this is to store the section and subsection indices for the ith subsection.
 	int[]  sectForSubSectionMapping,subSectForSubSectMapping, firstSubsectOfSectMapping;
@@ -150,10 +151,10 @@ public class CreateRupturesFromSections {
 	
 	
 	
-	  public ArrayList<ArrayList<Integer>> getRupList() {
-		  ArrayList<ArrayList<Integer>> rupList = new ArrayList<ArrayList<Integer>>();
+	  public List<List<Integer>> getRupList() {
+		  List<List<Integer>> rupList = new ArrayList<>();
 		  for(int i=0; i<sectionClusterList.size();i++) {
-System.out.println("Working on rupture list for cluster "+i);
+			  System.out.println("Working on rupture list for cluster "+i);
 			  rupList.addAll(sectionClusterList.get(i).getRuptures());
 		  }
 		  return rupList;
@@ -276,7 +277,7 @@ System.out.println("Working on rupture list for cluster "+i);
 	  
 
 		  // make subsection data
-		  subSectionPrefDataListList = new ArrayList<ArrayList<FaultSectionPrefData>>();
+		  subSectionPrefDataListList = new ArrayList<List<FaultSectionPrefData>>();
 		  subSectionPrefDataList = new ArrayList<FaultSectionPrefData>();
 		  numSubSections=0;
 		  numSections = allFaultSectionPrefData.size();
@@ -284,7 +285,7 @@ System.out.println("Working on rupture list for cluster "+i);
 		  for(int i=0; i<numSections; ++i) {
 			  FaultSectionPrefData faultSectionPrefData = (FaultSectionPrefData)allFaultSectionPrefData.get(i);
 			  double maxSectLength = faultSectionPrefData.getOrigDownDipWidth()*maxSubSectionLength;
-			  ArrayList<FaultSectionPrefData> subSectData = faultSectionPrefData.getSubSectionsList(maxSectLength);
+			  List<FaultSectionPrefData> subSectData = faultSectionPrefData.getSubSectionsList(maxSectLength);
 			  // if(subSectData.size()>maxNumSubSections) maxNumSubSections = numSubSections;  // this was a bug - fixed below
 			  if(subSectData.size()>maxNumSubSections) maxNumSubSections = subSectData.size();
 			  numSubSections += subSectData.size();
@@ -476,7 +477,7 @@ System.out.println("Working on rupture list for cluster "+i);
 	   */
 	  private void computeCloseSubSectionsListList() {
 		  
-		  subSectionConnectionsListList = new ArrayList<ArrayList<Integer>>();
+		  subSectionConnectionsListList = new ArrayList<List<Integer>>();
 
 		  // first add the adjacent subsections in that section
 		  for(int i=0; i<subSectionPrefDataListList.size(); ++i) {
@@ -493,9 +494,9 @@ System.out.println("Working on rupture list for cluster "+i);
 		  
 		  // now add subsections on other sections, keeping only one connection between each section (the closest)
 		  for(int i=0; i<subSectionPrefDataListList.size(); ++i) {
-			  ArrayList<FaultSectionPrefData> sect1_List = subSectionPrefDataListList.get(i);
+			  List<FaultSectionPrefData> sect1_List = subSectionPrefDataListList.get(i);
 			  for(int j=i+1; j<subSectionPrefDataListList.size(); ++j) {
-				  ArrayList<FaultSectionPrefData> sect2_List = subSectionPrefDataListList.get(j);
+				  List<FaultSectionPrefData> sect2_List = subSectionPrefDataListList.get(j);
 				  double minDist=Double.MAX_VALUE;
 				  int subSectIndex1 = -1;
 				  int subSectIndex2 = -1;
@@ -525,7 +526,7 @@ System.out.println("Working on rupture list for cluster "+i);
 	  private void makeClusterList() {
 		  
 		  // make an arrayList of subsection integers
-		  ArrayList<Integer> availableSubSections = new ArrayList<Integer>();
+		  List<Integer> availableSubSections = new ArrayList<Integer>();
 		  for(int i=0; i<numSubSections; i++) availableSubSections.add(i);
 		  
 		  sectionClusterList = new ArrayList<SectionCluster>();
@@ -548,7 +549,7 @@ System.out.println(newCluster.size()+"\tsubsections in cluster #"+sectionCluster
 	  
 	  
 	  private void addLinks(int subSectIndex, SectionCluster list) {
-		  ArrayList<Integer> branches = subSectionConnectionsListList.get(subSectIndex);
+		  List<Integer> branches = subSectionConnectionsListList.get(subSectIndex);
 		  for(int i=0; i<branches.size(); i++) {
 			  Integer subSect = branches.get(i);
 			  if(!list.contains(subSect)) {
@@ -570,7 +571,7 @@ System.out.println(newCluster.size()+"\tsubsections in cluster #"+sectionCluster
 			String outputString = new String();
 			
 			for(int sIndex1=0; sIndex1<subSectionConnectionsListList.size();sIndex1++) {
-				ArrayList<Integer> sectList = subSectionConnectionsListList.get(sIndex1);
+				List<Integer> sectList = subSectionConnectionsListList.get(sIndex1);
 				outputString += "\n"+subSectionPrefDataList.get(sIndex1).getName() + "  connections:\n\n";
 				for(int i=0;i<sectList.size();i++) {
 					int sIndex2 = sectList.get(i);

@@ -149,7 +149,7 @@ public abstract class NshmSource extends ProbEqkSource {
           delegate.rate(),
           weight,
           duration,
-          new CompoundSurface(surfaces));
+          CompoundSurface.get(surfaces));
     }
 
     @Override
