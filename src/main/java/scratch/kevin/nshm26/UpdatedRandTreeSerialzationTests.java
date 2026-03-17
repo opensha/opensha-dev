@@ -110,28 +110,13 @@ public class UpdatedRandTreeSerialzationTests {
 	private static class TestValuedLevel extends LogicTreeLevel.RandomlySampledLevel<Double> {
 
 		public TestValuedLevel() {
-			super("Test Valued Level", "TVL");
+			super("Test Valued Level", "TVL", "Random Node ", "RN", "RN");
 		}
 
 		@Override
 		protected void doBuild(long seed, int numNodes, double weightEach) {
 			Random rand = new Random(seed);
 			super.build(()->rand.nextDouble(), numNodes, weightEach);
-		}
-
-		@Override
-		protected String getNodeNamePrefix() {
-			return "Random Node ";
-		}
-
-		@Override
-		protected String getNodeShortNamePrefix() {
-			return "RN";
-		}
-
-		@Override
-		protected String getNodeFilePrefix() {
-			return "RN";
 		}
 
 		@Override
@@ -148,22 +133,8 @@ public class UpdatedRandTreeSerialzationTests {
 		};
 
 		public TestDistLevel(ContinuousDistribution dist) {
-			super("Test Distribution Level", "TestDistLevel", dist);
-		}
-
-		@Override
-		protected String getNodeNamePrefix() {
-			return "Distribution Sample ";
-		}
-
-		@Override
-		protected String getNodeShortNamePrefix() {
-			return "DistSample";
-		}
-
-		@Override
-		protected String getNodeFilePrefix() {
-			return "DistSample";
+			super("Test Distribution Level", "TestDistLevel", dist,
+					"Distribution Sample ", "DistSample", "DistSample");
 		}
 		
 	}

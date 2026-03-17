@@ -2,7 +2,6 @@ package scratch.kevin.prvi25;
 
 import java.io.IOException;
 
-import org.opensha.sha.earthquake.rupForecastImpl.prvi25.gridded.SeismicityRateModel;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_CrustalSeismicityRate;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_SeismicityRateEpoch;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_SubductionCaribbeanSeismicityRate;
@@ -10,6 +9,8 @@ import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_Subduc
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.util.PRVI25_RegionLoader.PRVI25_SeismicityRegions;
 
 import com.google.common.base.Preconditions;
+
+import gov.usgs.earthquake.nshmp.erf.seismicity.SeismicityRateModel;
 
 public class RateModelAvgVsPreferredTest {
 

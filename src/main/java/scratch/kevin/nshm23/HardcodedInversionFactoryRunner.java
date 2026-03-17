@@ -49,6 +49,7 @@ import org.opensha.sha.earthquake.rupForecastImpl.nshm23.prior2018.NSHM18_FaultM
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.prior2018.NSHM18_LogicTreeBranch;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm26.NSHM26_InvConfigFactory;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm26.logicTree.NSHM26_LogicTree;
+import org.opensha.sha.earthquake.rupForecastImpl.nshm26.util.NSHM26_RegionLoader.NSHM26_SeismicityRegions;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.PRVI25_InvConfigFactory;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_CrustalDeformationModels;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_CrustalFaultModels;
@@ -58,6 +59,7 @@ import org.opensha.sha.faultSurface.FaultSection;
 import org.opensha.sha.magdist.IncrementalMagFreqDist;
 import org.opensha.sha.magdist.SparseGutenbergRichterSolver;
 import org.opensha.sha.magdist.SparseGutenbergRichterSolver.SpreadingMethod;
+import org.opensha.sha.util.TectonicRegionType;
 
 import com.google.common.base.Preconditions;
 
@@ -174,7 +176,8 @@ public class HardcodedInversionFactoryRunner {
 
 //		LogicTreeBranch<LogicTreeNode> branch = NSHM26_LogicTree.DEFAULT_GNMI_SUBDUCTION_INTERFACE;
 //		dirName += "-gnmi";
-		LogicTreeBranch<LogicTreeNode> branch = NSHM26_LogicTree.DEFAULT_AMSAM_SUBDUCTION_INTERFACE;
+		LogicTreeBranch<LogicTreeNode> branch = NSHM26_LogicTree.buildInterfaceDefault(
+				NSHM26_SeismicityRegions.AMSAM, TectonicRegionType.SUBDUCTION_INTERFACE, false);
 		dirName += "-amsam";
 		
 		branch.setValue(PRVI25_SubductionBValues.B_1p0);

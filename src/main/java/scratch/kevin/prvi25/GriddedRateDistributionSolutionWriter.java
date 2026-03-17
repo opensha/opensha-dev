@@ -49,7 +49,6 @@ import org.opensha.sha.earthquake.param.IncludeBackgroundOption;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.gridded.NSHM23_SingleRegionGridSourceProvider;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_MaxMagOffFault;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.gridded.PRVI25_GridSourceBuilder;
-import org.opensha.sha.earthquake.rupForecastImpl.prvi25.gridded.SeismicityRateFileLoader.RateType;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_CrustalSeismicityRate;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_DeclusteringAlgorithms;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_LogicTree;
@@ -67,6 +66,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Stopwatch;
 
 import edu.usc.kmilner.mpj.taskDispatch.MPJTaskCalculator;
+import gov.usgs.earthquake.nshmp.erf.seismicity.SeismicityRateFileLoader.RateType;
 
 public class GriddedRateDistributionSolutionWriter {
 
@@ -538,17 +538,8 @@ public class GriddedRateDistributionSolutionWriter {
 		private CrustalRateSamplingLevel() {}
 
 		public CrustalRateSamplingLevel(List<double[]> samples) {
+			super("Crustal Rate/b Distribution Sampling", "Crustal-Sampling");
 			this.samples = samples;
-		}
-
-		@Override
-		public String getShortName() {
-			return "Crustal-Sampling";
-		}
-
-		@Override
-		public String getName() {
-			return "Crustal Rate/b Distribution Sampling";
 		}
 
 		@Override
@@ -625,21 +616,12 @@ public class GriddedRateDistributionSolutionWriter {
 		private CarSlabRateSamplingLevel() {}
 
 		public CarSlabRateSamplingLevel(List<double[]> slabSamples, List<double[]> interfaceSamples) {
+			super("CAR Rate/b Distribution Sampling", "CAR-Sampling");
 			TotalRateComparator comp = new TotalRateComparator(8d);
 			Collections.sort(slabSamples, comp);
 			Collections.sort(interfaceSamples, comp);
 			this.slabSamples = slabSamples;
 			this.interfaceSamples = interfaceSamples;
-		}
-
-		@Override
-		public String getShortName() {
-			return "CAR-Sampling";
-		}
-
-		@Override
-		public String getName() {
-			return "CAR Rate/b Distribution Sampling";
 		}
 
 		@Override
@@ -720,21 +702,12 @@ public class GriddedRateDistributionSolutionWriter {
 		private MueRateSamplingLevel() {}
 
 		public MueRateSamplingLevel(List<double[]> slabSamples, List<double[]> interfaceSamples) {
+			super("MUE Rate/b Distribution Sampling", "MUE-Sampling");
 			TotalRateComparator comp = new TotalRateComparator(8d);
 			Collections.sort(slabSamples, comp);
 			Collections.sort(interfaceSamples, comp);
 			this.slabSamples = slabSamples;
 			this.interfaceSamples = interfaceSamples;
-		}
-
-		@Override
-		public String getShortName() {
-			return "MUE-Sampling";
-		}
-
-		@Override
-		public String getName() {
-			return "MUE Rate/b Distribution Sampling";
 		}
 
 		@Override

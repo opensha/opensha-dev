@@ -15,17 +15,8 @@ public class RandomDefModSampleLevel extends RandomlyGeneratedLevel<RandomDefMod
 	}
 	
 	public RandomDefModSampleLevel(int numSamples, long seed) {
+		super("Random Deformation Model Sample", "DMSample");
 		build(seed, numSamples);
-	}
-
-	@Override
-	public String getShortName() {
-		return "DMSample";
-	}
-
-	@Override
-	public String getName() {
-		return "Random Deformation Model Sample";
 	}
 
 	@Override
