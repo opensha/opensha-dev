@@ -41,7 +41,7 @@ import org.opensha.sha.util.TectonicRegionType;
 public class InterfaceSubSeisMoReductionTests {
 
 	public static void main(String[] args) throws IOException {
-		LogicTreeBranch<LogicTreeNode> branch = NSHM26_LogicTree.buildInterfaceDefault(
+		LogicTreeBranch<LogicTreeNode> branch = NSHM26_LogicTree.buildDefault(
 				NSHM26_SeismicityRegions.AMSAM, TectonicRegionType.SUBDUCTION_INTERFACE, false);
 		NSHM26_InterfaceFaultModels fm = branch.requireValue(NSHM26_InterfaceFaultModels.class);
 		NSHM26_InterfaceDeformationModels dm = branch.requireValue(NSHM26_InterfaceDeformationModels.class);

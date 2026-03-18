@@ -45,6 +45,10 @@ public class UpdatedRandTreeSerialzationTests {
 		testDistLevel.build(12345l, 1000);
 		inTrees.add(LogicTree.buildExhaustive(List.of(testDistLevel), true));
 		
+		LogicTree<?> lastTree = inTrees.get(inTrees.size()-1);
+		for (int i=0; i<lastTree.size(); i++)
+			lastTree.getBranch(i).setCustomFileName("custom_branch_"+i);
+		
 		for (int t=0; t<inTrees.size(); t++) {
 			LogicTree<LogicTreeNode> tree = inTrees.get(t);
 			System.out.println("Processing tree "+t+" with "+tree.size()+" branches");

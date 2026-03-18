@@ -176,7 +176,7 @@ public class HardcodedInversionFactoryRunner {
 
 //		LogicTreeBranch<LogicTreeNode> branch = NSHM26_LogicTree.DEFAULT_GNMI_SUBDUCTION_INTERFACE;
 //		dirName += "-gnmi";
-		LogicTreeBranch<LogicTreeNode> branch = NSHM26_LogicTree.buildInterfaceDefault(
+		LogicTreeBranch<LogicTreeNode> branch = NSHM26_LogicTree.buildDefault(
 				NSHM26_SeismicityRegions.AMSAM, TectonicRegionType.SUBDUCTION_INTERFACE, false);
 		dirName += "-amsam";
 		
