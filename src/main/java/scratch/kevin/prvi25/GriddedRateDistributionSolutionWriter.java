@@ -538,7 +538,8 @@ public class GriddedRateDistributionSolutionWriter {
 		private CrustalRateSamplingLevel() {}
 
 		public CrustalRateSamplingLevel(List<double[]> samples) {
-			super("Crustal Rate/b Distribution Sampling", "Crustal-Sampling");
+			super("Crustal Rate/b Distribution Sampling", "Crustal-Sampling",
+					"Crustal Sample ", "Crustal-Sample", "crustal_sample_");
 			this.samples = samples;
 		}
 
@@ -556,21 +557,6 @@ public class GriddedRateDistributionSolutionWriter {
 		@Override
 		public Class<? extends CrustalSamplingNode> getType() {
 			return CrustalSamplingNode.class;
-		}
-
-		@Override
-		protected String getNodeNamePrefix() {
-			return "Crustal Sample ";
-		}
-
-		@Override
-		protected String getNodeShortNamePrefix() {
-			return "Crustal-Sample";
-		}
-
-		@Override
-		protected String getNodeFilePrefix() {
-			return "crustal_sample_";
 		}
 		
 	}
@@ -613,10 +599,13 @@ public class GriddedRateDistributionSolutionWriter {
 		private List<double[]> interfaceSamples;
 		private List<Integer> randomizedIndexes;
 		
-		private CarSlabRateSamplingLevel() {}
+		private CarSlabRateSamplingLevel() {
+			super();
+		}
 
 		public CarSlabRateSamplingLevel(List<double[]> slabSamples, List<double[]> interfaceSamples) {
-			super("CAR Rate/b Distribution Sampling", "CAR-Sampling");
+			super("CAR Rate/b Distribution Sampling", "CAR-Sampling",
+					"CAR Sample ", "CAR-Sample", "car_sample_");
 			TotalRateComparator comp = new TotalRateComparator(8d);
 			Collections.sort(slabSamples, comp);
 			Collections.sort(interfaceSamples, comp);
@@ -642,21 +631,6 @@ public class GriddedRateDistributionSolutionWriter {
 		@Override
 		public Class<? extends CarSlabSamplingNode> getType() {
 			return CarSlabSamplingNode.class;
-		}
-
-		@Override
-		protected String getNodeNamePrefix() {
-			return "CAR Sample ";
-		}
-
-		@Override
-		protected String getNodeShortNamePrefix() {
-			return "CAR-Sample";
-		}
-
-		@Override
-		protected String getNodeFilePrefix() {
-			return "car_sample_";
 		}
 		
 	}
@@ -702,7 +676,8 @@ public class GriddedRateDistributionSolutionWriter {
 		private MueRateSamplingLevel() {}
 
 		public MueRateSamplingLevel(List<double[]> slabSamples, List<double[]> interfaceSamples) {
-			super("MUE Rate/b Distribution Sampling", "MUE-Sampling");
+			super("MUE Rate/b Distribution Sampling", "MUE-Sampling",
+					"MUE Sample ", "MUE-Sample", "mue_sample_");
 			TotalRateComparator comp = new TotalRateComparator(8d);
 			Collections.sort(slabSamples, comp);
 			Collections.sort(interfaceSamples, comp);
@@ -728,21 +703,6 @@ public class GriddedRateDistributionSolutionWriter {
 		@Override
 		public Class<? extends MueSamplingNode> getType() {
 			return MueSamplingNode.class;
-		}
-
-		@Override
-		protected String getNodeNamePrefix() {
-			return "MUE Sample ";
-		}
-
-		@Override
-		protected String getNodeShortNamePrefix() {
-			return "MUE-Sample";
-		}
-
-		@Override
-		protected String getNodeFilePrefix() {
-			return "mue_sample_";
 		}
 		
 	}

@@ -15,7 +15,8 @@ public class RandomDefModSampleLevel extends RandomlyGeneratedLevel<RandomDefMod
 	}
 	
 	public RandomDefModSampleLevel(int numSamples, long seed) {
-		super("Random Deformation Model Sample", "DMSample");
+		super("Random Deformation Model Sample", "DMSample",
+				"Deformation Model Sample ", "DMSample", "DMSample");
 		build(seed, numSamples);
 	}
 
@@ -27,21 +28,6 @@ public class RandomDefModSampleLevel extends RandomlyGeneratedLevel<RandomDefMod
 	@Override
 	public Class<? extends RandomDefModSampleNode> getType() {
 		return RandomDefModSampleNode.class;
-	}
-
-	@Override
-	protected String getNodeNamePrefix() {
-		return "Deformation Model Sample ";
-	}
-
-	@Override
-	protected String getNodeShortNamePrefix() {
-		return "DMSample";
-	}
-
-	@Override
-	protected String getNodeFilePrefix() {
-		return "DMSample";
 	}
 
 }
