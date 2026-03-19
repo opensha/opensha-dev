@@ -175,12 +175,13 @@ public class HardcodedInversionFactoryRunner {
 //		writeGridProv = true;
 
 //		LogicTreeBranch<LogicTreeNode> branch = NSHM26_LogicTree.DEFAULT_GNMI_SUBDUCTION_INTERFACE;
-//		dirName += "-gnmi";
-		LogicTreeBranch<LogicTreeNode> branch = NSHM26_LogicTree.buildDefault(
-				NSHM26_SeismicityRegions.AMSAM, TectonicRegionType.SUBDUCTION_INTERFACE, false);
-		dirName += "-amsam";
+		LogicTreeBranch<LogicTreeNode> branch = NSHM26_LogicTree.buildDefault(NSHM26_SeismicityRegions.GNMI, TectonicRegionType.ACTIVE_SHALLOW, false);
+		dirName += "-gnmi";
+//		LogicTreeBranch<LogicTreeNode> branch = NSHM26_LogicTree.buildDefault(
+//				NSHM26_SeismicityRegions.AMSAM, TectonicRegionType.SUBDUCTION_INTERFACE, false);
+//		dirName += "-amsam";
 		
-		branch.setValue(PRVI25_SubductionBValues.B_1p0);
+//		branch.setValue(PRVI25_SubductionBValues.B_1p0);
 
 //		branch.setValue(NSHM23_SegmentationModels.NONE);
 //		branch.setValue(SupraSeisBValues.B_0p0);

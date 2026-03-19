@@ -16,6 +16,7 @@ import org.opensha.commons.logicTree.LogicTreeBranch;
 import org.opensha.commons.logicTree.LogicTreeLevel;
 import org.opensha.commons.logicTree.LogicTreeNode;
 import org.opensha.commons.logicTree.LogicTreeNode.RandomlyGeneratedNode;
+import org.opensha.commons.logicTree.LogicTreeNode.SimpleValuedNode;
 import org.opensha.commons.logicTree.LogicTreeNode.ValuedLogicTreeNode;
 import org.opensha.commons.util.DataUtils.MinMaxAveTracker;
 

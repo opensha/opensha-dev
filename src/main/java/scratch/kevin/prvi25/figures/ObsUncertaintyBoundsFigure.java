@@ -46,7 +46,6 @@ import gov.usgs.earthquake.nshmp.erf.seismicity.SeismicityRateFileLoader.PureGR;
 import gov.usgs.earthquake.nshmp.erf.seismicity.SeismicityRateFileLoader.RateRecord;
 import gov.usgs.earthquake.nshmp.erf.seismicity.SeismicityRateFileLoader.RateType;
 import net.mahdilamb.colormap.Colors;
-import scratch.kevin.prvi25.GriddedRateDistributionSolutionWriter;
 
 import static scratch.kevin.prvi25.figures.PRVI_Paths.*;
 
@@ -280,7 +279,7 @@ public class ObsUncertaintyBoundsFigure {
 			PlotUtils.writePlots(outputDir, prefix, gp, 700, 650, true, true, false);
 			
 			if (ref && refRatePairsFile != null && !incremental) {
-				List<double[]> ratePairs = GriddedRateDistributionSolutionWriter.loadRates(refRatePairsFile);
+				List<double[]> ratePairs = loadRates(refRatePairsFile);
 				Collections.shuffle(ratePairs, new Random(ratePairs.size()));
 				
 //				int c = 200;
@@ -426,6 +425,31 @@ public class ObsUncertaintyBoundsFigure {
 				}
 			}
 		}
+	}
+	
+	public static List<double[]> loadRates(File csvFile) throws IOException {
+		CSVFile<String> csv = CSVFile.readFile(csvFile, false);
+		
+		boolean reading = false;
+		List<double[]> ret = new ArrayList<>();
+		
+		MinMaxAveTracker rateTrack = new MinMaxAveTracker();
+		MinMaxAveTracker bTrack = new MinMaxAveTracker();
+		for (int row=0; row<csv.getNumRows(); row++) {
+			if (reading) {
+				double b = csv.getDouble(row, 0);
+				double rate = csv.getDouble(row, 1);
+				rateTrack.addValue(rate);
+				bTrack.addValue(b);
+				ret.add(new double[] {rate, b});
+			} else if (csv.get(row, 0).startsWith("next ") && csv.get(row, 0).contains("lines are b")) {
+				reading = true;
+			}
+		}
+		System.out.println("Loaded "+ret.size()+" rate and b-value pairs from "+csvFile.getName());
+		System.out.println("\trates: "+rateTrack);
+		System.out.println("\tbs: "+bTrack);
+		return ret;
 	}
 	
 	private static EvenlyDiscretizedFunc cmlMFD(RateRecord record, EvenlyDiscretizedFunc refMFD) {

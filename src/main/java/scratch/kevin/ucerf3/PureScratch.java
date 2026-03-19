@@ -737,7 +737,7 @@ public class PureScratch {
 			}
 		}
 		
-		RandomDefModSampleLevel level = new RandomDefModSampleLevel();
+		RandomDefModSampleLevel level = new RandomDefModSampleLevel("Name", "Short name");
 		level.build(new Random().nextLong(), 10);
 		System.out.println("Test level: "+level.getName());
 		System.out.println("\tAffected: "+level.getAffected());
