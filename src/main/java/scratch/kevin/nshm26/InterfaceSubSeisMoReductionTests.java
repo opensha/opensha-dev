@@ -42,12 +42,13 @@ public class InterfaceSubSeisMoReductionTests {
 
 	public static void main(String[] args) throws IOException {
 		LogicTreeBranch<LogicTreeNode> branch = NSHM26_LogicTree.buildDefault(
-				NSHM26_SeismicityRegions.AMSAM, TectonicRegionType.SUBDUCTION_INTERFACE, false);
+//				NSHM26_SeismicityRegions.AMSAM, TectonicRegionType.SUBDUCTION_INTERFACE, false);
+				NSHM26_SeismicityRegions.GNMI, TectonicRegionType.SUBDUCTION_INTERFACE, false);
 		NSHM26_InterfaceFaultModels fm = branch.requireValue(NSHM26_InterfaceFaultModels.class);
 		NSHM26_InterfaceDeformationModels dm = branch.requireValue(NSHM26_InterfaceDeformationModels.class);
 
 		NSHM26_SeismicityRegions reg = fm.getSeisReg();
-		File pdfBaseDir = new File("/home/kevin/OpenSHA/nshm26/spatial_seis_pdfs/"+reg.name().toLowerCase()+"/2026_03_09-v1_2D/INTERFACE");
+		File pdfBaseDir = new File("/home/kevin/OpenSHA/nshm26/data/spatial_seis_pdfs/"+reg.name().toLowerCase()+"/2026_03_09-v1_2D/INTERFACE");
 		
 		System.out.println("Branch: "+branch+"; reg="+reg);
 		

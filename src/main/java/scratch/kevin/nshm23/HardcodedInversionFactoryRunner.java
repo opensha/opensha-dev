@@ -27,6 +27,8 @@ import org.opensha.sha.earthquake.faultSysSolution.inversion.constraints.impl.Se
 import org.opensha.sha.earthquake.faultSysSolution.inversion.constraints.impl.SlipRateInversionConstraint;
 import org.opensha.sha.earthquake.faultSysSolution.modules.GridSourceProvider;
 import org.opensha.sha.earthquake.faultSysSolution.modules.InversionTargetMFDs;
+import org.opensha.sha.earthquake.faultSysSolution.reports.ReportPageGen;
+import org.opensha.sha.earthquake.faultSysSolution.reports.ReportPageGen.PlotLevel;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.NSHM23_InvConfigFactory;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.data.NSHM23_PaleoDataLoader;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.data.NSHM23_WasatchSegmentationData;
@@ -48,7 +50,11 @@ import org.opensha.sha.earthquake.rupForecastImpl.nshm23.prior2018.NSHM18_Deform
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.prior2018.NSHM18_FaultModels;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.prior2018.NSHM18_LogicTreeBranch;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm26.NSHM26_InvConfigFactory;
+import org.opensha.sha.earthquake.rupForecastImpl.nshm26.logicTree.NSHM26_InterfaceDeformationModels;
+import org.opensha.sha.earthquake.rupForecastImpl.nshm26.logicTree.NSHM26_InterfaceMinSubSects;
+import org.opensha.sha.earthquake.rupForecastImpl.nshm26.logicTree.NSHM26_InterfaceObsSeisDMAdjustment;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm26.logicTree.NSHM26_LogicTree;
+import org.opensha.sha.earthquake.rupForecastImpl.nshm26.logicTree.NSHM26_SeisRateModelBranch;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm26.util.NSHM26_RegionLoader.NSHM26_SeismicityRegions;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.PRVI25_InvConfigFactory;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_CrustalDeformationModels;
@@ -78,6 +84,8 @@ public class HardcodedInversionFactoryRunner {
 		
 		int threads = 16;
 		boolean writeGridProv = false;
+		
+		PlotLevel plotLevel = null;
 
 		String dirName = new SimpleDateFormat("yyyy_MM_dd").format(new Date());
 
@@ -174,12 +182,22 @@ public class HardcodedInversionFactoryRunner {
 //			branch.setValue(node);
 //		writeGridProv = true;
 
-//		LogicTreeBranch<LogicTreeNode> branch = NSHM26_LogicTree.DEFAULT_GNMI_SUBDUCTION_INTERFACE;
-		LogicTreeBranch<LogicTreeNode> branch = NSHM26_LogicTree.buildDefault(NSHM26_SeismicityRegions.GNMI, TectonicRegionType.ACTIVE_SHALLOW, false);
-		dirName += "-gnmi";
 //		LogicTreeBranch<LogicTreeNode> branch = NSHM26_LogicTree.buildDefault(
-//				NSHM26_SeismicityRegions.AMSAM, TectonicRegionType.SUBDUCTION_INTERFACE, false);
-//		dirName += "-amsam";
+//				NSHM26_SeismicityRegions.GNMI, TectonicRegionType.SUBDUCTION_INTERFACE, false);
+////		LogicTreeBranch<LogicTreeNode> branch = NSHM26_LogicTree.buildDefault(
+//// 				NSHM26_SeismicityRegions.GNMI, TectonicRegionType.ACTIVE_SHALLOW, false);
+//		dirName += "-gnmi";
+		LogicTreeBranch<LogicTreeNode> branch = NSHM26_LogicTree.buildDefault(
+				NSHM26_SeismicityRegions.AMSAM, TectonicRegionType.SUBDUCTION_INTERFACE, false);
+		dirName += "-amsam";
+
+//		branch.setValue(NSHM26_InterfaceObsSeisDMAdjustment.AVERAGE);
+		branch.setValue(NSHM26_InterfaceObsSeisDMAdjustment.SECTION_SPECIFIC);
+		branch.setValue(NSHM26_InterfaceMinSubSects.ONE);
+		branch.setValue(NSHM26_SeisRateModelBranch.HIGH);
+		branch.setValue(NSHM26_InterfaceDeformationModels.LOW_COUPLING);
+		
+		plotLevel = PlotLevel.REVIEW;
 		
 //		branch.setValue(PRVI25_SubductionBValues.B_1p0);
 
@@ -382,16 +400,22 @@ public class HardcodedInversionFactoryRunner {
 		System.out.println("Will save results in: "+outputDir.getAbsolutePath());
 		
 		FaultSystemSolution solution;
-		if (writeRS) {
-			FaultSystemRupSet rupSet = factory.buildRuptureSet(branch, threads);
-			
-			Preconditions.checkState(outputDir.exists() || outputDir.mkdir());
-			
-			rupSet.write(new File(outputDir, "rupSet.zip"));
-			
-			solution = Inversions.run(rupSet, factory, branch, threads, null);
-		} else {
-			solution = Inversions.run(factory, branch, threads);
+		try {
+			if (writeRS) {
+				FaultSystemRupSet rupSet = factory.buildRuptureSet(branch, threads);
+				
+				Preconditions.checkState(outputDir.exists() || outputDir.mkdir());
+				
+				rupSet.write(new File(outputDir, "rupSet.zip"));
+				
+				solution = Inversions.run(rupSet, factory, branch, threads, null);
+			} else {
+				solution = Inversions.run(factory, branch, threads);
+			}
+		} catch (Exception e) {
+			e.printStackTrace();
+			System.exit(1);
+			throw new IllegalStateException();
 		}
 		
 		Preconditions.checkState(outputDir.exists() || outputDir.mkdir());
@@ -405,6 +429,13 @@ public class HardcodedInversionFactoryRunner {
 		}
 		
 		solution.write(new File(outputDir, "solution.zip"));
+		
+		if (plotLevel != null) {
+			ReportPageGen reportGen = new ReportPageGen(solution.getRupSet(), solution, "Solution",
+					new File(outputDir, "report"), ReportPageGen.getDefaultSolutionPlots(plotLevel));
+			reportGen.setReplot(true);
+			reportGen.generatePage();
+		}
 		
 //		System.out.println("Currently loaded modules:");
 //		IncrementalMagFreqDist target1 = null;

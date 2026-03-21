@@ -51,7 +51,8 @@ public class DownDipRupSetBuildingTests {
 		NSHM26_InterfaceFaultModels fm = NSHM26_InterfaceFaultModels.GNMI_V1;
 		String prefix = "izu_slab2";
 		
-		Range<Double> minSupraRange = Range.closed(10d, 40d);
+		Range<Double> minSupraRange = Range.closed(20d, 40d);
+		double maxSubSeisAspectRatio = 4d;
 		
 		File inDir = new File(baseOutputDir, prefix);
 		List<? extends FaultSection> sects = fm.buildSubSects(fm);
@@ -112,7 +113,7 @@ public class DownDipRupSetBuildingTests {
 		Color participatingColor = overlapCPT.getMaxColor();
 		Color otherColor = overlapCPT.getMinColor();
 		
-		RectangularDownDipGrowingStrategy growingStrat = new RectangularDownDipGrowingStrategy(minSupraRange);
+		RectangularDownDipGrowingStrategy growingStrat = new RectangularDownDipGrowingStrategy(minSupraRange, maxSubSeisAspectRatio);
 		
 		RupSetScalingRelationship scale = PRVI25_SubductionScalingRelationships.LOGA_C4p0;
 		HeadlessGraphPanel gp = PlotUtils.initScreenHeadless();

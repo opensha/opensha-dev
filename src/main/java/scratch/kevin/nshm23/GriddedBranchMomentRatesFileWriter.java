@@ -24,7 +24,7 @@ public class GriddedBranchMomentRatesFileWriter {
 		for (LogicTreeBranch<?> branch : slt.getLogicTree()) {
 			System.out.println("Branch: "+branch);
 			GridSourceProvider gridProv =  slt.loadGridProvForBranch(branch);
-			GriddedGeoDataSet xyz = NucleationRatePlot.calcGriddedNucleationMomentRates(gridProv);
+			GriddedGeoDataSet xyz = NucleationRatePlot.calcGriddedNucleationMomentRates(gridProv, null);
 			GriddedGeoDataSet.writeXYZFile(xyz, new File(outputDir, branch.buildFileName()+".xyz"));
 		}
 	}

@@ -1066,7 +1066,7 @@ public class SingleSiteHazardAndDataComparisonPageGen {
 			double[] magThresholds, EvenlyDiscretizedFunc refMFD) {
 		FaultSystemRupSet rupSet = sol.getRupSet();
 		FaultGridAssociations assoc = FaultGridAssociations.getIntersectionAssociations(rupSet, gridReg);
-		List<IncrementalMagFreqDist> sectNuclMFDs = NucleationRatePlot.calcNuclMFDs(sol);
+		List<IncrementalMagFreqDist> sectNuclMFDs = NucleationRatePlot.calcNuclMFDs(sol, null);
 		GriddedGeoDataSet[] faultParticRates = new GriddedGeoDataSet[magThresholds.length];
 		for (int m=0; m<magThresholds.length; m++)
 			faultParticRates[m] = new GriddedGeoDataSet(gridReg, false);
@@ -1120,8 +1120,8 @@ public class SingleSiteHazardAndDataComparisonPageGen {
 		for (int m=0; m<magThresholds.length; m++)
 			// nucleation for gridded
 			griddedRates[m] = NucleationRatePlot.calcGriddedNucleationRates(
-					sol.getGridSourceProvider(), gridReg, magThresholds[m]);
-		GriddedGeoDataSet griddedMoRates = NucleationRatePlot.calcGriddedNucleationMomentRates(gridProv, gridReg);
+					sol.getGridSourceProvider(), gridReg, null, magThresholds[m]);
+		GriddedGeoDataSet griddedMoRates = NucleationRatePlot.calcGriddedNucleationMomentRates(gridProv, gridReg, null);
 		IncrementalMagFreqDist mfd = null;
 		if (refMFD != null) {
 			mfd = new IncrementalMagFreqDist(refMFD.getMinX(), refMFD.size(), refMFD.getDelta());
