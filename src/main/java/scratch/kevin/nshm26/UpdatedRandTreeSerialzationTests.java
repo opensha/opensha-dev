@@ -93,8 +93,8 @@ public class UpdatedRandTreeSerialzationTests {
 						Preconditions.checkState(gen1.equals(gen2));
 					}
 				}
-				List<ValuedLogicTreeNode<?>> valNodes1 = branch1.getValues(ValuedLogicTreeNode.class);
-				List<ValuedLogicTreeNode<?>> valNodes2 = branch2.getValues(ValuedLogicTreeNode.class);
+				List<ValuedLogicTreeNode> valNodes1 = branch1.getValues(ValuedLogicTreeNode.class);
+				List<ValuedLogicTreeNode> valNodes2 = branch2.getValues(ValuedLogicTreeNode.class);
 				if (valNodes1 == null) {
 					Preconditions.checkState(valNodes2 == null);
 				} else {

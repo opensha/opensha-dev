@@ -19,7 +19,8 @@ import org.opensha.sha.earthquake.faultSysSolution.modules.MFDGridSourceProvider
 import org.opensha.sha.earthquake.faultSysSolution.modules.ProxyFaultSectionInstances;
 import org.opensha.sha.earthquake.faultSysSolution.modules.RupSetTectonicRegimes;
 import org.opensha.sha.earthquake.faultSysSolution.treeCombiners.SolutionLogicTreeCombinationProcessor;
-import org.opensha.sha.earthquake.faultSysSolution.treeCombiners.SolutionLogicTreeCombinationProcessor.CombinedRupSetMappings;
+import org.opensha.sha.earthquake.faultSysSolution.util.MergedSolutionCreator;
+import org.opensha.sha.earthquake.faultSysSolution.util.MergedSolutionCreator.MergedRupSetMappings;
 import org.opensha.sha.earthquake.faultSysSolution.util.SolModuleStripper;
 import org.opensha.sha.earthquake.faultSysSolution.util.TrueMeanSolutionCreator;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.gridded.NSHM23_SingleRegionGridSourceProvider;
@@ -123,14 +124,14 @@ public class CrustalSubductionTrueMeanCreator {
 			FaultSystemSolution subductionSol = subductionBASols.get(branch.requireValue(PRVI25_SubductionFaultModels.class));
 			Preconditions.checkState(subductionSol.getRupSet().hasModule(RupSetTectonicRegimes.class), "Subduction solution doesn't have TRTs");
 			
-			FaultSystemSolution combined = SolutionLogicTreeCombinationProcessor.combineSols(crustalSol, subductionSol, true);
+			FaultSystemSolution combined = MergedSolutionCreator.merge(subductionSol, crustalSol);
 			Preconditions.checkState(combined.getRupSet().hasModule(RupSetTectonicRegimes.class), "Combined solution doesn't have TRTs");
 			if (gridded) {
 				GridSourceList crustalGridded = crustalSol.requireModule(GridSourceList.class);
 				GridSourceList subductionGridded = subductionSol.requireModule(GridSourceList.class);
-				CombinedRupSetMappings mappings = combined.getRupSet().requireModule(CombinedRupSetMappings.class);
-				crustalGridded = GridSourceList.remapAssociations(crustalGridded, mappings.getInnerSectMappings());
-				Map<Integer, Integer> subductionMappings = new HashMap<>(mappings.getOuterSectMappings());
+				MergedRupSetMappings mappings = combined.getRupSet().requireModule(MergedRupSetMappings.class);
+				crustalGridded = GridSourceList.remapAssociations(crustalGridded, mappings.getSectMappingsOldToNew(1));
+				Map<Integer, Integer> subductionMappings = new HashMap<>(mappings.getSectMappingsOldToNew(0));
 				// add slab IDs
 				Preconditions.checkState(!subductionMappings.containsKey(
 						PRVI25_GridSourceBuilder.CAR_SLAB_ASSOC_ID));

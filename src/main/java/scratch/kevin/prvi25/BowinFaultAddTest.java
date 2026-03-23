@@ -35,8 +35,9 @@ import org.opensha.sha.earthquake.faultSysSolution.inversion.Inversions;
 import org.opensha.sha.earthquake.faultSysSolution.modules.GridSourceList;
 import org.opensha.sha.earthquake.faultSysSolution.modules.RupSetTectonicRegimes;
 import org.opensha.sha.earthquake.faultSysSolution.treeCombiners.SolutionLogicTreeCombinationProcessor;
-import org.opensha.sha.earthquake.faultSysSolution.treeCombiners.SolutionLogicTreeCombinationProcessor.CombinedRupSetMappings;
 import org.opensha.sha.earthquake.faultSysSolution.util.FaultSysTools;
+import org.opensha.sha.earthquake.faultSysSolution.util.MergedSolutionCreator;
+import org.opensha.sha.earthquake.faultSysSolution.util.MergedSolutionCreator.MergedRupSetMappings;
 import org.opensha.sha.earthquake.faultSysSolution.util.SolModuleStripper;
 import org.opensha.sha.earthquake.faultSysSolution.util.TrueMeanSolutionCreator;
 import org.opensha.sha.earthquake.param.IncludeBackgroundOption;
@@ -251,12 +252,12 @@ public class BowinFaultAddTest {
 					FaultSystemSolution subductionSol = subductionBASols.get(combBranch.requireValue(PRVI25_SubductionFaultModels.class));
 					Preconditions.checkState(subductionSol.getRupSet().hasModule(RupSetTectonicRegimes.class), "Subduction solution doesn't have TRTs");
 					
-					FaultSystemSolution combined = SolutionLogicTreeCombinationProcessor.combineSols(solution, subductionSol, true);
+					FaultSystemSolution combined = MergedSolutionCreator.merge(solution, subductionSol);
 					Preconditions.checkState(combined.getRupSet().hasModule(RupSetTectonicRegimes.class), "Combined solution doesn't have TRTs");
 					GridSourceList subductionGridded = subductionSol.requireModule(GridSourceList.class);
-					CombinedRupSetMappings mappings = combined.getRupSet().requireModule(CombinedRupSetMappings.class);
-					crustalGridded = GridSourceList.remapAssociations(crustalGridded, mappings.getInnerSectMappings());
-					subductionGridded = GridSourceList.remapAssociations(subductionGridded, mappings.getOuterSectMappings());
+					MergedRupSetMappings mappings = combined.getRupSet().requireModule(MergedRupSetMappings.class);
+					crustalGridded = GridSourceList.remapAssociations(crustalGridded, mappings.getSectMappingsOldToNew(0));
+					subductionGridded = GridSourceList.remapAssociations(subductionGridded, mappings.getSectMappingsOldToNew(1));
 					combined.setGridSourceProvider(GridSourceList.combine(subductionGridded, crustalGridded));
 					
 					creator.addSolution(combined, combBranch);
