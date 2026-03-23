@@ -129,6 +129,7 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 		Double forceHazardGridSpacing = null;
 		GriddedRegion forceHazardReg = null;
 		long randSeed = 12345678l;
+		boolean parallelBA = false;
 		
 		Double vs30 = null;
 		Double sigmaTrunc = null;
@@ -745,12 +746,14 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 		 * TODO (this is a just a marker to find this part quickly, not an actual todo)
 		 */
 		
-		NSHM26_SeismicityRegions seisReg = NSHM26_SeismicityRegions.AMSAM;
-//		NSHM26_SeismicityRegions seisReg = NSHM26_SeismicityRegions.GNMI;
+//		NSHM26_SeismicityRegions seisReg = NSHM26_SeismicityRegions.AMSAM;
+		NSHM26_SeismicityRegions seisReg = NSHM26_SeismicityRegions.GNMI;
 		int numBranchSamples = 100;
 //		int numBranchSamples = 1000;
 //		int numBranchSamples = 10000;
 		TectonicRegionType trt = null;
+		
+		parallelBA = true;
 		
 		if (trt == null)
 			customTree = NSHM26_LogicTree.buildMultiRegimeTree(seisReg, numBranchSamples, true);
@@ -763,7 +766,7 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 		dirName += "-nshm26-"+seisReg.name()+"-"+numBranchSamples+"samples";
 		if (trt != null)
 			dirName += "-"+trt.name();
-		double avgNumRups = 50000;
+		double avgNumRups = 200000;
 		// TODO
 		System.err.println("WARNING: still using PRVI GMMs");
 		gmpes = new AttenRelRef[] { AttenRelRef.USGS_PRVI_ACTIVE, AttenRelRef.USGS_PRVI_SLAB, AttenRelRef.USGS_PRVI_INTERFACE };
@@ -1027,6 +1030,8 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 			argz += " --completion "+completionArg;
 		if (runsPerBranch > 1)
 			argz += " --runs-per-branch "+runsPerBranch;
+		if (parallelBA)
+			argz += " --parallel-ba";
 		for (String arg : extraArgs)
 			argz += " "+arg;
 		argz += " "+MPJTaskCalculator.argumentBuilder().exactDispatch(remoteInversionsPerBundle).build();
