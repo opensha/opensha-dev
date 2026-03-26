@@ -85,6 +85,7 @@ import org.opensha.sha.earthquake.rupForecastImpl.nshm23.prior2018.NSHM18_LogicT
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.util.NSHM23_RegionLoader;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm26.NSHM26_InvConfigFactory;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm26.logicTree.NSHM26_LogicTree;
+import org.opensha.sha.earthquake.rupForecastImpl.nshm26.util.NSHM26_RegionLoader.NSHM26_MapRegions;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm26.util.NSHM26_RegionLoader.NSHM26_SeismicityRegions;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_LogicTree;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_SubductionFaultModels;
@@ -746,11 +747,13 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 		 * TODO (this is a just a marker to find this part quickly, not an actual todo)
 		 */
 		
-//		NSHM26_SeismicityRegions seisReg = NSHM26_SeismicityRegions.AMSAM;
-		NSHM26_SeismicityRegions seisReg = NSHM26_SeismicityRegions.GNMI;
-		int numBranchSamples = 100;
+		NSHM26_SeismicityRegions seisReg = NSHM26_SeismicityRegions.AMSAM;
+//		NSHM26_SeismicityRegions seisReg = NSHM26_SeismicityRegions.GNMI;
+//		int numBranchSamples = 100;
 //		int numBranchSamples = 1000;
+//		int numBranchSamples = 2000;
 //		int numBranchSamples = 10000;
+		int numBranchSamples = 100000;
 		TectonicRegionType trt = null;
 		
 		parallelBA = true;
@@ -771,8 +774,13 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 		System.err.println("WARNING: still using PRVI GMMs");
 		gmpes = new AttenRelRef[] { AttenRelRef.USGS_PRVI_ACTIVE, AttenRelRef.USGS_PRVI_SLAB, AttenRelRef.USGS_PRVI_INTERFACE };
 		
-		forceHazardReg = new GriddedRegion(seisReg.load(), 0.1, GriddedRegion.ANCHOR_0_0);
-//		forceHazardReg = new GriddedRegion(seisReg.load(), 0.025, GriddedRegion.ANCHOR_0_0);
+//		// full seis region
+//		Region mapRegion = seisReg.load();
+		// smaller map region
+		Region mapRegion = NSHM26_MapRegions.valueOf(seisReg.name()).load();
+		
+		forceHazardReg = new GriddedRegion(mapRegion, 0.1, GriddedRegion.ANCHOR_0_0);
+//		forceHazardReg = new GriddedRegion(mapRegion, 0.025, GriddedRegion.ANCHOR_0_0);
 		sigmaTrunc = 3d;
 		
 		Class<? extends InversionConfigurationFactory> factoryClass = NSHM26_InvConfigFactory.class;
