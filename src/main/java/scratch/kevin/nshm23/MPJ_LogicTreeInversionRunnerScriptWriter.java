@@ -178,7 +178,7 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 		LogicTree<LogicTreeNode> analysisTree = null;
 
 		String dirName = new SimpleDateFormat("yyyy_MM_dd").format(new Date());
-//		String dirName = "2024_12_12";
+//		String dirName = "2026_03_27";
 		String dirSuffix = null;
 		
 		/*
@@ -748,8 +748,8 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 		 * TODO (this is a just a marker to find this part quickly, not an actual todo)
 		 */
 		
-		NSHM26_SeismicityRegions seisReg = NSHM26_SeismicityRegions.AMSAM;
-//		NSHM26_SeismicityRegions seisReg = NSHM26_SeismicityRegions.GNMI;
+//		NSHM26_SeismicityRegions seisReg = NSHM26_SeismicityRegions.AMSAM;
+		NSHM26_SeismicityRegions seisReg = NSHM26_SeismicityRegions.GNMI;
 //		int numBranchSamples = 100;
 //		int numBranchSamples = 1000;
 		int numBranchSamples = 2000;
