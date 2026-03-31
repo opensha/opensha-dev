@@ -1,4 +1,4 @@
-package scratch.kevin.nshm26.figures;
+package scratch.kevin.nshm27.figures;
 
 import java.io.File;
 import java.io.IOException;
