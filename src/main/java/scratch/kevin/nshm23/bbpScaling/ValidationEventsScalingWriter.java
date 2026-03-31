@@ -57,6 +57,26 @@ public class ValidationEventsScalingWriter {
 		lengths.add(20d);
 		widths.add(27d);
 		
+		names.add("landers");
+		mags.add(7.22);
+		lengths.add(80d);
+		widths.add(21d);
+		
+		names.add("ridgecrest_m6p4");
+		mags.add(6.47);
+		lengths.add(16d);
+		widths.add(12d);
+		
+		names.add("ridgecrest_m7p2");
+		mags.add(7.06);
+		lengths.add(52d);
+		widths.add(12d);
+		
+		names.add("whittier");
+		mags.add(5.89);
+		lengths.add(10d);
+		widths.add(10d);
+		
 		CSVFile<String> csv = new CSVFile<>(true);
 		
 		List<String> header = new ArrayList<>();
