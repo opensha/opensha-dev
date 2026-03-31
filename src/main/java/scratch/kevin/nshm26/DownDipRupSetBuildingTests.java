@@ -29,7 +29,6 @@ import org.opensha.sha.earthquake.faultSysSolution.ruptures.downDip.RectangularD
 import org.opensha.sha.earthquake.faultSysSolution.ruptures.downDip.RectangularDownDipGrowingStrategy.NeighborOverlaps;
 import org.opensha.sha.earthquake.faultSysSolution.ruptures.util.GeoJSONFaultReader;
 import org.opensha.sha.earthquake.faultSysSolution.util.FaultSysTools;
-import org.opensha.sha.earthquake.rupForecastImpl.nshm26.logicTree.NSHM26_InterfaceFaultModels;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_SubductionScalingRelationships;
 import org.opensha.sha.faultSurface.FaultSection;
 import org.opensha.sha.faultSurface.GeoJSONFaultSection;
@@ -37,6 +36,7 @@ import org.opensha.sha.faultSurface.GeoJSONFaultSection;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Range;
 
+import gov.usgs.earthquake.nshmp.erf.nshm27.logicTree.NSHM26_InterfaceFaultModels;
 import net.mahdilamb.colormap.Colors;
 
 public class DownDipRupSetBuildingTests {

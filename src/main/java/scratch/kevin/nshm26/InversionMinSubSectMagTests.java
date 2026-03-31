@@ -9,12 +9,13 @@ import org.opensha.commons.logicTree.LogicTreeBranch;
 import org.opensha.commons.logicTree.LogicTreeNode;
 import org.opensha.sha.earthquake.faultSysSolution.FaultSystemRupSet;
 import org.opensha.sha.earthquake.faultSysSolution.util.FaultSysTools;
-import org.opensha.sha.earthquake.rupForecastImpl.nshm26.NSHM26_InvConfigFactory;
-import org.opensha.sha.earthquake.rupForecastImpl.nshm26.logicTree.NSHM26_InterfaceFaultModels;
-import org.opensha.sha.earthquake.rupForecastImpl.nshm26.logicTree.NSHM26_InterfaceMinSubSects;
-import org.opensha.sha.earthquake.rupForecastImpl.nshm26.logicTree.NSHM26_LogicTree;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_SubductionScalingRelationships;
 import org.opensha.sha.util.TectonicRegionType;
+
+import gov.usgs.earthquake.nshmp.erf.nshm27.NSHM26_InvConfigFactory;
+import gov.usgs.earthquake.nshmp.erf.nshm27.logicTree.NSHM26_InterfaceFaultModels;
+import gov.usgs.earthquake.nshmp.erf.nshm27.logicTree.NSHM26_InterfaceMinSubSects;
+import gov.usgs.earthquake.nshmp.erf.nshm27.logicTree.NSHM26_LogicTree;
 
 public class InversionMinSubSectMagTests {
 

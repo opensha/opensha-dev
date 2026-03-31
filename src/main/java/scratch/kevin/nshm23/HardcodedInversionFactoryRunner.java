@@ -49,13 +49,6 @@ import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.random.Random
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.prior2018.NSHM18_DeformationModels;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.prior2018.NSHM18_FaultModels;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.prior2018.NSHM18_LogicTreeBranch;
-import org.opensha.sha.earthquake.rupForecastImpl.nshm26.NSHM26_InvConfigFactory;
-import org.opensha.sha.earthquake.rupForecastImpl.nshm26.logicTree.NSHM26_InterfaceDeformationModels;
-import org.opensha.sha.earthquake.rupForecastImpl.nshm26.logicTree.NSHM26_InterfaceMinSubSects;
-import org.opensha.sha.earthquake.rupForecastImpl.nshm26.logicTree.NSHM26_InterfaceObsSeisDMAdjustment;
-import org.opensha.sha.earthquake.rupForecastImpl.nshm26.logicTree.NSHM26_LogicTree;
-import org.opensha.sha.earthquake.rupForecastImpl.nshm26.logicTree.NSHM26_SeisRateModelBranch;
-import org.opensha.sha.earthquake.rupForecastImpl.nshm26.util.NSHM26_RegionLoader.NSHM26_SeismicityRegions;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.PRVI25_InvConfigFactory;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_CrustalDeformationModels;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_CrustalFaultModels;
@@ -69,6 +62,13 @@ import org.opensha.sha.util.TectonicRegionType;
 
 import com.google.common.base.Preconditions;
 
+import gov.usgs.earthquake.nshmp.erf.nshm27.NSHM26_InvConfigFactory;
+import gov.usgs.earthquake.nshmp.erf.nshm27.logicTree.NSHM26_InterfaceDeformationModels;
+import gov.usgs.earthquake.nshmp.erf.nshm27.logicTree.NSHM26_InterfaceMinSubSects;
+import gov.usgs.earthquake.nshmp.erf.nshm27.logicTree.NSHM26_InterfaceObsSeisDMAdjustment;
+import gov.usgs.earthquake.nshmp.erf.nshm27.logicTree.NSHM26_LogicTree;
+import gov.usgs.earthquake.nshmp.erf.nshm27.logicTree.NSHM26_SeisRateModelBranch;
+import gov.usgs.earthquake.nshmp.erf.nshm27.util.NSHM26_RegionLoader.NSHM26_SeismicityRegions;
 import scratch.UCERF3.enumTreeBranches.ScalingRelationships;
 import scratch.UCERF3.inversion.U3InversionConfigFactory;
 import scratch.UCERF3.logicTree.U3LogicTreeBranch;

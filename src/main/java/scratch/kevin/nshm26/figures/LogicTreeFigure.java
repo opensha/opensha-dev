@@ -8,11 +8,12 @@ import java.util.List;
 import org.opensha.commons.logicTree.LogicTree;
 import org.opensha.commons.logicTree.LogicTreeFigureWriter;
 import org.opensha.commons.logicTree.LogicTreeNode;
-import org.opensha.sha.earthquake.rupForecastImpl.nshm26.logicTree.NSHM26_LogicTree;
-import org.opensha.sha.earthquake.rupForecastImpl.nshm26.util.NSHM26_RegionLoader.NSHM26_SeismicityRegions;
 import org.opensha.sha.util.TectonicRegionType;
 
 import com.google.common.base.Preconditions;
+
+import gov.usgs.earthquake.nshmp.erf.nshm27.logicTree.NSHM26_LogicTree;
+import gov.usgs.earthquake.nshmp.erf.nshm27.util.NSHM26_RegionLoader.NSHM26_SeismicityRegions;
 
 public class LogicTreeFigure {
 	

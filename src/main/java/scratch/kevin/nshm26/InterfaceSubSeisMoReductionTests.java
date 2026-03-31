@@ -23,20 +23,21 @@ import org.opensha.commons.util.DataUtils.MinMaxAveTracker;
 import org.opensha.commons.util.cpt.CPT;
 import org.opensha.sha.earthquake.faultSysSolution.modules.FaultGridAssociations;
 import org.opensha.sha.earthquake.faultSysSolution.util.FaultSysTools;
-import org.opensha.sha.earthquake.rupForecastImpl.nshm26.logicTree.NSHM26_DeclusteringAlgorithms;
-import org.opensha.sha.earthquake.rupForecastImpl.nshm26.logicTree.NSHM26_LogicTree;
-import org.opensha.sha.earthquake.rupForecastImpl.nshm26.logicTree.NSHM26_SeisRateModelBranch;
-import org.opensha.sha.earthquake.rupForecastImpl.nshm26.logicTree.NSHM26_SeisSmoothingAlgorithms;
-import org.opensha.sha.earthquake.rupForecastImpl.nshm26.logicTree.NSHM26_InterfaceDeformationModels;
-import org.opensha.sha.earthquake.rupForecastImpl.nshm26.logicTree.NSHM26_InterfaceFaultModels;
-import org.opensha.sha.earthquake.rupForecastImpl.nshm26.util.InterfaceGridAssociations;
-import org.opensha.sha.earthquake.rupForecastImpl.nshm26.util.NSHM26_RegionLoader.NSHM26_SeismicityRegions;
-import org.opensha.sha.earthquake.rupForecastImpl.nshm26.util.NSHM26_SeisPDF_Loader;
 import org.opensha.sha.faultSurface.FaultSection;
 import org.opensha.sha.faultSurface.FaultTrace;
 import org.opensha.sha.faultSurface.RuptureSurface;
 import org.opensha.sha.magdist.IncrementalMagFreqDist;
 import org.opensha.sha.util.TectonicRegionType;
+
+import gov.usgs.earthquake.nshmp.erf.nshm27.logicTree.NSHM26_DeclusteringAlgorithms;
+import gov.usgs.earthquake.nshmp.erf.nshm27.logicTree.NSHM26_InterfaceDeformationModels;
+import gov.usgs.earthquake.nshmp.erf.nshm27.logicTree.NSHM26_InterfaceFaultModels;
+import gov.usgs.earthquake.nshmp.erf.nshm27.logicTree.NSHM26_LogicTree;
+import gov.usgs.earthquake.nshmp.erf.nshm27.logicTree.NSHM26_SeisRateModelBranch;
+import gov.usgs.earthquake.nshmp.erf.nshm27.logicTree.NSHM26_SeisSmoothingAlgorithms;
+import gov.usgs.earthquake.nshmp.erf.nshm27.util.InterfaceGridAssociations;
+import gov.usgs.earthquake.nshmp.erf.nshm27.util.NSHM26_SeisPDF_Loader;
+import gov.usgs.earthquake.nshmp.erf.nshm27.util.NSHM26_RegionLoader.NSHM26_SeismicityRegions;
 
 public class InterfaceSubSeisMoReductionTests {
 
