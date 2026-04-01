@@ -29,33 +29,33 @@ import org.opensha.sha.faultSurface.RuptureSurface;
 import org.opensha.sha.magdist.IncrementalMagFreqDist;
 import org.opensha.sha.util.TectonicRegionType;
 
-import gov.usgs.earthquake.nshmp.erf.nshm27.logicTree.NSHM26_DeclusteringAlgorithms;
-import gov.usgs.earthquake.nshmp.erf.nshm27.logicTree.NSHM26_InterfaceDeformationModels;
-import gov.usgs.earthquake.nshmp.erf.nshm27.logicTree.NSHM26_InterfaceFaultModels;
-import gov.usgs.earthquake.nshmp.erf.nshm27.logicTree.NSHM26_LogicTree;
-import gov.usgs.earthquake.nshmp.erf.nshm27.logicTree.NSHM26_SeisRateModelBranch;
-import gov.usgs.earthquake.nshmp.erf.nshm27.logicTree.NSHM26_SeisSmoothingAlgorithms;
+import gov.usgs.earthquake.nshmp.erf.nshm27.logicTree.NSHM27_DeclusteringAlgorithms;
+import gov.usgs.earthquake.nshmp.erf.nshm27.logicTree.NSHM27_InterfaceDeformationModels;
+import gov.usgs.earthquake.nshmp.erf.nshm27.logicTree.NSHM27_InterfaceFaultModels;
+import gov.usgs.earthquake.nshmp.erf.nshm27.logicTree.NSHM27_LogicTree;
+import gov.usgs.earthquake.nshmp.erf.nshm27.logicTree.NSHM27_SeisRateModelBranch;
+import gov.usgs.earthquake.nshmp.erf.nshm27.logicTree.NSHM27_SeisSmoothingAlgorithms;
 import gov.usgs.earthquake.nshmp.erf.nshm27.util.InterfaceGridAssociations;
-import gov.usgs.earthquake.nshmp.erf.nshm27.util.NSHM26_SeisPDF_Loader;
-import gov.usgs.earthquake.nshmp.erf.nshm27.util.NSHM26_RegionLoader.NSHM26_SeismicityRegions;
+import gov.usgs.earthquake.nshmp.erf.nshm27.util.NSHM27_SeisPDF_Loader;
+import gov.usgs.earthquake.nshmp.erf.nshm27.util.NSHM27_RegionLoader.NSHM27_SeismicityRegions;
 
 public class InterfaceSubSeisMoReductionTests {
 
 	public static void main(String[] args) throws IOException {
-		LogicTreeBranch<LogicTreeNode> branch = NSHM26_LogicTree.buildDefault(
+		LogicTreeBranch<LogicTreeNode> branch = NSHM27_LogicTree.buildDefault(
 //				NSHM26_SeismicityRegions.AMSAM, TectonicRegionType.SUBDUCTION_INTERFACE, false);
-				NSHM26_SeismicityRegions.GNMI, TectonicRegionType.SUBDUCTION_INTERFACE, false);
-		NSHM26_InterfaceFaultModels fm = branch.requireValue(NSHM26_InterfaceFaultModels.class);
-		NSHM26_InterfaceDeformationModels dm = branch.requireValue(NSHM26_InterfaceDeformationModels.class);
+				NSHM27_SeismicityRegions.GNMI, TectonicRegionType.SUBDUCTION_INTERFACE, false);
+		NSHM27_InterfaceFaultModels fm = branch.requireValue(NSHM27_InterfaceFaultModels.class);
+		NSHM27_InterfaceDeformationModels dm = branch.requireValue(NSHM27_InterfaceDeformationModels.class);
 
-		NSHM26_SeismicityRegions reg = fm.getSeisReg();
+		NSHM27_SeismicityRegions reg = fm.getSeisReg();
 		File pdfBaseDir = new File("/home/kevin/OpenSHA/nshm26/data/spatial_seis_pdfs/"+reg.name().toLowerCase()+"/2026_03_09-v1_2D/INTERFACE");
 		
 		System.out.println("Branch: "+branch+"; reg="+reg);
 		
-		NSHM26_SeisRateModelBranch rateModel = NSHM26_SeisRateModelBranch.PREFFERRED;
-		NSHM26_DeclusteringAlgorithms decluster = NSHM26_DeclusteringAlgorithms.AVERAGE;
-		NSHM26_SeisSmoothingAlgorithms smooth = NSHM26_SeisSmoothingAlgorithms.AVERAGE;
+		NSHM27_SeisRateModelBranch rateModel = NSHM27_SeisRateModelBranch.PREFFERRED;
+		NSHM27_DeclusteringAlgorithms decluster = NSHM27_DeclusteringAlgorithms.AVERAGE;
+		NSHM27_SeisSmoothingAlgorithms smooth = NSHM27_SeisSmoothingAlgorithms.AVERAGE;
 		double cutoffHorzDist = 50d;
 		
 		List<? extends FaultSection> sects = dm.build(branch);
@@ -74,7 +74,7 @@ public class InterfaceSubSeisMoReductionTests {
 			sectOutlines[s] = new Region(sectSurfs[s].getPerimeter(), BorderType.MERCATOR_LINEAR);
 		}
 		
-		GriddedGeoDataSet pdf = NSHM26_SeisPDF_Loader.load2D(pdfBaseDir, reg, decluster, smooth);
+		GriddedGeoDataSet pdf = NSHM27_SeisPDF_Loader.load2D(pdfBaseDir, reg, decluster, smooth);
 		
 		InterfaceGridAssociations assoc = new InterfaceGridAssociations(sects, pdf.getRegion());
 		double sumMapped = 0d;

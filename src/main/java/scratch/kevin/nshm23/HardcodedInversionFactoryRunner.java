@@ -62,13 +62,13 @@ import org.opensha.sha.util.TectonicRegionType;
 
 import com.google.common.base.Preconditions;
 
-import gov.usgs.earthquake.nshmp.erf.nshm27.NSHM26_InvConfigFactory;
-import gov.usgs.earthquake.nshmp.erf.nshm27.logicTree.NSHM26_InterfaceDeformationModels;
-import gov.usgs.earthquake.nshmp.erf.nshm27.logicTree.NSHM26_InterfaceMinSubSects;
-import gov.usgs.earthquake.nshmp.erf.nshm27.logicTree.NSHM26_InterfaceObsSeisDMAdjustment;
-import gov.usgs.earthquake.nshmp.erf.nshm27.logicTree.NSHM26_LogicTree;
-import gov.usgs.earthquake.nshmp.erf.nshm27.logicTree.NSHM26_SeisRateModelBranch;
-import gov.usgs.earthquake.nshmp.erf.nshm27.util.NSHM26_RegionLoader.NSHM26_SeismicityRegions;
+import gov.usgs.earthquake.nshmp.erf.nshm27.NSHM27_InvConfigFactory;
+import gov.usgs.earthquake.nshmp.erf.nshm27.logicTree.NSHM27_InterfaceDeformationModels;
+import gov.usgs.earthquake.nshmp.erf.nshm27.logicTree.NSHM27_InterfaceMinSubSects;
+import gov.usgs.earthquake.nshmp.erf.nshm27.logicTree.NSHM27_InterfaceObsSeisDMAdjustment;
+import gov.usgs.earthquake.nshmp.erf.nshm27.logicTree.NSHM27_LogicTree;
+import gov.usgs.earthquake.nshmp.erf.nshm27.logicTree.NSHM27_SeisRateModelBranch;
+import gov.usgs.earthquake.nshmp.erf.nshm27.util.NSHM27_RegionLoader.NSHM27_SeismicityRegions;
 import scratch.UCERF3.enumTreeBranches.ScalingRelationships;
 import scratch.UCERF3.inversion.U3InversionConfigFactory;
 import scratch.UCERF3.logicTree.U3LogicTreeBranch;
@@ -154,7 +154,7 @@ public class HardcodedInversionFactoryRunner {
 //		dirName += "-prvi25-limit_below_obs";
 //		PRVI25_InvConfigFactory.SUB_SECT_DDW_FRACT = 0.25; dirName += "-quarter_len_sub_sects";
 		
-		NSHM26_InvConfigFactory factory = new NSHM26_InvConfigFactory();
+		NSHM27_InvConfigFactory factory = new NSHM27_InvConfigFactory();
 		dirName += "-nshm26";
 		
 		factory.setCacheDir(new File("/home/kevin/OpenSHA/nshm23/rup_sets/cache"));
@@ -187,15 +187,15 @@ public class HardcodedInversionFactoryRunner {
 ////		LogicTreeBranch<LogicTreeNode> branch = NSHM26_LogicTree.buildDefault(
 //// 				NSHM26_SeismicityRegions.GNMI, TectonicRegionType.ACTIVE_SHALLOW, false);
 //		dirName += "-gnmi";
-		LogicTreeBranch<LogicTreeNode> branch = NSHM26_LogicTree.buildDefault(
-				NSHM26_SeismicityRegions.AMSAM, TectonicRegionType.SUBDUCTION_INTERFACE, false);
+		LogicTreeBranch<LogicTreeNode> branch = NSHM27_LogicTree.buildDefault(
+				NSHM27_SeismicityRegions.AMSAM, TectonicRegionType.SUBDUCTION_INTERFACE, false);
 		dirName += "-amsam";
 
 //		branch.setValue(NSHM26_InterfaceObsSeisDMAdjustment.AVERAGE);
-		branch.setValue(NSHM26_InterfaceObsSeisDMAdjustment.SECTION_SPECIFIC);
-		branch.setValue(NSHM26_InterfaceMinSubSects.ONE);
-		branch.setValue(NSHM26_SeisRateModelBranch.HIGH);
-		branch.setValue(NSHM26_InterfaceDeformationModels.LOW_COUPLING);
+		branch.setValue(NSHM27_InterfaceObsSeisDMAdjustment.SECTION_SPECIFIC);
+		branch.setValue(NSHM27_InterfaceMinSubSects.ONE);
+		branch.setValue(NSHM27_SeisRateModelBranch.HIGH);
+		branch.setValue(NSHM27_InterfaceDeformationModels.LOW_COUPLING);
 		
 		plotLevel = PlotLevel.REVIEW;
 		

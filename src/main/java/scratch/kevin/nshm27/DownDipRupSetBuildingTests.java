@@ -36,7 +36,7 @@ import org.opensha.sha.faultSurface.GeoJSONFaultSection;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Range;
 
-import gov.usgs.earthquake.nshmp.erf.nshm27.logicTree.NSHM26_InterfaceFaultModels;
+import gov.usgs.earthquake.nshmp.erf.nshm27.logicTree.NSHM27_InterfaceFaultModels;
 import net.mahdilamb.colormap.Colors;
 
 public class DownDipRupSetBuildingTests {
@@ -48,7 +48,7 @@ public class DownDipRupSetBuildingTests {
 //		NSHM26_SubductionInterfaceFaultModels fm = NSHM26_SubductionInterfaceFaultModels.KERMADEC;
 //		String prefix = "ker_slab2";
 		
-		NSHM26_InterfaceFaultModels fm = NSHM26_InterfaceFaultModels.GNMI_V1;
+		NSHM27_InterfaceFaultModels fm = NSHM27_InterfaceFaultModels.GNMI_V1;
 		String prefix = "izu_slab2";
 		
 		Range<Double> minSupraRange = Range.closed(20d, 40d);

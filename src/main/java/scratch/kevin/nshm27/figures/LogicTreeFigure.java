@@ -12,8 +12,8 @@ import org.opensha.sha.util.TectonicRegionType;
 
 import com.google.common.base.Preconditions;
 
-import gov.usgs.earthquake.nshmp.erf.nshm27.logicTree.NSHM26_LogicTree;
-import gov.usgs.earthquake.nshmp.erf.nshm27.util.NSHM26_RegionLoader.NSHM26_SeismicityRegions;
+import gov.usgs.earthquake.nshmp.erf.nshm27.logicTree.NSHM27_LogicTree;
+import gov.usgs.earthquake.nshmp.erf.nshm27.util.NSHM27_RegionLoader.NSHM27_SeismicityRegions;
 
 public class LogicTreeFigure {
 	
@@ -27,15 +27,15 @@ public class LogicTreeFigure {
 		TectonicRegionType[] trts = {TectonicRegionType.SUBDUCTION_INTERFACE, TectonicRegionType.SUBDUCTION_SLAB,
 				TectonicRegionType.ACTIVE_SHALLOW};
 		
-		for (NSHM26_SeismicityRegions seisReg : NSHM26_SeismicityRegions.values()) {
+		for (NSHM27_SeismicityRegions seisReg : NSHM27_SeismicityRegions.values()) {
 			for (TectonicRegionType trt : trts) {
-				LogicTree<LogicTreeNode> tree = NSHM26_LogicTree.buildLogicTree(seisReg, trt, samples, true);
+				LogicTree<LogicTreeNode> tree = NSHM27_LogicTree.buildLogicTree(seisReg, trt, samples, true);
 				
 				LogicTreeFigureWriter ltFig = new LogicTreeFigureWriter(tree, false, useLevelWeights);
 				ltFig.write(outputDir, seisReg.name()+"_"+trt.name(), true, true);
 			}
 			
-			LogicTree<LogicTreeNode> multiTree = NSHM26_LogicTree.buildMultiRegimeTree(seisReg, samples, true);
+			LogicTree<LogicTreeNode> multiTree = NSHM27_LogicTree.buildMultiRegimeTree(seisReg, samples, true);
 			LogicTreeFigureWriter ltFig = new LogicTreeFigureWriter(LogicTree.unrollTRTs(multiTree), false, useLevelWeights);
 			ltFig.write(outputDir, seisReg.name()+"_combined", true, true);
 		}

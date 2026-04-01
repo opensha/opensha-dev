@@ -12,19 +12,19 @@ import org.opensha.sha.earthquake.faultSysSolution.util.FaultSysTools;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_SubductionScalingRelationships;
 import org.opensha.sha.util.TectonicRegionType;
 
-import gov.usgs.earthquake.nshmp.erf.nshm27.NSHM26_InvConfigFactory;
-import gov.usgs.earthquake.nshmp.erf.nshm27.logicTree.NSHM26_InterfaceFaultModels;
-import gov.usgs.earthquake.nshmp.erf.nshm27.logicTree.NSHM26_InterfaceMinSubSects;
-import gov.usgs.earthquake.nshmp.erf.nshm27.logicTree.NSHM26_LogicTree;
+import gov.usgs.earthquake.nshmp.erf.nshm27.NSHM27_InvConfigFactory;
+import gov.usgs.earthquake.nshmp.erf.nshm27.logicTree.NSHM27_InterfaceFaultModels;
+import gov.usgs.earthquake.nshmp.erf.nshm27.logicTree.NSHM27_InterfaceMinSubSects;
+import gov.usgs.earthquake.nshmp.erf.nshm27.logicTree.NSHM27_LogicTree;
 
 public class InversionMinSubSectMagTests {
 
 	public static void main(String[] args) throws IOException {
-		NSHM26_InvConfigFactory factory = new NSHM26_InvConfigFactory();
-		Map<NSHM26_InterfaceFaultModels, double[]> countMags = new HashMap<>();
-		NSHM26_InterfaceMinSubSects[] minSects = NSHM26_InterfaceMinSubSects.values();
-		for (NSHM26_InterfaceFaultModels fm : NSHM26_InterfaceFaultModels.values()) {
-			LogicTreeBranch<LogicTreeNode> branch = NSHM26_LogicTree.buildDefault(
+		NSHM27_InvConfigFactory factory = new NSHM27_InvConfigFactory();
+		Map<NSHM27_InterfaceFaultModels, double[]> countMags = new HashMap<>();
+		NSHM27_InterfaceMinSubSects[] minSects = NSHM27_InterfaceMinSubSects.values();
+		for (NSHM27_InterfaceFaultModels fm : NSHM27_InterfaceFaultModels.values()) {
+			LogicTreeBranch<LogicTreeNode> branch = NSHM27_LogicTree.buildDefault(
 					fm.getSeisReg(), TectonicRegionType.SUBDUCTION_INTERFACE, false);
 			branch.setValue(PRVI25_SubductionScalingRelationships.AVERAGE);
 			FaultSystemRupSet rupSet = factory.buildRuptureSet(branch, FaultSysTools.defaultNumThreads());
@@ -51,7 +51,7 @@ public class InversionMinSubSectMagTests {
 		DecimalFormat mDF = new DecimalFormat("0.0");
 		
 		double[] avgMags = new double[minSects.length];
-		for (NSHM26_InterfaceFaultModels fm : countMags.keySet()) {
+		for (NSHM27_InterfaceFaultModels fm : countMags.keySet()) {
 			double[] mags = countMags.get(fm);
 			System.out.println(fm.getName());
 			for (int m=0; m<minSects.length; m++) {

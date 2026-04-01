@@ -98,10 +98,10 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 
 import edu.usc.kmilner.mpj.taskDispatch.MPJTaskCalculator;
-import gov.usgs.earthquake.nshmp.erf.nshm27.NSHM26_InvConfigFactory;
-import gov.usgs.earthquake.nshmp.erf.nshm27.logicTree.NSHM26_LogicTree;
-import gov.usgs.earthquake.nshmp.erf.nshm27.util.NSHM26_RegionLoader.NSHM26_MapRegions;
-import gov.usgs.earthquake.nshmp.erf.nshm27.util.NSHM26_RegionLoader.NSHM26_SeismicityRegions;
+import gov.usgs.earthquake.nshmp.erf.nshm27.NSHM27_InvConfigFactory;
+import gov.usgs.earthquake.nshmp.erf.nshm27.logicTree.NSHM27_LogicTree;
+import gov.usgs.earthquake.nshmp.erf.nshm27.util.NSHM27_RegionLoader.NSHM26_MapRegions;
+import gov.usgs.earthquake.nshmp.erf.nshm27.util.NSHM27_RegionLoader.NSHM27_SeismicityRegions;
 import scratch.UCERF3.enumTreeBranches.DeformationModels;
 import scratch.UCERF3.enumTreeBranches.FaultModels;
 import scratch.UCERF3.enumTreeBranches.ScalingRelationships;
@@ -749,7 +749,7 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 		 */
 		
 //		NSHM26_SeismicityRegions seisReg = NSHM26_SeismicityRegions.AMSAM;
-		NSHM26_SeismicityRegions seisReg = NSHM26_SeismicityRegions.GNMI;
+		NSHM27_SeismicityRegions seisReg = NSHM27_SeismicityRegions.GNMI;
 //		int numBranchSamples = 100;
 //		int numBranchSamples = 1000;
 		int numBranchSamples = 2000;
@@ -760,11 +760,11 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 		parallelBA = true;
 		
 		if (trt == null) {
-			customTree = NSHM26_LogicTree.buildMultiRegimeTree(seisReg, numBranchSamples, true);
+			customTree = NSHM27_LogicTree.buildMultiRegimeTree(seisReg, numBranchSamples, true);
 			analysisTree = LogicTree.unrollTRTs(customTree);
 			Preconditions.checkNotNull(analysisTree);
 		} else {
-			customTree = NSHM26_LogicTree.buildLogicTree(seisReg, trt, numBranchSamples, true);
+			customTree = NSHM27_LogicTree.buildLogicTree(seisReg, trt, numBranchSamples, true);
 			analysisTree = customTree;
 		}
 		analysisTree = LogicTree.applyBinning(analysisTree);
@@ -790,7 +790,7 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 //		forceHazardReg = new GriddedRegion(mapRegion, 0.025, GriddedRegion.ANCHOR_0_0);
 		sigmaTrunc = 3d;
 		
-		Class<? extends InversionConfigurationFactory> factoryClass = NSHM26_InvConfigFactory.class;
+		Class<? extends InversionConfigurationFactory> factoryClass = NSHM27_InvConfigFactory.class;
 		
 		forceHazardGridSpacing = 0.1;
 		nodeBAskipSectBySect = false;
