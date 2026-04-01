@@ -100,7 +100,7 @@ import com.google.common.collect.ImmutableList;
 import edu.usc.kmilner.mpj.taskDispatch.MPJTaskCalculator;
 import gov.usgs.earthquake.nshmp.erf.nshm27.NSHM27_InvConfigFactory;
 import gov.usgs.earthquake.nshmp.erf.nshm27.logicTree.NSHM27_LogicTree;
-import gov.usgs.earthquake.nshmp.erf.nshm27.util.NSHM27_RegionLoader.NSHM26_MapRegions;
+import gov.usgs.earthquake.nshmp.erf.nshm27.util.NSHM27_RegionLoader.NSHM27_MapRegions;
 import gov.usgs.earthquake.nshmp.erf.nshm27.util.NSHM27_RegionLoader.NSHM27_SeismicityRegions;
 import scratch.UCERF3.enumTreeBranches.DeformationModels;
 import scratch.UCERF3.enumTreeBranches.FaultModels;
@@ -744,11 +744,11 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 		 */
 		
 		/*
-		 * NSHM26 logic tree
+		 * NSHM27 logic tree
 		 * TODO (this is a just a marker to find this part quickly, not an actual todo)
 		 */
 		
-//		NSHM26_SeismicityRegions seisReg = NSHM26_SeismicityRegions.AMSAM;
+//		NSHM27_SeismicityRegions seisReg = NSHM27_SeismicityRegions.AMSAM;
 		NSHM27_SeismicityRegions seisReg = NSHM27_SeismicityRegions.GNMI;
 //		int numBranchSamples = 100;
 //		int numBranchSamples = 1000;
@@ -784,7 +784,7 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 //		// full seis region
 //		Region mapRegion = seisReg.load();
 		// smaller map region
-		Region mapRegion = NSHM26_MapRegions.valueOf(seisReg.name()).load();
+		Region mapRegion = NSHM27_MapRegions.valueOf(seisReg.name()).load();
 		
 		forceHazardReg = new GriddedRegion(mapRegion, 0.1, GriddedRegion.ANCHOR_0_0);
 //		forceHazardReg = new GriddedRegion(mapRegion, 0.025, GriddedRegion.ANCHOR_0_0);
