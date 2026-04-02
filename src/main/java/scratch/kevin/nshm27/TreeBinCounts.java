@@ -25,7 +25,8 @@ public class TreeBinCounts {
 //				+ "2026_03_23-nshm26-AMSAM-1000samples-gridded/logic_tree.json"));
 //				+ "2026_03_25-nshm26-AMSAM-2000samples-gridded/logic_tree.json"));
 //				+ "2026_03_27-nshm26-AMSAM-2000samples-gridded/logic_tree.json"));
-				+ "2026_03_27-nshm26-GNMI-2000samples-gridded/logic_tree.json"));
+//				+ "2026_03_27-nshm26-GNMI-2000samples-gridded/logic_tree.json"));
+				+ "2026_04_02-nshm27-AMSAM-2000samples-lhs-gridded/logic_tree.json"));
 		
 		System.out.println("Stats for "+tree.size()+" branches");
 		
@@ -50,12 +51,21 @@ public class TreeBinCounts {
 							level = ((BinnableLevel<?,?,?>)level).toBinnedLevel();
 							binned = true;
 						}
-						for (LogicTreeNode node : level.getNodes())
+						for (LogicTreeNode node : level.getNodes()) {
+							Preconditions.checkNotNull(node, "Null node for level %s: %s", l, level.getName());
 							nodeWeights.put(node, 0d);
+						}
 					}
 					LogicTreeNode node = branch.getValue(l);
-					if (binned)
+					Preconditions.checkNotNull(node, "Null node for level %s: %s", l, level.getName());
+					if (binned) {
+						LogicTreeNode oNode = node;
 						node = ((BinnedLevel<?, ?>)level).getBinUnchecked(node);
+						Preconditions.checkNotNull(node, "Null binned node for level %s branch %s: %s, value: %s [%s]",
+								l, i, level.getName(), oNode.getName(),
+								oNode instanceof LogicTreeNode.ValuedLogicTreeNode<?> ?
+										((LogicTreeNode.ValuedLogicTreeNode<?>)oNode).getValue() : "");
+					}
 					if (nodeWeights.containsKey(node))
 						nodeWeights.put(node, nodeWeights.get(node) + weight);
 					else

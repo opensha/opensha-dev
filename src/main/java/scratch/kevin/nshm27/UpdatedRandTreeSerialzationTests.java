@@ -119,9 +119,9 @@ public class UpdatedRandTreeSerialzationTests {
 		}
 
 		@Override
-		protected void doBuild(long seed, int numNodes, double weightEach) {
+		protected void doBuild(long seed, int numNodes, SamplingMethod samplingMethod) {
 			Random rand = new Random(seed);
-			super.build(()->rand.nextDouble(), numNodes, weightEach);
+			super.build(()->rand.nextDouble(), numNodes, 1d/numNodes);
 		}
 
 		@Override

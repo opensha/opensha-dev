@@ -9,6 +9,7 @@ import java.util.List;
 import org.opensha.commons.logicTree.LogicTree;
 import org.opensha.commons.logicTree.LogicTreeFigureWriter;
 import org.opensha.commons.logicTree.LogicTreeLevel;
+import org.opensha.commons.logicTree.LogicTreeLevel.SamplingMethod;
 import org.opensha.commons.logicTree.LogicTreeNode;
 import org.opensha.sha.util.TectonicRegionType;
 
@@ -30,9 +31,11 @@ public class LogicTreeFigure {
 		TectonicRegionType[] trts = {TectonicRegionType.SUBDUCTION_INTERFACE, TectonicRegionType.SUBDUCTION_SLAB,
 				TectonicRegionType.ACTIVE_SHALLOW};
 		
+		SamplingMethod samplingMethod = SamplingMethod.MONTE_CARLO;
+		
 		for (NSHM27_SeismicityRegions seisReg : NSHM27_SeismicityRegions.values()) {
 			for (TectonicRegionType trt : trts) {
-				LogicTree<LogicTreeNode> tree = NSHM27_LogicTree.buildLogicTree(seisReg, trt, samples, true);
+				LogicTree<LogicTreeNode> tree = NSHM27_LogicTree.buildLogicTree(seisReg, trt, samples, true, samplingMethod);
 				
 				LogicTreeFigureWriter ltFig = new LogicTreeFigureWriter(tree, false, useLevelWeights);
 				ltFig.write(outputDir, seisReg.name()+"_"+trt.name(), true, true);
@@ -54,7 +57,7 @@ public class LogicTreeFigure {
 				}
 			}
 			
-			LogicTree<LogicTreeNode> multiTree = NSHM27_LogicTree.buildMultiRegimeTree(seisReg, samples, true);
+			LogicTree<LogicTreeNode> multiTree = NSHM27_LogicTree.buildMultiRegimeTree(seisReg, samples, true, samplingMethod);
 			LogicTreeFigureWriter ltFig = new LogicTreeFigureWriter(LogicTree.unrollTRTs(multiTree), false, useLevelWeights);
 			ltFig.write(outputDir, seisReg.name()+"_combined", true, true);
 		}

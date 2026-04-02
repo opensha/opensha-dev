@@ -33,6 +33,7 @@ import org.opensha.commons.logicTree.LogicTree;
 import org.opensha.commons.logicTree.LogicTreeBranch;
 import org.opensha.commons.logicTree.LogicTreeLevel;
 import org.opensha.commons.logicTree.LogicTreeLevel.RandomlyGeneratedLevel;
+import org.opensha.commons.logicTree.LogicTreeLevel.SamplingMethod;
 import org.opensha.commons.logicTree.LogicTreeNode.RandomlyGeneratedNode;
 import org.opensha.commons.logicTree.LogicTreeNode;
 import org.opensha.commons.util.ClassUtils;
@@ -748,8 +749,8 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 		 * TODO (this is a just a marker to find this part quickly, not an actual todo)
 		 */
 		
-//		NSHM27_SeismicityRegions seisReg = NSHM27_SeismicityRegions.AMSAM;
-		NSHM27_SeismicityRegions seisReg = NSHM27_SeismicityRegions.GNMI;
+		NSHM27_SeismicityRegions seisReg = NSHM27_SeismicityRegions.AMSAM;
+//		NSHM27_SeismicityRegions seisReg = NSHM27_SeismicityRegions.GNMI;
 //		int numBranchSamples = 100;
 //		int numBranchSamples = 1000;
 		int numBranchSamples = 2000;
@@ -759,12 +760,15 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 		
 		parallelBA = true;
 		
+//		SamplingMethod samplingMethod = SamplingMethod.MONTE_CARLO;
+		SamplingMethod samplingMethod = SamplingMethod.LATIN_HYPERCUBE;
+		
 		if (trt == null) {
-			customTree = NSHM27_LogicTree.buildMultiRegimeTree(seisReg, numBranchSamples, true);
+			customTree = NSHM27_LogicTree.buildMultiRegimeTree(seisReg, numBranchSamples, true, samplingMethod);
 			analysisTree = LogicTree.unrollTRTs(customTree);
 			Preconditions.checkNotNull(analysisTree);
 		} else {
-			customTree = NSHM27_LogicTree.buildLogicTree(seisReg, trt, numBranchSamples, true);
+			customTree = NSHM27_LogicTree.buildLogicTree(seisReg, trt, numBranchSamples, true, samplingMethod);
 			analysisTree = customTree;
 		}
 		analysisTree = LogicTree.applyBinning(analysisTree);
@@ -773,7 +777,9 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 		hazardGridded = true;
 		
 		List<LogicTreeLevel<? extends LogicTreeNode>> levels = new ArrayList<>(customTree.getLevels());
-		dirName += "-nshm26-"+seisReg.name()+"-"+numBranchSamples+"samples";
+		dirName += "-nshm27-"+seisReg.name()+"-"+numBranchSamples+"samples";
+		if (samplingMethod == SamplingMethod.LATIN_HYPERCUBE)
+			dirName += "-lhs";
 		if (trt != null)
 			dirName += "-"+trt.name();
 		double avgNumRups = 200000;
