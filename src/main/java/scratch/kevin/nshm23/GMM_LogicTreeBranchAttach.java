@@ -56,7 +56,7 @@ public class GMM_LogicTreeBranchAttach {
 		
 		LogicTree<?> origTree = slt.getLogicTree();
 		if (samples > 0)
-			origTree = origTree.sample(samples, true, new Random((long)origTree.size()*(long)samples));
+			origTree = origTree.sample(samples, true, (long)origTree.size()*(long)samples);
 		
 		FileBuilder builder = new SolutionLogicTree.FileBuilder(slt.getProcessor(), resultsModFile);
 		

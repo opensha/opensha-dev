@@ -2854,7 +2854,7 @@ public class PureScratch {
 		File inFile = new File(dir, "logic_tree_full_gridded.json");
 		File outFile = new File(dir, "logic_tree_full_gridded_sampled_100k.json");
 		LogicTree<?> tree = LogicTree.read(inFile);
-		tree = tree.sample(100000, true, new Random(tree.size()*100000l));
+		tree = tree.sample(100000, true, tree.size()*100000l);
 		tree.write(outFile);
 	}
 	

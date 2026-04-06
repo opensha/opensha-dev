@@ -74,7 +74,7 @@ public class TimJonEpistemicCalcSetup {
 		LogicTree<?> fullTree = LogicTree.fromExisting(allBranches.get(0).getLevels(), allBranches);
 		
 		if (downsample > 0 && downsample < numBranches) {
-			fullTree = fullTree.sample(downsample, false, new Random((long)downsample*(long)numBranches));
+			fullTree = fullTree.sample(downsample, false, (long)downsample*(long)numBranches);
 			System.out.println("Downsampled to "+fullTree.size()+" branches");
 		}
 		

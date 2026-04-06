@@ -753,22 +753,24 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 //		NSHM27_SeismicityRegions seisReg = NSHM27_SeismicityRegions.GNMI;
 //		int numBranchSamples = 100;
 //		int numBranchSamples = 1000;
-		int numBranchSamples = 2000;
+//		int numBranchSamples = 2000;
+		int numBranchSamples = 5000;
 //		int numBranchSamples = 10000;
 //		int numBranchSamples = 100000;
 		TectonicRegionType trt = null;
 		
 		parallelBA = true;
+		boolean deterministicSeed = true;
 		
 //		SamplingMethod samplingMethod = SamplingMethod.MONTE_CARLO;
 		SamplingMethod samplingMethod = SamplingMethod.LATIN_HYPERCUBE;
 		
 		if (trt == null) {
-			customTree = NSHM27_LogicTree.buildMultiRegimeTree(seisReg, numBranchSamples, true, samplingMethod);
+			customTree = NSHM27_LogicTree.buildMultiRegimeTree(seisReg, numBranchSamples, deterministicSeed, samplingMethod);
 			analysisTree = LogicTree.unrollTRTs(customTree);
 			Preconditions.checkNotNull(analysisTree);
 		} else {
-			customTree = NSHM27_LogicTree.buildLogicTree(seisReg, trt, numBranchSamples, true, samplingMethod);
+			customTree = NSHM27_LogicTree.buildLogicTree(seisReg, trt, numBranchSamples, deterministicSeed, samplingMethod);
 			analysisTree = customTree;
 		}
 		analysisTree = LogicTree.applyBinning(analysisTree);
@@ -780,6 +782,8 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 		dirName += "-nshm27-"+seisReg.name()+"-"+numBranchSamples+"samples";
 		if (samplingMethod == SamplingMethod.LATIN_HYPERCUBE)
 			dirName += "-lhs";
+		if (!deterministicSeed)
+			dirName += "-unique_seed";
 		if (trt != null)
 			dirName += "-"+trt.name();
 		double avgNumRups = 200000;
@@ -855,8 +859,6 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 //		int numSamples = 450;
 //		int numSamples = 36*10;
 		
-		Random rand = new Random(randSeed);
-		
 		if (required != null && required.length > 0) {
 			for (LogicTreeNode node : required)
 				dirName += "-"+node.getFilePrefix();
@@ -872,6 +874,8 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 			
 			int numBranches = logicTree.size()*samplingBranchCountMultiplier;
 			System.out.println("\tnumBranches = "+logicTree.size()+" x "+samplingBranchCountMultiplier+" = "+numBranches);
+			
+			Random rand = new Random(randSeed);
 			
 			List<List<? extends RandomlyGeneratedNode>> levelNodes = new ArrayList<>();
 			for (RandomlyGeneratedLevel<?> level : individualRandomLevels) {
@@ -940,10 +944,10 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 						logicTree.setWeightProvider(new BranchWeightProvider.OriginalWeights());
 					} else {
 						System.out.println("Still doing random downsampling");
-						logicTree = logicTree.sample(numSamples, true, rand);
+						logicTree = logicTree.sample(numSamples, true, randSeed);
 					}
 				} else {
-					logicTree = logicTree.sample(numSamples, true, rand);
+					logicTree = logicTree.sample(numSamples, true, randSeed);
 				}
 			} else {
 				System.out.println("Won't sample logic tree, as tree has "+logicTree.size()+" values, which is fewer "
