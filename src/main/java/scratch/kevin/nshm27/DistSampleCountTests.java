@@ -36,6 +36,7 @@ public class DistSampleCountTests {
 //		ContinuousDistribution dist = CorrTruncatedNormalDistribution.of(7.6, 0.134, 7.15, 8.05);
 		ContinuousDistribution dist = CorrTruncatedNormalDistribution.of(8, 0.2, 7.45, 8.55);
 		int precisionScale = 1;
+		int bins = 3;
 		
 ////		ContinuousDistribution dist = UniformContinuousDistribution.of(0d, 1d);
 ////		ContinuousDistribution dist = UniformContinuousDistribution.of(0.5d, 1d);
@@ -121,7 +122,7 @@ public class DistSampleCountTests {
 			chars.add(new PlotCurveCharacterstics(PlotSymbol.FILLED_CIRCLE, 5f, Colors.tab_green));
 		}
 		
-		ContinuousDistributionBinnedLevel binned = level.toBinnedLevel();
+		ContinuousDistributionBinnedLevel binned = bins > 0 ? level.toBinnedLevel(bins) : level.toBinnedLevel();
 		List<? extends SimpleValuedNode<Range<Double>>> binNodes = binned.getNodes();
 		for (int i=0; i<binNodes.size(); i++) {
 			SimpleValuedNode<Range<Double>> node = binNodes.get(i);

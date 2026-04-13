@@ -756,14 +756,16 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 //		int numBranchSamples = 2000;
 		int numBranchSamples = 5000;
 //		int numBranchSamples = 10000;
+//		int numBranchSamples = 20000;
 //		int numBranchSamples = 100000;
 		TectonicRegionType trt = null;
 		
 		parallelBA = true;
-		boolean deterministicSeed = true;
+		boolean deterministicSeed = false;
 		
-//		SamplingMethod samplingMethod = SamplingMethod.MONTE_CARLO;
-		SamplingMethod samplingMethod = SamplingMethod.LATIN_HYPERCUBE;
+		SamplingMethod samplingMethod = SamplingMethod.MONTE_CARLO;
+//		SamplingMethod samplingMethod = SamplingMethod.LATIN_HYPERCUBE;
+//		SamplingMethod samplingMethod = SamplingMethod.PAIRWISE_OPTIMIZED_LATIN_HYPERCUBE;
 		
 		if (trt == null) {
 			customTree = NSHM27_LogicTree.buildMultiRegimeTree(seisReg, numBranchSamples, deterministicSeed, samplingMethod);
@@ -780,8 +782,12 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 		
 		List<LogicTreeLevel<? extends LogicTreeNode>> levels = new ArrayList<>(customTree.getLevels());
 		dirName += "-nshm27-"+seisReg.name()+"-"+numBranchSamples+"samples";
-		if (samplingMethod == SamplingMethod.LATIN_HYPERCUBE)
+		if (samplingMethod == SamplingMethod.MONTE_CARLO)
+			dirName += "-mcs";
+		else if (samplingMethod == SamplingMethod.LATIN_HYPERCUBE)
 			dirName += "-lhs";
+		else if (samplingMethod == SamplingMethod.PAIRWISE_OPTIMIZED_LATIN_HYPERCUBE)
+			dirName += "-lhs_pairwise";
 		if (!deterministicSeed)
 			dirName += "-unique_seed";
 		if (trt != null)
@@ -797,6 +803,7 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 		Region mapRegion = NSHM27_MapRegions.valueOf(seisReg.name()).load();
 		
 		forceHazardReg = new GriddedRegion(mapRegion, 0.1, GriddedRegion.ANCHOR_0_0);
+//		forceHazardReg = new GriddedRegion(mapRegion, 0.2, GriddedRegion.ANCHOR_0_0); dirName += "-haz0.2deg";
 //		forceHazardReg = new GriddedRegion(mapRegion, 0.025, GriddedRegion.ANCHOR_0_0);
 		sigmaTrunc = 3d;
 		
