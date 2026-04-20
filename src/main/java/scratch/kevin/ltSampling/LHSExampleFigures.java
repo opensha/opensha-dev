@@ -51,9 +51,9 @@ import net.mahdilamb.colormap.Colors;
 public class LHSExampleFigures {
 
 	public static void main(String[] args) throws IOException {
-//		int samples = 30;
+		int samples = 30;
 //		int samples = 100;
-		int samples = 1000;
+//		int samples = 1000;
 //		int samples = 2000;
 
 		int dpi = 300;
@@ -384,9 +384,9 @@ public class LHSExampleFigures {
 //						double y1 = l+1;
 //						double y = l+0.5;
 						
-						anns.add(new XYBoxAnnotation(x0, y0, x1, y1, outlineStroke, Color.BLACK, color));
-						
-						if (origBranchIndexes != null) {
+						if (origBranchIndexes == null) {
+							anns.add(new XYBoxAnnotation(x0, y0, x1, y1, outlineStroke, Color.BLACK, color));
+						} else {
 							int index = origBranchIndexes.get(n)[l];
 							XYTextAnnotation indexAnn = new XYTextAnnotation(index+"", x, y);
 							indexAnn.setTextAnchor(TextAnchor.CENTER);
@@ -395,11 +395,16 @@ public class LHSExampleFigures {
 									indexAnn.setFont(indexOrigFont);
 									anns.add(indexAnn);
 								}
+								anns.add(new XYBoxAnnotation(x0, y0, x1, y1, outlineStroke, Color.BLACK,
+										new Color(color.getRed(), color.getGreen(), color.getBlue(), 60)));
 							} else {
+								anns.add(new XYBoxAnnotation(x0, y0, x1, y1, outlineStroke, Color.BLACK, color));
 								indexAnn.setFont(indexSwappedFont);
 								anns.add(indexAnn);
 							}
 						}
+						
+						
 					}
 				}
 				
