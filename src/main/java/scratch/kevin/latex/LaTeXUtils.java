@@ -183,62 +183,120 @@ public class LaTeXUtils {
 	public static final String BEGIN_DYNVAL_INCLUDES_HEADER = "% begin dynval includes";
 	public static final String END_DYNVAL_INCLUDES_HEADER = "% end dynval includes";
 	
-	public static List<String> embedDynvalIncludes(List<String> inLines, File refDir) throws IOException {
+	private static Map<String, String> parseDynvals(List<String> inLines, File refDir) throws IOException {
 		boolean processingIncludes = false;
 		Map<String, String> dynVals = null;
+		for (String line : inLines) {
+			line = line.trim();
+			
+			if (line.isBlank())
+				continue;
+			
+			if (processingIncludes) {
+				if (line.equalsIgnoreCase(END_DYNVAL_INCLUDES_HEADER)) {
+					System.out.println("Found '"+END_DYNVAL_INCLUDES_HEADER+"'");
+					System.out.println("Processed "+dynVals.size()+" total dynamic values");
+					processingIncludes = false;
+					continue;
+				} else if (line.startsWith("%")) {
+					continue;
+				} else {
+					Preconditions.checkState(line.startsWith("\\include{") || line.startsWith("\\input{"),
+							"Inside dynval include block but line doesn't start with an \\include{ or \\input{: %s", line);
+					String path = line.substring(line.indexOf('{')+1);
+					Preconditions.checkState(path.contains("}"), "Line doesn't close '}': %s", line);
+					path = path.substring(0, path.indexOf('}'));
+					File includeFile = new File(refDir, path);
+					if (!includeFile.exists() && !path.toLowerCase().endsWith(".tex"))
+						includeFile = new File(refDir, path+".tex");
+					System.out.println("\tProcessing "+includeFile.getName());
+					Preconditions.checkState(includeFile.exists(), "Include path not found. raw='%s', abs='%s'",
+							path, includeFile.getAbsolutePath());
+					for (String varLine : Files.readLines(includeFile, Charset.defaultCharset())) {
+						varLine = varLine.trim();
+						if (varLine.isBlank() || varLine.startsWith("%"))
+							continue;
+						Preconditions.checkState(varLine.startsWith("\\newcommand{\\dynval"),
+								"Unexpected line in dynval include; should start with '\\newcommand{\\dynval': %s",
+								varLine);
+						try {
+							String varName = varLine.substring(varLine.indexOf("dynval"));
+							String varValue = varName.substring(varName.indexOf("{")+1);
+							varValue = varValue.substring(0, varValue.lastIndexOf("}"));
+							varName = varName.substring(0, varName.indexOf("}"));
+							System.out.println("\t\t'"+varName+"': '"+varValue+"'");
+							dynVals.put(varName, varValue);
+						} catch (RuntimeException e) {
+							throw new IllegalStateException("Error parsing dynval from: "+varLine, e);
+						}
+					}
+				}
+			} else if (line.trim().equalsIgnoreCase(BEGIN_DYNVAL_INCLUDES_HEADER)) {
+				System.out.println("Found '"+BEGIN_DYNVAL_INCLUDES_HEADER+"'");
+				processingIncludes = true;
+				if (dynVals == null)
+					dynVals = new HashMap<>();
+				continue;
+			} else if (line.trim().startsWith("\\externaldocument")) {
+				// look for dynVals there
+				String extName = line.substring(line.indexOf("{")+1);
+				extName = extName.substring(0, extName.indexOf("}"));
+				System.out.println("Looking for dynval includes in external document: "+extName);
+				File extFile = new File(refDir, extName);
+				if (!extFile.exists())
+					extFile = new File(refDir, extName+".tex");
+				Preconditions.checkState(extFile.exists(), "External document doesn't exist: %s", extFile.getAbsolutePath());
+				List<String> extLines = readTex(extFile);
+				// remove any \externaldocument declarations here to prevent recursion
+				for (int i=extLines.size(); --i>=0;)
+					if (extLines.get(i).trim().startsWith("\\externaldocument"))
+						extLines.remove(i);
+				Map<String, String> extDynVals = parseDynvals(extLines, refDir);
+				if (extDynVals != null) {
+					System.out.println("Loaded "+extDynVals.size()+" dynval includes from external document: "+extName);
+					if (dynVals == null)
+						dynVals = new HashMap<>(extDynVals);
+					else
+						dynVals.putAll(extDynVals);
+				}
+			}
+		}
+		return dynVals;
+	}
+	
+	public static List<String> embedDynvalIncludes(List<String> inLines, File refDir) throws IOException {
+		boolean processingIncludes = false;
+		Map<String, String> dynVals = parseDynvals(inLines, refDir);
 		
 		List<String> ret = new ArrayList<>(inLines.size());
+		int dynvalEmbeds = 0;
 		for (String line : inLines) {
 			if (dynVals == null) {
 				if (line.trim().equalsIgnoreCase(BEGIN_DYNVAL_INCLUDES_HEADER)) {
 					System.out.println("Found '"+BEGIN_DYNVAL_INCLUDES_HEADER+"'");
 					processingIncludes = true;
-					dynVals = new HashMap<>();
+					if (dynVals == null)
+						dynVals = new HashMap<>();
 					continue;
+				} else if (line.trim().startsWith("\\externaldocument")) {
+					// look for dynVals there
 				}
 			}
 			if (processingIncludes) {
+				// leave original includes out of the document
 				line = line.trim();
 				if (!line.isBlank()) {
 					if (line.equalsIgnoreCase(END_DYNVAL_INCLUDES_HEADER)) {
 						System.out.println("Found '"+END_DYNVAL_INCLUDES_HEADER+"'");
-						System.out.println("Processed "+dynVals.size()+" total dynamic values");
 						processingIncludes = false;
 						continue;
-					} else if (line.startsWith("%")) {
-						continue;
 					} else {
-						Preconditions.checkState(line.startsWith("\\include{") || line.startsWith("\\input{"),
-								"Inside dynval include block but line doesn't start with an \\include{ or \\input{: %s", line);
-						String path = line.substring(line.indexOf('{')+1);
-						Preconditions.checkState(path.contains("}"), "Line doesn't close '}': %s", line);
-						path = path.substring(0, path.indexOf('}'));
-						File includeFile = new File(refDir, path);
-						if (!includeFile.exists() && !path.toLowerCase().endsWith(".tex"))
-							includeFile = new File(refDir, path+".tex");
-						System.out.println("\tProcessing "+includeFile.getName());
-						Preconditions.checkState(includeFile.exists(), "Include path not found. raw='%s', abs='%s'",
-								path, includeFile.getAbsolutePath());
-						for (String varLine : Files.readLines(includeFile, Charset.defaultCharset())) {
-							varLine = varLine.trim();
-							if (varLine.isBlank() || varLine.startsWith("%"))
-								continue;
-							Preconditions.checkState(varLine.startsWith("\\newcommand{\\dynval"),
-									"Unexpected line in dynval include; should start with '\\newcommand{\\dynval': %s",
-									varLine);
-							try {
-								String varName = varLine.substring(varLine.indexOf("dynval"));
-								String varValue = varName.substring(varName.indexOf("{")+1);
-								varValue = varValue.substring(0, varValue.lastIndexOf("}"));
-								varName = varName.substring(0, varName.indexOf("}"));
-								System.out.println("\t\t'"+varName+"': '"+varValue+"'");
-								dynVals.put(varName, varValue);
-							} catch (RuntimeException e) {
-								throw new IllegalStateException("Error parsing dynval from: "+varLine, e);
-							}
-						}
+						continue;
 					}
 				}
+			} else if (line.trim().equalsIgnoreCase(BEGIN_DYNVAL_INCLUDES_HEADER)) {
+				System.out.println("Found '"+BEGIN_DYNVAL_INCLUDES_HEADER+"'");
+				processingIncludes = true;
 			} else {
 				while (line.contains("\\dynval") && !line.startsWith("%")) {
 					Preconditions.checkNotNull(dynVals, "dynval command found before include header was found; surround "
@@ -267,10 +325,13 @@ public class LaTeXUtils {
 					newLine += varValue;
 					newLine += line.substring(endIndex+2); // +2 here skips the {}
 					line = newLine;
+					dynvalEmbeds++;
 				}
 				ret.add(line);
 			}
 		}
+		
+		System.out.println("Embedded "+dynvalEmbeds+" dynval variables");
 		
 		return ret;
 	}
@@ -963,7 +1024,8 @@ public class LaTeXUtils {
 		File parentDir = new File("/home/kevin/Documents/papers/2026_nshm_grid_seis_dist_corr");
 		File mainBranch = new File(parentDir, "papers-2026-nshm-grid-seis-dist-corrs");
 		
-		File submitDir = new File(mainBranch, "submission/internal_review");
+//		File submitDir = new File(mainBranch, "submission/internal_review");
+		File submitDir = new File(mainBranch, "submission/srl_initial");
 		
 //		File initialBranch = new File(prviDir, "initial-bssa-submission");
 //		File refDir = initialBranch;
@@ -973,12 +1035,18 @@ public class LaTeXUtils {
 		String textWidth = "517.79993pt";
 		File refDir = mainBranch;
 		File figpanelDir = new File(refDir, "Figures/figpanel");
-		File inputFile = new File(mainBranch, "main.tex");
-		File outputFile = new File(submitDir, "main_embedded.tex");
+//		File inputFile = new File(mainBranch, "main.tex");
+//		File outputFile = new File(submitDir, "main_embedded.tex");
+		File inputFile = new File(mainBranch, "supplement.tex");
+		File outputFile = new File(submitDir, "supplement_embedded.tex");
 		
 		List<String> lines = readTex(inputFile);
 
 		lines = embedIncludes(lines, refDir, true); // embed includes first, but skip dynval ones
+//		System.out.println("============================");
+//		for (String line : lines)
+//			System.out.println(line);
+//		System.out.println("============================");
 		lines = embedDynvalIncludes(lines, refDir);
 		lines = embedCommands(lines, true);
 //		lines = embedBibliography(lines, new File(refDir, "refs_compiled.bbl"));
