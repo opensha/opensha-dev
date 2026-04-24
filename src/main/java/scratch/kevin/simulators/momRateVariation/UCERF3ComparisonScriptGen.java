@@ -62,7 +62,7 @@ public class UCERF3ComparisonScriptGen {
 			
 			List<String> script = javaWrite.buildScript(UCERF3ComparisonCalc.class.getName(), argsStr);
 			File outputFile = new File(localOutputDir, dirName+".pbs");
-			pbsWrite.writeScript(outputFile, script, mins, 1, threadsPerBatch, queue);
+			pbsWrite.writeScript(outputFile, script, mins, 1, threadsPerBatch, -1, queue);
 		}
 	}
 

@@ -159,7 +159,7 @@ public class InvFileDeadlockScriptWriter {
 			argz += " "+MPJTaskCalculator.argumentBuilder().exactDispatch(remoteInversionsPerBundle).build();
 			List<String> script = mpjWrite.buildScript(MPJ_LogicTreeInversionRunner.class.getName(), argz);
 			
-			pbsWrite.writeScript(new File(localDir, localDir.getName()+".slurm"), script, minsEach, nodes, remoteTotalThreads, queue);
+			pbsWrite.writeScript(new File(localDir, localDir.getName()+".slurm"), script, minsEach, nodes, remoteTotalThreads, -1, queue);
 		}
 	}
 

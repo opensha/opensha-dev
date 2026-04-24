@@ -15,7 +15,7 @@ import org.opensha.commons.hpc.mpj.FastMPJShellScriptWriter;
 import org.opensha.commons.hpc.mpj.MPJExpressShellScriptWriter;
 import org.opensha.commons.hpc.pbs.BatchScriptWriter;
 import org.opensha.commons.hpc.pbs.StampedeScriptWriter;
-import org.opensha.commons.hpc.pbs.USC_HPCC_ScriptWriter;
+import org.opensha.commons.hpc.pbs.USC_CARC_ScriptWriter;
 
 import scratch.UCERF3.erf.ETAS.ETAS_Simulator.TestScenario;
 import scratch.UCERF3.erf.ETAS.ETAS_CatalogIO;
@@ -281,15 +281,15 @@ public class MPJ_ETAS_SimulatorScriptGen {
 			boolean fmpj = nodes < 25;
 			fmpj = false;
 			if (fmpj) {
-				mpjWrite = new FastMPJShellScriptWriter(USC_HPCC_ScriptWriter.JAVA_BIN, memGigs*1024,
-						null, USC_HPCC_ScriptWriter.FMPJ_HOME);
+				mpjWrite = new FastMPJShellScriptWriter(USC_CARC_ScriptWriter.JAVA_BIN, memGigs*1024,
+						null, USC_CARC_ScriptWriter.FMPJ_HOME);
 				((FastMPJShellScriptWriter)mpjWrite).setUseLaunchWrapper(true);
 			} else {
-				mpjWrite = new MPJExpressShellScriptWriter(USC_HPCC_ScriptWriter.JAVA_BIN, memGigs*1024,
-						null, USC_HPCC_ScriptWriter.MPJ_HOME);
+				mpjWrite = new MPJExpressShellScriptWriter(USC_CARC_ScriptWriter.JAVA_BIN, memGigs*1024,
+						null, USC_CARC_ScriptWriter.MPJ_HOME);
 			}
-			pbsWrite = new USC_HPCC_ScriptWriter();
-			((USC_HPCC_ScriptWriter)pbsWrite).setSkipRootNode(hpcSkipRoot);
+			pbsWrite = new USC_CARC_ScriptWriter();
+			((USC_CARC_ScriptWriter)pbsWrite).setSkipRootNode(hpcSkipRoot);
 			cacheDir = new File(remoteDir, "cache_fm3p1_ba");
 		}
 		
@@ -517,7 +517,7 @@ public class MPJ_ETAS_SimulatorScriptGen {
 						}
 					}
 					
-					script = pbsWrite.buildScript(script, mins, nodes, ppn, queue);
+					script = pbsWrite.buildScript(script, mins, nodes, ppn, -1, queue);
 					pbsWrite.writeScript(pbsFile, script);
 					
 					if (writeConsolidate && !bundleConsolidate && stampede) {
@@ -530,8 +530,8 @@ public class MPJ_ETAS_SimulatorScriptGen {
 						script.add("");
 						script.addAll(consolidationLines);
 						
-						pbsWrite.writeScript(new File(localJobDir, "consolidate_dev.pbs"), script, 60, 1, 16, "development");
-						pbsWrite.writeScript(new File(localJobDir, "consolidate_norm.pbs"), script, 60, 1, 16, "normal");
+						pbsWrite.writeScript(new File(localJobDir, "consolidate_dev.pbs"), script, 60, 1, 16, -1, "development");
+						pbsWrite.writeScript(new File(localJobDir, "consolidate_norm.pbs"), script, 60, 1, 16, -1, "normal");
 					}
 				}
 			}

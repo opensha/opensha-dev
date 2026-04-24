@@ -8,7 +8,6 @@ import org.opensha.commons.hpc.JavaShellScriptWriter;
 import org.opensha.commons.hpc.mpj.FastMPJShellScriptWriter;
 import org.opensha.commons.hpc.mpj.MPJExpressShellScriptWriter;
 import org.opensha.commons.hpc.pbs.BatchScriptWriter;
-import org.opensha.commons.hpc.pbs.USC_HPCC_ScriptWriter;
 
 import com.google.common.collect.Lists;
 
@@ -78,8 +77,8 @@ public class BulkCompoundScriptWrite {
 		if (!writeDir.exists())
 			writeDir.mkdir();
 		
-		RunSites site = RunSites.HPCC;
-//		RunSites site = RunSites.STAMPEDE;
+//		RunSites site = RunSites.HPCC;
+		RunSites site = RunSites.STAMPEDE;
 		int nodes = 30;
 //		int bundleSize = 30; // TODO, must be >0
 //		int jobMins = 6*60; // TODO
@@ -97,8 +96,8 @@ public class BulkCompoundScriptWrite {
 		mpjWrite.setHeadless(true);
 		
 		BatchScriptWriter batchWrite = site.forBranch(null);
-		if (batchWrite instanceof USC_HPCC_ScriptWriter)
-			((USC_HPCC_ScriptWriter)batchWrite).setNodesAddition(null);
+//		if (batchWrite instanceof USC_HPCC_ScriptWriter)
+//			((USC_HPCC_ScriptWriter)batchWrite).setNodesAddition(null);
 		
 		for (U3LogicTreeBranchNode<?> fm : fmBranches) {
 			for (U3LogicTreeBranchNode<?> dm : dmBranches) {
@@ -124,7 +123,7 @@ public class BulkCompoundScriptWrite {
 					
 					String scriptName = remoteJobDir.getName()+".pbs";
 					
-					batchWrite.writeScript(new File(writeDir, scriptName), script, jobMins, nodes, site.getPPN(null), null);
+					batchWrite.writeScript(new File(writeDir, scriptName), script, jobMins, nodes, -1, site.getPPN(null), null);
 				}
 			}
 		}

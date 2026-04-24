@@ -20,7 +20,6 @@ import org.opensha.commons.geo.GriddedRegion;
 import org.opensha.commons.hpc.JavaShellScriptWriter;
 import org.opensha.commons.hpc.mpj.FastMPJShellScriptWriter;
 import org.opensha.commons.hpc.pbs.BatchScriptWriter;
-import org.opensha.commons.hpc.pbs.USC_HPCC_ScriptWriter;
 import org.opensha.commons.util.XMLUtils;
 import org.opensha.sha.calc.hazardMap.components.AsciiFileCurveArchiver;
 import org.opensha.sha.calc.hazardMap.components.CalculationInputsXMLFile;
@@ -58,8 +57,10 @@ public class HazardMapPBSGen {
 	 * @throws IOException 
 	 */
 	public static void main(String[] args) throws IOException {
-		RunSites runSite = RunSites.HPCC;
-		BatchScriptWriter writer = new USC_HPCC_ScriptWriter();
+//		RunSites runSite = RunSites.HPCC;
+//		BatchScriptWriter writer = new USC_HPCC_ScriptWriter();
+		RunSites runSite = null;
+		BatchScriptWriter writer = null;
 		int nodes = 30;
 		int mins = 60 * 5;
 		int heapMB = 9000;
@@ -152,7 +153,7 @@ public class HazardMapPBSGen {
 		
 		List<String> script = mpj.buildScript(MPJHazardCurveDriver.class.getName(), cliArgs);
 		
-		script = writer.buildScript(script, mins, nodes, 0, null);
+		script = writer.buildScript(script, mins, nodes, 0, -1, null);
 		
 		File pbsFile = new File(localRunDir, pbsName+".pbs");
 		JavaShellScriptWriter.writeScript(pbsFile, script);

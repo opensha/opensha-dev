@@ -1085,7 +1085,7 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 		System.out.println("Total job time: "+mins+" mins = "+(float)((double)mins/60d)+" hours");
 		// make sure to not exceed 1 week
 		mins = Integer.min(mins, 60*24*7 - 1);
-		pbsWrite.writeScript(new File(localDir, "batch_inversion.slurm"), script, mins, nodes, remoteTotalThreads, queue);
+		pbsWrite.writeScript(new File(localDir, "batch_inversion.slurm"), script, mins, nodes, remoteTotalThreads, -1, queue);
 		
 		Map<String, File> baFiles = AbstractAsyncLogicTreeWriter.getBranchAverageSolutionFileMap(new File("results"), logicTree);
 		
@@ -1155,7 +1155,7 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 		if (queue != null && queue.equals("scec"))
 			// run hazard in the high priority queue
 			queue = "scec_hiprio";
-		pbsWrite.writeScript(new File(localDir, "batch_hazard.slurm"), script, mins, nodes, remoteTotalThreads, queue);
+		pbsWrite.writeScript(new File(localDir, "batch_hazard.slurm"), script, mins, nodes, remoteTotalThreads, -1, queue);
 		
 		JavaShellScriptWriter javaWrite = new JavaShellScriptWriter(
 				mpjWrite.getJavaBin(), remoteTotalMemGB*1024, classpath);
@@ -1208,7 +1208,7 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 			int gridThreads = Integer.max(1, remoteTotalThreads/2);
 			argz += " "+MPJTaskCalculator.argumentBuilder().exactDispatch(1).threads(gridThreads).build();
 			script = mpjWrite.buildScript(MPJ_GridSeisBranchBuilder.class.getName(), argz);
-			pbsWrite.writeScript(new File(localDir, "batch_grid_calc.slurm"), script, mins, nodes, remoteTotalThreads, queue);
+			pbsWrite.writeScript(new File(localDir, "batch_grid_calc.slurm"), script, mins, nodes, remoteTotalThreads, -1, queue);
 			
 			String griddedBAName = null;
 			if (baFiles != null && baFiles.size() == 1)
@@ -1220,7 +1220,7 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 			if (griddedBAName != null)
 				argz += " "+dirPath+"/"+griddedBAName;
 			script = javaWrite.buildScript(TrueMeanSolutionCreator.class.getName(), argz);
-			pbsWrite.writeScript(new File(localDir, "true_mean_builder.slurm"), script, mins, 1, remoteTotalThreads, queue);
+			pbsWrite.writeScript(new File(localDir, "true_mean_builder.slurm"), script, mins, 1, remoteTotalThreads, -1, queue);
 			
 			// now add hazard calc jobs with gridded
 			for (int i=0; i<5; i++) {
@@ -1295,7 +1295,7 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 				int myMins = mins;
 				if (i == 1)
 					 myMins = Integer.min(mins*5, 60*24*7 - 1);
-				pbsWrite.writeScript(jobFile, script, myMins, myNodes, remoteTotalThreads, queue);
+				pbsWrite.writeScript(jobFile, script, myMins, myNodes, remoteTotalThreads, -1, queue);
 			}
 			
 			// write out gridded seismicity combiner script
@@ -1309,12 +1309,12 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 			argz += " "+resultsPath+"_hazard.zip";
 			script = javaWrite.buildScript(FaultAndGriddedSeparateTreeHazardCombiner.class.getName(), argz);
 			
-			pbsWrite.writeScript(new File(localDir, "fault_grid_hazard_combine.slurm"), script, mins, 1, remoteTotalThreads, queue);
+			pbsWrite.writeScript(new File(localDir, "fault_grid_hazard_combine.slurm"), script, mins, 1, remoteTotalThreads, -1, queue);
 		} else {
 			// true mean without gridded
 			argz = resultsPath+".zip true_mean_solution.zip";
 			script = javaWrite.buildScript(TrueMeanSolutionCreator.class.getName(), argz);
-			pbsWrite.writeScript(new File(localDir, "true_mean_builder.slurm"), script, mins, 1, remoteTotalThreads, queue);
+			pbsWrite.writeScript(new File(localDir, "true_mean_builder.slurm"), script, mins, 1, remoteTotalThreads, -1, queue);
 		}
 		
 		// site hazard job
@@ -1360,7 +1360,7 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 					for (AttenRelRef gmpe : gmpes)
 						argz += " --gmpe "+gmpe.name();
 				script = mpjWrite.buildScript(MPJ_SiteLogicTreeHazardCurveCalc.class.getName(), argz);
-				pbsWrite.writeScript(new File(localDir, "batch_hazard_sites.slurm"), script, mins, nodes, remoteTotalThreads, queue);
+				pbsWrite.writeScript(new File(localDir, "batch_hazard_sites.slurm"), script, mins, nodes, remoteTotalThreads, -1, queue);
 				
 				if (griddedJob) {
 					Preconditions.checkState(!hazardGridded);
@@ -1377,7 +1377,7 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 							argz += " --gmpe "+gmpe.name();
 					argz += " "+MPJTaskCalculator.argumentBuilder().minDispatch(2).maxDispatch(10).threads(remoteTotalThreads).build();
 					script = mpjWrite.buildScript(MPJ_SiteLogicTreeHazardCurveCalc.class.getName(), argz);
-					pbsWrite.writeScript(new File(localDir, "batch_hazard_sites_full_gridded.slurm"), script, mins, nodes, remoteTotalThreads, queue);
+					pbsWrite.writeScript(new File(localDir, "batch_hazard_sites_full_gridded.slurm"), script, mins, nodes, remoteTotalThreads, -1, queue);
 				}
 			}
 		}
@@ -1441,7 +1441,7 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 				argz += " --branch-averaged-file "+dirPath+"/"+baFile.getName();
 			script = javaWrite.buildScript(LogicTreeBranchAverageWriter.class.getName(), argz);
 			
-			pbsWrite.writeScript(new File(localDir, "full_node_ba"+baJobSuffixes.get(n)+".slurm"), script, mins, 1, remoteTotalThreads, queue);
+			pbsWrite.writeScript(new File(localDir, "full_node_ba"+baJobSuffixes.get(n)+".slurm"), script, mins, 1, remoteTotalThreads, -1, queue);
 			
 //			// write out individual node BA scripts (useful if the tree is enormous
 //			File baIndvLocalDir = new File(localDir, "indv_node_ba_scripts");
@@ -1494,7 +1494,7 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 					argz += " "+MPJTaskCalculator.argumentBuilder().exactDispatch(1).threads(remoteTotalThreads).build();
 					script = mpjWrite.buildScript(MPJ_LogicTreeBranchAverageBuilder.class.getName(), argz);
 					pbsWrite.writeScript(new File(localDir, "batch_node_ba"+baJobSuffixes.get(n)+".slurm"),
-							script, mins, myNodes, remoteTotalThreads, queue);
+							script, mins, myNodes, remoteTotalThreads, -1, queue);
 				}
 			}
 		}
@@ -1561,7 +1561,7 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 			
 			int transNodes = Integer.min(16, nodes);
 			pbsWrite.writeScript(new File(modLocalDir, "batch_strict_branch_translate.slurm"), script, mins, transNodes,
-					remoteTotalThreads, queue);
+					remoteTotalThreads, -1, queue);
 			
 			// now write hazard script
 			argz = "--input-file "+modResultsPath+".zip";
@@ -1570,7 +1570,7 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 			script = mpjWrite.buildScript(MPJ_LogicTreeHazardCalc.class.getName(), argz);
 			
 			nodes = Integer.min(40, nodes);
-			pbsWrite.writeScript(new File(modLocalDir, "batch_hazard.slurm"), script, mins, nodes, remoteTotalThreads, queue);
+			pbsWrite.writeScript(new File(modLocalDir, "batch_hazard.slurm"), script, mins, nodes, remoteTotalThreads, -1, queue);
 		}
 	}
 	

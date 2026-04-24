@@ -190,7 +190,7 @@ public class UCERF3_EAL_ScriptGen {
 					+remoteXML.getAbsolutePath()+" "+remoteOutput.getAbsolutePath();
 			
 			File jobFile = new File(writeDir, name+".slurm");
-			pbsWrite.writeScript(jobFile, javaWrite.buildScript(className, jobArgs), mins, nodes, ppn, queue);
+			pbsWrite.writeScript(jobFile, javaWrite.buildScript(className, jobArgs), mins, nodes, ppn, -1, queue);
 		}
 	}
 

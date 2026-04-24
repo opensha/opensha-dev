@@ -155,7 +155,7 @@ public class MPJ_WrapperHazardCalcScriptWriter {
 		
 		// make sure to not exceed 1 week
 		mins = Integer.min(mins, 60*24*7 - 1);
-		pbsWrite.writeScript(new File(localDir, "batch_wrapper_calc.slurm"), script, mins, nodes, remoteTotalThreads, queue);
+		pbsWrite.writeScript(new File(localDir, "batch_wrapper_calc.slurm"), script, mins, nodes, remoteTotalThreads, -1, queue);
 	}
 
 }

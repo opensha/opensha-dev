@@ -156,7 +156,7 @@ public class MPJ_UCERF3_ShakeMapPrecalcScriptGen {
 		List<String> script = mpjWrite.buildScript(MPJ_UCERF3_ShakeMapPrecalc.class.getName(), argz);
 		
 		int mins = hours*60;
-		script = pbsWrite.buildScript(script, mins, nodes, ppn, queue);
+		script = pbsWrite.buildScript(script, mins, nodes, ppn, -1, queue);
 		pbsWrite.writeScript(new File(localDir, jobName+".pbs"), script);
 	}
 	

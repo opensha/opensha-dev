@@ -135,7 +135,7 @@ class MPJ_BBP_PartBSimScriptGen {
 		if (!addLines.isEmpty())
 			script.addAll(2, addLines);
 		
-		script = pbsWrite.buildScript(script, mins, nodes, threads, queue);
+		script = pbsWrite.buildScript(script, mins, nodes, threads, -1, queue);
 		pbsWrite.writeScript(new File(localJobDir, "cat_bbp_partb.slurm"), script);
 	}
 

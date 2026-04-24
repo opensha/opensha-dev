@@ -188,7 +188,7 @@ class MPJ_BBP_RotatedRupVariabilityMagDistSimScriptGen {
 		if (!addLines.isEmpty())
 			script.addAll(2, addLines);
 		
-		script = pbsWrite.buildScript(script, mins, nodes, threads, queue);
+		script = pbsWrite.buildScript(script, mins, nodes, threads, -1, queue);
 		pbsWrite.writeScript(new File(localJobDir, scriptFileName), script);
 	}
 

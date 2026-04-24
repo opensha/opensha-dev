@@ -18,8 +18,11 @@ public class FaultSlipRateInvestigations {
 		NSHM23_FaultModels fm = NSHM23_FaultModels.WUS_FM_v3;
 		FaultModels u3FM = FaultModels.FM3_1;
 		
-		int nshm23_id = FaultSectionUtils.findSectionID(fm.getFaultSections(), "Silver", "Creek");
-		int u3_id = FaultSectionUtils.findSectionID(u3FM.getFaultSections(), "Silver", "Creek");
+//		int nshm23_id = FaultSectionUtils.findSectionID(fm.getFaultSections(), "Silver", "Creek");
+//		int u3_id = FaultSectionUtils.findSectionID(u3FM.getFaultSections(), "Silver", "Creek");
+		
+		int nshm23_id = FaultSectionUtils.findSectionID(fm.getFaultSections(), "Rose", "Canyon");
+		int u3_id = FaultSectionUtils.findSectionID(u3FM.getFaultSections(), "Rose", "Canyon");
 		
 		double u3Avg = avgSlipRate(DeformationModels.MEAN_UCERF3.build(u3FM, DeformationModels.MEAN_UCERF3, null), u3_id);
 		NSHM23_DeformationModels[] dms = NSHM23_DeformationModels.values();

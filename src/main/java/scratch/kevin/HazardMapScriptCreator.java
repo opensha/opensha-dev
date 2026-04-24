@@ -153,7 +153,7 @@ public class HazardMapScriptCreator {
 		List<String> script = mpj.buildScript(MPJHazardCurveDriver.class.getName(), cliArgs);
 		USC_HPCC_ScriptWriter writer = new USC_HPCC_ScriptWriter();
 		
-		script = writer.buildScript(script, mins, nodes, ppn, queue);
+		script = writer.buildScript(script, mins, nodes, ppn, -1, queue);
 		
 		File pbsFile = new File(localJobDir, jobName+".pbs");
 		System.out.println("Writing "+pbsFile.getAbsolutePath());

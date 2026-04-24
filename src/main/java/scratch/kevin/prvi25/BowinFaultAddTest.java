@@ -318,7 +318,7 @@ public class BowinFaultAddTest {
 			
 			System.out.println("Writing "+jobFile.getAbsolutePath());
 			
-			pbsWrite.writeScript(jobFile, script, mins, nodes, remoteTotalThreads, queue);
+			pbsWrite.writeScript(jobFile, script, mins, nodes, remoteTotalThreads, -1, queue);
 		}
 	}
 

@@ -119,7 +119,7 @@ public class GMM_LogicTreeBranchAttach {
 			int nodeRounds = (int)Math.ceil((double)finalTree.getLogicTree().size()/(double)(nodes));
 			int mins = minsEach*nodeRounds + 60;
 			nodes = Integer.min(40, nodes);
-			pbsWrite.writeScript(new File(destDir, "batch_hazard.slurm"), script, mins, nodes, remoteToalThreads, queue);
+			pbsWrite.writeScript(new File(destDir, "batch_hazard.slurm"), script, mins, nodes, remoteToalThreads, -1, queue);
 		}
 	}
 	
