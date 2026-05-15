@@ -14,7 +14,7 @@ import java.util.Map;
 import java.util.Random;
 
 import org.apache.commons.statistics.distribution.ContinuousDistribution;
-import org.apache.commons.statistics.distribution.CorrTruncatedNormalDistribution;
+import org.apache.commons.statistics.distribution.TruncatedNormalDistribution;
 import org.apache.commons.statistics.distribution.UniformContinuousDistribution;
 import org.jfree.chart.annotations.XYAnnotation;
 import org.jfree.chart.annotations.XYBoxAnnotation;
@@ -70,7 +70,7 @@ public class LHSExampleFigures {
 		levels.add(new ContinuousDistributionSampledLevel(
 				"GR b-value", "GR b-value", UniformContinuousDistribution.of(0d, 1d), "Sample ", "Sample", "Sample"));
 		levels.add(new ContinuousDistributionSampledLevel(
-				"Off-fault Mmax", "Off-fault Mmax", CorrTruncatedNormalDistribution.of(7.6, 0.2, 7.15, 8.05), -1, "Sample ", "Sample", "Sample"));
+				"Off-fault Mmax", "Off-fault Mmax", TruncatedNormalDistribution.of(7.6, 0.2, 7.15, 8.05), -1, "Sample ", "Sample", "Sample"));
 		
 		long seed = 123456789l;
 		

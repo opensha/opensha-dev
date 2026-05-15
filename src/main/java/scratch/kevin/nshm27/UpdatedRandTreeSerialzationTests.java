@@ -9,7 +9,6 @@ import java.util.Random;
 import org.apache.commons.rng.simple.RandomSource;
 import org.apache.commons.statistics.distribution.ContinuousDistribution;
 import org.apache.commons.statistics.distribution.ContinuousDistribution.Sampler;
-import org.apache.commons.statistics.distribution.CorrTruncatedNormalDistribution;
 import org.apache.commons.statistics.distribution.TruncatedNormalDistribution;
 import org.opensha.commons.logicTree.LogicTree;
 import org.opensha.commons.logicTree.LogicTreeBranch;
@@ -33,7 +32,7 @@ public class UpdatedRandTreeSerialzationTests {
 		testValLevel.build(12345l, 1000);
 		inTrees.add(LogicTree.buildExhaustive(List.of(testValLevel), true));
 		
-		ContinuousDistribution dist = CorrTruncatedNormalDistribution.of(1d, 0.1, 0.7, 1.3);
+		ContinuousDistribution dist = TruncatedNormalDistribution.of(1d, 0.1, 0.7, 1.3);
 		Sampler sampler = dist.createSampler(RandomSource.XO_RO_SHI_RO_128_PP.create(123456l));
 		MinMaxAveTracker sampleTrack = new MinMaxAveTracker();
 		for (int i=0; i<100000; i++) {

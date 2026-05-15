@@ -12,7 +12,6 @@ import org.apache.commons.statistics.distribution.TruncatedNormalDistribution;
 import org.jfree.chart.ui.RectangleAnchor;
 import org.jfree.data.Range;
 import org.apache.commons.statistics.distribution.ContinuousDistribution.Sampler;
-import org.apache.commons.statistics.distribution.CorrTruncatedNormalDistribution;
 import org.apache.commons.statistics.distribution.NormalDistribution;
 import org.opensha.commons.data.function.ArbitrarilyDiscretizedFunc;
 import org.opensha.commons.data.function.DiscretizedFunc;
@@ -81,7 +80,7 @@ public class SamplerTest {
 		hist1.scale(1d/(samples*hist1.getDelta()));
 		
 		EvenlyDiscretizedFunc hist2 = new EvenlyDiscretizedFunc(hist1.getMinX(), hist1.size(), hist1.getDelta());
-		ContinuousDistribution corrDist = CorrTruncatedNormalDistribution.of(mean, sd, lower, upper);
+		ContinuousDistribution corrDist = TruncatedNormalDistribution.of(mean, sd, lower, upper);
 		Sampler corrSampler = corrDist.createSampler(RandomSource.XO_RO_SHI_RO_128_PP.create(123456l));
 		for (int i=0; i<samples; i++) {
 			double value = corrSampler.sample();

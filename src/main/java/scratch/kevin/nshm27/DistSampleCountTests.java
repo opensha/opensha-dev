@@ -7,7 +7,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.apache.commons.statistics.distribution.ContinuousDistribution;
-import org.apache.commons.statistics.distribution.CorrTruncatedNormalDistribution;
+import org.apache.commons.statistics.distribution.TruncatedNormalDistribution;
 import org.apache.commons.statistics.distribution.UniformContinuousDistribution;
 import org.opensha.commons.data.function.ArbitrarilyDiscretizedFunc;
 import org.opensha.commons.data.function.DefaultXY_DataSet;
@@ -33,14 +33,14 @@ import net.mahdilamb.colormap.Colors;
 public class DistSampleCountTests {
 
 	public static void main(String[] args) throws IOException {
-//		ContinuousDistribution dist = CorrTruncatedNormalDistribution.of(7.6, 0.134, 7.15, 8.05);
-		ContinuousDistribution dist = CorrTruncatedNormalDistribution.of(8, 0.2, 7.45, 8.55);
+//		ContinuousDistribution dist = TruncatedNormalDistribution.of(7.6, 0.134, 7.15, 8.05);
+		ContinuousDistribution dist = TruncatedNormalDistribution.of(8, 0.2, 7.45, 8.55);
 		int precisionScale = 1;
 		int bins = 3;
 		
 ////		ContinuousDistribution dist = UniformContinuousDistribution.of(0d, 1d);
 ////		ContinuousDistribution dist = UniformContinuousDistribution.of(0.5d, 1d);
-//		ContinuousDistribution dist = CorrTruncatedNormalDistribution.of(0.75, 0.5, 0d, 1.5);
+//		ContinuousDistribution dist = TruncatedNormalDistribution.of(0.75, 0.5, 0d, 1.5);
 //		int precisionScale = 2;
 		
 //		ContinuousDistribution dist = UniformContinuousDistribution.of(1000d, 1500d);
