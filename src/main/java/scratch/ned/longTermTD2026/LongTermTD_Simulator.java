@@ -1,5 +1,6 @@
 package scratch.ned.longTermTD2026;
 
+import java.awt.Color;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileWriter;
@@ -16,11 +17,21 @@ import com.google.common.io.Files;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.math3.distribution.GammaDistribution;
 import org.apache.commons.math3.random.RandomDataGenerator;
+import org.apache.commons.math3.stat.correlation.PearsonsCorrelation;
+import org.apache.commons.math3.stat.descriptive.DescriptiveStatistics;
+import org.jfree.data.Range;
 import org.opensha.commons.calc.FaultMomentCalc;
 import org.opensha.commons.data.function.ArbDiscrEmpiricalDistFunc_3D;
+import org.opensha.commons.data.function.DefaultXY_DataSet;
+import org.opensha.commons.data.function.EvenlyDiscretizedFunc;
 import org.opensha.commons.data.function.HistogramFunction;
 import org.opensha.commons.data.function.IntegerPDF_FunctionSampler;
+import org.opensha.commons.data.function.XY_DataSet;
 import org.opensha.commons.eq.MagUtils;
+import org.opensha.commons.gui.plot.GeographicMapMaker;
+import org.opensha.commons.gui.plot.PlotCurveCharacterstics;
+import org.opensha.commons.gui.plot.PlotLineType;
+import org.opensha.commons.gui.plot.PlotSymbol;
 import org.opensha.commons.param.Parameter;
 import org.opensha.commons.param.ParameterList;
 import org.opensha.commons.util.ExceptionUtils;
@@ -1050,6 +1061,11 @@ public class LongTermTD_Simulator {
 	public static void simulateEvents(TimeDepFaultSystemSolutionERF erf, String inputTimeSinceLastMillisFileName, String outputTimesinceLastMillisFileName, 
 			double numYears, File resultsDir, long randomSeed, boolean verbose, boolean makePlots, double timeStepYrs) {
 
+		// make sure background excluded for now
+		IncludeBackgroundOption includeBackgroundOptionTest = (IncludeBackgroundOption)erf.getParameter(IncludeBackgroundParam.NAME).getValue();
+		if(includeBackgroundOptionTest != IncludeBackgroundOption.EXCLUDE)
+			throw new RuntimeException("Including background seismicity not supported (not yet tested).");
+
 		FSS_ProbabilityModel probModel = erf.getProbabilityModel();
 		boolean isPoisson = false;
 		
@@ -1135,6 +1151,13 @@ public class LongTermTD_Simulator {
 		erf.getParameter(IncludeBackgroundParam.NAME).setValue(IncludeBackgroundOption.EXCLUDE);
 		erf.setProbabilityModelChoice(FSS_ProbabilityModels.POISSON);
 		erf.updateForecast();
+		
+// TESTS
+//System.out.println("erf.getTotNumRups()"+erf.getTotNumRups());
+//System.out.println("erf.getTotNumRupsFromFaultSystem()"+erf.getTotNumRupsFromFaultSystem());
+//if(erf.getTotNumRups() != erf.getTotNumRupsFromFaultSystem())
+//	throw new RuntimeException("Problem A");
+//System.exit(0);
 
 		// fill in totalRate, longTermRateOfNthRups, magOfNthRups, and longTermSlipRateForSectArray
 		double totalLongTermRate=0, longTermMoRate=0;
@@ -1174,6 +1197,8 @@ public class LongTermTD_Simulator {
 		// set the ave cond recurrence intervals
 		double[] aveCondRecurIntervalForFltSysRups = TimeDepUtils.computeAveCondRecurIntervalForFltSysRups(fltSysRupSet, 
 				longTermPartRateForSectArray, aveRecurIntervals);
+
+		// find min and max cond RI
 		double minCondRI=Double.MAX_VALUE,maxCondRI=0;
 		for(double ri: aveCondRecurIntervalForFltSysRups) {
 			if(!Double.isInfinite(ri)) {
@@ -1181,7 +1206,6 @@ public class LongTermTD_Simulator {
 				if(ri > maxCondRI) maxCondRI = ri;
 			}
 		}
-		
 		infoString +="minCondRI="+minCondRI+"\nmaxCondRI="+maxCondRI+"\n\n";
 
 		//write out infoString if verbose
@@ -1230,7 +1254,12 @@ public class LongTermTD_Simulator {
 					int percentGood = (int)Math.round((100.0*(double)numGoodDateOfLast/(double)dateOfLastForSect.length));
 					System.out.println("\n"+(float)percDoneThresh+"% done in "+(float)timeInMin+" minutes"+"; yr="+(float)currentYear+";  % sect with date of last = "+percentGood);	
 					System.out.println("\tFraction of sections that ruptured: "+ (double)numSectThatRuptured/(double)numSections+"\n");
-			
+					// save results so far
+					try {
+						eventFileWriter.flush();
+					} catch (IOException e) {
+						e.printStackTrace();
+					}
 					percDoneThresh += percDoneIncrement;
 				}				
 			}
@@ -1246,7 +1275,8 @@ public class LongTermTD_Simulator {
 				}
 
 				// now update totalRate and ruptureSampler (for all rups since start time changed)
-				for(int n=0; n<erf.getTotNumRupsFromFaultSystem();n++) {
+//				for(int n=0; n<erf.getTotNumRupsFromFaultSystem();n++) {
+				for(int n=0; n<erf.getTotNumRups();n++) {
 					double probGain = probGainForFaultSystemSource[erf.getSrcIndexForNthRup(n)];
 					aveGainAtTime += probGain;
 					double newRate = longTermRateOfNthRups[n] * probGain;	// applied as a rate gain
@@ -1321,7 +1351,7 @@ public class LongTermTD_Simulator {
 				e1.printStackTrace();
 			}
 
-			// reset last event time and increment simulated/obs rate on sections
+			// reset last event time and increment simulated/obs rate on sections				
 			for(int sect:sectIndexArrayForSrcList.get(srcIndex)) {
 				dateOfLastForSect[sect] = eventTimeMillis;
 				probModel.setSectDOLE(sect, eventTimeMillis);
@@ -1428,14 +1458,17 @@ public class LongTermTD_Simulator {
 		boolean aveRecurIntervals = true; 		// default value applied by WG02
 		boolean aveNormTimeSinceLast = true;
 		AperiodicityModel aperModel = null;
+		EqkProbDistCalc renewalCalc=null;
 		if (probModel instanceof UCERF3_ProbabilityModel) {			// U3 calculation type
 			u3ProbModel = (UCERF3_ProbabilityModel)probModel;
 			aveRecurIntervals = u3ProbModel.getAveragingTypeChoice().isAveRI();
 			aveNormTimeSinceLast = u3ProbModel.getAveragingTypeChoice().isAveNTS();
 			aperModel = u3ProbModel.getAperiodicityModel();
+			renewalCalc = u3ProbModel.getRenewalModelChoice().instance();
 		} else if (probModel instanceof WG02_ProbabilityModel) {
 			wgProbModel = (WG02_ProbabilityModel)probModel;
 			aperModel = wgProbModel.getAperiodicityModel();
+			renewalCalc = RenewalModels.BPT.instance();
 		}
 		else if (probModel instanceof FSS_ProbabilityModel.Poisson) {
 			isPoisson = true;
@@ -1506,6 +1539,7 @@ public class LongTermTD_Simulator {
 		erf.getParameter(IncludeBackgroundParam.NAME).setValue(IncludeBackgroundOption.EXCLUDE);
 		erf.setProbabilityModelChoice(FSS_ProbabilityModels.POISSON);
 		erf.updateForecast();
+		
 
 		// fill in longTermRateOfNthRups, magOfNthRups, and longTermSlipRateForSectArray
 		double totalLongTermRate=0;
@@ -1891,18 +1925,18 @@ public class LongTermTD_Simulator {
 		double aper=Double.NaN;
 		if(numAperValues==1)
 			aper=aperValuesList.get(0);	// only one value, so include for comparison
-		infoString += ProbModelsPlottingUtils.writeNormalizedDistPlotWithFits(normalizedRupRecurIntervals, aper, 
+		infoString += ProbModelsPlottingUtils.writeNormalizedDistPlotWithFits(normalizedRupRecurIntervals, aper, renewalCalc,
 				plotsDir, "Normalized Rupture RIs", "normalizedRupRecurIntervals");		
 
 		// for subduction zones
-		infoString += ProbModelsPlottingUtils.writeNormalizedDistPlotWithFits(subductionNormRupRIs, aper, 
+		infoString += ProbModelsPlottingUtils.writeNormalizedDistPlotWithFits(subductionNormRupRIs, aper, renewalCalc,
 				plotsDir, "Subduction Norm Rup RIs", "normalizedRupRecurIntervals_SubductionZones");		
 		
 		// now mag-dep:
 		if(numAperValues >1) {
 			for(double aperVal : aperValuesList) {
 				String label = "aper="+aperVal;
-				infoString += ProbModelsPlottingUtils.writeNormalizedDistPlotWithFits(normalizedRupRecurIntervalsAperMap.get(aperVal), aperVal, 
+				infoString += ProbModelsPlottingUtils.writeNormalizedDistPlotWithFits(normalizedRupRecurIntervalsAperMap.get(aperVal), aperVal, renewalCalc,
 						plotsDir, "Norm Rup RIs; "+label, "normRupRecurIntsForTargetAper"+aperVal);
 			}
 		}
@@ -2126,7 +2160,458 @@ public class LongTermTD_Simulator {
 
 		if(verbose) System.out.println("INFO STRING:\n\n"+infoString);
 	}
+	
+	
+	/**
+	 * 
+	 */
+	public static void sectPlotsForMultSimulations(String dirName, String runDirPrefix, String runDirSuffix, 
+			int numSims, FaultSystemSolution sol) {
+		
+		String outputInfoString="";
+		
+		File outputDir = new File(dirName+"/StatsPlotsFor"+numSims+"_Runs");
+		if(!outputDir.exists())
+			outputDir.mkdir();
+		
+		int numSections = 0;
+		ArrayList<double[]> simRateArrayList = new ArrayList<double[]>();
+		ArrayList<double[]> ratioArrayList = new ArrayList<double[]>();
+		double[] targetRateArray=null;
+		String[] sectNameArray=null;
+		double totMeanRatio = 0, minSectRatio=Double.MAX_VALUE, maxSectRatio=0;
 
+		ArrayList<HistogramFunction> aveSectNormRI_HistList = new ArrayList<HistogramFunction>();
+		int maxHistSize=0;
+		for(int i=1;i<=numSims;i++) {
+			
+			// section RI histograms
+			HistogramFunction hist = readFirstFuncFromTxtFile(dirName+"/"+runDirPrefix+i+runDirSuffix+"/plots/normalizedSectRecurIntervals.txt", 0.05,0.10);
+			aveSectNormRI_HistList.add(hist);
+			if(maxHistSize<hist.size())
+				maxHistSize=hist.size();
+
+			try {
+				File dataFile = new File(dirName+"/"+runDirPrefix+i+runDirSuffix+"/obsVsImposedSectionPartRates.txt");
+//				System.out.println(dataFile);
+
+				// compute numSections & create arrays if first simulation
+				if(i==1) {
+					BufferedReader reader = new BufferedReader(scratch.UCERF3.utils.UCERF3_DataUtils.getReader(dataFile.toURL()));
+					String line;
+			        reader.readLine(); // skip header
+					while ((line = reader.readLine()) != null)
+						numSections+=1;
+//					System.out.println("numSections="+numSections);
+					outputInfoString+="numSections="+numSections+"\n";
+					targetRateArray = new double[numSections];
+					sectNameArray = new String[numSections];
+				}
+				
+				double[] simRateArray = new double[numSections];
+				double[] ratioArray = new double[numSections];
+				BufferedReader reader = new BufferedReader(scratch.UCERF3.utils.UCERF3_DataUtils.getReader(dataFile.toURL()));
+//		        Path filePath = Paths.get("/Users/field/Library/CloudStorage/OneDrive-DOI/Field_Other/ERF_Coordination/LongTermTD_2026/Analysis/bptSimulationsU3/Run"+i+"_100k/obsVsImposedSectionPartRates.txt"); 
+//		        Charset asciiCharset = Charset.forName("US-ASCII");
+//		        BufferedReader reader = Files.newBufferedReader(filePath, asciiCharset);
+
+		        reader.readLine(); // skip header
+				int s=0;
+				String line;
+				while ((line = reader.readLine()) != null) {
+					String[] st = StringUtils.split(line,"\t");
+					int sectIndex = Integer.valueOf(st[0]);
+					targetRateArray[s] = Double.valueOf(st[1]);
+					simRateArray[s] = Double.valueOf(st[2]);
+					double ratio = Double.valueOf(st[3]);
+					ratioArray[s] = ratio;
+					totMeanRatio += ratio;
+					sectNameArray[s] = st[4];
+					if(s != sectIndex)
+						throw new RuntimeException("bad index");
+					s+=1;
+				}
+				simRateArrayList.add(simRateArray);
+				ratioArrayList.add(ratioArray);
+				
+				reader.close();
+			} catch (Exception e) {
+				ExceptionUtils.throwAsRuntimeException(e);
+			}
+		}
+		totMeanRatio /= (numSections*numSims);
+		outputInfoString+="totMeanRatio="+totMeanRatio+"\n";
+
+
+		double[] simRateMeanArray = new double[numSections];
+		double[] simRateStdevArray = new double[numSections];
+		double[] simRateStdomArray = new double[numSections];
+		double[] ratioMeanArray = new double[numSections];
+		double[] ratioStdevArray = new double[numSections];
+		double[] ratioStdomArray = new double[numSections];
+		double[] ratioMeanFirstHalf = new double[numSections];
+		double[] ratioMeanLastHalf = new double[numSections];
+//		double[] simNormError = new double[numSections];
+		double[] simFractStdom = new double[numSections];
+
+		double minMeanRatio = Double.MAX_VALUE; // min ave among sections
+		double maxMeanRatio = -Double.MAX_VALUE; // max ave among sections
+		double minMeanRate = Double.MAX_VALUE;
+		double maxFractError = -Double.MAX_VALUE;
+		int indexForMaxFractError=-1;
+		HistogramFunction ratioHist = new HistogramFunction(0d,8d,201);
+		HistogramFunction ratioHistWted = new HistogramFunction(0d,8d,81);
+		for(int s=0;s<numSections;s++) {
+			DescriptiveStatistics simRateStats = new DescriptiveStatistics();
+			DescriptiveStatistics ratioStats = new DescriptiveStatistics();
+			for(int i=0;i<numSims;i++) {
+				simRateStats.addValue(simRateArrayList.get(i)[s]);
+				ratioStats.addValue(ratioArrayList.get(i)[s]);
+				if(i<numSims/2)
+					ratioMeanFirstHalf[s]+=ratioArrayList.get(i)[s]/((numSims/2)); //*totMeanRatio);
+				else
+					ratioMeanLastHalf[s]+=ratioArrayList.get(i)[s]/((numSims/2)); //*totMeanRatio);
+			}
+			simRateMeanArray[s] = simRateStats.getMean();
+			if(minMeanRate>simRateMeanArray[s]) minMeanRate=simRateMeanArray[s];
+			simRateStdevArray[s] = simRateStats.getStandardDeviation();
+			simRateStdomArray[s] = simRateStdevArray[s]/Math.sqrt(numSims);
+			ratioMeanArray[s] = ratioStats.getMean();
+			if(minMeanRatio>ratioMeanArray[s]) minMeanRatio=ratioMeanArray[s];
+			if(maxMeanRatio<ratioMeanArray[s]) maxMeanRatio=ratioMeanArray[s];
+			ratioStdevArray[s] = ratioStats.getStandardDeviation();
+			ratioStdomArray[s] = ratioStats.getStandardDeviation()/Math.sqrt(numSims);
+//			simNormError[s] = (simRateMeanArray[s]/1.088-targetRateArray[s])/simRateStdomArray[s];
+			simFractStdom[s] = simRateStdomArray[s]/simRateMeanArray[s];
+			if(maxFractError<simFractStdom[s]) {
+				maxFractError=simFractStdom[s];
+				indexForMaxFractError=s;
+			}
+			if(minSectRatio>ratioMeanArray[s]) minSectRatio=ratioMeanArray[s];
+			if(maxSectRatio<ratioMeanArray[s]) maxSectRatio=ratioMeanArray[s];
+			ratioHist.add(ratioMeanArray[s], 1.0);
+			ratioHistWted.add(ratioMeanArray[s], ratioMeanArray[s]/ratioStdomArray[s]);
+		}
+		ratioHist.normalizeBySumOfY_Vals();
+		ratioHistWted.normalizeBySumOfY_Vals();
+//		System.out.println("minMeanRate="+minMeanRate+"\tN="+(float)minMeanRate*1e6);
+//		System.out.println("maxFractStdom="+maxFractError+"\ttargetRate="+targetRateArray[indexForMaxFractError]);
+//		System.out.println("minSectRatio="+minSectRatio+"\nmaxSectRatio="+maxSectRatio);
+//		System.out.println("ratioHist:\n"+ratioHist);
+//		System.out.println("ratioHistWted:\n"+ratioHistWted);
+		
+		outputInfoString+="minMeanRate="+minMeanRate+"\tN="+(float)minMeanRate*1e6+"\n";
+		outputInfoString+="maxFractStdom="+maxFractError+"\ttargetRate="+targetRateArray[indexForMaxFractError]+"\n";
+		outputInfoString+="minSectRatio="+minSectRatio+"\nmaxSectRatio="+maxSectRatio+"\n";
+		outputInfoString+="\nratioHist:\n"+ratioHist+"\n";
+		outputInfoString+="\nratioHistWted:\n"+ratioHistWted+"\n";
+				
+		// following used to verify calculation in Excel
+//		System.out.println("Values for maxFractStdom:");
+//		for(int i=0;i<numSims;i++) {
+//			System.out.println(simRateArrayList.get(i)[indexForMaxFractError]);
+//		}
+		
+		
+		PearsonsCorrelation pCorr = new PearsonsCorrelation();
+		double corrCoeff = pCorr.correlation(ratioMeanFirstHalf, ratioMeanLastHalf);
+		outputInfoString += "PearsonsCorrelation Coeff for first vs second half = "+corrCoeff+"\n";
+
+		ProbModelsPlottingUtils.writeSimVsImposedRateScatterPlot(ratioMeanFirstHalf, ratioMeanLastHalf, outputDir, "RatioSimFirstHalf_vs_RatioSimLastHalf_SectionPartRates", 
+				"", "RatioSimFirstHalf Sect Part Rate (/yr)", "RatioSimLastHalf Sect Part Rate (/yr)", 0.5,2.0);
+
+
+		ProbModelsPlottingUtils.writeSimVsImposedRateScatterPlot(targetRateArray, simRateMeanArray, outputDir, "aveSimVsImposedSectionPartRates", 
+				"", "Imposed Sect Part Rate (/yr)", "Ave Simulated Sect Part Rate (/yr)", Double.NaN,Double.NaN);
+
+//		ProbModelsPlottingUtils.writeSimVsImposedRateScatterPlot(targetArray, ratioMeanArray, outputDir, "aveSimVsImposedRatioSectionPartRates", 
+//				"", "Imposed Sect Part Rate (/yr)", "AveSimulated/Imposed Sect Part Rate (/yr)", Double.NaN,Double.NaN);
+//		
+		DefaultXY_DataSet ratioFunc = new DefaultXY_DataSet(targetRateArray,ratioMeanArray);
+		ratioFunc.setInfo("minMeanRatio="+(float)minMeanRatio+"\nmaxMeanRatio="+(float)maxMeanRatio);
+		ArrayList<XY_DataSet> funcs = new ArrayList<XY_DataSet>();
+		funcs.add(ratioFunc);
+		ArrayList<PlotCurveCharacterstics> plotChars = new ArrayList<PlotCurveCharacterstics>();
+		plotChars.add(new PlotCurveCharacterstics(PlotSymbol.FILLED_CIRCLE, 0.5f, Color.RED));
+		Range xAxisRange = new Range(1e-5,4e-2);
+		Range yAxisRange = new Range(0,2);
+		boolean logX = true;
+		boolean logY = false;
+		double widthInches = 7.0; // inches
+		double heightInches = 6.0; // inches
+		boolean popupWindow = false;
+		ProbModelsPlottingUtils.writeAndOrPlotFuncs(funcs,plotChars,"","Imposed Sect Part Rate (/yr)","AveSimulated/Imposed Sect Part Rate (/yr)",xAxisRange,yAxisRange,
+				logX,logY,widthInches,heightInches, new File(outputDir,"aveSimVsImposedRatioSectionPartRates"), popupWindow);
+
+		
+		ArrayList<XY_DataSet> histFuncs = new ArrayList<XY_DataSet>();
+		ratioHist.setInfo("mean="+(float)ratioHist.computeMean());
+		histFuncs.add(ratioHist);
+		ArrayList<PlotCurveCharacterstics> histPlotChars = new ArrayList<PlotCurveCharacterstics>();
+		histPlotChars.add(new PlotCurveCharacterstics(PlotLineType.HISTOGRAM, 1f, Color.GRAY));
+		ProbModelsPlottingUtils.writeAndOrPlotFuncs(
+				histFuncs, 
+				histPlotChars, 
+				"",
+				"Section Ratio",
+				"PDF",
+				new Range(0.5,1.5),
+				new Range(0,1.1*ratioHist.getMaxY()),
+				false,
+				false,
+				4d,
+				3d,
+				new File(outputDir,"sectRateRatiosHistogram"), 
+				false);
+		
+		DefaultXY_DataSet normErrorFunc = new DefaultXY_DataSet(targetRateArray,simFractStdom);
+		ArrayList<XY_DataSet> funcs2 = new ArrayList<XY_DataSet>();
+		funcs2.add(normErrorFunc);
+		xAxisRange = new Range(1e-5,4e-2);
+		yAxisRange = null;
+		logX = true;
+		logY = false;
+		widthInches = 7.0; // inches
+		heightInches = 6.0; // inches
+		popupWindow = false;
+		ProbModelsPlottingUtils.writeAndOrPlotFuncs(funcs2,plotChars,"","Imposed Sect Part Rate (/yr)","simFractStdom",xAxisRange,yAxisRange,
+				logX,logY,widthInches,heightInches, new File(outputDir,"simFractStdomVsImposedRatioSectionPartRates"), popupWindow);
+
+		
+		DefaultXY_DataSet ratioVsNormStdomFunc = new DefaultXY_DataSet(simFractStdom,ratioMeanArray);
+		ArrayList<XY_DataSet> funcs3 = new ArrayList<XY_DataSet>();
+		funcs3.add(ratioVsNormStdomFunc);
+		xAxisRange = new Range(0,0.005);
+		yAxisRange = new Range(0.8,1.2);
+		logX = false;
+		logY = false;
+		widthInches = 7.0; // inches
+		heightInches = 6.0; // inches
+		popupWindow = false;
+		ProbModelsPlottingUtils.writeAndOrPlotFuncs(funcs3,plotChars,"","simFractStdom","AveSimulated/Imposed Sect Part Rate (/yr)",xAxisRange,yAxisRange,
+				logX,logY,widthInches,heightInches, new File(outputDir,"simRateRatioVsSimFractStdom"), popupWindow);
+
+		// look only at data with very small fractStdom
+		int num =0;
+		double fractStdomThresh=0.005;
+		for(int s=0;s<simFractStdom.length;s++)
+			if(simFractStdom[s]<fractStdomThresh) num+=1;
+		double[] subsetObsRate = new double[num];
+		double[] subsetTargetRate = new double[num];
+		double[] subsetRatioMeanFirst5 = new double[num];
+		double[] subsetRatioMeanLast5 = new double[num];
+
+		num=0;
+		double aveRatio=0;
+		double wtAveRatio=0;
+		double totWt=0;
+		for(int s=0;s<simFractStdom.length;s++) {
+			if(simFractStdom[s]<fractStdomThresh) {
+				subsetObsRate[num] = simRateMeanArray[s];
+				subsetTargetRate[num] = targetRateArray[s];
+				aveRatio+=subsetObsRate[num]/subsetTargetRate[num];
+				subsetRatioMeanFirst5[num] = ratioMeanFirstHalf[s];
+				subsetRatioMeanLast5[num] = ratioMeanLastHalf[s];
+				num+=1;
+			}
+			wtAveRatio += (simRateMeanArray[s]/targetRateArray[s])/(simFractStdom[s]*simFractStdom[s]);
+			totWt += 1/(simFractStdom[s]*simFractStdom[s]);
+		}
+		aveRatio /= subsetObsRate.length;
+		wtAveRatio /= totWt;
+//		System.out.println("Select data are defined as having a simFractStdom less than "+fractStdomThresh);
+//		System.out.println("aveRatio for select data: "+aveRatio);
+//		System.out.println("wtAveRatio: "+ wtAveRatio);
+		outputInfoString += "Select data are defined as having a simFractStdom less than "+fractStdomThresh+"\n";
+		outputInfoString += "aveRatio for select data: "+aveRatio+"\n";
+		outputInfoString += "wtAveRatio: "+ wtAveRatio+"\n";
+
+		ProbModelsPlottingUtils.writeSimVsImposedRateScatterPlot(subsetTargetRate, subsetObsRate, outputDir, "selectAveSimVsImposedSectionPartRates", 
+				"", "Select Imposed Part Rate (/yr)", "Select Ave Sim Part Rate (/yr)", Double.NaN,Double.NaN);
+
+		ProbModelsPlottingUtils.writeSimVsImposedRateScatterPlot(subsetRatioMeanFirst5, subsetRatioMeanLast5, outputDir, "selectRatioSimFirstHalf_vs_RatioSimLastHalf_SectionPartRates", 
+				"", "Select RatioSimFirstHalf Sect Part Rate (/yr)", "Select RatioSimLastHalf Sect Part Rate (/yr)", 0.5,2.0);
+
+		
+//		Make aveSectNormRI_Hist plot
+		HistogramFunction aveSectNormRI_Hist = new HistogramFunction(0.05,maxHistSize,0.10);
+		for(HistogramFunction hist:aveSectNormRI_HistList) {
+			for(int n=0;n<hist.size();n++)
+				aveSectNormRI_Hist.add(n,hist.getY(n)/(double)numSims);
+		}
+//		System.out.println("maxHistSize="+maxHistSize);
+//		System.out.println(aveSectNormRI_Hist);
+		ArrayList<EvenlyDiscretizedFunc> funcList = new ArrayList<EvenlyDiscretizedFunc>();
+		funcList.add(aveSectNormRI_Hist);
+		// now make the list of best-fit functions for the plot
+		funcList.addAll(ProbModelsPlottingUtils.getRenewalModelFunctionFitsToDist(aveSectNormRI_Hist));
+		aveSectNormRI_Hist.setName("Norm Sect RI Dist");
+		String info = "ObsMean, ObsCOV, bestFitBPTmean, bestFitBPTaper, bestFitWeibullmean, bestFitWeibullAper\n"+
+				(float)aveSectNormRI_Hist.computeMean()+", "+(float)aveSectNormRI_Hist.computeCOV();
+		EvenlyDiscretizedFunc bptDist = (EvenlyDiscretizedFunc)funcList.get(1);
+		info += ", "+bptDist.getInfo().split("\n")[1];
+		EvenlyDiscretizedFunc weibullDist = (EvenlyDiscretizedFunc)funcList.get(3);
+		info += ", "+weibullDist.getInfo().split("\n")[1];
+		aveSectNormRI_Hist.setInfo(info);
+		ProbModelsPlottingUtils.writeNormalizedDistPlotWithFits(funcList, outputDir, "Ave Normalized Section RIs", 
+				"aveSectNormRI_Hist");
+
+		//make hazard rate plot
+		EvenlyDiscretizedFunc hazardRate = getHazardRateFuncFromPDF(aveSectNormRI_Hist);
+		ArrayList<XY_DataSet> hazRatefuncs = new ArrayList<XY_DataSet>();
+		plotChars = new ArrayList<PlotCurveCharacterstics>();
+		for(HistogramFunction hist:aveSectNormRI_HistList) {
+			hazRatefuncs.add(getHazardRateFuncFromPDF(hist));
+			plotChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, Color.PINK));
+		}
+		hazRatefuncs.add(hazardRate);
+		plotChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 2f, Color.RED));
+		//BPT & Weibull tests
+		HistogramFunction bptHist =new HistogramFunction(bptDist.getMinX(),bptDist.size(), bptDist.getDelta());
+		for(int i=0;i<bptHist.size();i++)
+			bptHist.set(i,bptDist.getY(i));
+		bptHist.setInfo(bptDist.getInfo());
+		bptHist.setName(bptDist.getName());
+		hazRatefuncs.add(getHazardRateFuncFromPDF(bptHist));
+		HistogramFunction weibullHist =new HistogramFunction(weibullDist.getMinX(),weibullDist.size(), weibullDist.getDelta());
+		for(int i=0;i<weibullDist.size();i++)
+			weibullHist.set(i,weibullDist.getY(i));
+		weibullHist.setInfo(weibullDist.getInfo());
+		weibullHist.setName(weibullDist.getName());
+		hazRatefuncs.add(getHazardRateFuncFromPDF(weibullHist));
+		plotChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, Color.BLACK));
+		plotChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, Color.GREEN));
+		String xAxisLabel = "Norm Time Since Last (yrs)";
+		String yAxisLabel = "Hazard Rate";
+		xAxisRange = new Range(0, 5);
+		yAxisRange = new Range(0, 5);
+		logX = false;
+		logY = false;
+		widthInches = 7; // inches
+		heightInches = 6; // inches
+		popupWindow = false;
+		ProbModelsPlottingUtils.writeAndOrPlotFuncs(hazRatefuncs,plotChars,"",xAxisLabel,yAxisLabel,xAxisRange,yAxisRange,
+				logX,logY,widthInches,heightInches, new File(outputDir,"aveSectHazardRateFunc"), popupWindow);
+
+		
+		
+		// make map
+		try {
+			FaultSystemRupSet rupSet = sol.getRupSet();
+			List<? extends FaultSection> subSects = rupSet.getFaultSectionDataList();
+			Color[] sectColorArray = new Color[subSects.size()];
+			GeographicMapMaker mapMaker = new GeographicMapMaker(subSects);
+			mapMaker.setWriteGeoJSON(true);
+			mapMaker.clearSectScalars();
+			
+			List<Color> sectColorList = new ArrayList<>();
+			for (int i=0;i<ratioMeanArray.length;i++) {
+//				Color color = ProbModelsPlottingUtils.getRatioMapColor(ratioMeanArray[i], simFractStdom[i]);
+				Color color = ProbModelsPlottingUtils.getRatioMapColor(ratioMeanArray[i]/totMeanRatio, simFractStdom[i]);
+				sectColorList.add(color);
+			}
+			outputInfoString+="\nRatio values in sectPartRatioMap are corrected by totMeanRatio\n\n";
+			mapMaker.plotSectColors(sectColorList, null, null);
+			mapMaker.setSectNaNChar(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, new Color(0, 0, 255)));
+			mapMaker.plot(outputDir, "sectPartRatioMap", " ");
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		
+		// make map scale
+		ProbModelsPlottingUtils.plotScaleForSectRatioWithUncert(outputDir);
+		
+//		System.out.println("totMeanRatio="+totMeanRatio+"\nminMeanSectRatio="+minMeanRatio+"\nmaxMeanSectRatio="+maxMeanRatio);
+		outputInfoString += "totMeanRatio="+totMeanRatio+"\nminMeanSectRatio="+minMeanRatio+"\nmaxMeanSectRatio="+maxMeanRatio+"\n";
+
+		
+		FileWriter sectRates_fw;
+		FileWriter infoFile_fw;
+		try {
+			sectRates_fw = new FileWriter(new File(outputDir,"/AveSectionPartRatesData.csv"));
+			sectRates_fw.write("sectID,simRate,targetRate,ratio,simFractStdom,sectName\n");
+			for(int i=0;i<targetRateArray.length;i++) {
+				String sectName = sectNameArray[i].replace(","," ");
+				sectRates_fw.write(i+","+simRateMeanArray[i]+","+targetRateArray[i]+","+ratioMeanArray[i]+","+simFractStdom[i]+","+sectName+"\n");
+			}
+			sectRates_fw.close();
+			
+			infoFile_fw = new FileWriter(new File(outputDir,"/INFO_ForSectPlots.txt"));
+			infoFile_fw.write(outputInfoString);
+			infoFile_fw.close();
+
+		} catch (IOException e1) {
+			e1.printStackTrace();
+		}
+
+	}
+
+	/**
+	 * The number of points in the function can be variable
+	 * @param fileName
+	 * @param startX
+	 * @param deltaX
+	 * @return
+	 */
+	private static HistogramFunction readFirstFuncFromTxtFile(String fileName, double startX, double deltaX) {
+		HistogramFunction hist = null;
+		try {
+			File dataFile = new File(fileName);
+			
+			String lineMarker = "Data[x,y]:";
+			boolean foundIt = false;
+			ArrayList<Double> yValsList = new ArrayList<Double>();
+			int numX = 0;
+			
+//			System.out.println("Reading file "+fileName);
+			
+			double testX = startX;
+			
+			BufferedReader reader = new BufferedReader(scratch.UCERF3.utils.UCERF3_DataUtils.getReader(dataFile.toURL()));
+			String line;
+			while ((line = reader.readLine()) != null) {
+				if(!foundIt || line.contains(lineMarker)) {
+					if(line.contains(lineMarker)) {
+//						System.out.println("FOUND IT");
+						foundIt=true;
+					}
+					continue;
+				}
+				String[] st = line.trim().split("\\s+");
+				if(st.length == 2) {
+					numX+=1;
+					double ratioX = testX/Double.valueOf(st[0]);
+					if( ratioX<0.9999 || ratioX> 1.0001)
+						throw new RuntimeException("Problem with x-axis values");
+					yValsList.add(Double.valueOf(st[1]));
+//					System.out.println(Double.valueOf(st[0])+", "+Double.valueOf(st[1]));
+					testX += deltaX;					
+				}
+				else
+					break;
+			}
+			if(numX != yValsList.size())
+				throw new RuntimeException("Problem with number of x-axis values");
+			hist = new HistogramFunction(startX,numX,deltaX);
+			for(int i=0;i<yValsList.size();i++)
+				hist.set(i,yValsList.get(i));
+//			System.out.println(hist);
+
+		} catch (Exception e) {
+			ExceptionUtils.throwAsRuntimeException(e);
+		}
+		return hist;
+	}
+
+
+	public static EvenlyDiscretizedFunc getHazardRateFuncFromPDF(HistogramFunction pdf) {
+		HistogramFunction cdf = pdf.getCumulativeDistFunctionWithHalfBinOffset();
+		cdf.scale(1.0/cdf.getMaxY());
+		EvenlyDiscretizedFunc hazardRate = pdf.deepClone();
+		for(int i=0;i<hazardRate.size();i++)
+			hazardRate.set(i,pdf.getY(i)/(1.0-cdf.getInterpolatedY(pdf.getX(i))));
+		return hazardRate;
+	}
 
 
 
