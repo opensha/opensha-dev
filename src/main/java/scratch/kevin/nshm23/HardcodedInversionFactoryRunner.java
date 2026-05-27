@@ -41,6 +41,7 @@ import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_Segmen
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_SingleStates;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_U3_HybridLogicTreeBranch;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.RupturePlausibilityModels;
+import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.SectionSupraSeisBValues;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.SegmentationModelBranchNode;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.SupraSeisBValues;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.U3_UncertAddDeformationModels;
@@ -191,11 +192,22 @@ public class HardcodedInversionFactoryRunner {
 				NSHM27_SeismicityRegions.AMSAM, TectonicRegionType.SUBDUCTION_INTERFACE, false);
 		dirName += "-amsam";
 
-//		branch.setValue(NSHM26_InterfaceObsSeisDMAdjustment.AVERAGE);
-		branch.setValue(NSHM27_InterfaceObsSeisDMAdjustment.SECTION_SPECIFIC);
-		branch.setValue(NSHM27_InterfaceMinSubSects.ONE);
-		branch.setValue(NSHM27_SeisRateModelBranch.HIGH);
-		branch.setValue(NSHM27_InterfaceDeformationModels.LOW_COUPLING);
+		branch.setValue(NSHM27_InterfaceObsSeisDMAdjustment.AVERAGE);
+//		branch.setValue(NSHM27_InterfaceObsSeisDMAdjustment.SECTION_SPECIFIC);
+		branch.setValue(NSHM27_InterfaceMinSubSects.TWO);
+		branch.setValue(NSHM27_SeisRateModelBranch.AVERAGE);
+		branch.setValue(NSHM27_InterfaceDeformationModels.PREF_COUPLING);
+		branch.setValue(NSHM27_InterfaceDeformationModels.PREF_COUPLING);
+		
+		double b = 1d;
+		dirName += "-b"+(float)b;
+		for (int l=0; l<branch.size(); l++) {
+			LogicTreeLevel<? extends LogicTreeNode> level = branch.getLevel(l);
+			if (level instanceof SectionSupraSeisBValues.FixedValueLevel) {
+				((SectionSupraSeisBValues.FixedValueLevel)level).setValue(b);
+				branch.setValue(level.getNodes().get(0));
+			}
+		}
 		
 		plotLevel = PlotLevel.REVIEW;
 		

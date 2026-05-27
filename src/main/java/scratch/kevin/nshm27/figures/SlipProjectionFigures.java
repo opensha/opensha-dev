@@ -11,6 +11,7 @@ import java.util.List;
 import org.apache.commons.math3.stat.StatUtils;
 import org.opensha.commons.geo.Location;
 import org.opensha.commons.geo.LocationList;
+import org.opensha.commons.geo.LocationUtils;
 import org.opensha.commons.geo.LocationUtils.LocationAverager;
 import org.opensha.commons.gui.plot.GeographicMapMaker;
 import org.opensha.commons.gui.plot.PlotCurveCharacterstics;
@@ -18,9 +19,11 @@ import org.opensha.commons.gui.plot.PlotLineType;
 import org.opensha.commons.logicTree.LogicTreeBranch;
 import org.opensha.commons.logicTree.LogicTreeNode;
 import org.opensha.commons.mapping.gmt.elements.GMT_CPT_Files;
+import org.opensha.commons.util.FaultUtils.AngleAverager;
 import org.opensha.commons.util.cpt.CPT;
 import org.opensha.sha.earthquake.faultSysSolution.ruptures.util.GeoJSONFaultReader;
 import org.opensha.sha.faultSurface.FaultSection;
+import org.opensha.sha.faultSurface.FaultTrace;
 import org.opensha.sha.faultSurface.GeoJSONFaultSection;
 import org.opensha.sha.util.TectonicRegionType;
 
@@ -38,8 +41,10 @@ public class SlipProjectionFigures {
 		File outputDir = new File(FIGURES_DIR, "slip_projection");
 		Preconditions.checkState(outputDir.exists() || outputDir.mkdir());
 
-		NSHM27_InterfaceFaultModels fm = NSHM27_InterfaceFaultModels.AMSAM_V1;
-//		NSHM27_InterfaceFaultModels fm = NSHM27_InterfaceFaultModels.GNMI_V1;
+//		NSHM27_InterfaceFaultModels fm = NSHM27_InterfaceFaultModels.AMSAM_V1;
+//		double maxSlip = 160;
+		NSHM27_InterfaceFaultModels fm = NSHM27_InterfaceFaultModels.GNMI_V1;
+		double maxSlip = 30d;
 		
 		List<? extends FaultSection> sects = fm.buildSubSects(fm);
 		
@@ -49,7 +54,49 @@ public class SlipProjectionFigures {
 		
 		NSHM27_InterfaceDeformationModels dm = fm.getDefaultDeformationModel();
 		
-		GeographicMapMaker mapMaker = new GeographicMapMaker(sects);
+		LogicTreeBranch<LogicTreeNode> branch = NSHM27_LogicTree.buildDefault(fm.getSeisReg(), TectonicRegionType.SUBDUCTION_INTERFACE, false);
+		branch.setValue(NSHM27_InterfaceCouplingDepthModels.NONE);
+		
+//		double maxSlip = maxSlip(dm.apply(fm, branch, sects));
+		CPT slipCPT = GMT_CPT_Files.SEQUENTIAL_BATLOW_UNIFORM.instance().rescale(0d, maxSlip);
+		
+		DeformationFront df = dm.getDeformationFront(fm);
+		double moveOffset = 15d; // km
+		
+		LocationList dfTrace = df.trace();
+		List<FaultSection> regSects = new ArrayList<>(sects);
+		if (moveOffset > 0d) {
+			LocationList movedTrace = new LocationList(dfTrace.size());
+			for (int i=0; i<dfTrace.size(); i++) {
+				Location loc = dfTrace.get(i);
+				double az;
+				if (i == 0) {
+					az = LocationUtils.azimuth(loc, dfTrace.get(i+1));
+				} else if (i == dfTrace.size()-1) {
+					az = LocationUtils.azimuth(dfTrace.get(i-1), loc);
+				} else {
+					Location before = dfTrace.get(i-1);
+					Location after = dfTrace.get(i+1);
+					double az1 = LocationUtils.azimuth(before, loc);
+					double az2 = LocationUtils.azimuth(loc, after);
+					AngleAverager avg = new AngleAverager();
+					avg.add(az1, LocationUtils.horzDistanceFast(before, loc));
+					avg.add(az2, LocationUtils.horzDistanceFast(loc, after));
+					az = avg.getAverage();
+				}
+				movedTrace.add(LocationUtils.location(loc, Math.toRadians(az-90d), moveOffset));
+			}
+			dfTrace = movedTrace;
+			FaultTrace offsetTrace = new FaultTrace();
+			offsetTrace.addAll(movedTrace);
+			FaultSection offsetSect = new GeoJSONFaultSection.Builder(999, "Offset", offsetTrace).dip(90d).upperDepth(0d).lowerDepth(10d).build();
+			regSects.add(offsetSect);
+		}
+		
+		GeographicMapMaker.buildBufferedRegion(regSects);
+		
+		GeographicMapMaker mapMaker = new GeographicMapMaker(GeographicMapMaker.buildBufferedRegion(regSects));
+		mapMaker.setFaultSections(sects);
 		mapMaker.setWriteGeoJSON(false);
 		mapMaker.setFillSurfaces(true);
 		
@@ -62,14 +109,6 @@ public class SlipProjectionFigures {
 				ratioCPT, "Projected / Horizontal Slip Rate Ratio");
 		mapMaker.plot(outputDir, fm.name()+"_slip_proj_ratio", " ");
 		
-		LogicTreeBranch<LogicTreeNode> branch = NSHM27_LogicTree.buildDefault(fm.getSeisReg(), TectonicRegionType.SUBDUCTION_INTERFACE, false);
-		branch.setValue(NSHM27_InterfaceCouplingDepthModels.NONE);
-		
-		double maxSlip = maxSlip(dm.apply(fm, branch, sects));
-		CPT slipCPT = GMT_CPT_Files.SEQUENTIAL_BATLOW_UNIFORM.instance().rescale(0d, maxSlip);
-		
-		DeformationFront df = dm.getDeformationFront(fm);
-		
 		for (NSHM27_InterfaceCouplingDepthModels depthCoupling : NSHM27_InterfaceCouplingDepthModels.values()) {
 			branch.setValue(depthCoupling);
 			List<? extends FaultSection> dmSects = dm.apply(fm, branch, sects);
@@ -79,23 +118,24 @@ public class SlipProjectionFigures {
 			
 			List<LocationList> traces = new ArrayList<>();
 			List<PlotCurveCharacterstics> traceChars = new ArrayList<>();
-			traces.add(df.trace());
-			traceChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 10f, Color.BLACK));
-			traces.add(df.trace());
-			traceChars.add(new PlotCurveCharacterstics(PlotLineType.DASHED, 10f, Color.LIGHT_GRAY));
+			
+			traces.add(dfTrace);
+			traceChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 15f, Color.BLACK));
+//			traces.add(dfTrace);
+//			traceChars.add(new PlotCurveCharacterstics(PlotLineType.DASHED, 10f, Color.LIGHT_GRAY));
 			for (int i=0; i<df.slips().length; i++) {
-				Location loc = df.trace().get(i);
+				Location loc = dfTrace.get(i);
 				Location l1, l2;
 				if (i == 0)
 					l1 = loc;
 				else
-					l1 = middle(loc, df.trace().get(i-1));
+					l1 = middle(loc, dfTrace.get(i-1));
 				if (i == df.slips().length-1)
 					l2 = loc;
 				else
-					l2 = middle(loc, df.trace().get(i+1));
+					l2 = middle(loc, dfTrace.get(i+1));
 				traces.add(LocationList.of(l1, l2));
-				traceChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 5f, slipCPT.getColor(df.slips()[i])));
+				traceChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 10f, slipCPT.getColor(df.slips()[i])));
 			}
 			mapMaker.plotLines(traces, traceChars);
 			
