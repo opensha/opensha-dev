@@ -67,7 +67,7 @@ public class BathymetryConvert {
 			e.printStackTrace();
 		}
 		
-		GriddedGeoDataSet.writeXYZFile(depths, new File("/tmp/"+seisReg.name()+"_depths.xyz"));
+		GriddedGeoDataSet.writeXYZFile(depths, new File("/tmp/"+seisReg.name()+"-depths.xyz"));
 		GeographicMapMaker mapMaker = new GeographicMapMaker(gridReg);
 		CPT cpt = GMT_CPT_Files.SEQUENTIAL_NAVIA_UNIFORM.instance().reverse().rescale(0d, 10d);
 		cpt.setNanColor(Colors.tab_orange);

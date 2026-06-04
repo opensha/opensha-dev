@@ -64,7 +64,9 @@ import org.opensha.sha.util.TectonicRegionType;
 import com.google.common.base.Preconditions;
 
 import gov.usgs.earthquake.nshmp.erf.nshm27.NSHM27_InvConfigFactory;
+import gov.usgs.earthquake.nshmp.erf.nshm27.logicTree.NSHM27_CrustalAggregatedDeformationModels;
 import gov.usgs.earthquake.nshmp.erf.nshm27.logicTree.NSHM27_InterfaceDeformationModels;
+import gov.usgs.earthquake.nshmp.erf.nshm27.logicTree.NSHM27_InterfaceFaultModels;
 import gov.usgs.earthquake.nshmp.erf.nshm27.logicTree.NSHM27_InterfaceMinSubSects;
 import gov.usgs.earthquake.nshmp.erf.nshm27.logicTree.NSHM27_InterfaceObsSeisDMAdjustment;
 import gov.usgs.earthquake.nshmp.erf.nshm27.logicTree.NSHM27_LogicTree;
@@ -183,21 +185,27 @@ public class HardcodedInversionFactoryRunner {
 //			branch.setValue(node);
 //		writeGridProv = true;
 
-//		LogicTreeBranch<LogicTreeNode> branch = NSHM26_LogicTree.buildDefault(
-//				NSHM26_SeismicityRegions.GNMI, TectonicRegionType.SUBDUCTION_INTERFACE, false);
-////		LogicTreeBranch<LogicTreeNode> branch = NSHM26_LogicTree.buildDefault(
-//// 				NSHM26_SeismicityRegions.GNMI, TectonicRegionType.ACTIVE_SHALLOW, false);
-//		dirName += "-gnmi";
+//		LogicTreeBranch<LogicTreeNode> branch = NSHM27_LogicTree.buildDefault(
+//				NSHM27_SeismicityRegions.GNMI, TectonicRegionType.SUBDUCTION_INTERFACE, false);
 		LogicTreeBranch<LogicTreeNode> branch = NSHM27_LogicTree.buildDefault(
-				NSHM27_SeismicityRegions.AMSAM, TectonicRegionType.SUBDUCTION_INTERFACE, false);
-		dirName += "-amsam";
+ 				NSHM27_SeismicityRegions.GNMI, TectonicRegionType.ACTIVE_SHALLOW, false);
+		dirName += "-gnmi";
+//		LogicTreeBranch<LogicTreeNode> branch = NSHM27_LogicTree.buildDefault(
+//				NSHM27_SeismicityRegions.AMSAM, TectonicRegionType.SUBDUCTION_INTERFACE, false);
+//		dirName += "-amsam";
 
-		branch.setValue(NSHM27_InterfaceObsSeisDMAdjustment.AVERAGE);
-//		branch.setValue(NSHM27_InterfaceObsSeisDMAdjustment.SECTION_SPECIFIC);
-		branch.setValue(NSHM27_InterfaceMinSubSects.TWO);
+		if (branch.hasValue(NSHM27_InterfaceFaultModels.class) ) {
+			branch.setValue(NSHM27_InterfaceObsSeisDMAdjustment.AVERAGE);
+//			branch.setValue(NSHM27_InterfaceObsSeisDMAdjustment.SECTION_SPECIFIC);
+			branch.setValue(NSHM27_InterfaceMinSubSects.TWO);
+			branch.setValue(NSHM27_InterfaceDeformationModels.PREF_COUPLING);
+		} else {
+			branch.setValue(NSHM27_CrustalAggregatedDeformationModels.AVERAGE);
+		}
 		branch.setValue(NSHM27_SeisRateModelBranch.AVERAGE);
-		branch.setValue(NSHM27_InterfaceDeformationModels.PREF_COUPLING);
-		branch.setValue(NSHM27_InterfaceDeformationModels.PREF_COUPLING);
+		
+//		writeGridProv = false;
+		writeGridProv = true;
 		
 		double b = 1d;
 		dirName += "-b"+(float)b;
