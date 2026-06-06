@@ -2,6 +2,7 @@ package scratch.kevin.mfdInversion;
 
 import java.text.DecimalFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.BitSet;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -80,11 +81,11 @@ public class MFD_InversionAdjustment extends SectNucleationMFD_Estimator {
 		if (verbose) System.out.println("Building constraints");
 		List<InversionConstraint> constraints = new ArrayList<>();
 		
-		constraints.add(new MFD_SectSlipRateConstraint(structure, 1d, ConstraintWeightingType.NORMALIZED_BY_UNCERTAINTY));
-		constraints.add(new SectCoruptureBudgetConstraint(structure, 1d, ConstraintWeightingType.NORMALIZED_BY_UNCERTAINTY));
-		constraints.add(new RelativeGRInequalityToSingleFaultConstraint(structure, 1e3));
-		constraints.add(new RelativeCommonPathGREqualityConstraint(structure, 1e2));
-		constraints.add(new SectRateMinimizationConstraint(structure, 1d, ConstraintWeightingType.NORMALIZED_BY_UNCERTAINTY));
+		constraints.add(new MFD_SectSlipRateConstraint(structure, 1e1, ConstraintWeightingType.NORMALIZED_BY_UNCERTAINTY));
+		constraints.add(new SectCoruptureBudgetConstraint(structure, 1e1, ConstraintWeightingType.NORMALIZED_BY_UNCERTAINTY));
+		constraints.add(new RelativeGRInequalityToSingleFaultConstraint(structure, 1e1));
+		constraints.add(new RelativeCommonPathGREqualityConstraint(structure, 1e1));
+		constraints.add(new SectRateMinimizationConstraint(structure, 1e0, ConstraintWeightingType.NORMALIZED_BY_UNCERTAINTY));
 		if (segModel != null) {
 			// TODO: seg constraint
 		}
@@ -102,11 +103,21 @@ public class MFD_InversionAdjustment extends SectNucleationMFD_Estimator {
 		
 		int columns = structure.getNumColumns();
 		
-		DoubleMatrix2D A = new SparseDoubleMatrix2D(numRows, columns);
-		double[] d = new double[numRows];
+		DoubleMatrix2D A = null;
+		double[] d = null;
 		
-		DoubleMatrix2D A_ineq = new SparseDoubleMatrix2D(numIneqRows, columns);
-		double[] d_ineq = new double[numIneqRows];
+		if (numRows > 0) {
+			A = new SparseDoubleMatrix2D(numRows, columns);
+			d = new double[numRows];
+		}
+		
+		DoubleMatrix2D A_ineq = null;
+		double[] d_ineq = null;
+		
+		if (numIneqRows > 0) {
+			A_ineq = new SparseDoubleMatrix2D(numIneqRows, columns);
+			d_ineq = new double[numIneqRows];
+		}
 		
 		if (verbose) System.out.println("Encoding matrices");
 		
@@ -153,11 +164,11 @@ public class MFD_InversionAdjustment extends SectNucleationMFD_Estimator {
 		}
 		
 		// run the inversion
-		ColumnOrganizedAnnealingData equalityData = new ColumnOrganizedAnnealingData(A, d);
-		ColumnOrganizedAnnealingData inequalityData = new ColumnOrganizedAnnealingData(A_ineq, d_ineq);
+		ColumnOrganizedAnnealingData equalityData = numRows > 0 ? new ColumnOrganizedAnnealingData(A, d) : null;
+		ColumnOrganizedAnnealingData inequalityData = numIneqRows > 0 ? new ColumnOrganizedAnnealingData(A_ineq, d_ineq) : null;
 		
 		double[] initial = new double[columns];
-		long itersPerSectBin = 10000l;
+		long itersPerSectBin = 100000l;
 		long totalIters = itersPerSectBin * columns;
 		CompletionCriteria completion = new IterationCompletionCriteria(itersPerSectBin);
 		
@@ -269,6 +280,10 @@ public class MFD_InversionAdjustment extends SectNucleationMFD_Estimator {
 				List<BitSet> sectRupUtilizations, int[] sectMinMagIndexes, int[] sectMaxMagIndexes,
 				int[][] sectRupInBinCounts, EvenlyDiscretizedFunc refMFD, JumpProbabilityCalc segModel) {
 			this.rupSet = rupSet;
+			
+			int numRuptures = rupSet.getNumRuptures();
+			int numSections = rupSet.getNumSections();
+			
 			this.origSectSupraSeisMFDs = origSectSupraSeisMFDs;
 			this.targetSectSupraMoRates = targetSectSupraMoRates;
 			this.targetSectSupraSlipRates = targetSectSupraSlipRates;
@@ -277,10 +292,6 @@ public class MFD_InversionAdjustment extends SectNucleationMFD_Estimator {
 			this.sectRupInBinCounts = sectRupInBinCounts;
 			this.refMFD = refMFD;
 			this.segModel = segModel;
-			
-			int numRuptures = rupSet.getNumRuptures();
-			int numSections = rupSet.getNumSections();
-			int numMags = refMFD.size();
 			List<? extends FaultSection> subSects = rupSet.getFaultSectionDataList();
 			
 			// bin sections by parent
@@ -645,12 +656,13 @@ public class MFD_InversionAdjustment extends SectNucleationMFD_Estimator {
 		@Override
 		public long encode(DoubleMatrix2D A, double[] d, int startRow) {
 			FaultSystemRupSet rupSet = structure.getRupSet();
-			double[] targetSectSupraSlipRates = structure.getTargetSectSupraSlipRates();
-			double[] sectSupraSlipRateStdDevs = structure.getSectSupraSlipRateStdDevs();
 			
 			int numSections = rupSet.getNumSections();
 			int numCols = structure.getNumColumns();
 			Preconditions.checkState(A.columns() == numCols);
+			
+			double[] targetSectSupraSlipRates = structure.getTargetSectSupraSlipRates();
+			double[] sectSupraSlipRateStdDevs = structure.getSectSupraSlipRateStdDevs();
 			
 			double[] weights = new double[numSections];
 			for (int s=0; s<numSections; s++)
@@ -673,16 +685,21 @@ public class MFD_InversionAdjustment extends SectNucleationMFD_Estimator {
 				double[] slips = slipAlongModule.calcSlipOnSectionsForRup(rupSet, aveSlipModule, rupIndex);
 				List<Integer> sects = rupSet.getSectionsIndicesForRup(rupIndex);
 				int magIndex = refMFD.getClosestXIndex(rupSet.getMagForRup(rupIndex));
+				double rupArea = rupSet.getAreaForRup(rupIndex);
 				for (int s=0; s<slips.length; s++) {
 					int sectID = sects.get(s);
 					int colIndex = structure.getColumn(sectID, magIndex);
 					sectMagRupCounts[colIndex]++;
-					sectMagSumSlips[colIndex] += slips[s];
+					// we're comparing to nucleation MFDs, but slip rate scales with participation
+					// this scalar fixes that
+					double particToNuclScalar = rupArea/rupSet.getAreaForSection(s);
+					sectMagSumSlips[colIndex] += slips[s]*particToNuclScalar;
 				}
 			}
 			// normalize
+			double[] sectMagAvgSlips = new double[numCols];
 			for (int c=0; c<numCols; c++)
-				sectMagSumSlips[c] /= (double)sectMagRupCounts[c];
+				sectMagAvgSlips[c] = sectMagSumSlips[c] / (double)sectMagRupCounts[c];
 		
 			long numNonZeroElements = 0l;
 			
@@ -695,8 +712,9 @@ public class MFD_InversionAdjustment extends SectNucleationMFD_Estimator {
 				for (int magIndex=sectMinMagIndexes[s]; magIndex<=sectMaxMagIndexes[s]; magIndex++) {
 					int col = structure.getColumn(s, magIndex);
 					if (sectMagRupCounts[col] > 0) {
-						double avgSlip = sectMagSumSlips[col] / (double)sectMagRupCounts[col];
+						double avgSlip = sectMagAvgSlips[col];
 						double val = avgSlip;
+						
 						if (weightingType == ConstraintWeightingType.NORMALIZED) {
 							double target = targetSectSupraSlipRates[s];
 							if (target != 0d) {

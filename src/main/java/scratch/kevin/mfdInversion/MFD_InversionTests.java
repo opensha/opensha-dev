@@ -44,7 +44,8 @@ public class MFD_InversionTests {
 
 	public static void main(String[] args) throws IOException {
 		System.setProperty("java.awt.headless", "true");
-		File outputDir = new File("/tmp/mfd_inv_tests");
+//		File outputDir = new File("/tmp/mfd_inv_tests");
+		File outputDir = new File("C:\\Users\\kmilner\\scratch\\mfd_inv_tests");
 		Preconditions.checkState(outputDir.exists() || outputDir.mkdir(),
 				"Can't create output dir: %s", outputDir.getAbsolutePath());
 		// demo Y-shaped fault system
@@ -71,6 +72,7 @@ public class MFD_InversionTests {
 		double segRate1 = 1d;
 		double segRate2 = 1d;
 		SubSectConstraintModels sectConstrModel = SubSectConstraintModels.TOT_NUCL_RATE;
+//		SubSectConstraintModels sectConstrModel = SubSectConstraintModels.NUCL_MFD;
 		
 		// misc
 		int threads = 16;
@@ -113,8 +115,6 @@ public class MFD_InversionTests {
 		
 		long equivNumVars = Long.max(rupSet.getNumRuptures(), rupSet.getNumSections()*100l);
 		
-		SupraSeisBValInversionTargetMFDs mfds = new SupraSeisBValInversionTargetMFDs.Builder(rupSet, b).build();
-		
 		JumpProbabilityCalc segModel = null;
 		if (segRate1 < 1d || segRate2 < 1d) {
 			segModel = new JumpProbabilityCalc() {
@@ -149,8 +149,13 @@ public class MFD_InversionTests {
 		
 		for (boolean orig : new boolean[] {true,false}) {
 			NSHM23_ConstraintBuilder constrBuilder = new NSHM23_ConstraintBuilder(rupSet, b);
+			
+			constrBuilder.magDepRelStdDev(M->NSHM23_InvConfigFactory.MFD_MIN_FRACT_UNCERT*Math.max(1, Math.pow(10, b*0.5*(M-6))));
 			if (orig) {
 				System.out.println("Running original recipe inversion");
+				
+				constrBuilder.adjustForActualRupSlips(NSHM23_ConstraintBuilder.ADJ_FOR_ACTUAL_RUP_SLIPS_DEFAULT,
+						NSHM23_ConstraintBuilder.ADJ_FOR_SLIP_ALONG_DEFAULT);
 				
 				if (segModel != null)
 					constrBuilder.adjustForSegmentationModel(segModel);
