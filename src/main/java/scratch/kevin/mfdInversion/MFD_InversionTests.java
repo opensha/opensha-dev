@@ -74,10 +74,14 @@ public class MFD_InversionTests {
 
 	public static void main(String[] args) throws IOException {
 		System.setProperty("java.awt.headless", "true");
-//		File outputDir = new File("/tmp/mfd_inv_tests");
-		File outputDir = new File("C:\\Users\\kmilner\\scratch\\mfd_inv_tests");
+		File outputDir = new File("/tmp/mfd_inv_tests");
+//		File outputDir = new File("C:\\Users\\kmilner\\scratch\\mfd_inv_tests");
+		Preconditions.checkState(outputDir.getParentFile().exists());
 		Preconditions.checkState(outputDir.exists() || outputDir.mkdir(),
 				"Can't create output dir: %s", outputDir.getAbsolutePath());
+		
+		boolean scaleFactorInversion = true;
+		
 		// demo Y-shaped fault system
 		double upperDepth = 0d;
 		double lowerDepth = 12d;
@@ -86,14 +90,17 @@ public class MFD_InversionTests {
 		double mainSlipRate = 10d;
 		double fractSlipSD = 0.1;
 		
+//		double splitSlipRate1 = 10d;
+//		double splitSlipRate2 = 10d;
+		
+		double splitSlipRate1 = 5d;
+		double splitSlipRate2 = 5d;
+		
 //		double splitSlipRate1 = 2d;
 //		double splitSlipRate2 = 2d;
 		
-//		double splitSlipRate1 = 5d;
-//		double splitSlipRate2 = 5d;
-		
-		double splitSlipRate1 = 3d;
-		double splitSlipRate2 = 1d;
+//		double splitSlipRate1 = 3d;
+//		double splitSlipRate2 = 1d;
 		
 		int mainID = 0;
 		int splitID1 = 1;
@@ -109,14 +116,14 @@ public class MFD_InversionTests {
 		// MFD params
 		double b = 0.5d;
 		
-		double segRate1 = 1d;
-		double segRate2 = 1d;
+//		double segRate1 = 1d;
+//		double segRate2 = 1d;
 		
 //		double segRate1 = 0.1d;
 //		double segRate2 = 0.1d;
 		
-//		double segRate1 = 0.05d;
-//		double segRate2 = 0.05d;
+		double segRate1 = 0.05d;
+		double segRate2 = 0.05d;
 		
 		SubSectConstraintModels sectConstrModel = SubSectConstraintModels.TOT_NUCL_RATE;
 //		SubSectConstraintModels sectConstrModel = SubSectConstraintModels.NUCL_MFD;
@@ -227,10 +234,16 @@ public class MFD_InversionTests {
 		for (boolean orig : new boolean[] {true,false}) {
 			FaultSystemRupSet rupSet = rsConfig.build(1);
 			
+			// make sure split1 and split2 don't rupture together
+			for (int rupIndex : rupSet.getRupturesForParentSection(splitID1))
+				for (FaultSection sect : rupSet.getFaultSectionDataForRupture(rupIndex))
+					Preconditions.checkState(sect.getParentSectionId() != splitID2);
+			
 			long equivNumVars = Long.max(rupSet.getNumRuptures(), rupSet.getNumSections()*100l);
 			// to get some extra stability
-			equivNumVars *= 2l;
-			NSHM23_ConstraintBuilder constrBuilder = new NSHM23_ConstraintBuilder(rupSet, b);
+			equivNumVars *= 5l;
+//			NSHM23_ConstraintBuilder constrBuilder = new NSHM23_ConstraintBuilder(rupSet, b);
+			NSHM23_ConstraintBuilder constrBuilder = new NSHM23_ConstraintBuilder(rupSet, b, null, false, true, true);
 			
 			constrBuilder.magDepRelStdDev(M->NSHM23_InvConfigFactory.MFD_MIN_FRACT_UNCERT*Math.max(1, Math.pow(10, b*0.5*(M-6))));
 			if (orig) {
@@ -242,8 +255,18 @@ public class MFD_InversionTests {
 				if (segModel != null)
 					constrBuilder.adjustForSegmentationModel(segModel);
 			} else {
-				System.out.println("Running updated inversion");
-				constrBuilder.applyCustomMFDAdjustment(new MFD_InversionAdjustment(threads, segModel));
+				if (scaleFactorInversion) {
+					// ajust for actual slips first because if we don't, even if no adjustment is needed for slip rate
+					// or segmentation issues, it might try to fix for actual rup slips
+					constrBuilder.adjustForActualRupSlips(NSHM23_ConstraintBuilder.ADJ_FOR_ACTUAL_RUP_SLIPS_DEFAULT,
+							NSHM23_ConstraintBuilder.ADJ_FOR_SLIP_ALONG_DEFAULT);
+					
+					System.out.println("Running updated MFD scale factor inversion");
+					constrBuilder.applyCustomMFDAdjustment(new MFD_ScaledInversionAdjustment(threads, segModel));
+				} else {
+					System.out.println("Running updated raw MFD inversion");
+					constrBuilder.applyCustomMFDAdjustment(new MFD_InversionAdjustment(threads, segModel));
+				}
 			}
 			
 			double slipWeight = 1d;
