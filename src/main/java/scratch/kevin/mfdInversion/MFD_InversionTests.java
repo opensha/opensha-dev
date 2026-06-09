@@ -5,6 +5,7 @@ import java.io.File;
 import java.io.IOException;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -81,11 +82,12 @@ public class MFD_InversionTests {
 				"Can't create output dir: %s", outputDir.getAbsolutePath());
 		
 		boolean scaleFactorInversion = true;
+		boolean threeFaults = false;
 		
 		// demo Y-shaped fault system
 		double upperDepth = 0d;
 		double lowerDepth = 12d;
-		double dip = 90d;
+		double dip = 85d;
 		double rake = 0d;
 		double mainSlipRate = 10d;
 		double fractSlipSD = 0.1;
@@ -102,28 +104,47 @@ public class MFD_InversionTests {
 //		double splitSlipRate1 = 3d;
 //		double splitSlipRate2 = 1d;
 		
+		int minSectsPerParentRup = 1;
+		
 		int mainID = 0;
 		int splitID1 = 1;
 		int splitID2 = 2;
 		
 		Location origin = new Location(0d,0d);
-		Location splitPoint = LocationUtils.location(origin, 0d, 50d);
-		Location splitEnd1 = LocationUtils.location(splitPoint, -Math.PI/4d, 50d);
-		Location splitEnd2 = LocationUtils.location(splitPoint, Math.PI/4d, 50d);
+		Location splitPoint = LocationUtils.location(origin, 0d, 50d); 
+		double splitDist = 5d;
+		double splitDir1, splitDir2;
+		if (threeFaults) {
+			splitDir1 = -Math.PI/4d;
+			splitDir2 = Math.PI/4d;
+		} else {
+			splitDir1 = 0d;
+			splitDir2 = 0d; // unused
+		}
+		Location splitStart1 = LocationUtils.location(splitPoint, splitDir1, splitDist);
+		Location splitEnd1 = LocationUtils.location(splitStart1, splitDir1, 50d);
+		Location splitStart2 = LocationUtils.location(splitPoint, splitDir2, splitDist);
+		Location splitEnd2 = LocationUtils.location(splitStart2, splitDir2, 50d);
 		
 		Region mapReg = new Region(new Location(-0.1, -0.5), new Location(1, 0.5));
 		
 		// MFD params
 		double b = 0.5d;
 		
-//		double segRate1 = 1d;
-//		double segRate2 = 1d;
+		double segRate1 = 1d;
+		double segRate2 = 1d;
+		
+//		double segRate1 = 0.5d;
+//		double segRate2 = 0.5d;
+		
+//		double segRate1 = 0.2d;
+//		double segRate2 = 0.2d;
 		
 //		double segRate1 = 0.1d;
 //		double segRate2 = 0.1d;
 		
-		double segRate1 = 0.05d;
-		double segRate2 = 0.05d;
+//		double segRate1 = 0.05d;
+//		double segRate2 = 0.05d;
 		
 		SubSectConstraintModels sectConstrModel = SubSectConstraintModels.TOT_NUCL_RATE;
 //		SubSectConstraintModels sectConstrModel = SubSectConstraintModels.NUCL_MFD;
@@ -136,7 +157,7 @@ public class MFD_InversionTests {
 		DecimalFormat oDF = new DecimalFormat("0.##");
 		
 		String mainName = "Main Fault ("+oDF.format(mainSlipRate)+" mm/yr)";
-		String splitName1 = "Split Fault 1 ("+oDF.format(splitSlipRate1)+" mm/yr";
+		String splitName1 = (threeFaults ? "Split Fault 1" : "Secondary Fault")+" ("+oDF.format(splitSlipRate1)+" mm/yr";
 		if (segRate1 < 1)
 			splitName1 += ", P="+oDF.format(segRate1);
 		splitName1 += ")";
@@ -155,7 +176,7 @@ public class MFD_InversionTests {
 				.slipRateStdDev(mainSlipRate*fractSlipSD)
 				.build());
 		sects.add(new GeoJSONFaultSection.Builder(splitID1, splitName1,
-				FaultTrace.of(splitPoint, splitEnd1))
+				FaultTrace.of(splitStart1, splitEnd1))
 				.lowerDepth(lowerDepth)
 				.upperDepth(upperDepth)
 				.dip(dip)
@@ -163,15 +184,16 @@ public class MFD_InversionTests {
 				.slipRate(splitSlipRate1)
 				.slipRateStdDev(splitSlipRate1*fractSlipSD)
 				.build());
-		sects.add(new GeoJSONFaultSection.Builder(splitID2, splitName2,
-				FaultTrace.of(splitPoint, splitEnd2))
-				.lowerDepth(lowerDepth)
-				.upperDepth(upperDepth)
-				.dip(dip)
-				.rake(rake)
-				.slipRate(splitSlipRate2)
-				.slipRateStdDev(splitSlipRate2*fractSlipSD)
-				.build());
+		if (threeFaults)
+			sects.add(new GeoJSONFaultSection.Builder(splitID2, splitName2,
+					FaultTrace.of(splitStart2, splitEnd2))
+					.lowerDepth(lowerDepth)
+					.upperDepth(upperDepth)
+					.dip(dip)
+					.rake(rake)
+					.slipRate(splitSlipRate2)
+					.slipRateStdDev(splitSlipRate2*fractSlipSD)
+					.build());
 		
 		List<FaultSection> subSects = SubSectionBuilder.buildSubSects(sects);
 		
@@ -190,7 +212,7 @@ public class MFD_InversionTests {
 			else
 				parentMaxDistFromSplit.put(parentID, Math.max(dist, parentMaxDistFromSplit.get(parentID)));
 		}
-		CPT distFromSplitCPT = new CPT(0d, 1d, Color.DARK_GRAY, Color.LIGHT_GRAY);
+		CPT distFromSplitCPT = new CPT(0d, 1d, Color.DARK_GRAY.darker(), Color.LIGHT_GRAY.brighter());
 		Color[] sectDistFromSplitColors = new Color[subSects.size()];
 		for (int s=0; s<subSects.size(); s++) {
 			double parentMax = parentMaxDistFromSplit.get(subSects.get(s).getParentSectionId());
@@ -198,9 +220,10 @@ public class MFD_InversionTests {
 		}
 		
 		SimpleAzimuthalRupSetConfig rsConfig = new SimpleAzimuthalRupSetConfig(subSects, NSHM23_ScalingRelationships.AVERAGE);
+		rsConfig.setMinSectsPerParent(minSectsPerParentRup);
 		
 		JumpProbabilityCalc segModel = null;
-		if (segRate1 < 1d || segRate2 < 1d) {
+		if (segRate1 < 1d || (threeFaults && segRate2 < 1d)) {
 			segModel = new JumpProbabilityCalc() {
 
 				@Override
@@ -383,10 +406,7 @@ public class MFD_InversionTests {
 				FaultSection sect = sects.get(i);
 				parentID = sect.getSectionId();
 				name = sect.getName();
-				String nameForPrefix = name;
-				if (nameForPrefix.contains("("))
-					nameForPrefix = nameForPrefix.substring(0, nameForPrefix.indexOf("(")).trim();
-				prefix = "mfd_indv_"+FileNameUtils.simplify(nameForPrefix);
+				prefix = "mfd_indv_fault"+parentID;
 			}
 			List<DiscretizedFunc> funcs = new ArrayList<>();
 			List<PlotCurveCharacterstics> chars = new ArrayList<>();
@@ -405,10 +425,22 @@ public class MFD_InversionTests {
 				}
 			} else {
 				List<Color> colors = new ArrayList<>(targets.size());
-				for (FaultSection sect : subSects)
-					if (sect.getParentSectionId() == parentID)
+				double firstDist = -1;
+				double lastDist = -1;
+				for (FaultSection sect : subSects) {
+					if (sect.getParentSectionId() == parentID) {
 						colors.add(sectDistFromSplitColors[sect.getSectionId()]);
+						if (firstDist < 0)
+							firstDist = sectDistFromSplit[sect.getSectionId()];
+						lastDist = sectDistFromSplit[sect.getSectionId()];
+					}
+				}
 				Preconditions.checkState(colors.size() == targets.size());
+				if (firstDist < lastDist) {
+					// reverse order so that the closest to split is on top
+					Collections.reverse(colors);
+					Collections.reverse(targets);
+				}
 				for (int j=0; j<targets.size(); j++) {
 					IncrementalMagFreqDist target = targets.get(j);
 					target.setName(j == targets.size()/2 ? "Subsections" : null);
