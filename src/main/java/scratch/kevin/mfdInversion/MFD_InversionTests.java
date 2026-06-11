@@ -83,6 +83,7 @@ public class MFD_InversionTests {
 		
 		boolean scaleFactorInversion = true;
 		boolean threeFaults = false;
+		boolean writeReports = false;
 		
 		// demo Y-shaped fault system
 		double upperDepth = 0d;
@@ -92,11 +93,11 @@ public class MFD_InversionTests {
 		double mainSlipRate = 10d;
 		double fractSlipSD = 0.1;
 		
-//		double splitSlipRate1 = 10d;
-//		double splitSlipRate2 = 10d;
+		double splitSlipRate1 = 10d;
+		double splitSlipRate2 = 10d;
 		
-		double splitSlipRate1 = 5d;
-		double splitSlipRate2 = 5d;
+//		double splitSlipRate1 = 5d;
+//		double splitSlipRate2 = 5d;
 		
 //		double splitSlipRate1 = 2d;
 //		double splitSlipRate2 = 2d;
@@ -150,7 +151,9 @@ public class MFD_InversionTests {
 //		SubSectConstraintModels sectConstrModel = SubSectConstraintModels.NUCL_MFD;
 		
 		// misc
-		int threads = 16;
+		int threads = 24;
+		// do the rate model longer to get more stable results
+		int invStabilityScalar = 5;
 		
 		List<FaultSection> sects = new ArrayList<>();
 		
@@ -264,7 +267,7 @@ public class MFD_InversionTests {
 			
 			long equivNumVars = Long.max(rupSet.getNumRuptures(), rupSet.getNumSections()*100l);
 			// to get some extra stability
-			equivNumVars *= 5l;
+			equivNumVars *= invStabilityScalar;
 //			NSHM23_ConstraintBuilder constrBuilder = new NSHM23_ConstraintBuilder(rupSet, b);
 			NSHM23_ConstraintBuilder constrBuilder = new NSHM23_ConstraintBuilder(rupSet, b, null, false, true, true);
 			
@@ -538,12 +541,14 @@ public class MFD_InversionTests {
 			PlotUtils.writePlots(outputDir, "seg_scatter", gp, 800, false, true, true, false);
 		}
 		
-		ReportMetadata meta = new ReportMetadata(new RupSetMetadata("MFD Inversion Solution", modSol),
-				new RupSetMetadata("NSHM23 Recipe Solution", origSol));
-		ReportPageGen report = new ReportPageGen(meta, new File(outputDir, "report"),
-				ReportPageGen.getDefaultSolutionPlots(PlotLevel.REVIEW));
-		report.setReplot(true);
-		report.generatePage();
+		if (writeReports) {
+			ReportMetadata meta = new ReportMetadata(new RupSetMetadata("MFD Inversion Solution", modSol),
+					new RupSetMetadata("NSHM23 Recipe Solution", origSol));
+			ReportPageGen report = new ReportPageGen(meta, new File(outputDir, "report"),
+					ReportPageGen.getDefaultSolutionPlots(PlotLevel.REVIEW));
+			report.setReplot(true);
+			report.generatePage();
+		}
 	}
 	
 	private static List<? extends IncrementalMagFreqDist> getTargets(FaultSystemSolution sol, int parentID) {

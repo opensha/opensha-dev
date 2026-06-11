@@ -51,6 +51,13 @@ import com.google.common.primitives.Ints;
 import cern.colt.matrix.tdouble.DoubleMatrix2D;
 import cern.colt.matrix.tdouble.impl.SparseDoubleMatrix2D;
 
+/**
+ * This is an old attempt at solving for the MFDs directly with lots of normalization constraints to force them to be G-R.
+ * 
+ * I later realized that it's much easier to just solve for scale factors, rather than to constraint it to be GR, so I
+ * abandoned this one. I discovered some indexing bugs when migrating to {@link MFD_ScaledInversionAdjustment} that
+ * probably were present here are not fixed, so this needs work if ever revived.
+ */
 public class MFD_InversionAdjustment extends SectNucleationMFD_Estimator {
 	
 	private JumpProbabilityCalc segModel;

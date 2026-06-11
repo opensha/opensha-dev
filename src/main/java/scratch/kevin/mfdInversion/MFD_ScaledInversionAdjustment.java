@@ -3,6 +3,7 @@ package scratch.kevin.mfdInversion;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.BitSet;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -25,6 +26,8 @@ import org.opensha.sha.earthquake.faultSysSolution.inversion.sa.SerialSimulatedA
 import org.opensha.sha.earthquake.faultSysSolution.inversion.sa.SimulatedAnnealing;
 import org.opensha.sha.earthquake.faultSysSolution.inversion.sa.ThreadedSimulatedAnnealing;
 import org.opensha.sha.earthquake.faultSysSolution.inversion.sa.completion.CompletionCriteria;
+import org.opensha.sha.earthquake.faultSysSolution.inversion.sa.completion.CompoundCompletionCriteria;
+import org.opensha.sha.earthquake.faultSysSolution.inversion.sa.completion.EnergyChangeVsPrevCompletionCriteria;
 import org.opensha.sha.earthquake.faultSysSolution.inversion.sa.completion.IterationCompletionCriteria;
 import org.opensha.sha.earthquake.faultSysSolution.inversion.sa.params.CoolingScheduleType;
 import org.opensha.sha.earthquake.faultSysSolution.inversion.sa.params.GenerationFunctionType;
@@ -86,19 +89,19 @@ public class MFD_ScaledInversionAdjustment extends SectNucleationMFD_Estimator {
 		List<InversionConstraint> constraints = new ArrayList<>();
 		
 		// slip rate constraint: ensure each nucleation MFD matches the original slip rate
-		constraints.add(new MFD_SectSlipRateConstraint(structure, 1e3, ConstraintWeightingType.NORMALIZED_BY_UNCERTAINTY));
+		constraints.add(new MFD_SectSlipRateConstraint(structure, 1e2, ConstraintWeightingType.NORMALIZED_BY_UNCERTAINTY));
 		// slip corupture balancing constraint: ensure slip in large multifault rupture mag bins is available on all faults
-		constraints.add(new SectCoruptureBudgetConstraint(structure, 5e1, ConstraintWeightingType.NORMALIZED_BY_UNCERTAINTY));
+		constraints.add(new SectCoruptureBudgetConstraint(structure, 1e0, ConstraintWeightingType.NORMALIZED_BY_UNCERTAINTY));
 		// scale factor normalization: ensure single fault scale factors are >=1
-		constraints.add(new ScaleFactorLimitConstraint(structure, true, 1e3));
+		constraints.add(new ScaleFactorLimitConstraint(structure, true, 1e4));
 		// scale factor normalization: ensure multi fault scale factors are <=1
-		constraints.add(new ScaleFactorLimitConstraint(structure, false, 1e3));
+		constraints.add(new ScaleFactorLimitConstraint(structure, false, 1e4));
 		// scale factor normalization: keep-near 1 (weakly)
-		constraints.add(new ScaleFactorOneConstraint(structure, 1e1, 5e1));
-//		// Minimzation constraint: week constraint to force it to use large magnitude bins if they don't break the other constraints
-//		constraints.add(new SectRateMinimizationConstraint(structure, 5e0, ConstraintWeightingType.NORMALIZED_BY_UNCERTAINTY));
-//		if (segModel != null)
-//			constraints.add(new MFD_SegmentationConstraint(structure, 5e1));
+		constraints.add(new ScaleFactorOneConstraint(structure, 1e0, 1e0));
+		// Minimzation constraint: weak constraint to force it to use large magnitude bins if they don't break the other constraints
+		constraints.add(new SectRateMinimizationConstraint(structure, 1e0, ConstraintWeightingType.NORMALIZED_BY_UNCERTAINTY, false));
+		if (segModel != null)
+			constraints.add(new MFD_SegmentationConstraint(structure, 1e2, SegConstraintMethod.FULL_PARTICIPATION));
 		
 		if (verbose) System.out.println("Building inversion inputs");
 		List<ConstraintRange> constraintRowRanges = InversionInputGenerator.buildConstraintRanges(constraints, verbose);
@@ -196,17 +199,34 @@ public class MFD_ScaledInversionAdjustment extends SectNucleationMFD_Estimator {
 		NonnegativityConstraintType nonneg = NonnegativityConstraintType.TRY_ZERO_RATES_OFTEN;
 //		GenerationFunctionType perturb = GenerationFunctionType.UNIFORM_0p0001;
 //		NonnegativityConstraintType nonneg = NonnegativityConstraintType.LIMIT_ZERO_RATES;
-//		long itersPerVal = 100000l;
-//		CoolingScheduleType cool = CoolingScheduleType.FAST_SA;
-		long itersPerVal = 100000l;
-		CoolingScheduleType cool = CoolingScheduleType.CLASSICAL_SA;
+		int numVals = Integer.max(columns, 100);
+		long itersPerVal = 10000l;
+		CoolingScheduleType cool = CoolingScheduleType.FAST_SA;
+//		long itersPerVal = 10000l;
+//		CoolingScheduleType cool = CoolingScheduleType.CLASSICAL_SA;
 		
-		long totalIters = itersPerVal * columns;
-		CompletionCriteria completion = new IterationCompletionCriteria(totalIters);
+		long minTotalIters = itersPerVal * numVals;
+		CompletionCriteria completion;
 		
 //		threads = 1;
 		SimulatedAnnealing sa;
 		if (threads > 1) {
+			// do at least this many averaging rounds
+			int minRounds = 10;
+			// do at most this many times minRounds rounds
+			int maxRoundScalar = 10;
+			// within each round, do across-thread-swapping this many times
+			// 1 means just pull the best performing thread at the end of each round
+			int subIterScalar = 1;
+			
+			long maxTotalIters = minTotalIters * maxRoundScalar;
+			// require at least minTotalIters and convergence (change <1% for 2 consecutive rounds)
+			CompletionCriteria minCompletion = new CompoundCompletionCriteria(
+					List.of(new EnergyChangeVsPrevCompletionCriteria(0.1, 2),
+							new IterationCompletionCriteria(minTotalIters)), true); // true here means logical and
+			// but bail if we hit maxTotalIters
+			completion = new CompoundCompletionCriteria(
+					List.of(minCompletion, new IterationCompletionCriteria(maxTotalIters)), false); // false here means logical or
 			
 			int avgThreads = Integer.max(threads/4, 2);
 			
@@ -214,8 +234,10 @@ public class MFD_ScaledInversionAdjustment extends SectNucleationMFD_Estimator {
 			Preconditions.checkState(threadsPerAvg <= threads);
 			Preconditions.checkState(threadsPerAvg > 0);
 			
-			CompletionCriteria avgCompletion = new IterationCompletionCriteria(totalIters/10);
-			CompletionCriteria subCompletion = new IterationCompletionCriteria(totalIters/100);
+			long roundIters = minTotalIters/minRounds;
+			CompletionCriteria avgCompletion = new IterationCompletionCriteria(roundIters);
+			long threadIters = roundIters / subIterScalar;
+			CompletionCriteria subCompletion = new IterationCompletionCriteria(threadIters);
 			
 			int threadsLeft = threads;
 			
@@ -233,6 +255,8 @@ public class MFD_ScaledInversionAdjustment extends SectNucleationMFD_Estimator {
 			}
 			sa = new ThreadedSimulatedAnnealing(tsas, avgCompletion, true);
 		} else {
+			completion = new IterationCompletionCriteria(minTotalIters);
+			
 			sa = new SerialSimulatedAnnealing(equalityData, inequalityData, initial, 0d);
 		}
 		sa.setConstraintRanges(constraintRowRanges);
@@ -244,6 +268,8 @@ public class MFD_ScaledInversionAdjustment extends SectNucleationMFD_Estimator {
 		sa.iterate(completion);
 		
 		solution = sa.getBestSolution();
+
+//		System.exit(0);
 		
 		if (verbose) {
 			System.out.println("DONE estimating MFDs");
@@ -300,6 +326,13 @@ public class MFD_ScaledInversionAdjustment extends SectNucleationMFD_Estimator {
 		return mfd;
 	}
 	
+	private enum RuptureWeightingMethod {
+		MIN_AVAIL_SLIP,
+		MEAN_AVAIL_SLIP,
+		GEOM_MEAN_AVAIL_SLIP,
+		HARM_MEAN_AVAIL_SLIP,
+	}
+	
 	private static class RupSetCoruptureMFDStructure {
 		
 		private Map<Integer, List<FaultSection>> parentSectsMap;
@@ -333,6 +366,22 @@ public class MFD_ScaledInversionAdjustment extends SectNucleationMFD_Estimator {
 		private EvenlyDiscretizedFunc refMFD;
 
 		private JumpProbabilityCalc segModel;
+		
+		/**
+		 * This controls how slip rates (potentially with segmentation-adjustments) within each rupture
+		 * are combined to compute an availability weight for that rupture
+		 */
+//		private RuptureWeightingMethod rupWeightingMethod = RuptureWeightingMethod.MIN_AVAIL_SLIP;
+		private RuptureWeightingMethod rupWeightingMethod = RuptureWeightingMethod.HARM_MEAN_AVAIL_SLIP;
+		
+		/**
+		 *  Exponent applied to availability weights before normalization, designed to mimic how the rate model
+		 *  inversion chooses the easiest pathway.
+		 *  
+		 *  A value of 1 assumes that the inversion will choose pathways proportionally to their availability score.
+		 *  A value >1 concentrates rate on the best-supported pathways.
+		 */
+		private double pathwayWeightGamma = 2;
 		
 		public RupSetCoruptureMFDStructure(FaultSystemRupSet rupSet, List<IncrementalMagFreqDist> origSectSupraSeisMFDs,
 				double[] targetSectSupraMoRates, double[] targetSectSupraSlipRates, double[] sectSupraSlipRateStdDevs,
@@ -412,8 +461,6 @@ public class MFD_ScaledInversionAdjustment extends SectNucleationMFD_Estimator {
 				for (int m=0; m<myNumMags; m++)
 					rupsByMagIndex.add(null);
 				
-				int myParentID = subSects.get(s).getParentSectionId();
-				
 				for (int rupIndex : includedRupIndexes) {
 					if (!sectRups.get(rupIndex))
 						continue;
@@ -446,111 +493,165 @@ public class MFD_ScaledInversionAdjustment extends SectNucleationMFD_Estimator {
 					}
 					int magIndex = sectMinMagIndexes[s] + m;
 					
-					// figure out each unique parent combination/pathway
-					// for each such pathway, keep a list of weights for each rupture (to determine the overall path weight)
-					Map<Set<Integer>, List<Double>> uniqueParentCombWeights = new HashMap<>();
+					// figure out each unique parent combination/pathway and the associated ruptures
 					// also keep track of the ruptures using those pathways (for seg constraints)
 					Map<Set<Integer>, List<Integer>> uniqueParentCombRups = new HashMap<>();
-					// also keep track of the sections used by those parents for weighting later
-					Map<Integer, int[]> parentUsedSectCounts = new HashMap<>();
 					boolean anySingleFault = false;
 					for (int rupIndex : rupsForMag) {
 						Set<Integer> parents = rupParentSets.get(rupIndex);
 						if (parents.size() == 1)
 							anySingleFault = true;
-						List<FaultSection> rupSects = rupSet.getFaultSectionDataForRupture(rupIndex);
-						// figure out average slip rate for each parent
-						Map<Integer, DoubleAverager> parentSlips = new HashMap<>(parents.size());
-						for (FaultSection sect : rupSects) {
-							int parentID = sect.getParentSectionId();
-							if (!parentSlips.containsKey(parentID))
-								parentSlips.put(parentID, new DoubleAverager());
-							parentSlips.get(parentID).add(targetSectSupraSlipRates[sect.getSectionId()]);
-							if (!parentUsedSectCounts.containsKey(parentID))
-								parentUsedSectCounts.put(parentID, new int[parentSectsMap.get(parentID).size()]);
-							int[] sectsUsed = parentUsedSectCounts.get(parentID);
-							sectsUsed[sect.getSubSectionIndex()]++;
-						}
-
-						// calculate weight for this rupture, based on lowest segmentation-adjusted slip rate
-						double rupWeight = Double.POSITIVE_INFINITY;
-						if (segModel == null) {
-							// simple, just use smallest slip rate as weight
-							for (int parentID : parents)
-								rupWeight = Math.min(rupWeight, parentSlips.get(parentID).getAverage());
-						} else {
-							// also incorporate segmentation rates
-							ClusterRupture cRup = cRups.get(rupIndex);
-							RuptureTreeNavigator rupNav = cRup.getTreeNavigator();
-							
-							for (FaultSubsectionCluster cluster : cRup.getClustersIterable()) {
-								double slipRate  = parentSlips.get(cluster.parentSectionID).getAverage();
-								Jump jumpTo = rupNav.getJumpTo(cluster);
-								List<Jump> jumpsInvolving = new ArrayList<>(2);
-								if (jumpTo != null)
-									jumpsInvolving.add(jumpTo);
-								for (FaultSubsectionCluster oCluster : rupNav.getDescendants(cluster))
-									jumpsInvolving.add(rupNav.getJumpTo(oCluster));
-								
-								rupWeight = Math.min(rupWeight, slipRate);
-								
-								for (Jump jump : jumpsInvolving) {
-									double segRate = segModel.calcJumpProbability(cRup, jump, false);
-									if (segRate < 1d)
-										rupWeight = Math.min(rupWeight, segRate*slipRate);
-								}
-							}
-						}
-						Preconditions.checkState(Double.isFinite(rupWeight));
-						List<Double> pathWeights = uniqueParentCombWeights.get(parents);
-						if (pathWeights == null) {
-							pathWeights = new ArrayList<>();
-							uniqueParentCombWeights.put(parents, pathWeights);
+						if (!uniqueParentCombRups.containsKey(parents))
 							uniqueParentCombRups.put(parents, new ArrayList<>());
-						}
-						pathWeights.add(rupWeight);
 						uniqueParentCombRups.get(parents).add(rupIndex);
 					}
 					
-					// determine aggregate usage weights for each parent
-					Map<Integer, Double> parentWeights = new HashMap<>(parentUsedSectCounts.size()-1);
-					double sumPathWeights = 0d;
-					List<Set<Integer>> parentPathways = new ArrayList<>(uniqueParentCombWeights.size());
-					List<Double> pathwayWeights = new ArrayList<>(uniqueParentCombWeights.size());
-					List<int[]> pathwayRups = new ArrayList<>(uniqueParentCombWeights.size());
-					List<double[]> pathwayRupWeights = new ArrayList<>(uniqueParentCombWeights.size());
-					for (Set<Integer> parents : uniqueParentCombWeights.keySet()) {
+					List<Set<Integer>> parentPathways = new ArrayList<>(uniqueParentCombRups.size());
+					List<Double> pathwayWeights = new ArrayList<>(uniqueParentCombRups.size());
+					List<int[]> pathwayRups = new ArrayList<>(uniqueParentCombRups.size());
+					List<double[]> pathwayRupWeights = new ArrayList<>(uniqueParentCombRups.size());
+					
+					double sumPathwayWeights = 0d;
+					for (Set<Integer> parents : uniqueParentCombRups.keySet()) {
+						List<Integer> rupsForPathway = uniqueParentCombRups.get(parents);
+						
+						double[] rupWeightsForPathway = new double[rupsForPathway.size()];
+						
+						for (int i=0; i<rupsForPathway.size(); i++) {
+							int rupIndex = rupsForPathway.get(i);
+
+							List<FaultSection> rupSects = rupSet.getFaultSectionDataForRupture(rupIndex);
+							// figure out average slip rate for each parent in this rupture
+							// we'll use this when weighting to smooth over any slip-rate fluctuations
+							Map<Integer, DoubleAverager> parentSlips = new HashMap<>(parents.size());
+							for (FaultSection sect : rupSects) {
+								int parentID = sect.getParentSectionId();
+								if (!parentSlips.containsKey(parentID))
+									parentSlips.put(parentID, new DoubleAverager());
+								parentSlips.get(parentID).add(targetSectSupraSlipRates[sect.getSectionId()]);
+							}
+							
+							// calculate weight for this rupture, based on lowest segmentation-adjusted slip rate
+							List<Double> rupParentWeights;
+							if (segModel == null) {
+								// simple, just use smallest slip rate as weight
+								rupParentWeights = new ArrayList<>(parents.size());
+								for (int parentID : parents)
+									rupParentWeights.add(parentSlips.get(parentID).getAverage());
+							} else {
+								// also incorporate segmentation rates
+								ClusterRupture cRup = cRups.get(rupIndex);
+								RuptureTreeNavigator rupNav = cRup.getTreeNavigator();
+								
+								rupParentWeights = new ArrayList<>(cRup.getTotalNumClusters());
+								for (FaultSubsectionCluster cluster : cRup.getClustersIterable()) {
+									double slipRate  = parentSlips.get(cluster.parentSectionID).getAverage();
+									Jump jumpTo = rupNav.getJumpTo(cluster);
+									List<Jump> jumpsInvolving = new ArrayList<>(2);
+									if (jumpTo != null)
+										jumpsInvolving.add(jumpTo);
+									for (FaultSubsectionCluster oCluster : rupNav.getDescendants(cluster))
+										jumpsInvolving.add(rupNav.getJumpTo(oCluster));
+									
+									double clusterWeight = slipRate;
+									
+									for (Jump jump : jumpsInvolving) {
+										double segRate = segModel.calcJumpProbability(cRup, jump, false);
+										if (segModel.isDirectional(!cRup.singleStrand))
+											segRate = Math.min(segRate, segModel.calcJumpProbability(cRup, jump.reverse(), false));
+										if (segRate < 1d)
+											clusterWeight = Math.min(clusterWeight, segRate*slipRate);
+									}
+									rupParentWeights.add(clusterWeight);
+								}
+							}
+							Preconditions.checkState(!rupParentWeights.isEmpty());
+							for (double val : rupParentWeights)
+								Preconditions.checkState(Double.isFinite(val) && val >= 0d,
+										"Bad weight encountered: %s for rup %s on sect %s", val, rupIndex, s);
+							double weight = switch (rupWeightingMethod) {
+							case MIN_AVAIL_SLIP: {
+								double min = Double.POSITIVE_INFINITY;
+								for (double val : rupParentWeights)
+									min = Math.min(min, val);
+								yield min;
+							}
+							case MEAN_AVAIL_SLIP: {
+								yield rupParentWeights.stream().mapToDouble(D->D).average().getAsDouble();
+							}
+							case GEOM_MEAN_AVAIL_SLIP: {
+								double sumOfLogs = 0.0;
+
+								for (Double val : rupParentWeights) {
+									if (val == 0)
+										yield 0;
+									sumOfLogs += Math.log(val);
+								}
+
+								// Return the exponentiated average of the logs
+								yield Math.exp(sumOfLogs / rupParentWeights.size());
+							}
+							case HARM_MEAN_AVAIL_SLIP: {
+								double reciprocalSum = 0.0;
+						        for (Double val : rupParentWeights) {
+						        	if (val == 0)
+										yield 0;
+						            reciprocalSum += 1.0 / val;
+						        }
+
+						        yield rupParentWeights.size() / reciprocalSum;
+							}
+							default:
+								throw new IllegalArgumentException("Unexpected value: " + rupWeightingMethod);
+							};
+							Preconditions.checkState(Double.isFinite(weight));
+							rupWeightsForPathway[i] = weight;
+						}
+						
+						// use the average of all rupture weights as our pathway weight
+						double pathwayWeight = StatUtils.mean(rupWeightsForPathway);
+						if (pathwayWeightGamma != 1d)
+							pathwayWeight = Math.pow(pathwayWeight, pathwayWeightGamma);
+						sumPathwayWeights += pathwayWeight;
+						
 						parentPathways.add(parents);
-						int[] pathRups = Ints.toArray(uniqueParentCombRups.get(parents));
-						double[] pathRupWeights = Doubles.toArray(uniqueParentCombWeights.get(parents));
-						pathwayRups.add(pathRups);
-						pathwayRupWeights.add(pathRupWeights);
-						double pathWeight = StatUtils.sum(pathRupWeights);
-						pathwayWeights.add(pathWeight);
-						sumPathWeights += pathWeight;
-						for (Integer parentID : parents) {
-							Double prev = parentWeights.get(parentID);
-							if (prev == null)
-								prev = 0d;
-							parentWeights.put(parentID, prev+pathWeight);
+						pathwayWeights.add(pathwayWeight);
+						pathwayRups.add(Ints.toArray(rupsForPathway));
+						pathwayRupWeights.add(rupWeightsForPathway);
+					}
+					Preconditions.checkState(sumPathwayWeights > 0d);
+					
+					// normalize and determine aggregate usage weights for each parent
+					Map<Integer, Double> parentWeights = new HashMap<>();
+					for (int i=0; i<parentPathways.size(); i++) {
+						double relWeight = pathwayWeights.get(i)/sumPathwayWeights;
+						pathwayWeights.set(i, relWeight);
+						// normalize each rupture weight by the pathway's relative weight
+						double[] rupWeightsForPathway = pathwayRupWeights.get(i);
+						if (relWeight == 0d) {
+							for (int r=0; r<rupWeightsForPathway.length; r++)
+								rupWeightsForPathway[r] = 0d;
+						} else {
+							double origRupSum = StatUtils.sum(rupWeightsForPathway);
+							Preconditions.checkState(origRupSum > 0d);
+							double rupWeightScalar = relWeight/origRupSum;
+							for (int r=0; r<rupWeightsForPathway.length; r++)
+								rupWeightsForPathway[r] *= rupWeightScalar;
+						}
+						for (Integer parent : parentPathways.get(i)) {
+							if (parentWeights.containsKey(parent))
+								parentWeights.put(parent, parentWeights.get(parent)+relWeight);
+							else
+								parentWeights.put(parent, relWeight);
 						}
 					}
-					Preconditions.checkState(sumPathWeights > 0d);
-					// normalize
-					for (int i=0; i<pathwayWeights.size(); i++)
-						pathwayWeights.set(i, pathwayWeights.get(i)/sumPathWeights);
-					for (Integer pathParentID : parentWeights.keySet())
-						parentWeights.put(pathParentID, parentWeights.get(pathParentID)/sumPathWeights);
-					for (double[] weights : pathwayRupWeights) {
-						for (int i=0; i<weights.length; i++)
-							weights[i] /= sumPathWeights;
-					}
 					
-					myPathways.add(new SectMagRupturePathways(s, sectMinMagIndexes[s]+m, parentPathways, pathwayWeights,
-							pathwayRups, pathwayRupWeights, parentWeights, parentUsedSectCounts));
+					myPathways.add(new SectMagRupturePathways(s, sectMinMagIndexes[s]+m, anySingleFault,
+							parentPathways, pathwayWeights,
+							pathwayRups, pathwayRupWeights, parentWeights));
 					
 					// now see if this magnitude bin used the same set of pathways
-					if (curCommonPathways != null && !curCommonPathways.equals(uniqueParentCombWeights.keySet())) {
+					if (curCommonPathways != null && !curCommonPathways.equals(uniqueParentCombRups.keySet())) {
 						// new set of pathways
 						
 						// store the previous one
@@ -559,14 +660,14 @@ public class MFD_ScaledInversionAdjustment extends SectNucleationMFD_Estimator {
 						myCommonPathways.add(new SectCommonPathwaysMagRange(s, curCommonPathwayMmin, curCommonPathwayMmax,
 								curCommonPathwayHasSingleFault, curCommonPathways));
 						
-						curCommonPathways = uniqueParentCombWeights.keySet();
+						curCommonPathways = uniqueParentCombRups.keySet();
 						curCommonPathwayMmin = magIndex;
 						curCommonPathwayMmax = magIndex;
 						curCommonPathwayHasSingleFault = anySingleFault;
 					} else if (curCommonPathways == null) {
 						// first bin
 						Preconditions.checkState(m == 0);
-						curCommonPathways = uniqueParentCombWeights.keySet();
+						curCommonPathways = uniqueParentCombRups.keySet();
 						curCommonPathwayMmin = magIndex;
 						curCommonPathwayMmax = magIndex;
 						curCommonPathwayHasSingleFault = anySingleFault;
@@ -684,6 +785,14 @@ public class MFD_ScaledInversionAdjustment extends SectNucleationMFD_Estimator {
 		public List<Integer> getIncludedRupIndexes() {
 			return includedRupIndexes;
 		}
+		
+		public List<Integer> getSectIncludedRupIndexes(int sectIndex) {
+			BitSet sectRups = getSectRupUtilizations(sectIndex);
+			List<Integer> rups = new ArrayList<>(sectRups.cardinality());
+			for (int r = sectRups.nextSetBit(0); r >= 0; r = sectRups.nextSetBit(r+1))
+				rups.add(r);
+			return rups;
+		}
 
 		public int[] getSectMinMagIndexes() {
 			return sectMinMagIndexes;
@@ -701,7 +810,43 @@ public class MFD_ScaledInversionAdjustment extends SectNucleationMFD_Estimator {
 			return origSectSupraSeisMFDs;
 		}
 		
-		public double getMultifaultRupFractContributionToBin(int sectIndex, int magIndex, int rupIndex) {
+		/**
+		 * For the given section index and magnitude index, return the estimated fractional weight summed across all
+		 * ruptures involving the given other section index
+		 * @param sectIndex
+		 * @param magIndex
+		 * @param toSectIndex
+		 * @return
+		 */
+		public double getOtherSectFractContributionToBin(int sectIndex, int magIndex, int toSectIndex) {
+			SectMagRupturePathways sectPaths = getMagBinPathways(sectIndex, magIndex);
+			if (sectPaths == null)
+				return 0d;
+			BitSet toRups = sectRupUtilizations.get(toSectIndex);
+			int toParentID = rupSet.getFaultSectionData(toSectIndex).getParentSectionId();
+			double weight = 0d;
+			for (int i=0; i<sectPaths.parentPathways.size(); i++) {
+				if (!sectPaths.parentPathways.get(i).contains(toParentID))
+					continue;
+				int[] rups = sectPaths.pathwayRups.get(i);
+				double[] weights = sectPaths.pathwayRupWeights.get(i);
+				for (int j=0; j<rups.length; j++)
+					if (toRups.get(rups[j]))
+						weight += weights[j];
+			}
+			return weight;
+		}
+		
+		/**
+		 * For the given section index and magnitude index, return the estimated fractional weight assigned to the
+		 * given rupture. The sum of all ruptures for this section/magnitude index will be 1.
+		 * 
+		 * @param sectIndex
+		 * @param magIndex
+		 * @param rupIndex
+		 * @return
+		 */
+		public double getRupFractContributionToBin(int sectIndex, int magIndex, int rupIndex) {
 			SectMagRupturePathways sectPaths = getMagBinPathways(sectIndex, magIndex);
 			if (sectPaths == null)
 				return 0d;
@@ -720,9 +865,10 @@ public class MFD_ScaledInversionAdjustment extends SectNucleationMFD_Estimator {
 		}
 	}
 	
-	private static record SectMagRupturePathways(int sectIndex, int magIndex, List<Set<Integer>> parentPathways,
-			List<Double> pathwayWeights, List<int[]> pathwayRups, List<double[]> pathwayRupWeights,
-			Map<Integer, Double> parentWeights, Map<Integer, int[]> parentSectCounts) {};
+	private static record SectMagRupturePathways(int sectIndex, int magIndex, boolean hasSingleFault,
+			List<Set<Integer>> parentPathways, List<Double> pathwayWeights,
+			List<int[]> pathwayRups, List<double[]> pathwayRupWeights,
+			Map<Integer, Double> parentWeights) {};
 	
 	private static record SectCommonPathwaysMagRange(int sectIndex, int minMagIndex, int maxMagIndex,
 			boolean hasSingleFault, Set<Set<Integer>> parentPathways) {};
@@ -772,12 +918,12 @@ public class MFD_ScaledInversionAdjustment extends SectNucleationMFD_Estimator {
 			int[] sectMaxMagIndexes = structure.getSectMaxMagIndexes();
 			
 			// figure out section slips
-			int[][] sectMagRupCounts = new int[numSections][];
 			double[][] sectMagSlipConsumptions = new double[numSections][];
+			double[][] sectMagSlipConsumptionSumWeights = new double[numSections][];
 			for (int s=0; s<numSections; s++) {
 				int numMag = 1 + sectMaxMagIndexes[s] - sectMinMagIndexes[s];
-				sectMagRupCounts[s] = new int[numMag];
 				sectMagSlipConsumptions[s] = new double[numMag];
+				sectMagSlipConsumptionSumWeights[s] = new double[numMag];
 			}
 			for (int rupIndex : structure.getIncludedRupIndexes()) {
 				double[] slips = slipAlongModule.calcSlipOnSectionsForRup(rupSet, aveSlipModule, rupIndex);
@@ -788,17 +934,19 @@ public class MFD_ScaledInversionAdjustment extends SectNucleationMFD_Estimator {
 				for (int s=0; s<slips.length; s++) {
 					int sectID = sects.get(s);
 					int m = magIndex - sectMinMagIndexes[sectID];
-					sectMagRupCounts[sectID][m]++;
+					double weight = structure.getRupFractContributionToBin(sectID, magIndex, rupIndex);
 					// we're comparing to nucleation MFDs, but slip rate scales with participation
 					// this scalar fixes that
 					double particToNuclScalar = rupArea/rupSet.getAreaForSection(sectID);
-					sectMagSlipConsumptions[sectID][m] += slips[s]*particToNuclScalar;
+					sectMagSlipConsumptions[sectID][m] += slips[s]*particToNuclScalar*weight;
+					sectMagSlipConsumptionSumWeights[sectID][m] += weight;
 				}
 			}
 			// normalize
 			for (int s=0; s<numSections; s++)
-				for (int m=0; m<sectMagRupCounts[s].length; m++)
-					sectMagSlipConsumptions[s][m] /= (double)sectMagRupCounts[s][m];
+				for (int m=0; m<sectMagSlipConsumptions[s].length; m++)
+					if (sectMagSlipConsumptionSumWeights[s][m] > 0)
+						sectMagSlipConsumptions[s][m] /= (double)sectMagSlipConsumptionSumWeights[s][m];
 		
 			long numNonZeroElements = 0l;
 			
@@ -815,7 +963,7 @@ public class MFD_ScaledInversionAdjustment extends SectNucleationMFD_Estimator {
 //							+(float)refMFD.getX(pathway.maxMagIndex)+"; parents="+pathway.parentPathways);
 					for (int magIndex=pathway.minMagIndex; magIndex<=pathway.maxMagIndex; magIndex++) {
 						int m = magIndex - sectMinMagIndexes[s];
-						if (sectMagRupCounts[s][m] > 0) {
+						if (sectMagSlipConsumptions[s][m] > 0) {
 							double avgSlipConsumption = sectMagSlipConsumptions[s][m];
 							double origRate = structure.getSectOrigRate(s, magIndex);
 							double val = avgSlipConsumption * origRate;
@@ -857,8 +1005,8 @@ public class MFD_ScaledInversionAdjustment extends SectNucleationMFD_Estimator {
 				}
 				int row = startRow+s;
 				d[row] = val*weights[s];
-				if (Double.isNaN(d[s]) || d[s]<0)
-					throw new IllegalStateException("d["+s+"]="+d[s]+" is NaN or 0!  target="+target);
+				if (Double.isNaN(d[row]) || d[row]<0)
+					throw new IllegalStateException("d["+row+"]="+d[row]+" is NaN or 0!  target="+target);
 			}
 			return numNonZeroElements;
 		}
@@ -918,7 +1066,23 @@ public class MFD_ScaledInversionAdjustment extends SectNucleationMFD_Estimator {
 
 		private RupSetCoruptureMFDStructure structure;
 		
-		private List<SectParentCoruptureSet> corupSects;
+		private List<SubsectCoruptureSet> corupSects;
+		
+		/**
+		 * if false, will skip constraints on single fault magnitude bins, assuming that the inversion can find what
+		 * it needs on its own parent fault section
+		 */
+		private boolean applyWhenSingleFaultAvailable = false;
+		/**
+		 * if true, will make sure that the other side of the constraint has not only rate available, but rate
+		 * allocated to this section. if false, will only check against the total rate budget on the other section
+		 */
+		private boolean applyDoubleSided = false;
+		/**
+		 * if false, will skip balancing within the same parent for both multifault and single fault bins.
+		 * if true and !applyWhenSingleFaultAvailable, will only balance on the same parent in multifault bins
+		 */
+		private boolean applySameParent = true;
 
 		public SectCoruptureBudgetConstraint(RupSetCoruptureMFDStructure structure,
 				double weight, ConstraintWeightingType weightingType) {
@@ -933,31 +1097,38 @@ public class MFD_ScaledInversionAdjustment extends SectNucleationMFD_Estimator {
 			int[] sectMaxMagIndexes = structure.getSectMaxMagIndexes();
 			
 			corupSects = new ArrayList<>();
-			for (int s=0; s<numSections; s++) {
-				int fromParentID = rupSet.getFaultSectionData(s).getParentSectionId();
-				for (int magIndex=sectMinMagIndexes[s]; magIndex<=sectMaxMagIndexes[s]; magIndex++) {
-					SectMagRupturePathways pathways = structure.getMagBinPathways(s, magIndex);
+			for (int sectID1=0; sectID1<numSections; sectID1++) {
+				FaultSection sect1 = rupSet.getFaultSectionData(sectID1);
+				int parentID1 = sect1.getParentSectionId();
+				for (int magIndex=sectMinMagIndexes[sectID1]; magIndex<=sectMaxMagIndexes[sectID1]; magIndex++) {
+					SectMagRupturePathways pathways = structure.getMagBinPathways(sectID1, magIndex);
 					if (pathways == null)
 						// empty mag bin
 						continue;
 					
-					for (int parentID : pathways.parentWeights().keySet()) {
-						if (parentID == fromParentID)
+					for (int parentID2 : pathways.parentWeights().keySet()) {
+						if (!applySameParent && parentID2 == parentID1)
 							// don't worry about shared ruptures on the same section
 							continue;
-						double parentWeight = pathways.parentWeights().get(parentID);
-						int[] sectCounts = pathways.parentSectCounts().get(parentID);
-						int sectCountSum = 0;
-						for (int sectCount : sectCounts)
-							sectCountSum += sectCount;
-						Preconditions.checkState(sectCountSum > 0);
-						List<FaultSection> parentSects = structure.getSectsForParent(parentID);
-						Preconditions.checkState(parentSects.size() == sectCounts.length);
-						double[] sectWeights = new double[sectCounts.length];
-						for (int i=0; i<sectCounts.length; i++)
-							sectWeights[i] = parentWeight * (double)sectCounts[i]/(double)sectCountSum;
-						
-						corupSects.add(new SectParentCoruptureSet(s, magIndex, parentID, parentSects, sectWeights));
+						for (FaultSection sect2 : structure.getSectsForParent(parentID2)) {
+							int sectID2 = sect2.getSectionId();
+							if (sectID2 <= sectID1)
+								// we'll add it both ways right now, only calc the fractContribs once
+								continue;
+							double sect1_fractCorupWith2 = structure.getOtherSectFractContributionToBin(sectID1, magIndex, sectID2);
+							Preconditions.checkState(sect1_fractCorupWith2 <= 1.000001);
+							if (sect1_fractCorupWith2 > 0) {
+								double sect2_fractCorupWith1 = structure.getOtherSectFractContributionToBin(sectID2, magIndex, sectID1);
+								Preconditions.checkState(sect2_fractCorupWith1 > 0d);
+								// need to do it both ways as it's an inequality constraint
+								// forwards
+								if (applyWhenSingleFaultAvailable || !pathways.hasSingleFault())
+									corupSects.add(new SubsectCoruptureSet(magIndex, sectID1, sectID2, sect1_fractCorupWith2, sect2_fractCorupWith1));
+								// reversed
+								if (applyWhenSingleFaultAvailable || !structure.getMagBinPathways(sectID2, magIndex).hasSingleFault())
+									corupSects.add(new SubsectCoruptureSet(magIndex, sectID2, sectID1, sect2_fractCorupWith1, sect1_fractCorupWith2));
+							}
+						}
 					}
 				}
 			}
@@ -991,55 +1162,52 @@ public class MFD_ScaledInversionAdjustment extends SectNucleationMFD_Estimator {
 			for (int i=0; i<corupSects.size(); i++) {
 				// unique row for each section, magnitude, and other parent that it ruptures with
 				int row = startRow + i;
-				SectParentCoruptureSet corups = corupSects.get(i);
+				SubsectCoruptureSet corups = corupSects.get(i);
 				int magIndex = corups.magIndex;
 				
-				Preconditions.checkState(corups.toParentID != rupSet.getFaultSectionData(corups.fromSectID).getParentSectionId());
+				Preconditions.checkState(applySameParent || rupSet.getFaultSectionData(corups.sectID1).getParentSectionId()
+						!= rupSet.getFaultSectionData(corups.sectID2).getParentSectionId());
 				
 				double rowWeight = this.weight;
 				if (weightingType == ConstraintWeightingType.NORMALIZED) {
 					// normalize by the original value for this sect/mag
-					rowWeight /= structure.getSectOrigRate(corups.fromSectID, magIndex);
+					rowWeight /= structure.getSectOrigRate(corups.sectID1, magIndex);
 				} else if (weightingType == ConstraintWeightingType.NORMALIZED_BY_UNCERTAINTY) {
-					if (sectSupraSlipRateStdDevs[corups.fromSectID] > 0d && targetSectSupraSlipRates[corups.fromSectID] > 0d) {
+					if (sectSupraSlipRateStdDevs[corups.sectID1] > 0d && targetSectSupraSlipRates[corups.sectID1] > 0d) {
 						// apply fractional slip rate uncertainty
-						rowWeight /= sectSupraSlipRateStdDevs[corups.fromSectID]/targetSectSupraSlipRates[corups.fromSectID];
+						rowWeight /= sectSupraSlipRateStdDevs[corups.sectID1]/targetSectSupraSlipRates[corups.sectID1];
 					}
 					// normalize by the original rate for this sect/mag
-					rowWeight /= structure.getSectOrigRate(corups.fromSectID, magIndex);
+					rowWeight /= structure.getSectOrigRate(corups.sectID1, magIndex);
 				}
 				
 				// data vector is always 0. we ensure that the sum across the row is <= 0 when satisfied
 				d[row] = 0;
-				// the positive side will represent this section's rate for this magnitude that uses ruptures to the given parent
-				double sumParentWeight = StatUtils.sum(corups.toSectWeights);
-				
-				int fromCol = structure.getSectMagColumn(corups.fromSectID, magIndex);
-				double fromOrigRate = structure.getSectOrigRate(corups.fromSectID, magIndex);
+				// the positive side represents sectID1's rate for this magnitude that coruptures with sectID2
+				int col1 = structure.getSectMagColumn(corups.sectID1, magIndex);
+				double origRate1 = structure.getSectOrigRate(corups.sectID1, magIndex);
 //				Preconditions.checkState(getA(A, row, fromCol) == 0d);
-				setA(A, row, fromCol, rowWeight*sumParentWeight*fromOrigRate);
+				setA(A, row, col1, rowWeight * origRate1 * corups.sect1_fractCorupWith2);
 				numNonZeroElements++;
-				// the negative side will represent the average rate available on the given parent for coruptures with
-				// this section; individual subsections on that parent are scaled to their fractional participation
-				// in the coruptures
-				List<FaultSection> toParentSects = corups.toParentSects();
-				for (int j=0; j<toParentSects.size(); j++) {
-					if (corups.toSectWeights[j] > 0 ) {
-						int toSectID = toParentSects.get(j).getSectionId();
-						int toCol = structure.getSectMagColumn(toSectID, magIndex);
-						double toOrigRate = structure.getSectOrigRate(toSectID, magIndex);
-//						Preconditions.checkState(getA(A, row, toCol) == 0d);
-						setA(A, row, toCol, -rowWeight*corups.toSectWeights[j]*toOrigRate);
-						numNonZeroElements++;
-					}
-				}
+				
+				// the negative side represents sectID2's total rate for this magnitude
+				// if applyDoubleSided, that's aclso scaled by sectID2's allocated ruptures with sectID1 (stronger constraint)
+				int col2 = structure.getSectMagColumn(corups.sectID2, magIndex);
+				double origRate2 = structure.getSectOrigRate(corups.sectID2, magIndex);
+//				Preconditions.checkState(getA(A, row, fromCol) == 0d);
+				// option 1: make sure 
+				if (applyDoubleSided)
+					setA(A, row, col2, -rowWeight * origRate2 * corups.sect2_fractCorupWith1);
+				else
+					setA(A, row, col2, -rowWeight * origRate2);
+				numNonZeroElements++;
 			}
 			
 			return numNonZeroElements;
 		}
 		
-		private static record SectParentCoruptureSet(int fromSectID, int magIndex, int toParentID,
-				List<FaultSection> toParentSects, double[] toSectWeights) {};
+		private static record SubsectCoruptureSet(int magIndex, int sectID1, int sectID2,
+				double sect1_fractCorupWith2, double sect2_fractCorupWith1) {};
 		
 	}
 	
@@ -1057,8 +1225,14 @@ public class MFD_ScaledInversionAdjustment extends SectNucleationMFD_Estimator {
 		}
 	}
 	
+	private enum SegConstraintMethod {
+		JUMP_SECT_SCALED_NUCLEATION,
+		PARENT_SECT_SCALED_NUCLEATION,
+		FULL_PARTICIPATION
+	}
+	
 	/**
-	 * Segmentation constraint (corup budget only uses seg for path weighting)
+	 * Segmentation constraint (corup budget only uses seg for path weighting, so an explicit constraint is needed)
 	 */
 	public static class MFD_SegmentationConstraint extends InversionConstraint {
 		
@@ -1070,37 +1244,67 @@ public class MFD_ScaledInversionAdjustment extends SectNucleationMFD_Estimator {
 		private transient RupSetCoruptureMFDStructure structure;
 		private transient FaultSystemRupSet rupSet;
 		private transient Map<UniqueDistJump, List<Integer>> jumpRupsMap;
+		private transient Map<UniqueDistJump, Set<Integer>> jumpParentSectsMap;
+		private transient int numRows;
+
+		private SegConstraintMethod method;
 		
-		public MFD_SegmentationConstraint(RupSetCoruptureMFDStructure structure, double weight) {
+		/**
+		 * if true, will ignore rate on the positive side from ruptures using each jump if they lie in a mag bin that
+		 * also has single fault ruptures 
+		 */
+		private boolean ignoreSingleFaultBins = false;
+		
+		public MFD_SegmentationConstraint(RupSetCoruptureMFDStructure structure, double weight, SegConstraintMethod method) {
 			super("MFD Segmentation", "MFD-Seg", weight, true, ConstraintWeightingType.NORMALIZED);
 			this.structure = structure;
+			this.method = method;
 			this.rupSet = structure.getRupSet();		}
 		
 		private synchronized void checkInitJumpRups() {
 			if (jumpRupsMap == null) {
 				jumpRupsMap = new HashMap<>();
 				
+				numRows = 0;
+				if (method == SegConstraintMethod.PARENT_SECT_SCALED_NUCLEATION)
+					jumpParentSectsMap = new HashMap<>();
+				
 				ClusterRuptures cRups = rupSet.requireModule(ClusterRuptures.class);
 				
 				for (int r=0; r<cRups.size(); r++) {
 					ClusterRupture rup = cRups.get(r);
 					for (Jump jump : rup.getJumpsIterable()) {
-						UniqueDistJump udJump = new UniqueDistJump(jump);
-						List<Integer> jumpRups = jumpRupsMap.get(udJump);
-						if (jumpRups == null) {
-							jumpRups = new ArrayList<>();
-							jumpRupsMap.put(udJump, jumpRups);
+						for (boolean forwards : new boolean[] {true,false}) {
+							if (!forwards)
+								jump = jump.reverse();
+							UniqueDistJump udJump = new UniqueDistJump(jump);
+							List<Integer> jumpRups = jumpRupsMap.get(udJump);
+							if (jumpRups == null) {
+								jumpRups = new ArrayList<>();
+								jumpRupsMap.put(udJump, jumpRups);
+								if (method == SegConstraintMethod.PARENT_SECT_SCALED_NUCLEATION)
+									jumpParentSectsMap.put(udJump, new HashSet<>());
+							}
+							jumpRups.add(r);
+							if (method == SegConstraintMethod.PARENT_SECT_SCALED_NUCLEATION) {
+								Set<Integer> jumpParentSects = jumpParentSectsMap.get(udJump);
+								int parentID = jump.fromSection.getParentSectionId();
+								for (FaultSubsectionCluster cluster : rup.getClustersIterable())
+									if (cluster.parentSectionID == parentID)
+										for (FaultSection sect : cluster.subSects)
+											jumpParentSects.add(sect.getSectionId());
+							}
 						}
-						jumpRups.add(r);
-						// now add it reversed
-						udJump = udJump.reverse();
-						jumpRups = jumpRupsMap.get(udJump);
-						if (jumpRups == null) {
-							jumpRups = new ArrayList<>();
-							jumpRupsMap.put(udJump, jumpRups);
-						}
-						jumpRups.add(r);
 					}
+				}
+				if (method == SegConstraintMethod.PARENT_SECT_SCALED_NUCLEATION) {
+					for (UniqueDistJump jump : jumpRupsMap.keySet()) {
+						Set<Integer> parents = jumpParentSectsMap.get(jump);
+						Preconditions.checkState(!parents.isEmpty());
+						numRows += parents.size();
+					}
+				} else {
+					numRows = jumpRupsMap.size();
 				}
 			}
 		}
@@ -1108,7 +1312,32 @@ public class MFD_ScaledInversionAdjustment extends SectNucleationMFD_Estimator {
 		@Override
 		public int getNumRows() {
 			checkInitJumpRups();
-			return jumpRupsMap.size();
+			return numRows;
+		}
+		
+		private List<Integer> getFilteredRupsUsingJump(UniqueDistJump jump, int sectIndex) {
+			List<Integer> rups = jumpRupsMap.get(jump);
+			if (ignoreSingleFaultBins) {
+				EvenlyDiscretizedFunc refMFD = structure.getRefMFD();
+				
+				int minMag = structure.getSectMinMagIndexes()[sectIndex];
+				int numMag = 1 + structure.getSectMaxMagIndexes()[sectIndex] - minMag;
+				boolean[] excludeIndexes = new boolean[numMag];
+				for (int m=0; m<numMag; m++) {
+					SectMagRupturePathways pathway = structure.getMagBinPathways(sectIndex, minMag + m);
+					excludeIndexes[m] = pathway != null && pathway.hasSingleFault;
+				}
+				BitSet sectUtilizations = structure.getSectRupUtilizations(sectIndex);
+				
+				rups = new ArrayList<>(rups);
+				for (int i=rups.size(); --i>=0;) {
+					int rupIndex = rups.get(i);
+					int magIndex = refMFD.getClosestXIndex(rupSet.getMagForRup(rupIndex));
+					if (!sectUtilizations.get(rupIndex) || excludeIndexes[magIndex-minMag])
+						rups.remove(i);
+				}
+			}
+			return rups;
 		}
 
 		@Override
@@ -1131,14 +1360,11 @@ public class MFD_ScaledInversionAdjustment extends SectNucleationMFD_Estimator {
 			SectParticipationRateEstimator rateEst = new GRParticRateEstimator(
 					rupSet, structure.origSectSupraSeisMFDs, structure.sectRupUtilizations);
 			
-			int[] sectMinMags = structure.getSectMinMagIndexes();
-			int[] sectMaxMags = structure.getSectMaxMagIndexes();
-			
 			long rawAddCount = 0;
 			
 			for (UniqueDistJump jump : allJumps) {
 				List<Integer> rupsUsingJump = jumpRupsMap.get(jump);
-				Preconditions.checkNotNull(rupsUsingJump != null);
+				Preconditions.checkNotNull(rupsUsingJump);
 				Preconditions.checkState(!rupsUsingJump.isEmpty());
 				
 				MinMaxAveTracker probTrack = new MinMaxAveTracker();
@@ -1168,7 +1394,10 @@ public class MFD_ScaledInversionAdjustment extends SectNucleationMFD_Estimator {
 				double jumpCondProb = probTrack.getAverage();
 				Preconditions.checkState(jumpCondProb >= 0 && jumpCondProb <= 1d);
 				if (jumpCondProb == 0) {
-					row++;
+					if (method == SegConstraintMethod.PARENT_SECT_SCALED_NUCLEATION)
+						row += jumpParentSectsMap.get(jump).size();
+					else
+						row++;
 					continue;
 				}
 				
@@ -1195,74 +1424,118 @@ public class MFD_ScaledInversionAdjustment extends SectNucleationMFD_Estimator {
 				
 				// the inversion (inequality) will ensure that the negative side is net larger
 				
-				// sum the total rate on this section
+				// negative side: sum the total rate on this section
 				int sectIndex = jump.fromSection.getSectionId();
 				// scalar is negative so that this works in inequality mode
 				double scalarSectBins = -rateEstWeight;
 				Preconditions.checkState(Double.isFinite(scalarSectBins),
 						"Bad scalarSectBins=%s for jump %s with jumpCondProb=%s and weight=%s",
 						scalarSectBins, jump, jumpCondProb, rateEstWeight);
-				// will need to scale from nuclation to participation
-				double sectArea = rupSet.getAreaForSection(sectIndex);
-				BitSet sectRups = structure.getSectRupUtilizations(sectIndex);
-				int sectNumMags = 1 + sectMaxMags[sectIndex] - sectMinMags[sectIndex];
-				double[] magBinnedRupAreaSums = new double[sectNumMags];
-				int[] magBinnedRupCounts = new int[sectNumMags];
-				for (int r = sectRups.nextSetBit(0); r >= 0; r = sectRups.nextSetBit(r+1)){
-					int magIndex = refMFD.getClosestXIndex(rupSet.getMagForRup(r));
-					int m = magIndex-sectMinMags[sectIndex];
-					magBinnedRupAreaSums[m] += rupSet.getAreaForRup(r);
-					magBinnedRupCounts[m]++;
-				}
-				for (int m=0; m<sectNumMags; m++) {
-					if (magBinnedRupCounts[m] > 0) {
-						double avgRupArea = magBinnedRupAreaSums[m] / (double)magBinnedRupCounts[m];
-						// bin nuclRate = particRate * sectArea / avgRupArea
-						// bin particRate = nuclRate * avgRupArea / sectArea
-						double particScalar = avgRupArea / sectArea;
-						
-						int col = structure.getSectMagColumn(sectIndex, sectMinMags[sectIndex]+m);
-						double origRate = structure.getSectOrigRate(sectIndex, sectMinMags[sectIndex]+m);
-						
-						if (!addA(A, row, col, particScalar*scalarSectBins*origRate))
-							count++;
-						rawAddCount++;
-					}
-				}
 				
-				// now sum the total rate of ruptures using the jump
+				// positive side: sum the total rate of ruptures using the jump
 				// then we'll add the MFD bins using this jump on the positive side, but divide by the segmentation
 				// rate to ensure that the rate using the jump does not exceed segRate*totalRate
 				double scalarAllUsing = rateEstWeight/jumpCondProb;
 				Preconditions.checkState(Double.isFinite(scalarAllUsing),
 						"Bad scalarAllUsing=%s for jump %s with jumpCondProb=%s and weight=%s",
 						scalarAllUsing, jump, jumpCondProb, rateEstWeight);
-				// we're processing it for each section using the jump, so this will naturally sum to participation rates
-				for (int rupIndex : rupsUsingJump) {
-					int magIndex = refMFD.getClosestXIndex(rupSet.getMagForRup(rupIndex));
-					for (int oSectIndex : rupSet.getSectionsIndicesForRup(rupIndex)) {
-						double weight = structure.getMultifaultRupFractContributionToBin(oSectIndex, magIndex, rupIndex);
-						if (weight > 0d) {
-							int col = structure.getSectMagColumn(oSectIndex, magIndex);
-							double origRate = structure.getSectOrigRate(oSectIndex, magIndex);
-							if (!addA(A, row, col, scalarAllUsing*weight*origRate))
+				
+				switch (method) {
+				case JUMP_SECT_SCALED_NUCLEATION: {
+					for (boolean positive : new boolean[] {false, true}) {
+						double scalar = positive ? scalarAllUsing: scalarSectBins;
+
+						List<Integer> rups = positive ? getFilteredRupsUsingJump(jump, sectIndex) : structure.getSectIncludedRupIndexes(sectIndex);
+
+						// will need to scale from nuclation to participation
+						double sectArea = rupSet.getAreaForSection(sectIndex);
+
+						for (int rupIndex : rups) {
+							double rupArea = rupSet.getAreaForRup(rupIndex);
+							int magIndex = refMFD.getClosestXIndex(rupSet.getMagForRup(rupIndex));
+
+							// bin nuclRate = particRate * sectArea / avgRupArea
+							// bin particRate = nuclRate * avgRupArea / sectArea
+							double particScalar = rupArea / sectArea;
+							int col = structure.getSectMagColumn(sectIndex, magIndex);
+							double origRate = structure.getSectOrigRate(sectIndex, magIndex);
+							double weight = structure.getRupFractContributionToBin(sectIndex, magIndex, rupIndex);
+							if (!addA(A, row, col, particScalar*scalar*weight*origRate))
 								count++;
 							rawAddCount++;
 						}
 					}
+					row++;
+					break;
 				}
-				
-//				if (D) {
-//					System.out.println("Row for jump "+jump+" with P="+(float)jumpCondProb+":\n\t");
-//					for (int col=0; col<A.columns(); col++)
-//						System.out.print((float)getA(A, row, col)+"\t");
-//					System.out.println();
-//				}
-				
-				row++;
+				case PARENT_SECT_SCALED_NUCLEATION: {
+					Set<Integer> sectsOnParent = jumpParentSectsMap.get(jump);
+					List<Integer> sorted = new ArrayList<>(sectsOnParent);
+					Collections.sort(sorted);
+					for (int sectOnParentIndex : sorted) {
+						// will need to scale from nuclation to participation
+						double sectArea = rupSet.getAreaForSection(sectOnParentIndex);
+
+						BitSet sectRups = structure.getSectRupUtilizations(sectOnParentIndex);
+
+						for (boolean positive : new boolean[] {false, true}) {
+							double scalar = positive ? scalarAllUsing: scalarSectBins;
+
+							List<Integer> rups = positive ? getFilteredRupsUsingJump(jump, sectOnParentIndex) : structure.getSectIncludedRupIndexes(sectOnParentIndex);
+
+							for (int rupIndex : rups) {
+								double rupArea = rupSet.getAreaForRup(rupIndex);
+								int magIndex = refMFD.getClosestXIndex(rupSet.getMagForRup(rupIndex));
+
+								if (!sectRups.get(rupIndex))
+									// can happen on the negative side; not all rups using the jump will make it to this section
+									continue;
+
+								// bin nuclRate = particRate * sectArea / avgRupArea
+								// bin particRate = nuclRate * avgRupArea / sectArea
+								double particScalar = rupArea / sectArea;
+								int col = structure.getSectMagColumn(sectOnParentIndex, magIndex);
+								double origRate = structure.getSectOrigRate(sectOnParentIndex, magIndex);
+								double weight = structure.getRupFractContributionToBin(sectOnParentIndex, magIndex, rupIndex);
+								if (!addA(A, row, col, particScalar*scalar*weight*origRate))
+									count++;
+								rawAddCount++;
+							}
+						}
+
+						row++;
+					}
+					break;
+				}
+				case FULL_PARTICIPATION: {
+					for (boolean positive : new boolean[] {false, true}) {
+						double scalar = positive ? scalarAllUsing: scalarSectBins;
+
+						List<Integer> rups = positive ? getFilteredRupsUsingJump(jump, sectIndex) : structure.getSectIncludedRupIndexes(sectIndex);
+
+						for (int rupIndex : rups) {
+							int magIndex = refMFD.getClosestXIndex(rupSet.getMagForRup(rupIndex));
+
+							for (int rupSectIndex : rupSet.getSectionsIndicesForRup(rupIndex)) {
+								int col = structure.getSectMagColumn(rupSectIndex, magIndex);
+								double origRate = structure.getSectOrigRate(rupSectIndex, magIndex);
+								double weight = structure.getRupFractContributionToBin(rupSectIndex, magIndex, rupIndex);
+								if (!addA(A, row, col, scalar*weight*origRate))
+									count++;
+								rawAddCount++;
+							}
+						}
+					}
+					row++;
+					break;
+				}
+				default:
+					throw new IllegalStateException("Unsupported method: "+method);
+				}
 			}
 			
 			int rows = row-startRow;
+			Preconditions.checkState(rows == numRows);
 			long maxPossibleCount = rows * structure.getNumColumns();
 			Preconditions.checkState(count <= maxPossibleCount,
 					"Count is impossibly-large; have %s, max possible is %s x %s = %s; rawAddCount=%s",
@@ -1407,10 +1680,14 @@ public class MFD_ScaledInversionAdjustment extends SectNucleationMFD_Estimator {
 		
 		private transient RupSetCoruptureMFDStructure structure;
 		
-		public SectRateMinimizationConstraint(RupSetCoruptureMFDStructure structure, double weight, ConstraintWeightingType weightingType) {
+		private boolean minimizeToOrigRate = true;
+		
+		public SectRateMinimizationConstraint(RupSetCoruptureMFDStructure structure, double weight,
+				ConstraintWeightingType weightingType, boolean minimizeToOrigRate) {
 			super("Sect Rate Minimization",
 					"SectMinimum", weight, false, weightingType);
 			this.structure = structure;
+			this.minimizeToOrigRate = minimizeToOrigRate;
 		}
 
 		@Override
@@ -1435,6 +1712,11 @@ public class MFD_ScaledInversionAdjustment extends SectNucleationMFD_Estimator {
 			for (int s=0; s<numSections; s++)
 				weights[s] = this.weight;
 			if (weightingType == ConstraintWeightingType.NORMALIZED_BY_UNCERTAINTY) {
+				// weighted normalized by the (slip-rate-based) uncertainty in the total rate for each subsection
+				// higher slip rate uncertainty -> lower weighting
+				
+				// weighting is equal for all subsections with the same fractional slip rate uncertainty, regardless
+				// of their overal rate
 				double[] sectSlipRates = structure.getTargetSectSupraSlipRates();
 				double[] sectSlipRateStdDevs = structure.getSectSupraSlipRateStdDevs();
 				for (int s=0; s<numSections; s++) {
@@ -1444,7 +1726,12 @@ public class MFD_ScaledInversionAdjustment extends SectNucleationMFD_Estimator {
 						weights[s] /= origTotRate*fractUncert;
 					}
 				}
+			} else if (weightingType == ConstraintWeightingType.UNNORMALIZED) {
+				// normalized to the total original estimated rate for each subsection
+				// i.e., higher rate subsections are minimized more
 			} else if (weightingType == ConstraintWeightingType.NORMALIZED) {
+				// weightecd normalized by the total rate for each subsection
+				// weighting is then roughtly equal for all subsections
 				for (int s=0; s<numSections; s++) {
 					double origTotRate = origMFDs.get(s).calcSumOfY_Vals();
 					weights[s] /= origTotRate;
@@ -1453,15 +1740,17 @@ public class MFD_ScaledInversionAdjustment extends SectNucleationMFD_Estimator {
 
 			for (int sectIndex=0; sectIndex<numSections; sectIndex++) {
 				double weight = weights[sectIndex];
+				double origTotRate = 0d;
 				for (int m=sectMinMagIndexes[sectIndex]; m<=sectMaxMagIndexes[sectIndex]; m++) {
-					double origRate = structure.getSectOrigRate(sectIndex, m);
-					if (origRate > 0d) {
+					double origBinRate = structure.getSectOrigRate(sectIndex, m);
+					origTotRate += origBinRate;
+					if (origBinRate > 0d) {
 						int col = structure.getSectMagColumn(sectIndex, m);
-						if (!addA(A, row, col, weight*origRate))
+						if (!addA(A, row, col, weight*origBinRate))
 							count++;
 					}
 				}
-				d[row] = 0d;
+				d[row] = minimizeToOrigRate ? weight*origTotRate : 0d;
 				row++;
 			}
 			
