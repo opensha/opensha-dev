@@ -17,14 +17,15 @@ import org.opensha.commons.gui.plot.PlotSpec;
 import org.opensha.commons.gui.plot.PlotUtils;
 import org.opensha.commons.mapping.gmt.elements.GMT_CPT_Files;
 import org.opensha.commons.util.cpt.CPT;
-import org.opensha.sha.earthquake.rupForecastImpl.prvi25.gridded.SeismicityRateFileLoader;
-import org.opensha.sha.earthquake.rupForecastImpl.prvi25.gridded.SeismicityRateFileLoader.Exact;
 import org.opensha.sha.magdist.GutenbergRichterMagFreqDist;
 import org.opensha.sha.magdist.IncrementalMagFreqDist;
 import org.opensha.sha.magdist.SummedMagFreqDist;
 import org.opensha.sha.magdist.TaperedGR_MagFreqDist;
 
 import com.google.common.base.Preconditions;
+
+import gov.usgs.earthquake.nshmp.erf.seismicity.SeismicityRateFileLoader;
+import gov.usgs.earthquake.nshmp.erf.seismicity.SeismicityRateFileLoader.Exact;
 
 public class GriddedSeismicityMFDTests {
 	

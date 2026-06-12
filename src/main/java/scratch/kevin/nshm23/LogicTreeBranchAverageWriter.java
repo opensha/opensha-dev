@@ -61,6 +61,8 @@ public class LogicTreeBranchAverageWriter {
 		HashSet<Class<? extends LogicTreeNode>> restrictBAClasses = null;
 		LogicTreeNode[] restrictNodes = null;
 		
+		LogicTree<?> analysisTree = null;
+		
 		List<Class<? extends BranchAverageableModule<?>>> skipModules = null;
 		
 		int totThreads = FaultSysTools.defaultNumThreads();
@@ -152,7 +154,7 @@ public class LogicTreeBranchAverageWriter {
 			
 			HazardMapPlot.SPACING_DEFAULT = 0.2;
 		} else {
-			CommandLine cmd = FaultSysTools.parseOptions(createOptions(), args, ReportPageGen.class);
+			CommandLine cmd = FaultSysTools.parseOptions(createOptions(), args, LogicTreeBranchAverageWriter.class);
 			
 			File inputFile = new File(cmd.getOptionValue("input-file"));
 			Preconditions.checkArgument(inputFile.exists(), "Input file doesn't exist: %s", inputFile.getAbsolutePath());
@@ -169,6 +171,10 @@ public class LogicTreeBranchAverageWriter {
 			} else {
 				// it should be SolutionLogicTree zip file
 				slt = SolutionLogicTree.load(inputFile);
+			}
+			
+			if (cmd.hasOption("analysis-logic-tree")) {
+				analysisTree = LogicTree.read(new File(cmd.getOptionValue("analysis-logic-tree")));
 			}
 			
 			if (cmd.hasOption("branch-averaged-file"))
@@ -210,10 +216,13 @@ public class LogicTreeBranchAverageWriter {
 		FaultSystemSolution fullBA = fullBAFile == null ? null : FaultSystemSolution.load(fullBAFile);
 		boolean compWithLoaded = false;
 		
-		LogicTree<?> tree = slt.getLogicTree();
+		LogicTree<?> sltTree = slt.getLogicTree();
 		
-		if (restrictNodes != null && restrictNodes.length > 0)
-			tree = tree.matchingAll(restrictNodes);
+		if (restrictNodes != null && restrictNodes.length > 0) {
+			Preconditions.checkState(analysisTree == null);
+			sltTree = sltTree.matchingAll(restrictNodes);
+		}
+		LogicTree<?> outTree = analysisTree == null ? sltTree : analysisTree;
 		
 //		tree = tree.matchingAll(SupraSeisBValues.B_0p0, DeformationModels.GEOLOGIC,
 //				SubSectConstraintModels.TOT_NUCL_RATE, SegmentationModels.SHAW_R0_3);
@@ -225,13 +234,13 @@ public class LogicTreeBranchAverageWriter {
 //		compWithLoaded = true;
 		
 		Map<LogicTreeLevel<?>, HashSet<LogicTreeNode>> levelNodes = new HashMap<>();
-		List<? extends LogicTreeLevel<?>> levels = tree.getLevels();
+		List<? extends LogicTreeLevel<?>> levels = outTree.getLevels();
 		for (LogicTreeLevel<?> level : levels)
 			levelNodes.put(level, new HashSet<>());
 		
 		Map<LogicTreeNode, LogicTreeLevel<?>> nodeLevels = new HashMap<>();
 		
-		for (LogicTreeBranch<?> branch : tree) {
+		for (LogicTreeBranch<?> branch : outTree) {
 			for (int i=0; i<levels.size(); i++) {
 				LogicTreeNode node = branch.getValue(i);
 				levelNodes.get(levels.get(i)).add(node);
@@ -251,7 +260,7 @@ public class LogicTreeBranchAverageWriter {
 				}
 				System.out.println("Building "+nodes.size()+" BAs for "+level.getName());
 				for (LogicTreeNode node : nodes) {
-					BranchAverageSolutionCreator creator = new BranchAverageSolutionCreator(tree.getWeightProvider());
+					BranchAverageSolutionCreator creator = new BranchAverageSolutionCreator(outTree.getWeightProvider());
 					if (skipModules != null)
 						for (Class<? extends BranchAverageableModule<?>> moduleClass : skipModules)
 							creator.skipModule(moduleClass);
@@ -265,19 +274,33 @@ public class LogicTreeBranchAverageWriter {
 		int maxTasks = Integer.min(asyncThreads * 2, asyncThreads + 2);
 		ExecutorService exec = ExecutorUtils.newBlockingThreadPool(asyncThreads, maxTasks);
 		
-		int count = 0;
 		List<Future<?>> futures = new ArrayList<>();
-		for (LogicTreeBranch<?> branch : tree) {
-			System.out.println("Processing branch "+(count++)+"/"+tree.size()+": "+branch);
-			FaultSystemSolution sol = slt.forBranch(branch);
+		for (int index=0; index<outTree.size(); index++) {
+			LogicTreeBranch<?> outBranch = outTree.getBranch(index);
+			System.out.println("Processing branch "+index+"/"+outTree.size()+": "+outBranch);
+			LogicTreeBranch<?> inBranch;
+			if (sltTree == outTree || sltTree.size() == outTree.size()) {
+				inBranch = sltTree.getBranch(index); 
+			} else {
+				// need to match
+				String fName = outBranch.buildFileName();
+				inBranch = null;
+				for (LogicTreeBranch<?> oBranch : sltTree) {
+					if (oBranch.buildFileName().equals(fName)) {
+						Preconditions.checkState(inBranch == null);
+						inBranch = oBranch;
+					}
+				}
+			}
+			FaultSystemSolution sol = slt.forBranch(inBranch);
 			
 			futures.add(exec.submit(new Runnable() {
 				
 				@Override
 				public void run() {
-					for (LogicTreeNode node : branch)
+					for (LogicTreeNode node : outBranch)
 						if (nodeBACreators.containsKey(node))
-							nodeBACreators.get(node).addSolution(sol, branch);
+							nodeBACreators.get(node).addSolution(sol, outBranch);
 				}
 			}));
 		}
@@ -383,6 +406,8 @@ public class LogicTreeBranchAverageWriter {
 				+ "for comparison in reports");
 		ops.addOption("lt", "logic-tree", true, "Path to logic tree JSON file, required if a results directory is "
 				+ "supplied with --input-file");
+		ops.addOption(null, "analysis-logic-tree", true, "Path to separate logic tree used for analysis that should be used "
+				+ "for writing the results.");
 		ops.addRequiredOption("od", "output-dir", true, "Path to output directory");
 		ops.addOption(FaultSysTools.threadsOption());
 		ops.addOption("at", "async-threads", true, "Maximum number of asynchronous load/process threads, lower to "

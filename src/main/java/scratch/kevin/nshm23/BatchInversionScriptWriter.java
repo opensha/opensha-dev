@@ -1742,7 +1742,7 @@ public class BatchInversionScriptWriter {
 			script.add("# open up permissions");
 			script.add("chmod -R go+rX "+remoteSubDir.getAbsolutePath());
 			
-			script = scriptWrite.buildScript(script, mins, 1, remoteToalThreads, queue);
+			script = scriptWrite.buildScript(script, mins, 1, remoteToalThreads, -1, queue);
 			
 			File localScript = new File(localSubDir, name+".slurm");
 			System.out.println("Writing "+localScript.getAbsolutePath());
@@ -1799,7 +1799,7 @@ public class BatchInversionScriptWriter {
 		script.add("# open up permissions");
 		script.add("chmod -R go+rX "+remoteDir.getAbsolutePath());
 		
-		script = scriptWrite.buildScript(script, 60, 1, remoteToalThreads, queue);
+		script = scriptWrite.buildScript(script, 60, 1, remoteToalThreads, -1, queue);
 		
 		File localScript = new File(localDir, "mean_solution.slurm");
 		System.out.println("Writing "+localScript.getAbsolutePath());

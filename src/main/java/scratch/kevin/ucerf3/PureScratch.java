@@ -83,9 +83,9 @@ import org.opensha.commons.logicTree.BranchWeightProvider;
 import org.opensha.commons.logicTree.LogicTree;
 import org.opensha.commons.logicTree.LogicTreeBranch;
 import org.opensha.commons.logicTree.LogicTreeLevel;
-import org.opensha.commons.logicTree.LogicTreeLevel.RandomlySampledLevel;
+import org.opensha.commons.logicTree.LogicTreeLevel.RandomlyGeneratedLevel;
 import org.opensha.commons.logicTree.LogicTreeNode;
-import org.opensha.commons.logicTree.LogicTreeNode.RandomlySampledNode;
+import org.opensha.commons.logicTree.LogicTreeNode.RandomlyGeneratedNode;
 import org.opensha.commons.mapping.PoliticalBoundariesData;
 import org.opensha.commons.mapping.gmt.elements.GMT_CPT_Files;
 import org.opensha.commons.param.Parameter;
@@ -179,8 +179,6 @@ import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_Single
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.random.BranchSamplingManager;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.util.NSHM23_RegionLoader;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.gridded.PRVI25_GridSourceBuilder;
-import org.opensha.sha.earthquake.rupForecastImpl.prvi25.gridded.SeismicityRateFileLoader.RateType;
-import org.opensha.sha.earthquake.rupForecastImpl.prvi25.gridded.SeismicityRateModel;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_CrustalDeformationModels;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_CrustalFaultModels;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_CrustalGMMs;
@@ -228,6 +226,8 @@ import com.google.common.primitives.Ints;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 
+import gov.usgs.earthquake.nshmp.erf.seismicity.SeismicityRateModel;
+import gov.usgs.earthquake.nshmp.erf.seismicity.SeismicityRateFileLoader.RateType;
 import gov.usgs.earthquake.nshmp.gmm.Gmm;
 import gov.usgs.earthquake.nshmp.gmm.GmmInput;
 import gov.usgs.earthquake.nshmp.gmm.GroundMotion;
@@ -712,10 +712,10 @@ public class PureScratch {
 				System.out.println("\t\tAffected: "+level.getAffected());
 				System.out.println("\t\tNot affected: "+level.getNotAffected());
 			}
-			if (level instanceof RandomlySampledLevel<?>) {
+			if (level instanceof RandomlyGeneratedLevel<?>) {
 				System.out.println("\tIt's a random level: "+level.getName());
-				RandomlySampledLevel<? extends RandomlySampledNode> randLevel = (RandomlySampledLevel<?>)level;
-				List<? extends RandomlySampledNode> nodes = randLevel.getNodes();
+				RandomlyGeneratedLevel<? extends RandomlyGeneratedNode> randLevel = (RandomlyGeneratedLevel<?>)level;
+				List<? extends RandomlyGeneratedNode> nodes = randLevel.getNodes();
 				System.out.println("\t\tNode count: "+nodes.size());
 				System.out.println("\t\tNode 0:\tseed="+nodes.get(0).getSeed()+"; weight="+nodes.get(0).getNodeWeight(null));
 				int lastIndex = nodes.size()-1;
@@ -729,16 +729,16 @@ public class PureScratch {
 			LogicTreeBranch<?> branch = tree.getBranch(index);
 			System.out.println("Branch "+index+": "+branch);
 			for (LogicTreeNode val : branch) {
-				if (val instanceof RandomlySampledNode) {
-					RandomlySampledNode randNode = (RandomlySampledNode)val;
+				if (val instanceof RandomlyGeneratedNode) {
+					RandomlyGeneratedNode randNode = (RandomlyGeneratedNode)val;
 					System.out.println("\t"+val.getName()+":\t"+randNode.getSeed()+"; weight="+(float)randNode.getNodeWeight(null));
 				}
 				
 			}
 		}
 		
-		RandomDefModSampleLevel level = new RandomDefModSampleLevel();
-		level.buildNodes(new Random(), 10);
+		RandomDefModSampleLevel level = new RandomDefModSampleLevel("Name", "Short name");
+		level.build(new Random().nextLong(), 10);
 		System.out.println("Test level: "+level.getName());
 		System.out.println("\tAffected: "+level.getAffected());
 		System.out.println("\tNot affected: "+level.getNotAffected());
@@ -2854,7 +2854,7 @@ public class PureScratch {
 		File inFile = new File(dir, "logic_tree_full_gridded.json");
 		File outFile = new File(dir, "logic_tree_full_gridded_sampled_100k.json");
 		LogicTree<?> tree = LogicTree.read(inFile);
-		tree = tree.sample(100000, true, new Random(tree.size()*100000l));
+		tree = tree.sample(100000, true, tree.size()*100000l);
 		tree.write(outFile);
 	}
 	

@@ -13,7 +13,7 @@ import org.opensha.commons.hpc.mpj.FastMPJShellScriptWriter.Device;
 import org.opensha.commons.hpc.mpj.MPJExpressShellScriptWriter;
 import org.opensha.commons.hpc.pbs.BatchScriptWriter;
 import org.opensha.commons.hpc.pbs.StampedeScriptWriter;
-import org.opensha.commons.hpc.pbs.USC_HPCC_ScriptWriter;
+import org.opensha.commons.hpc.pbs.USC_CARC_ScriptWriter;
 
 import com.google.common.base.Preconditions;
 
@@ -74,19 +74,19 @@ public class AzimuthalScriptsGen {
 		String queue = "scec";
 		int mins = 48*60;
 		int heapSizeMB = 45*1024;
-		String bbpDataDir = USC_HPCC_ScriptWriter.NODE_TEMP_DIR;
+		String bbpDataDir = USC_CARC_ScriptWriter.NODE_TEMP_DIR;
 		String nodeScratchDir = null;
-		String bbpCopyParentDir = USC_HPCC_ScriptWriter.SHARED_SCRATCH_DIR+"/kmilner";
-		String nodeGFDir = USC_HPCC_ScriptWriter.NODE_TEMP_DIR+"/gfs";
+		String bbpCopyParentDir = USC_CARC_ScriptWriter.SHARED_SCRATCH_DIR+"/kmilner";
+		String nodeGFDir = USC_CARC_ScriptWriter.NODE_TEMP_DIR+"/gfs";
 		File bbpEnvFile = new File("/auto/scec-02/kmilner/bbp/bbp_env.sh");
 //		String sharedScratchDir = "${SCRATCHDIR}";
 		String sharedScratchDir = null;
 		File remoteDir = new File("/auto/scec-02/kmilner/bbp/parallel");
-		BatchScriptWriter pbsWrite = new USC_HPCC_ScriptWriter();
+		BatchScriptWriter pbsWrite = new USC_CARC_ScriptWriter();
 		List<File> classpath = new ArrayList<>();
 		classpath.add(new File(remoteDir, "opensha-dev-all.jar"));
 		JavaShellScriptWriter mpjWrite = new MPJExpressShellScriptWriter(
-				USC_HPCC_ScriptWriter.JAVA_BIN, heapSizeMB, classpath, USC_HPCC_ScriptWriter.MPJ_HOME);
+				USC_CARC_ScriptWriter.JAVA_BIN, heapSizeMB, classpath, USC_CARC_ScriptWriter.MPJ_HOME);
 		((MPJExpressShellScriptWriter)mpjWrite).setUseLaunchWrapper(true);
 		
 //		int threads = 48;
@@ -189,7 +189,7 @@ public class AzimuthalScriptsGen {
 		if (!addLines.isEmpty())
 			script.addAll(2, addLines);
 		
-		script = pbsWrite.buildScript(script, mins, nodes, threads, queue);
+		script = pbsWrite.buildScript(script, mins, nodes, threads, -1, queue);
 		String scriptName = gp ? "gp_bbp_azimuthal.slurm" : "cat_bbp_azimuthal.slurm";
 		pbsWrite.writeScript(new File(localJobDir, scriptName), script);
 	}

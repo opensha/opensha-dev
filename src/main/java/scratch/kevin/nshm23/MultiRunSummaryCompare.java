@@ -640,7 +640,7 @@ public class MultiRunSummaryCompare {
 		}
 		if (hasFM32)
 			tree = tree.matchingAll(FaultModels.FM3_1);
-		return new LogicTreeHazardCompare(slt, tree, new File(dir, "results_hazard.zip"), rps, periods, spacing);
+		return new LogicTreeHazardCompare(slt, tree, new File(dir, "results_hazard.zip"), rps, periods, spacing, false, false);
 	}
 	
 	private static FaultSystemSolution loadBA_Sol(File dir) throws IOException {

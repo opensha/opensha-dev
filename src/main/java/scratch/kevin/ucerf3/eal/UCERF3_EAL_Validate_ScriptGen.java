@@ -136,7 +136,7 @@ public class UCERF3_EAL_Validate_ScriptGen {
 							+remoteXML.getAbsolutePath()+" "+remoteOutput.getAbsolutePath();
 					
 					File jobFile = new File(writeDir, name+".pbs");
-					pbsWrite.writeScript(jobFile, javaWrite.buildScript(className, jobArgs), mins, nodes, ppn, queue);
+					pbsWrite.writeScript(jobFile, javaWrite.buildScript(className, jobArgs), mins, nodes, ppn, -1, queue);
 				}
 			}
 		}

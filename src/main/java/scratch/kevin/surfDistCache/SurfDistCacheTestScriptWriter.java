@@ -69,8 +69,8 @@ public class SurfDistCacheTestScriptWriter {
 					String argz = type.name()+" "+solFile.getAbsolutePath()+" "+threads+" "+numSites;
 					for (int j=0; j<jobsPerConfig; j++) {
 						File outputFile = new File(localDir, "threads_"+threads+"_size_"+size+"_force_"+force+"_run_"+j+".pbs");
-						List<String> script = writer.buildScript(javaWrite.buildScript(className, argz), mins, nodes, ppn, queue);
-						writer.writeScript(outputFile, script, mins, nodes, ppn, queue);
+						List<String> script = writer.buildScript(javaWrite.buildScript(className, argz), mins, nodes, ppn, -1, queue);
+						writer.writeScript(outputFile, script, mins, nodes, ppn, -1, queue);
 					}
 				}
 			}

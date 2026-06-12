@@ -14,7 +14,6 @@ import org.opensha.commons.hpc.mpj.MPJExpressShellScriptWriter;
 import org.opensha.commons.hpc.pbs.BatchScriptWriter;
 import org.opensha.commons.hpc.pbs.StampedeScriptWriter;
 import org.opensha.commons.hpc.pbs.USC_CARC_ScriptWriter;
-import org.opensha.commons.hpc.pbs.USC_HPCC_ScriptWriter;
 import org.opensha.sha.simulators.RSQSimEvent;
 import org.opensha.sha.simulators.srf.RSQSimEventSlipTimeFunc;
 import org.opensha.sha.simulators.srf.RSQSimSRFGenerator;
@@ -160,6 +159,7 @@ class MPJ_BBP_RuptureScriptsGen {
 		BatchScriptWriter pbsWrite;
 		
 		JavaShellScriptWriter mpjWrite;
+		int nodeMemBG;
 		if (stampede) {
 			threads = 96;
 			queue = "skx-normal";
@@ -173,6 +173,7 @@ class MPJ_BBP_RuptureScriptsGen {
 			sharedScratchDir = null;
 			pbsWrite = new StampedeScriptWriter(true);
 			mpjWrite = new FastMPJShellScriptWriter(StampedeScriptWriter.JAVA_BIN, heapSizeMB, null, StampedeScriptWriter.FMPJ_HOME);
+			nodeMemBG = heapSizeMB / 1024 + 4;
 			((FastMPJShellScriptWriter)mpjWrite).setUseLaunchWrapper(true);
 		} else {
 //			threads = 20;
@@ -208,6 +209,7 @@ class MPJ_BBP_RuptureScriptsGen {
 			mpjWrite = new FastMPJShellScriptWriter(
 					USC_CARC_ScriptWriter.JAVA_BIN, heapSizeMB, null, USC_CARC_ScriptWriter.FMPJ_HOME);
 			((FastMPJShellScriptWriter)mpjWrite).setUseLaunchWrapper(true);
+			nodeMemBG = -1;
 		}
 		
 		String dateStr = new SimpleDateFormat("yyyy_MM_dd").format(new Date());
@@ -312,7 +314,7 @@ class MPJ_BBP_RuptureScriptsGen {
 			if (!addLines.isEmpty())
 				script.addAll(2, addLines);
 			
-			script = pbsWrite.buildScript(script, gpMins, nodes, threads, queue);
+			script = pbsWrite.buildScript(script, gpMins, nodes, threads, nodeMemBG, queue);
 			pbsWrite.writeScript(new File(localJobDir, "gp_bbp_parallel.slurm"), script);
 		}
 		if (doShakeMap) {
@@ -364,7 +366,7 @@ class MPJ_BBP_RuptureScriptsGen {
 			if (!addLines.isEmpty())
 				script.addAll(2, addLines);
 			
-			script = pbsWrite.buildScript(script, mapMins, nodes, threads, queue);
+			script = pbsWrite.buildScript(script, mapMins, nodes, threads, nodeMemBG, queue);
 			pbsWrite.writeScript(new File(localJobDir, "map_bbp_parallel.slurm"), script);
 		}
 		if (doGPShakeMaps) {
@@ -431,7 +433,7 @@ class MPJ_BBP_RuptureScriptsGen {
 				if (!addLines.isEmpty())
 					script.addAll(2, addLines);
 				
-				script = pbsWrite.buildScript(script, mapMins, nodes, threads, queue);
+				script = pbsWrite.buildScript(script, mapMins, nodes, threads, nodeMemBG, queue);
 				pbsWrite.writeScript(new File(localJobDir, "map_bbp_parallel.slurm"), script);
 			}
 		}

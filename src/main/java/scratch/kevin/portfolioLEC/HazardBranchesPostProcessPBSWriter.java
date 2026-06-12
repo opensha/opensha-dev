@@ -5,7 +5,7 @@ import java.io.IOException;
 import java.util.List;
 
 import org.opensha.commons.hpc.JavaShellScriptWriter;
-import org.opensha.commons.hpc.pbs.USC_HPCC_ScriptWriter;
+import org.opensha.commons.hpc.pbs.USC_CARC_ScriptWriter;
 
 import com.google.common.collect.Lists;
 
@@ -24,8 +24,8 @@ public class HazardBranchesPostProcessPBSWriter {
 		List<File> classpath = Lists.newArrayList();
 		classpath.add(new File("/home/scec-02/kmilner/hazMaps/svn/dist/OpenSHA_complete.jar"));
 		
-		JavaShellScriptWriter javaWrite = new JavaShellScriptWriter(USC_HPCC_ScriptWriter.JAVA_BIN, 7000, classpath);
-		USC_HPCC_ScriptWriter pbsWrite = new USC_HPCC_ScriptWriter("dodecacore");
+		JavaShellScriptWriter javaWrite = new JavaShellScriptWriter(USC_CARC_ScriptWriter.JAVA_BIN, 7000, classpath);
+		USC_CARC_ScriptWriter pbsWrite = new USC_CARC_ScriptWriter("dodecacore");
 		
 		int mins = 60;
 		int nodes = 1;
@@ -43,7 +43,7 @@ public class HazardBranchesPostProcessPBSWriter {
 			
 			List<String> script = javaWrite.buildScript(HazardBranchesPostProcess.class.getName(), cliargs);
 			File pbsFile = new File(outDir, "assemble_"+name+".pbs");
-			pbsWrite.writeScript(pbsFile, script, mins, nodes, ppn, queue);
+			pbsWrite.writeScript(pbsFile, script, mins, nodes, ppn, -1, queue);
 		}
 	}
 

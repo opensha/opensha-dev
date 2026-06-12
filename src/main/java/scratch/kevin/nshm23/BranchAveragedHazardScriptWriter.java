@@ -336,7 +336,7 @@ public class BranchAveragedHazardScriptWriter {
 			
 			System.out.println("Writing "+jobFile.getAbsolutePath());
 			
-			pbsWrite.writeScript(jobFile, script, mins, myNodes, remoteTotalThreads, queue);
+			pbsWrite.writeScript(jobFile, script, mins, myNodes, remoteTotalThreads, -1, queue);
 		}
 	}
 

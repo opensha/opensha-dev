@@ -69,7 +69,7 @@ public class MPJ_HPC_DebugScriptGen {
 					script = fmpjWrite.buildScript(className, myArgs);
 				else
 					script = mpjWrite.buildScript(className, myArgs);
-				script = pbsWrite.buildScript(script, mins, nodes, ppn, queue);
+				script = pbsWrite.buildScript(script, mins, nodes, ppn, -1, queue);
 				
 				pbsWrite.writeScript(new File(localDir, prefix+".pbs"), script);
 			}

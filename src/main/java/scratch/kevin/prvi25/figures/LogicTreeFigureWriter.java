@@ -28,7 +28,7 @@ import org.opensha.commons.gui.plot.pdf.PDF_UTF8_FontMapper;
 import org.opensha.commons.logicTree.LogicTree;
 import org.opensha.commons.logicTree.LogicTreeBranch;
 import org.opensha.commons.logicTree.LogicTreeLevel;
-import org.opensha.commons.logicTree.LogicTreeLevel.RandomlySampledLevel;
+import org.opensha.commons.logicTree.LogicTreeLevel.RandomlyGeneratedLevel;
 import org.opensha.commons.logicTree.LogicTreeNode;
 import org.opensha.commons.util.ExceptionUtils;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_MaxMagOffFault;
@@ -128,7 +128,7 @@ public class LogicTreeFigureWriter extends JPanel {
 			for (LogicTreeNode node : branch)
 				crustalFaultNodesUsed.add(node);
 		for (LogicTreeLevel<?> level : crustalFaultTree.getLevels()) {
-			if (level instanceof RandomlySampledLevel<?>) {
+			if (level instanceof RandomlyGeneratedLevel<?>) {
 				int numRand = level.getNodes().size();
 				texFW.write(LaTeXUtils.defineValueCommand("CrustalFaultBranchesNumRand", LaTeXUtils.groupedIntNumber(numRand))+"\n");
 			} else {
@@ -251,7 +251,7 @@ public class LogicTreeFigureWriter extends JPanel {
 				includedLevels.add(level);
 				includedLevelChoices.add(uniqueChoices);
 				maxLevelFontWidth = Integer.max(maxLevelFontWidth, new JPanel().getFontMetrics(levelFont).stringWidth(remapped(level.getName())));
-				if (!(level instanceof RandomlySampledLevel<?>)) {
+				if (!(level instanceof RandomlyGeneratedLevel<?>)) {
 					maxNodes = Integer.max(maxNodes, uniqueChoices.size());
 					for (LogicTreeNode node : uniqueChoices) {
 						String name = remapped(node.getShortName());
@@ -316,7 +316,7 @@ public class LogicTreeFigureWriter extends JPanel {
 			int botLineY = y+lineHeight;
 			int topChoiceY = botLineY + lineGap;
 			int topWeightY = topChoiceY + choiceFontHeight;
-			if (level instanceof RandomlySampledLevel<?> && nodes.size() > maxNodes && includedLevels.size() > 1) {
+			if (level instanceof RandomlyGeneratedLevel<?> && nodes.size() > maxNodes && includedLevels.size() > 1) {
 				// figure out how many branches we have without this
 				HashSet<String> uniquesWithout = new HashSet<>();
 				for (LogicTreeBranch<?> branch : tree) {

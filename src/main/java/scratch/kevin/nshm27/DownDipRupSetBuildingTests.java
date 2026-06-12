@@ -1,4 +1,4 @@
-package scratch.kevin.nshm26;
+package scratch.kevin.nshm27;
 
 import java.awt.Color;
 import java.awt.image.BufferedImage;
@@ -29,7 +29,6 @@ import org.opensha.sha.earthquake.faultSysSolution.ruptures.downDip.RectangularD
 import org.opensha.sha.earthquake.faultSysSolution.ruptures.downDip.RectangularDownDipGrowingStrategy.NeighborOverlaps;
 import org.opensha.sha.earthquake.faultSysSolution.ruptures.util.GeoJSONFaultReader;
 import org.opensha.sha.earthquake.faultSysSolution.util.FaultSysTools;
-import org.opensha.sha.earthquake.rupForecastImpl.nshm26.logicTree.NSHM26_SubductionInterfaceFaultModels;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_SubductionScalingRelationships;
 import org.opensha.sha.faultSurface.FaultSection;
 import org.opensha.sha.faultSurface.GeoJSONFaultSection;
@@ -37,6 +36,7 @@ import org.opensha.sha.faultSurface.GeoJSONFaultSection;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Range;
 
+import gov.usgs.earthquake.nshmp.erf.nshm27.logicTree.NSHM27_InterfaceFaultModels;
 import net.mahdilamb.colormap.Colors;
 
 public class DownDipRupSetBuildingTests {
@@ -48,10 +48,11 @@ public class DownDipRupSetBuildingTests {
 //		NSHM26_SubductionInterfaceFaultModels fm = NSHM26_SubductionInterfaceFaultModels.KERMADEC;
 //		String prefix = "ker_slab2";
 		
-		NSHM26_SubductionInterfaceFaultModels fm = NSHM26_SubductionInterfaceFaultModels.MARIANA;
+		NSHM27_InterfaceFaultModels fm = NSHM27_InterfaceFaultModels.GNMI_V1;
 		String prefix = "izu_slab2";
 		
-		Range<Double> minSupraRange = Range.closed(10d, 40d);
+		Range<Double> minSupraRange = Range.closed(20d, 40d);
+		double maxSubSeisAspectRatio = 4d;
 		
 		File inDir = new File(baseOutputDir, prefix);
 		List<? extends FaultSection> sects = fm.buildSubSects(fm);
@@ -112,7 +113,7 @@ public class DownDipRupSetBuildingTests {
 		Color participatingColor = overlapCPT.getMaxColor();
 		Color otherColor = overlapCPT.getMinColor();
 		
-		RectangularDownDipGrowingStrategy growingStrat = new RectangularDownDipGrowingStrategy(minSupraRange);
+		RectangularDownDipGrowingStrategy growingStrat = new RectangularDownDipGrowingStrategy(minSupraRange, maxSubSeisAspectRatio);
 		
 		RupSetScalingRelationship scale = PRVI25_SubductionScalingRelationships.LOGA_C4p0;
 		HeadlessGraphPanel gp = PlotUtils.initScreenHeadless();

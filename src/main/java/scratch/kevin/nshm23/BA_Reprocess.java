@@ -64,7 +64,7 @@ public class BA_Reprocess {
 		argz += " --annealing-threads 1";
 		List<String> script = mpjWrite.buildScript(MPJ_LogicTreeInversionRunner.class.getName(), argz);
 		
-		pbsWrite.writeScript(new File(localDir, "ba_regen.slurm"), script, mins, nodes, remoteToalThreads, queue);
+		pbsWrite.writeScript(new File(localDir, "ba_regen.slurm"), script, mins, nodes, remoteToalThreads, -1, queue);
 	}
 
 }

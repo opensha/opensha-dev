@@ -129,7 +129,7 @@ public class MapScriptWriter {
 			
 			scriptName = "maps_"+scriptName+".pbs";
 			
-			batchWrite.writeScript(new File(writeDir, scriptName), script, jobMins, nodes, site.getPPN(null), null);
+			batchWrite.writeScript(new File(writeDir, scriptName), script, jobMins, nodes, site.getPPN(null), -1, null);
 			
 			jobCount += branches.size();
 			batchCount++;

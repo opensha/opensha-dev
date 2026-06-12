@@ -111,7 +111,7 @@ public class MPJ_ETAS_SimulatorInternScriptGen {
 			
 			List<String> script = mpjWrite.buildScript(MPJ_ETAS_Simulator.class.getName(), argz);
 			
-			script = pbsWrite.buildScript(script, mins, nodes, ppn, queue);
+			script = pbsWrite.buildScript(script, mins, nodes, ppn, -1, queue);
 			pbsWrite.writeScript(pbsFile, script);
 		}
 	}
