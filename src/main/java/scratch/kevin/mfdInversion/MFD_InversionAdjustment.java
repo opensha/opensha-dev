@@ -50,6 +50,7 @@ import com.google.common.primitives.Ints;
 
 import cern.colt.matrix.tdouble.DoubleMatrix2D;
 import cern.colt.matrix.tdouble.impl.SparseDoubleMatrix2D;
+import gov.usgs.earthquake.nshmp.erf.inversion.mfdPreInversion.MFD_ScaledInversionAdjustment;
 
 /**
  * This is an old attempt at solving for the MFDs directly with lots of normalization constraints to force them to be G-R.

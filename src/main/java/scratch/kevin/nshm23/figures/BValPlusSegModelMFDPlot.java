@@ -246,7 +246,7 @@ public class BValPlusSegModelMFDPlot {
 					Builder builder = new SupraSeisBValInversionTargetMFDs.Builder(rupSet, bVal.bValue);
 					builder.applyDefModelUncertainties(false);
 					if (model != null) {
-						SectNucleationMFD_Estimator adjustment = segAdjMethod.getAdjustment(model);
+						SectNucleationMFD_Estimator adjustment = segAdjMethod.getAdjustment(model, 1);
 						builder.adjustTargetsForData(adjustment);
 						BinaryRuptureProbabilityCalc rupExclusionModel = segModel.getExclusionModel(rupSet, branch);
 						if (rupExclusionModel != null)

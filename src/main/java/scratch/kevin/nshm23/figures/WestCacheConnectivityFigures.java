@@ -104,7 +104,7 @@ public class WestCacheConnectivityFigures {
 		mfdBuilder.sparseGR(true);
 		SupraSeisBValInversionTargetMFDs unadjustedMFDs = mfdBuilder.build();
 //		RelGRWorstJumpProb.D = true;
-		mfdBuilder.adjustTargetsForData(adj.getAdjustment(segCalc));
+		mfdBuilder.adjustTargetsForData(adj.getAdjustment(segCalc, 1));
 		SupraSeisBValInversionTargetMFDs adjustedMFDs = mfdBuilder.build();
 		
 		Range xRange = new Range(6.5, 8d);

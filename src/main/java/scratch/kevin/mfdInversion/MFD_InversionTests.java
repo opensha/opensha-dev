@@ -69,6 +69,7 @@ import org.opensha.sha.magdist.SummedMagFreqDist;
 
 import com.google.common.base.Preconditions;
 
+import gov.usgs.earthquake.nshmp.erf.inversion.mfdPreInversion.MFD_ScaledInversionAdjustment;
 import net.mahdilamb.colormap.Colors;
 
 public class MFD_InversionTests {
@@ -82,7 +83,7 @@ public class MFD_InversionTests {
 				"Can't create output dir: %s", outputDir.getAbsolutePath());
 		
 		boolean scaleFactorInversion = true;
-		boolean threeFaults = false;
+		boolean threeFaults = true;
 		boolean writeReports = false;
 		
 		// demo Y-shaped fault system
@@ -93,11 +94,11 @@ public class MFD_InversionTests {
 		double mainSlipRate = 10d;
 		double fractSlipSD = 0.1;
 		
-		double splitSlipRate1 = 10d;
-		double splitSlipRate2 = 10d;
+//		double splitSlipRate1 = 10d;
+//		double splitSlipRate2 = 10d;
 		
-//		double splitSlipRate1 = 5d;
-//		double splitSlipRate2 = 5d;
+		double splitSlipRate1 = 5d;
+		double splitSlipRate2 = 5d;
 		
 //		double splitSlipRate1 = 2d;
 //		double splitSlipRate2 = 2d;
@@ -132,14 +133,14 @@ public class MFD_InversionTests {
 		// MFD params
 		double b = 0.5d;
 		
-		double segRate1 = 1d;
-		double segRate2 = 1d;
+//		double segRate1 = 1d;
+//		double segRate2 = 1d;
 		
 //		double segRate1 = 0.5d;
 //		double segRate2 = 0.5d;
 		
-//		double segRate1 = 0.2d;
-//		double segRate2 = 0.2d;
+		double segRate1 = 0.2d;
+		double segRate2 = 0.2d;
 		
 //		double segRate1 = 0.1d;
 //		double segRate2 = 0.1d;
