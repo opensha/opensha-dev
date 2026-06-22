@@ -64,7 +64,7 @@ import org.opensha.sha.util.TectonicRegionType;
 import com.google.common.base.Preconditions;
 
 import gov.usgs.earthquake.nshmp.erf.nshm27.NSHM27_InvConfigFactory;
-import gov.usgs.earthquake.nshmp.erf.nshm27.logicTree.NSHM27_CrustalAggregatedDeformationModels;
+import gov.usgs.earthquake.nshmp.erf.nshm27.logicTree.NSHM27_CrustalDeformationModels;
 import gov.usgs.earthquake.nshmp.erf.nshm27.logicTree.NSHM27_InterfaceDeformationModels;
 import gov.usgs.earthquake.nshmp.erf.nshm27.logicTree.NSHM27_InterfaceFaultModels;
 import gov.usgs.earthquake.nshmp.erf.nshm27.logicTree.NSHM27_InterfaceMinSubSects;
@@ -198,9 +198,9 @@ public class HardcodedInversionFactoryRunner {
 			branch.setValue(NSHM27_InterfaceObsSeisDMAdjustment.AVERAGE);
 //			branch.setValue(NSHM27_InterfaceObsSeisDMAdjustment.SECTION_SPECIFIC);
 			branch.setValue(NSHM27_InterfaceMinSubSects.TWO);
-			branch.setValue(NSHM27_InterfaceDeformationModels.PREF_COUPLING);
+			branch.setValue(NSHM27_InterfaceDeformationModels.Aggregated.PREF_COUPLING);
 		} else {
-			branch.setValue(NSHM27_CrustalAggregatedDeformationModels.AVERAGE);
+			branch.setValue(NSHM27_CrustalDeformationModels.Aggregated.AVERAGE);
 		}
 		branch.setValue(NSHM27_SeisRateModelBranch.AVERAGE);
 		

@@ -21,7 +21,6 @@ import org.opensha.commons.logicTree.LogicTreeNode;
 import org.opensha.commons.mapping.gmt.elements.GMT_CPT_Files;
 import org.opensha.commons.util.FaultUtils.AngleAverager;
 import org.opensha.commons.util.cpt.CPT;
-import org.opensha.sha.earthquake.faultSysSolution.ruptures.util.GeoJSONFaultReader;
 import org.opensha.sha.faultSurface.FaultSection;
 import org.opensha.sha.faultSurface.FaultTrace;
 import org.opensha.sha.faultSurface.GeoJSONFaultSection;
@@ -52,7 +51,7 @@ public class SlipProjectionFigures {
 		double maxRatio = 1.5;
 		CPT ratioCPT = GMT_CPT_Files.DIVERGING_VIK_UNIFORM.instance().rescale(0d, 2d).trim(1d, 2d).rescale(1d, maxRatio);
 		
-		NSHM27_InterfaceDeformationModels dm = fm.getDefaultDeformationModel();
+		NSHM27_InterfaceDeformationModels.Aggregated dm = fm.getDefaultDeformationModel();
 		
 		LogicTreeBranch<LogicTreeNode> branch = NSHM27_LogicTree.buildDefault(fm.getSeisReg(), TectonicRegionType.SUBDUCTION_INTERFACE, false);
 		branch.setValue(NSHM27_InterfaceCouplingDepthModels.NONE);
@@ -60,7 +59,7 @@ public class SlipProjectionFigures {
 //		double maxSlip = maxSlip(dm.apply(fm, branch, sects));
 		CPT slipCPT = GMT_CPT_Files.SEQUENTIAL_BATLOW_UNIFORM.instance().rescale(0d, maxSlip);
 		
-		DeformationFront df = dm.getDeformationFront(fm);
+		DeformationFront df = NSHM27_InterfaceDeformationModels.getDeformationFront(fm);
 		double moveOffset = 15d; // km
 		
 		LocationList dfTrace = df.trace();
@@ -123,33 +122,35 @@ public class SlipProjectionFigures {
 			traceChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 15f, Color.BLACK));
 //			traces.add(dfTrace);
 //			traceChars.add(new PlotCurveCharacterstics(PlotLineType.DASHED, 10f, Color.LIGHT_GRAY));
-			for (int i=0; i<df.slips().length; i++) {
+			int num = dfTrace.size();
+			double[] slips = NSHM27_InterfaceDeformationModels.getCoupledSlipRates(df, dm.getSampler());
+			for (int i=0; i<num; i++) {
 				Location loc = dfTrace.get(i);
 				Location l1, l2;
 				if (i == 0)
 					l1 = loc;
 				else
 					l1 = middle(loc, dfTrace.get(i-1));
-				if (i == df.slips().length-1)
+				if (i == num-1)
 					l2 = loc;
 				else
 					l2 = middle(loc, dfTrace.get(i+1));
 				traces.add(LocationList.of(l1, l2));
-				traceChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 10f, slipCPT.getColor(df.slips()[i])));
+				traceChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 10f, slipCPT.getColor(slips[i])));
 			}
 			mapMaker.plotLines(traces, traceChars);
 			
-			mapMaker.plot(outputDir, fm.name()+"_"+dm.name()+"_"+depthCoupling.name()+"_slip_deficit_rate",
+			mapMaker.plot(outputDir, fm.name()+"_"+dm.getFilePrefix()+"_"+depthCoupling.name()+"_slip_deficit_rate",
 					dm.getShortName()+" DM, "+depthCoupling.getShortName()+" Taper");
 		}
 		
 		mapMaker.clearLines();
 		
-		maxSlip = maxSlip(NSHM27_InterfaceDeformationModels.HIGH_COUPLING.apply(fm, branch, sects));
+		maxSlip = maxSlip(NSHM27_InterfaceDeformationModels.Aggregated.HIGH_COUPLING.apply(fm, branch, sects));
 		slipCPT = GMT_CPT_Files.SEQUENTIAL_BATLOW_UNIFORM.instance().rescale(0d, maxSlip);
 		
 		branch.setValue(NSHM27_InterfaceCouplingDepthModels.AVERAGE);
-		for (NSHM27_InterfaceDeformationModels odm : NSHM27_InterfaceDeformationModels.values()) {
+		for (NSHM27_InterfaceDeformationModels.Aggregated odm : NSHM27_InterfaceDeformationModels.Aggregated.values()) {
 			if (odm.getNodeWeight() == 0d)
 				continue;
 			
