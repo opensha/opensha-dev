@@ -142,42 +142,52 @@ public class BranchScratch {
 	}
 	
 	private static void test4() throws IOException {
-		File storeDir = MeanUCERF3.getStoreDir();
-		File solFile = MeanUCERF3.checkDownload(
-				new File(storeDir, "cached_FM3_1_dep100.0_depMean_rakeMean.zip")).join();
+//		File storeDir = MeanUCERF3.getStoreDir();
+//		File solFile = MeanUCERF3.checkDownload(
+//				new File(storeDir, "cached_FM3_1_dep100.0_depMean_rakeMean.zip")).join();
+		File solFile = new File("/home/kevin/OpenSHA/fss_inversions/2021_11_30-u3_branches-orig_calcs-5h/results_FM3_1_branch_averaged.zip");
 		FaultSystemSolution sol = FaultSystemSolution.load(solFile);
 		FaultSystemRupSet rupSet = sol.getRupSet();
+		RupMFDsModule mfds = rupSet.getModule(RupMFDsModule.class);
+		ModSectMinMags modMags = rupSet.getModule(ModSectMinMags.class);
 		System.out.println("Sol type: "+sol.getClass());
 		System.out.println("Rup set type: "+rupSet.getClass());
 		System.out.println("Inv type? "+(rupSet instanceof InversionFaultSystemRupSet));
-		ModSectMinMags modMags = rupSet.getModule(ModSectMinMags.class);
 		if (modMags == null) {
 			System.out.println("No mod mags");
 		} else {
 			System.out.println("Mod mags type: "+modMags.getClass()+"; name="+modMags.getName());
 		}
 		
-		RupMFDsModule mfds = rupSet.getModule(RupMFDsModule.class);
 		System.out.println("Has MFDs? "+(mfds != null));
 		for (int s=0; s<rupSet.getNumSections(); s++) {
 			double minMag = Double.POSITIVE_INFINITY;
+			double minIncludedMag = Double.POSITIVE_INFINITY;
 			double totRate = 0d;
 			for (int rupIndex : rupSet.getRupturesForSection(s)) {
+				double rupMinMag = Double.POSITIVE_INFINITY;
 				DiscretizedFunc mfd = mfds == null ? null : mfds.getRuptureMFD(rupIndex);
 				if (mfd == null)
 					mfd = new LightFixedXFunc(new double[] {rupSet.getMagForRup(rupIndex)}, new double[] {sol.getRateForRup(rupIndex)});
 				for (Point2D pt : mfd) {
 					if (pt.getY() > 0) {
 						totRate += pt.getY();
-						minMag = Math.min(minMag, pt.getX());
+						rupMinMag = Math.min(rupMinMag, pt.getX());
 					}
 				}
+				minMag = Math.min(minMag, rupMinMag);
+				if (modMags == null || !modMags.isRupBelowSectMinMag(rupIndex))
+					minIncludedMag = Math.min(minIncludedMag, rupMinMag);
 			}
-//			if (minMag < 5.9d) {
-			if (minMag < 6d) {
+			if (minMag < 5.9d) {
+//			if (minMag < 6d) {
 				FaultSection sect = rupSet.getFaultSectionData(s);
-				System.out.println(s+". "+sect.getSectionName()+" (parent="+sect.getParentSectionId()+"):\tminMag="+(float)minMag
-						+"\trate="+(float)totRate+"\tRI="+(float)(1d/totRate));
+				String prefix = s+". "+sect.getSectionName()+" (parent="+sect.getParentSectionId()+"):";
+				if (modMags == null)
+					System.out.println(prefix+"\tminMag="+(float)minMag+"\trate="+(float)totRate+"\tRI="+(float)(1d/totRate));
+				else
+					System.out.println(prefix+"\tminMag="+(float)minMag+"\tminIncludedMag="+(float)minIncludedMag
+							+"\trate="+(float)totRate+"\tRI="+(float)(1d/totRate));
 			}
 		}
 	}

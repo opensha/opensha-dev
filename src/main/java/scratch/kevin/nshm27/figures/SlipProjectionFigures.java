@@ -3,12 +3,16 @@ package scratch.kevin.nshm27.figures;
 import static scratch.kevin.nshm27.figures.NSHM27_PaperPaths.*;
 
 import java.awt.Color;
+import java.awt.Font;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
 import org.apache.commons.math3.stat.StatUtils;
+import org.jfree.chart.annotations.XYAnnotation;
+import org.jfree.chart.annotations.XYTextAnnotation;
+import org.jfree.chart.ui.TextAnchor;
 import org.opensha.commons.geo.Location;
 import org.opensha.commons.geo.LocationList;
 import org.opensha.commons.geo.LocationUtils;
@@ -16,9 +20,11 @@ import org.opensha.commons.geo.LocationUtils.LocationAverager;
 import org.opensha.commons.gui.plot.GeographicMapMaker;
 import org.opensha.commons.gui.plot.PlotCurveCharacterstics;
 import org.opensha.commons.gui.plot.PlotLineType;
+import org.opensha.commons.gui.plot.PlotSymbol;
 import org.opensha.commons.logicTree.LogicTreeBranch;
 import org.opensha.commons.logicTree.LogicTreeNode;
 import org.opensha.commons.mapping.gmt.elements.GMT_CPT_Files;
+import org.opensha.commons.util.FaultUtils;
 import org.opensha.commons.util.FaultUtils.AngleAverager;
 import org.opensha.commons.util.cpt.CPT;
 import org.opensha.sha.faultSurface.FaultSection;
@@ -33,6 +39,7 @@ import gov.usgs.earthquake.nshmp.erf.nshm27.logicTree.NSHM27_InterfaceDeformatio
 import gov.usgs.earthquake.nshmp.erf.nshm27.logicTree.NSHM27_InterfaceDeformationModels.DeformationFront;
 import gov.usgs.earthquake.nshmp.erf.nshm27.logicTree.NSHM27_InterfaceFaultModels;
 import gov.usgs.earthquake.nshmp.erf.nshm27.logicTree.NSHM27_LogicTree;
+import net.mahdilamb.colormap.Colors;
 
 public class SlipProjectionFigures {
 
@@ -41,10 +48,10 @@ public class SlipProjectionFigures {
 		File outputDir = new File("/tmp/nshm27_slip_projection");
 		Preconditions.checkState(outputDir.exists() || outputDir.mkdir());
 
-		NSHM27_InterfaceFaultModels fm = NSHM27_InterfaceFaultModels.AMSAM_V1;
-		double maxSlip = 160;
-//		NSHM27_InterfaceFaultModels fm = NSHM27_InterfaceFaultModels.GNMI_V1;
-//		double maxSlip = 30d;
+//		NSHM27_InterfaceFaultModels fm = NSHM27_InterfaceFaultModels.AMSAM_V1;
+//		double maxSlip = 150;
+		NSHM27_InterfaceFaultModels fm = NSHM27_InterfaceFaultModels.GNMI_V1;
+		double maxSlip = 30d;
 		
 		List<? extends FaultSection> sects = fm.buildSubSects(fm);
 		
@@ -143,6 +150,96 @@ public class SlipProjectionFigures {
 			
 			mapMaker.plot(outputDir, fm.name()+"_"+dm.getFilePrefix()+"_"+depthCoupling.name()+"_slip_deficit_rate",
 					dm.getShortName()+" DM, "+depthCoupling.getShortName()+" Taper");
+			
+			if (depthCoupling == NSHM27_InterfaceCouplingDepthModels.NONE) {
+				// add length annotations
+				
+				FaultSection sect= fm.getFaultSections().get(0);
+				FaultTrace upper = sect.getFaultTrace();
+				FaultTrace lower = sect.getLowerFaultTrace();
+				
+				int numResample = 5000;
+				
+				upper = FaultUtils.resampleTrace(upper, numResample);
+				lower = FaultUtils.resampleTrace(lower, numResample);
+				
+				FaultTrace middle = new FaultTrace();
+				for (int i=0; i<numResample; i++) {
+					Location upperLoc = upper.get(i);
+					Location lowerLoc = lower.get(i);
+					double dist = LocationUtils.horzDistance(lowerLoc, upperLoc);
+					double az = LocationUtils.azimuthRad(lowerLoc, upperLoc);
+					Location middleLoc = LocationUtils.location(lowerLoc, az, 0.5*dist);
+					middle.add(middleLoc);
+				}
+				
+				double markerDelta = 50d;
+				double nextMarker = 0d;
+				
+				LocationList lengthLocs = new LocationList();
+				List<Double> lengthVals = new ArrayList<>();
+				
+				double curLen = 0d;
+				for (int i=0; i<middle.size(); i++) {
+					if (i > 0)
+						curLen += LocationUtils.horzDistance(middle.get(i-1), middle.get(i));
+					if (curLen >= nextMarker || i == numResample-1) {
+						Location loc;
+						double markerLen;
+						if (i > 0 && i < numResample-1) {
+							double overshoot = curLen - nextMarker;
+							double backAz = LocationUtils.azimuthRad(middle.get(i), middle.get(i-1));
+							loc = LocationUtils.location(middle.get(i), backAz, overshoot);
+							markerLen = nextMarker;
+						} else {
+							loc = middle.get(i);
+							markerLen = curLen;
+						}
+						lengthLocs.add(loc);
+						lengthVals.add(markerLen);
+						
+						nextMarker += markerDelta;
+					}
+				}
+				
+				for (int i=0; i<lengthLocs.size(); i++) {
+					Location loc = lengthLocs.get(i);
+					double markerLen = lengthVals.get(i);
+					
+					XYTextAnnotation labelAnn = new XYTextAnnotation(" "+(int)Math.round(markerLen), loc.lon, loc.lat);
+					labelAnn.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 24));
+					labelAnn.setTextAnchor(TextAnchor.CENTER_LEFT);
+					labelAnn.setRotationAnchor(TextAnchor.CENTER_LEFT);
+					double azimuth;
+					if (i == 0) {
+						azimuth = LocationUtils.azimuthRad(lengthLocs.get(0), lengthLocs.get(1));
+					} else if (i == lengthLocs.size()-1) {
+						azimuth = LocationUtils.azimuthRad(lengthLocs.get(lengthLocs.size()-2), lengthLocs.get(lengthLocs.size()-1));
+					} else {
+						AngleAverager avg = new AngleAverager();
+						avg.add(LocationUtils.azimuth(lengthLocs.get(i-1), lengthLocs.get(i)), 1d);
+						avg.add(LocationUtils.azimuth(lengthLocs.get(i), lengthLocs.get(i+1)), 1d);
+						azimuth = Math.toRadians(avg.getAverage());
+					}
+					double rotAngle = azimuth;
+					// correct for aspect ratio
+					rotAngle = mapMaker.getRotationAngleCorrectedForAspectRatio(rotAngle);
+					labelAnn.setRotationAngle(rotAngle);
+//					labelAnn.setPaint(Colors.tab_lightbrown);
+//					labelAnn.setPaint(Colors.tab_brown);
+					labelAnn.setPaint(Colors.tab_brown.darker().darker().darker());
+					mapMaker.addAnnotation(labelAnn);
+				}
+				
+				mapMaker.setScatterSymbol(PlotSymbol.FILLED_CIRCLE, 6f, PlotSymbol.CIRCLE, Color.BLACK);
+				mapMaker.plotScatters(lengthLocs, Color.WHITE);
+				
+				mapMaker.plot(outputDir, fm.name()+"_"+dm.getFilePrefix()+"_slip_and_length",
+						dm.getShortName()+" DM & Kilometer Length Markers");
+				
+				mapMaker.clearScatters();
+				mapMaker.clearAnnotations();
+			}
 		}
 		
 		mapMaker.clearLines();

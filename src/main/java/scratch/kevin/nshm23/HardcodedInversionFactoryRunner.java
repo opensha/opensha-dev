@@ -195,10 +195,10 @@ public class HardcodedInversionFactoryRunner {
 		dirName += "-amsam";
 
 		if (branch.hasValue(NSHM27_InterfaceFaultModels.class) ) {
-//			branch.setValue(NSHM27_InterfaceObsSeisDMAdjustment.NONE);
+			branch.setValue(NSHM27_InterfaceObsSeisDMAdjustment.NONE);
 //			branch.setValue(NSHM27_InterfaceObsSeisDMAdjustment.AVERAGE);
 //			branch.setValue(NSHM27_InterfaceObsSeisDMAdjustment.SECTION_SPECIFIC);
-			branch.setValue(NSHM27_InterfaceObsSeisDMAdjustment.EXTRAPOLATE);
+//			branch.setValue(NSHM27_InterfaceObsSeisDMAdjustment.EXTRAPOLATE);
 			branch.setValue(NSHM27_InterfaceMinSubSects.TWO);
 			branch.setValue(NSHM27_InterfaceDeformationModels.Aggregated.PREF_COUPLING);
 		} else {
