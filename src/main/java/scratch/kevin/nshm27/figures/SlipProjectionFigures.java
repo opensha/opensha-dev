@@ -37,13 +37,14 @@ import gov.usgs.earthquake.nshmp.erf.nshm27.logicTree.NSHM27_LogicTree;
 public class SlipProjectionFigures {
 
 	public static void main(String[] args) throws IOException {
-		File outputDir = new File(FIGURES_DIR, "slip_projection");
+//		File outputDir = new File(FIGURES_DIR, "slip_projection");
+		File outputDir = new File("/tmp/nshm27_slip_projection");
 		Preconditions.checkState(outputDir.exists() || outputDir.mkdir());
 
-//		NSHM27_InterfaceFaultModels fm = NSHM27_InterfaceFaultModels.AMSAM_V1;
-//		double maxSlip = 160;
-		NSHM27_InterfaceFaultModels fm = NSHM27_InterfaceFaultModels.GNMI_V1;
-		double maxSlip = 30d;
+		NSHM27_InterfaceFaultModels fm = NSHM27_InterfaceFaultModels.AMSAM_V1;
+		double maxSlip = 160;
+//		NSHM27_InterfaceFaultModels fm = NSHM27_InterfaceFaultModels.GNMI_V1;
+//		double maxSlip = 30d;
 		
 		List<? extends FaultSection> sects = fm.buildSubSects(fm);
 		

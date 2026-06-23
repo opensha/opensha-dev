@@ -187,22 +187,25 @@ public class HardcodedInversionFactoryRunner {
 
 //		LogicTreeBranch<LogicTreeNode> branch = NSHM27_LogicTree.buildDefault(
 //				NSHM27_SeismicityRegions.GNMI, TectonicRegionType.SUBDUCTION_INTERFACE, false);
+////		LogicTreeBranch<LogicTreeNode> branch = NSHM27_LogicTree.buildDefault(
+//// 				NSHM27_SeismicityRegions.GNMI, TectonicRegionType.ACTIVE_SHALLOW, false);
+//		dirName += "-gnmi";
 		LogicTreeBranch<LogicTreeNode> branch = NSHM27_LogicTree.buildDefault(
- 				NSHM27_SeismicityRegions.GNMI, TectonicRegionType.ACTIVE_SHALLOW, false);
-		dirName += "-gnmi";
-//		LogicTreeBranch<LogicTreeNode> branch = NSHM27_LogicTree.buildDefault(
-//				NSHM27_SeismicityRegions.AMSAM, TectonicRegionType.SUBDUCTION_INTERFACE, false);
-//		dirName += "-amsam";
+				NSHM27_SeismicityRegions.AMSAM, TectonicRegionType.SUBDUCTION_INTERFACE, false);
+		dirName += "-amsam";
 
 		if (branch.hasValue(NSHM27_InterfaceFaultModels.class) ) {
-			branch.setValue(NSHM27_InterfaceObsSeisDMAdjustment.AVERAGE);
+//			branch.setValue(NSHM27_InterfaceObsSeisDMAdjustment.NONE);
+//			branch.setValue(NSHM27_InterfaceObsSeisDMAdjustment.AVERAGE);
 //			branch.setValue(NSHM27_InterfaceObsSeisDMAdjustment.SECTION_SPECIFIC);
+			branch.setValue(NSHM27_InterfaceObsSeisDMAdjustment.EXTRAPOLATE);
 			branch.setValue(NSHM27_InterfaceMinSubSects.TWO);
 			branch.setValue(NSHM27_InterfaceDeformationModels.Aggregated.PREF_COUPLING);
 		} else {
 			branch.setValue(NSHM27_CrustalDeformationModels.Aggregated.AVERAGE);
 		}
-		branch.setValue(NSHM27_SeisRateModelBranch.AVERAGE);
+//		branch.setValue(NSHM27_SeisRateModelBranch.AVERAGE);
+		branch.setValue(NSHM27_SeisRateModelBranch.PREFFERRED);
 		
 //		writeGridProv = false;
 		writeGridProv = true;
