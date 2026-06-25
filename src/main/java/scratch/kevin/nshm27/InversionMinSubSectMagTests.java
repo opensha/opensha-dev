@@ -25,7 +25,7 @@ public class InversionMinSubSectMagTests {
 		NSHM27_InterfaceMinSubSects[] minSects = NSHM27_InterfaceMinSubSects.values();
 		for (NSHM27_InterfaceFaultModels fm : NSHM27_InterfaceFaultModels.values()) {
 			LogicTreeBranch<LogicTreeNode> branch = NSHM27_LogicTree.buildDefault(
-					fm.getSeisReg(), TectonicRegionType.SUBDUCTION_INTERFACE, false);
+					fm.getSeismicityRegion(), TectonicRegionType.SUBDUCTION_INTERFACE, false);
 			branch.setValue(PRVI25_SubductionScalingRelationships.AVERAGE);
 			FaultSystemRupSet rupSet = factory.buildRuptureSet(branch, FaultSysTools.defaultNumThreads());
 			

@@ -29,6 +29,7 @@ import org.opensha.sha.earthquake.faultSysSolution.modules.GridSourceProvider;
 import org.opensha.sha.earthquake.faultSysSolution.modules.InversionTargetMFDs;
 import org.opensha.sha.earthquake.faultSysSolution.reports.ReportPageGen;
 import org.opensha.sha.earthquake.faultSysSolution.reports.ReportPageGen.PlotLevel;
+import org.opensha.sha.earthquake.rupForecastImpl.nshm23.NSHM23_ConstraintBuilder;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.NSHM23_InvConfigFactory;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.data.NSHM23_PaleoDataLoader;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.data.NSHM23_WasatchSegmentationData;
@@ -65,6 +66,7 @@ import com.google.common.base.Preconditions;
 
 import gov.usgs.earthquake.nshmp.erf.nshm27.NSHM27_InvConfigFactory;
 import gov.usgs.earthquake.nshmp.erf.nshm27.logicTree.NSHM27_CrustalDeformationModels;
+import gov.usgs.earthquake.nshmp.erf.nshm27.logicTree.NSHM27_InterfaceCouplingDepthModels;
 import gov.usgs.earthquake.nshmp.erf.nshm27.logicTree.NSHM27_InterfaceDeformationModels;
 import gov.usgs.earthquake.nshmp.erf.nshm27.logicTree.NSHM27_InterfaceFaultModels;
 import gov.usgs.earthquake.nshmp.erf.nshm27.logicTree.NSHM27_InterfaceMinSubSects;
@@ -200,7 +202,11 @@ public class HardcodedInversionFactoryRunner {
 //			branch.setValue(NSHM27_InterfaceObsSeisDMAdjustment.SECTION_SPECIFIC);
 //			branch.setValue(NSHM27_InterfaceObsSeisDMAdjustment.EXTRAPOLATE);
 			branch.setValue(NSHM27_InterfaceMinSubSects.TWO);
+//			branch.setValue(NSHM27_InterfaceDeformationModels.Aggregated.LOW_COUPLING);
 			branch.setValue(NSHM27_InterfaceDeformationModels.Aggregated.PREF_COUPLING);
+//			branch.setValue(NSHM27_InterfaceDeformationModels.Aggregated.HIGH_COUPLING);
+//			branch.setValue(NSHM27_InterfaceCouplingDepthModels.DOUBLE_TAPER);
+			branch.setValue(NSHM27_InterfaceCouplingDepthModels.AVERAGE);
 		} else {
 			branch.setValue(NSHM27_CrustalDeformationModels.Aggregated.AVERAGE);
 		}
@@ -211,7 +217,16 @@ public class HardcodedInversionFactoryRunner {
 		writeGridProv = true;
 		
 		double b = 1d;
+//		double b = 0.5d;
+//		double b = 0d;
 		dirName += "-b"+(float)b;
+		
+//		// hinged b-value tests
+//		FaultSystemRupSet tempRupSet = factory.buildRuptureSet(branch, threads);
+//		new NSHM27_InvConfigFactory().getSolutionLogicTreeProcessor().processRupSet(tempRupSet, branch);
+//		double b = NSHM27_InvConfigFactory.calcInterfaceHingedBValue(tempRupSet, branch);
+//		dirName += "-hingedB"+(float)b;
+		
 		for (int l=0; l<branch.size(); l++) {
 			LogicTreeLevel<? extends LogicTreeNode> level = branch.getLevel(l);
 			if (level instanceof SectionSupraSeisBValues.FixedValueLevel) {

@@ -61,7 +61,7 @@ public class SlipProjectionFigures {
 		
 		NSHM27_InterfaceDeformationModels.Aggregated dm = fm.getDefaultDeformationModel();
 		
-		LogicTreeBranch<LogicTreeNode> branch = NSHM27_LogicTree.buildDefault(fm.getSeisReg(), TectonicRegionType.SUBDUCTION_INTERFACE, false);
+		LogicTreeBranch<LogicTreeNode> branch = NSHM27_LogicTree.buildDefault(fm.getSeismicityRegion(), TectonicRegionType.SUBDUCTION_INTERFACE, false);
 		branch.setValue(NSHM27_InterfaceCouplingDepthModels.NONE);
 		
 //		double maxSlip = maxSlip(dm.apply(fm, branch, sects));
