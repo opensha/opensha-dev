@@ -192,6 +192,7 @@ public class HardcodedInversionFactoryRunner {
 ////		LogicTreeBranch<LogicTreeNode> branch = NSHM27_LogicTree.buildDefault(
 //// 				NSHM27_SeismicityRegions.GNMI, TectonicRegionType.ACTIVE_SHALLOW, false);
 //		dirName += "-gnmi";
+		NSHM27_LogicTree.INTERFACE_B_HINGED_WEIGHT = 1d;
 		LogicTreeBranch<LogicTreeNode> branch = NSHM27_LogicTree.buildDefault(
 				NSHM27_SeismicityRegions.AMSAM, TectonicRegionType.SUBDUCTION_INTERFACE, false);
 		dirName += "-amsam";
@@ -216,24 +217,24 @@ public class HardcodedInversionFactoryRunner {
 //		writeGridProv = false;
 		writeGridProv = true;
 		
-		double b = 1d;
-//		double b = 0.5d;
-//		double b = 0d;
-		dirName += "-b"+(float)b;
-		
-//		// hinged b-value tests
-//		FaultSystemRupSet tempRupSet = factory.buildRuptureSet(branch, threads);
-//		new NSHM27_InvConfigFactory().getSolutionLogicTreeProcessor().processRupSet(tempRupSet, branch);
-//		double b = NSHM27_InvConfigFactory.calcInterfaceHingedBValue(tempRupSet, branch);
-//		dirName += "-hingedB"+(float)b;
-		
-		for (int l=0; l<branch.size(); l++) {
-			LogicTreeLevel<? extends LogicTreeNode> level = branch.getLevel(l);
-			if (level instanceof SectionSupraSeisBValues.FixedValueLevel) {
-				((SectionSupraSeisBValues.FixedValueLevel)level).setValue(b);
-				branch.setValue(level.getNodes().get(0));
-			}
-		}
+//		double b = 1d;
+////		double b = 0.5d;
+////		double b = 0d;
+//		dirName += "-b"+(float)b;
+//		
+////		// hinged b-value tests
+////		FaultSystemRupSet tempRupSet = factory.buildRuptureSet(branch, threads);
+////		new NSHM27_InvConfigFactory().getSolutionLogicTreeProcessor().processRupSet(tempRupSet, branch);
+////		double b = NSHM27_InvConfigFactory.calcInterfaceHingedBValue(tempRupSet, branch);
+////		dirName += "-hingedB"+(float)b;
+//		
+//		for (int l=0; l<branch.size(); l++) {
+//			LogicTreeLevel<? extends LogicTreeNode> level = branch.getLevel(l);
+//			if (level instanceof SectionSupraSeisBValues.FixedValueLevel) {
+//				((SectionSupraSeisBValues.FixedValueLevel)level).setValue(b);
+//				branch.setValue(level.getNodes().get(0));
+//			}
+//		}
 		
 		plotLevel = PlotLevel.REVIEW;
 		
