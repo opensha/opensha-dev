@@ -1,6 +1,7 @@
 package scratch.kevin;
 
 import java.awt.Color;
+import java.awt.geom.Point2D;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -8,7 +9,9 @@ import java.util.List;
 
 import org.jfree.data.Range;
 import org.opensha.commons.data.CSVFile;
+import org.opensha.commons.data.function.DiscretizedFunc;
 import org.opensha.commons.data.function.EvenlyDiscretizedFunc;
+import org.opensha.commons.data.function.LightFixedXFunc;
 import org.opensha.commons.geo.Location;
 import org.opensha.commons.geo.Region;
 import org.opensha.commons.gui.plot.HeadlessGraphPanel;
@@ -20,11 +23,20 @@ import org.opensha.sha.earthquake.ProbEqkRupture;
 import org.opensha.sha.earthquake.ProbEqkSource;
 import org.opensha.sha.earthquake.faultSysSolution.FaultSystemRupSet;
 import org.opensha.sha.earthquake.faultSysSolution.FaultSystemSolution;
+import org.opensha.sha.earthquake.faultSysSolution.modules.ModSectMinMags;
+import org.opensha.sha.earthquake.faultSysSolution.modules.RupMFDsModule;
 import org.opensha.sha.earthquake.faultSysSolution.util.FaultSysTools;
 import org.opensha.sha.earthquake.rupForecastImpl.WGCEP_UCERF_2_Final.UCERF2;
 import org.opensha.sha.earthquake.rupForecastImpl.WGCEP_UCERF_2_Final.MeanUCERF2.MeanUCERF2;
+import org.opensha.sha.earthquake.rupForecastImpl.prvi25.erf.NSHM25_PRVI_BranchAveragedERF;
+import org.opensha.sha.earthquake.util.GriddedSeismicitySettings;
 import org.opensha.sha.faultSurface.FaultSection;
+import org.opensha.sha.faultSurface.PointSurface;
+import org.opensha.sha.faultSurface.RuptureSurface;
 import org.opensha.sha.magdist.IncrementalMagFreqDist;
+
+import scratch.UCERF3.erf.mean.MeanUCERF3;
+import scratch.UCERF3.inversion.InversionFaultSystemRupSet;
 
 public class BranchScratch {
 	
@@ -105,13 +117,88 @@ public class BranchScratch {
 		}
 	}
 	
+	private static void test3() throws IOException {
+		NSHM25_PRVI_BranchAveragedERF erf = new NSHM25_PRVI_BranchAveragedERF();
+//		erf.setGriddedSeismicitySettings(GriddedSeismicitySettings.DEFAULT.forDistanceCorrection(null));
+		erf.updateForecast();
+		long numRups = 0l;
+		long numPtRups = 0l;
+		long numPtRupsWithCorr = 0l;
+		for (ProbEqkSource source : erf) {
+			numRups += source.getNumRuptures();
+			for (ProbEqkRupture rup : source) {
+				RuptureSurface surf = rup.getRuptureSurface();
+				if (surf instanceof PointSurface) {
+					numPtRups++;
+					PointSurface ptSurf = (PointSurface)surf;
+					if (ptSurf instanceof PointSurface.DistanceCorrectable || ptSurf instanceof PointSurface.DistanceCorrectionAttached)
+						numPtRupsWithCorr++;
+				}
+			}
+		}
+		System.out.println("Have "+numRups+" total rups");
+		System.out.println("\t"+numPtRups+" are point sources");
+		System.out.println("\t"+numPtRupsWithCorr+" are point sources w/ dist corrs");
+	}
+	
+	private static void test4() throws IOException {
+//		File storeDir = MeanUCERF3.getStoreDir();
+//		File solFile = MeanUCERF3.checkDownload(
+//				new File(storeDir, "cached_FM3_1_dep100.0_depMean_rakeMean.zip")).join();
+		File solFile = new File("/home/kevin/OpenSHA/fss_inversions/2021_11_30-u3_branches-orig_calcs-5h/results_FM3_1_branch_averaged.zip");
+		FaultSystemSolution sol = FaultSystemSolution.load(solFile);
+		FaultSystemRupSet rupSet = sol.getRupSet();
+		RupMFDsModule mfds = rupSet.getModule(RupMFDsModule.class);
+		ModSectMinMags modMags = rupSet.getModule(ModSectMinMags.class);
+		System.out.println("Sol type: "+sol.getClass());
+		System.out.println("Rup set type: "+rupSet.getClass());
+		System.out.println("Inv type? "+(rupSet instanceof InversionFaultSystemRupSet));
+		if (modMags == null) {
+			System.out.println("No mod mags");
+		} else {
+			System.out.println("Mod mags type: "+modMags.getClass()+"; name="+modMags.getName());
+		}
+		
+		System.out.println("Has MFDs? "+(mfds != null));
+		for (int s=0; s<rupSet.getNumSections(); s++) {
+			double minMag = Double.POSITIVE_INFINITY;
+			double minIncludedMag = Double.POSITIVE_INFINITY;
+			double totRate = 0d;
+			for (int rupIndex : rupSet.getRupturesForSection(s)) {
+				double rupMinMag = Double.POSITIVE_INFINITY;
+				DiscretizedFunc mfd = mfds == null ? null : mfds.getRuptureMFD(rupIndex);
+				if (mfd == null)
+					mfd = new LightFixedXFunc(new double[] {rupSet.getMagForRup(rupIndex)}, new double[] {sol.getRateForRup(rupIndex)});
+				for (Point2D pt : mfd) {
+					if (pt.getY() > 0) {
+						totRate += pt.getY();
+						rupMinMag = Math.min(rupMinMag, pt.getX());
+					}
+				}
+				minMag = Math.min(minMag, rupMinMag);
+				if (modMags == null || !modMags.isRupBelowSectMinMag(rupIndex))
+					minIncludedMag = Math.min(minIncludedMag, rupMinMag);
+			}
+			if (minMag < 5.9d) {
+//			if (minMag < 6d) {
+				FaultSection sect = rupSet.getFaultSectionData(s);
+				String prefix = s+". "+sect.getSectionName()+" (parent="+sect.getParentSectionId()+"):";
+				if (modMags == null)
+					System.out.println(prefix+"\tminMag="+(float)minMag+"\trate="+(float)totRate+"\tRI="+(float)(1d/totRate));
+				else
+					System.out.println(prefix+"\tminMag="+(float)minMag+"\tminIncludedMag="+(float)minIncludedMag
+							+"\trate="+(float)totRate+"\tRI="+(float)(1d/totRate));
+			}
+		}
+	}
+	
 	/**
 	 * @param args
 	 * @throws Exception 
 	 */
 	public static void main(String[] args) throws Exception {
 		try {
-			test2();
+			test4();
 		} catch (Throwable t) {
 			t.printStackTrace();
 			System.exit(1);

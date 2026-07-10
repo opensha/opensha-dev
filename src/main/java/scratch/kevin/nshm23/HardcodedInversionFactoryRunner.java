@@ -29,6 +29,7 @@ import org.opensha.sha.earthquake.faultSysSolution.modules.GridSourceProvider;
 import org.opensha.sha.earthquake.faultSysSolution.modules.InversionTargetMFDs;
 import org.opensha.sha.earthquake.faultSysSolution.reports.ReportPageGen;
 import org.opensha.sha.earthquake.faultSysSolution.reports.ReportPageGen.PlotLevel;
+import org.opensha.sha.earthquake.rupForecastImpl.nshm23.NSHM23_ConstraintBuilder;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.NSHM23_InvConfigFactory;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.data.NSHM23_PaleoDataLoader;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.data.NSHM23_WasatchSegmentationData;
@@ -42,7 +43,6 @@ import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_Single
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_U3_HybridLogicTreeBranch;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.RupturePlausibilityModels;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.SectionSupraSeisBValues;
-import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.SegmentationMFD_Adjustment;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.SegmentationModelBranchNode;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.SupraSeisBValues;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.U3_UncertAddDeformationModels;
@@ -65,7 +65,8 @@ import org.opensha.sha.util.TectonicRegionType;
 import com.google.common.base.Preconditions;
 
 import gov.usgs.earthquake.nshmp.erf.nshm27.NSHM27_InvConfigFactory;
-import gov.usgs.earthquake.nshmp.erf.nshm27.logicTree.NSHM27_CrustalAggregatedDeformationModels;
+import gov.usgs.earthquake.nshmp.erf.nshm27.logicTree.NSHM27_CrustalDeformationModels;
+import gov.usgs.earthquake.nshmp.erf.nshm27.logicTree.NSHM27_InterfaceCouplingDepthModels;
 import gov.usgs.earthquake.nshmp.erf.nshm27.logicTree.NSHM27_InterfaceDeformationModels;
 import gov.usgs.earthquake.nshmp.erf.nshm27.logicTree.NSHM27_InterfaceFaultModels;
 import gov.usgs.earthquake.nshmp.erf.nshm27.logicTree.NSHM27_InterfaceMinSubSects;
@@ -150,16 +151,16 @@ public class HardcodedInversionFactoryRunner {
 //		NSHM23_InvConfigFactory factory = new DefModSamplingEnabledInvConfig.ConnDistB0p5MidSegCorrCapSigma();
 //		dirName += "-nshm23-dm_sample_cap_sigma";
 		
-		PRVI25_InvConfigFactory factory = new PRVI25_InvConfigFactory();
-		dirName += "-prvi25";
+//		PRVI25_InvConfigFactory factory = new PRVI25_InvConfigFactory();
+//		dirName += "-prvi25";
 //		PRVI25_InvConfigFactory factory = new PRVI25_InvConfigFactory.MueAsCrustal();
 //		dirName += "-prvi25-mue_as_crustal";
 //		PRVI25_InvConfigFactory factory = new PRVI25_InvConfigFactory.LimitCrustalBelowObserved_0p9();
 //		dirName += "-prvi25-limit_below_obs";
 //		PRVI25_InvConfigFactory.SUB_SECT_DDW_FRACT = 0.25; dirName += "-quarter_len_sub_sects";
 		
-//		NSHM27_InvConfigFactory factory = new NSHM27_InvConfigFactory();
-//		dirName += "-nshm26";
+		NSHM27_InvConfigFactory factory = new NSHM27_InvConfigFactory();
+		dirName += "-nshm26";
 		
 		factory.setCacheDir(new File("/home/kevin/OpenSHA/nshm23/rup_sets/cache"));
 		
@@ -185,40 +186,48 @@ public class HardcodedInversionFactoryRunner {
 //		for (LogicTreeNode node : PRVI25_LogicTree.DEFAULT_SUBDUCTION_GRIDDED)
 //			branch.setValue(node);
 //		writeGridProv = true;
-		
-		List<LogicTreeLevel<? extends LogicTreeNode>> levels = new ArrayList<>();
-		levels.addAll(PRVI25_LogicTree.levelsOnFault);
-		levels.add(NSHM23_LogicTreeBranch.SEG_ADJ);
-		LogicTreeBranch<LogicTreeNode> branch = new LogicTreeBranch<>(levels);
-		for (LogicTreeNode node : PRVI25_LogicTree.DEFAULT_CRUSTAL_ON_FAULT)
-			branch.setValue(node);
-//		branch.setValue(SegmentationMFD_Adjustment.REL_GR_THRESHOLD_AVG);
-		branch.setValue(SegmentationMFD_Adjustment.MFD_PRE_INVERSION);
 
-////		LogicTreeBranch<LogicTreeNode> branch = NSHM27_LogicTree.buildDefault(
-////				NSHM27_SeismicityRegions.GNMI, TectonicRegionType.SUBDUCTION_INTERFACE, false);
 //		LogicTreeBranch<LogicTreeNode> branch = NSHM27_LogicTree.buildDefault(
-// 				NSHM27_SeismicityRegions.GNMI, TectonicRegionType.ACTIVE_SHALLOW, false);
-//		dirName += "-gnmi";
+//				NSHM27_SeismicityRegions.GNMI, TectonicRegionType.SUBDUCTION_INTERFACE, false);
 ////		LogicTreeBranch<LogicTreeNode> branch = NSHM27_LogicTree.buildDefault(
-////				NSHM27_SeismicityRegions.AMSAM, TectonicRegionType.SUBDUCTION_INTERFACE, false);
-////		dirName += "-amsam";
-//
-//		if (branch.hasValue(NSHM27_InterfaceFaultModels.class) ) {
+//// 				NSHM27_SeismicityRegions.GNMI, TectonicRegionType.ACTIVE_SHALLOW, false);
+//		dirName += "-gnmi";
+		NSHM27_LogicTree.INTERFACE_B_HINGED_WEIGHT = 1d;
+		LogicTreeBranch<LogicTreeNode> branch = NSHM27_LogicTree.buildDefault(
+				NSHM27_SeismicityRegions.AMSAM, TectonicRegionType.SUBDUCTION_INTERFACE, false);
+		dirName += "-amsam";
+
+		if (branch.hasValue(NSHM27_InterfaceFaultModels.class) ) {
+			branch.setValue(NSHM27_InterfaceObsSeisDMAdjustment.NONE);
 //			branch.setValue(NSHM27_InterfaceObsSeisDMAdjustment.AVERAGE);
-////			branch.setValue(NSHM27_InterfaceObsSeisDMAdjustment.SECTION_SPECIFIC);
-//			branch.setValue(NSHM27_InterfaceMinSubSects.TWO);
-//			branch.setValue(NSHM27_InterfaceDeformationModels.PREF_COUPLING);
-//		} else {
-//			branch.setValue(NSHM27_CrustalAggregatedDeformationModels.AVERAGE);
-//		}
+//			branch.setValue(NSHM27_InterfaceObsSeisDMAdjustment.SECTION_SPECIFIC);
+//			branch.setValue(NSHM27_InterfaceObsSeisDMAdjustment.EXTRAPOLATE);
+			branch.setValue(NSHM27_InterfaceMinSubSects.TWO);
+//			branch.setValue(NSHM27_InterfaceDeformationModels.Aggregated.LOW_COUPLING);
+			branch.setValue(NSHM27_InterfaceDeformationModels.Aggregated.PREF_COUPLING);
+//			branch.setValue(NSHM27_InterfaceDeformationModels.Aggregated.HIGH_COUPLING);
+//			branch.setValue(NSHM27_InterfaceCouplingDepthModels.DOUBLE_TAPER);
+			branch.setValue(NSHM27_InterfaceCouplingDepthModels.AVERAGE);
+		} else {
+			branch.setValue(NSHM27_CrustalDeformationModels.Aggregated.AVERAGE);
+		}
 //		branch.setValue(NSHM27_SeisRateModelBranch.AVERAGE);
-//		
-////		writeGridProv = false;
-//		writeGridProv = true;
-//		
+		branch.setValue(NSHM27_SeisRateModelBranch.PREFFERRED);
+		
+//		writeGridProv = false;
+		writeGridProv = true;
+		
 //		double b = 1d;
+////		double b = 0.5d;
+////		double b = 0d;
 //		dirName += "-b"+(float)b;
+//		
+////		// hinged b-value tests
+////		FaultSystemRupSet tempRupSet = factory.buildRuptureSet(branch, threads);
+////		new NSHM27_InvConfigFactory().getSolutionLogicTreeProcessor().processRupSet(tempRupSet, branch);
+////		double b = NSHM27_InvConfigFactory.calcInterfaceHingedBValue(tempRupSet, branch);
+////		dirName += "-hingedB"+(float)b;
+//		
 //		for (int l=0; l<branch.size(); l++) {
 //			LogicTreeLevel<? extends LogicTreeNode> level = branch.getLevel(l);
 //			if (level instanceof SectionSupraSeisBValues.FixedValueLevel) {

@@ -48,7 +48,7 @@ public class InterfaceSubSeisMoReductionTests {
 		NSHM27_InterfaceFaultModels fm = branch.requireValue(NSHM27_InterfaceFaultModels.class);
 		NSHM27_InterfaceDeformationModels dm = branch.requireValue(NSHM27_InterfaceDeformationModels.class);
 
-		NSHM27_SeismicityRegions reg = fm.getSeisReg();
+		NSHM27_SeismicityRegions reg = fm.getSeismicityRegion();
 		File pdfBaseDir = new File("/home/kevin/OpenSHA/nshm26/data/spatial_seis_pdfs/"+reg.name().toLowerCase()+"/2026_03_09-v1_2D/INTERFACE");
 		
 		System.out.println("Branch: "+branch+"; reg="+reg);

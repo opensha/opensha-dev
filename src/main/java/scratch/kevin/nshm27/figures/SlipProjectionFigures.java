@@ -3,12 +3,16 @@ package scratch.kevin.nshm27.figures;
 import static scratch.kevin.nshm27.figures.NSHM27_PaperPaths.*;
 
 import java.awt.Color;
+import java.awt.Font;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
 import org.apache.commons.math3.stat.StatUtils;
+import org.jfree.chart.annotations.XYAnnotation;
+import org.jfree.chart.annotations.XYTextAnnotation;
+import org.jfree.chart.ui.TextAnchor;
 import org.opensha.commons.geo.Location;
 import org.opensha.commons.geo.LocationList;
 import org.opensha.commons.geo.LocationUtils;
@@ -16,12 +20,13 @@ import org.opensha.commons.geo.LocationUtils.LocationAverager;
 import org.opensha.commons.gui.plot.GeographicMapMaker;
 import org.opensha.commons.gui.plot.PlotCurveCharacterstics;
 import org.opensha.commons.gui.plot.PlotLineType;
+import org.opensha.commons.gui.plot.PlotSymbol;
 import org.opensha.commons.logicTree.LogicTreeBranch;
 import org.opensha.commons.logicTree.LogicTreeNode;
 import org.opensha.commons.mapping.gmt.elements.GMT_CPT_Files;
+import org.opensha.commons.util.FaultUtils;
 import org.opensha.commons.util.FaultUtils.AngleAverager;
 import org.opensha.commons.util.cpt.CPT;
-import org.opensha.sha.earthquake.faultSysSolution.ruptures.util.GeoJSONFaultReader;
 import org.opensha.sha.faultSurface.FaultSection;
 import org.opensha.sha.faultSurface.FaultTrace;
 import org.opensha.sha.faultSurface.GeoJSONFaultSection;
@@ -34,17 +39,19 @@ import gov.usgs.earthquake.nshmp.erf.nshm27.logicTree.NSHM27_InterfaceDeformatio
 import gov.usgs.earthquake.nshmp.erf.nshm27.logicTree.NSHM27_InterfaceDeformationModels.DeformationFront;
 import gov.usgs.earthquake.nshmp.erf.nshm27.logicTree.NSHM27_InterfaceFaultModels;
 import gov.usgs.earthquake.nshmp.erf.nshm27.logicTree.NSHM27_LogicTree;
+import net.mahdilamb.colormap.Colors;
 
 public class SlipProjectionFigures {
 
 	public static void main(String[] args) throws IOException {
-		File outputDir = new File(FIGURES_DIR, "slip_projection");
+//		File outputDir = new File(FIGURES_DIR, "slip_projection");
+		File outputDir = new File("/tmp/nshm27_slip_projection");
 		Preconditions.checkState(outputDir.exists() || outputDir.mkdir());
 
-//		NSHM27_InterfaceFaultModels fm = NSHM27_InterfaceFaultModels.AMSAM_V1;
-//		double maxSlip = 160;
-		NSHM27_InterfaceFaultModels fm = NSHM27_InterfaceFaultModels.GNMI_V1;
-		double maxSlip = 30d;
+		NSHM27_InterfaceFaultModels fm = NSHM27_InterfaceFaultModels.AMSAM_V1;
+		double maxSlip = 150;
+//		NSHM27_InterfaceFaultModels fm = NSHM27_InterfaceFaultModels.GNMI_V1;
+//		double maxSlip = 30d;
 		
 		List<? extends FaultSection> sects = fm.buildSubSects(fm);
 		
@@ -52,15 +59,15 @@ public class SlipProjectionFigures {
 		double maxRatio = 1.5;
 		CPT ratioCPT = GMT_CPT_Files.DIVERGING_VIK_UNIFORM.instance().rescale(0d, 2d).trim(1d, 2d).rescale(1d, maxRatio);
 		
-		NSHM27_InterfaceDeformationModels dm = fm.getDefaultDeformationModel();
+		NSHM27_InterfaceDeformationModels.Aggregated dm = fm.getDefaultDeformationModel();
 		
-		LogicTreeBranch<LogicTreeNode> branch = NSHM27_LogicTree.buildDefault(fm.getSeisReg(), TectonicRegionType.SUBDUCTION_INTERFACE, false);
+		LogicTreeBranch<LogicTreeNode> branch = NSHM27_LogicTree.buildDefault(fm.getSeismicityRegion(), TectonicRegionType.SUBDUCTION_INTERFACE, false);
 		branch.setValue(NSHM27_InterfaceCouplingDepthModels.NONE);
 		
 //		double maxSlip = maxSlip(dm.apply(fm, branch, sects));
 		CPT slipCPT = GMT_CPT_Files.SEQUENTIAL_BATLOW_UNIFORM.instance().rescale(0d, maxSlip);
 		
-		DeformationFront df = dm.getDeformationFront(fm);
+		DeformationFront df = NSHM27_InterfaceDeformationModels.getDeformationFront(fm);
 		double moveOffset = 15d; // km
 		
 		LocationList dfTrace = df.trace();
@@ -123,33 +130,125 @@ public class SlipProjectionFigures {
 			traceChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 15f, Color.BLACK));
 //			traces.add(dfTrace);
 //			traceChars.add(new PlotCurveCharacterstics(PlotLineType.DASHED, 10f, Color.LIGHT_GRAY));
-			for (int i=0; i<df.slips().length; i++) {
+			int num = dfTrace.size();
+			double[] slips = NSHM27_InterfaceDeformationModels.getCoupledSlipRates(df, dm.getSampler());
+			for (int i=0; i<num; i++) {
 				Location loc = dfTrace.get(i);
 				Location l1, l2;
 				if (i == 0)
 					l1 = loc;
 				else
 					l1 = middle(loc, dfTrace.get(i-1));
-				if (i == df.slips().length-1)
+				if (i == num-1)
 					l2 = loc;
 				else
 					l2 = middle(loc, dfTrace.get(i+1));
 				traces.add(LocationList.of(l1, l2));
-				traceChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 10f, slipCPT.getColor(df.slips()[i])));
+				traceChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 10f, slipCPT.getColor(slips[i])));
 			}
 			mapMaker.plotLines(traces, traceChars);
 			
-			mapMaker.plot(outputDir, fm.name()+"_"+dm.name()+"_"+depthCoupling.name()+"_slip_deficit_rate",
+			mapMaker.plot(outputDir, fm.name()+"_"+dm.getFilePrefix()+"_"+depthCoupling.name()+"_slip_deficit_rate",
 					dm.getShortName()+" DM, "+depthCoupling.getShortName()+" Taper");
+			
+			if (depthCoupling == NSHM27_InterfaceCouplingDepthModels.NONE) {
+				// add length annotations
+				
+				FaultSection sect= fm.getFaultSections().get(0);
+				FaultTrace upper = sect.getFaultTrace();
+				FaultTrace lower = sect.getLowerFaultTrace();
+				
+				int numResample = 5000;
+				
+				upper = FaultUtils.resampleTrace(upper, numResample);
+				lower = FaultUtils.resampleTrace(lower, numResample);
+				
+				FaultTrace middle = new FaultTrace();
+				for (int i=0; i<numResample; i++) {
+					Location upperLoc = upper.get(i);
+					Location lowerLoc = lower.get(i);
+					double dist = LocationUtils.horzDistance(lowerLoc, upperLoc);
+					double az = LocationUtils.azimuthRad(lowerLoc, upperLoc);
+					Location middleLoc = LocationUtils.location(lowerLoc, az, 0.5*dist);
+					middle.add(middleLoc);
+				}
+				
+				double markerDelta = 50d;
+				double nextMarker = 0d;
+				
+				LocationList lengthLocs = new LocationList();
+				List<Double> lengthVals = new ArrayList<>();
+				
+				double curLen = 0d;
+				for (int i=0; i<middle.size(); i++) {
+					if (i > 0)
+						curLen += LocationUtils.horzDistance(middle.get(i-1), middle.get(i));
+					if (curLen >= nextMarker || i == numResample-1) {
+						Location loc;
+						double markerLen;
+						if (i > 0 && i < numResample-1) {
+							double overshoot = curLen - nextMarker;
+							double backAz = LocationUtils.azimuthRad(middle.get(i), middle.get(i-1));
+							loc = LocationUtils.location(middle.get(i), backAz, overshoot);
+							markerLen = nextMarker;
+						} else {
+							loc = middle.get(i);
+							markerLen = curLen;
+						}
+						lengthLocs.add(loc);
+						lengthVals.add(markerLen);
+						
+						nextMarker += markerDelta;
+					}
+				}
+				
+				for (int i=0; i<lengthLocs.size(); i++) {
+					Location loc = lengthLocs.get(i);
+					double markerLen = lengthVals.get(i);
+					
+					XYTextAnnotation labelAnn = new XYTextAnnotation(" "+(int)Math.round(markerLen), loc.lon, loc.lat);
+					labelAnn.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 24));
+					labelAnn.setTextAnchor(TextAnchor.CENTER_LEFT);
+					labelAnn.setRotationAnchor(TextAnchor.CENTER_LEFT);
+					double azimuth;
+					if (i == 0) {
+						azimuth = LocationUtils.azimuthRad(lengthLocs.get(0), lengthLocs.get(1));
+					} else if (i == lengthLocs.size()-1) {
+						azimuth = LocationUtils.azimuthRad(lengthLocs.get(lengthLocs.size()-2), lengthLocs.get(lengthLocs.size()-1));
+					} else {
+						AngleAverager avg = new AngleAverager();
+						avg.add(LocationUtils.azimuth(lengthLocs.get(i-1), lengthLocs.get(i)), 1d);
+						avg.add(LocationUtils.azimuth(lengthLocs.get(i), lengthLocs.get(i+1)), 1d);
+						azimuth = Math.toRadians(avg.getAverage());
+					}
+					double rotAngle = azimuth;
+					// correct for aspect ratio
+					rotAngle = mapMaker.getRotationAngleCorrectedForAspectRatio(rotAngle);
+					labelAnn.setRotationAngle(rotAngle);
+//					labelAnn.setPaint(Colors.tab_lightbrown);
+//					labelAnn.setPaint(Colors.tab_brown);
+					labelAnn.setPaint(Colors.tab_brown.darker().darker().darker());
+					mapMaker.addAnnotation(labelAnn);
+				}
+				
+				mapMaker.setScatterSymbol(PlotSymbol.FILLED_CIRCLE, 6f, PlotSymbol.CIRCLE, Color.BLACK);
+				mapMaker.plotScatters(lengthLocs, Color.WHITE);
+				
+				mapMaker.plot(outputDir, fm.name()+"_"+dm.getFilePrefix()+"_slip_and_length",
+						dm.getShortName()+" DM & Kilometer Length Markers");
+				
+				mapMaker.clearScatters();
+				mapMaker.clearAnnotations();
+			}
 		}
 		
 		mapMaker.clearLines();
 		
-		maxSlip = maxSlip(NSHM27_InterfaceDeformationModels.HIGH_COUPLING.apply(fm, branch, sects));
+		maxSlip = maxSlip(NSHM27_InterfaceDeformationModels.Aggregated.HIGH_COUPLING.apply(fm, branch, sects));
 		slipCPT = GMT_CPT_Files.SEQUENTIAL_BATLOW_UNIFORM.instance().rescale(0d, maxSlip);
 		
 		branch.setValue(NSHM27_InterfaceCouplingDepthModels.AVERAGE);
-		for (NSHM27_InterfaceDeformationModels odm : NSHM27_InterfaceDeformationModels.values()) {
+		for (NSHM27_InterfaceDeformationModels.Aggregated odm : NSHM27_InterfaceDeformationModels.Aggregated.values()) {
 			if (odm.getNodeWeight() == 0d)
 				continue;
 			
