@@ -27,6 +27,8 @@ import org.opensha.commons.data.function.EvenlyDiscretizedFunc;
 import org.opensha.commons.data.function.HistogramFunction;
 import org.opensha.commons.data.function.IntegerPDF_FunctionSampler;
 import org.opensha.commons.data.function.XY_DataSet;
+import org.opensha.commons.data.uncertainty.UncertainArbDiscFunc;
+import org.opensha.commons.data.uncertainty.UncertaintyBoundType;
 import org.opensha.commons.eq.MagUtils;
 import org.opensha.commons.gui.plot.GeographicMapMaker;
 import org.opensha.commons.gui.plot.PlotCurveCharacterstics;
@@ -40,6 +42,7 @@ import org.opensha.sha.earthquake.calc.ERF_Calculator;
 import org.opensha.sha.earthquake.calc.recurInterval.EqkProbDistCalc;
 import org.opensha.sha.earthquake.faultSysSolution.FaultSystemRupSet;
 import org.opensha.sha.earthquake.faultSysSolution.FaultSystemSolution;
+import org.opensha.sha.earthquake.faultSysSolution.erf.FaultSysSolERF_Calc;
 import org.opensha.sha.earthquake.faultSysSolution.erf.td.AperiodicityModel;
 import org.opensha.sha.earthquake.faultSysSolution.erf.td.AperiodicityModels;
 import org.opensha.sha.earthquake.faultSysSolution.erf.td.FSS_ProbabilityModel;
@@ -60,13 +63,16 @@ import org.opensha.sha.earthquake.param.MagDependentAperiodicityParam;
 import org.opensha.sha.earthquake.param.ProbabilityModelOptions;
 import org.opensha.sha.earthquake.param.ProbabilityModelParam;
 import org.opensha.sha.faultSurface.FaultSection;
+import org.opensha.sha.magdist.IncrementalMagFreqDist;
 import org.opensha.sha.magdist.SummedMagFreqDist;
 import org.opensha.sha.util.TectonicRegionType;
 import org.opensha.sha.faultSurface.RuptureSurface;
 
+import scratch.UCERF3.erf.FaultSystemSolutionERF;
 import scratch.UCERF3.erf.utils.ProbModelsPlottingUtils;
 import scratch.UCERF3.erf.utils.ProbabilityModelsCalc.RenewalModelType;
 import scratch.UCERF3.inversion.InversionFaultSystemRupSet;
+import scratch.ned.nshm23.PoissonRateFromNinT_Calc;
 
 public class LongTermTD_Simulator {
 	
@@ -1071,11 +1077,14 @@ public class LongTermTD_Simulator {
 		
 		boolean aveRecurIntervals=true;
 		boolean aveNormTimeSinceLast=true;
+		double[] aveCondRecurIntervalForFltSysRups = null; // default is null
+
 		if (probModel instanceof UCERF3_ProbabilityModel) {			// U3 calculation type
 			UCERF3_ProbabilityModel u3ProbModel = (UCERF3_ProbabilityModel)probModel;
 			aveRecurIntervals = u3ProbModel.getAveragingTypeChoice().isAveRI();
 			aveNormTimeSinceLast = u3ProbModel.getAveragingTypeChoice().isAveNTS();
 			u3ProbModel.setSaveDebugInfo(false); // safer in simulation mode
+			aveCondRecurIntervalForFltSysRups = u3ProbModel.getAveCondRecurIntervalForFltSysRups();
 		} else if (probModel instanceof WG02_ProbabilityModel) {
 //			WG02_ProbabilityModel wgProbModel = (WG02_ProbabilityModel)probModel; // not needed
 			aveRecurIntervals = true; 		// default value applied by WG02
@@ -1194,19 +1203,73 @@ public class LongTermTD_Simulator {
 			sectIndexArrayForSrcList.add(indexArray);
 		}
 		
-		// set the ave cond recurrence intervals
-		double[] aveCondRecurIntervalForFltSysRups = TimeDepUtils.computeAveCondRecurIntervalForFltSysRups(fltSysRupSet, 
-				longTermPartRateForSectArray, aveRecurIntervals);
+		
+		
+		
+		
+		
+// FOLLOWING NOW DONE ELSEWHERE _ DELETE WHEN THAT'S CONFIRMED
+//		// TEMP TEST FOR JAMIE
+//		double[] aveCondRecurIntervalForFltSysRupsAlt = TimeDepUtils.testJamieAveCondRecurIntervalForFltSysRups(fltSysSolution);
+////		double[] aveCondRecurIntervalForFltSysRupsAlt = new double[aveCondRecurIntervalForFltSysRups.length];
+////		IncrementalMagFreqDist[] sectMFD_Array = new IncrementalMagFreqDist[numSections];
+////		for(int s=0;s<numSections;s++)
+////			sectMFD_Array[s] = fltSysSolution.calcParticipationMFD_forSect(s, 5.05, 9.95, 50);
+////		double[] sectAreas = fltSysRupSet.getAreaForAllSections();
+////		for (int r=0;r<aveCondRecurIntervalForFltSysRupsAlt.length; r++) {
+////			aveCondRecurIntervalForFltSysRupsAlt[r] = 0;
+////			List<Integer> rupSections = fltSysRupSet.getSectionsIndicesForRup(r);
+////			double ave=0, totArea=0;
+////			for (int sectID : rupSections) {
+////				double area = sectAreas[sectID];
+////				totArea += area;
+////				double magBin = sectMFD_Array[sectID].getClosestXtoY(fltSysRupSet.getMagForRup(r));
+////				double cumRateAboveMag = sectMFD_Array[sectID].getCumRate(magBin);
+////				ave += area/cumRateAboveMag;  
+////			}
+////			aveCondRecurIntervalForFltSysRupsAlt[r] = ave/totArea;
+////		}
+////		try {
+////			FileWriter fileWriter = new FileWriter("TEST_RIGHT_HERE.txt");
+////			for(int i=0; i<aveCondRecurIntervalForFltSysRups.length;i++) {
+////				fileWriter.write(i+"\t"+fltSysRupSet.getMagForRup(i)+"\t"+aveCondRecurIntervalForFltSysRups[i]+"\t"+aveCondRecurIntervalForFltSysRupsAlt[i]+"\n");					
+////			}
+////			fileWriter.close();
+////		}catch(Exception e) {
+////			e.printStackTrace();
+////		}
+//		double testRatio=0;
+//		for(int r=0;r<aveCondRecurIntervalForFltSysRups.length;r++)
+//			testRatio += (aveCondRecurIntervalForFltSysRupsAlt[r]/aveCondRecurIntervalForFltSysRups[r])/aveCondRecurIntervalForFltSysRups.length;
+//		System.out.println("testRatio1 = "+testRatio);
+////		System.exit(0);
+//		aveCondRecurIntervalForFltSysRups = aveCondRecurIntervalForFltSysRupsAlt;
+//		// REMOVE THE FOLLOWING METHOD WHEN DONE WITH JAMIE TEST
+//		((UCERF3_ProbabilityModel)probModel).tempSetAveCondRecurIntervalForFltSysRups(aveCondRecurIntervalForFltSysRupsAlt);
+
+
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
 
 		// find min and max cond RI
-		double minCondRI=Double.MAX_VALUE,maxCondRI=0;
-		for(double ri: aveCondRecurIntervalForFltSysRups) {
-			if(!Double.isInfinite(ri)) {
-				if(ri < minCondRI) minCondRI = ri;
-				if(ri > maxCondRI) maxCondRI = ri;
+		if(aveCondRecurIntervalForFltSysRups != null ) {
+			double minCondRI=Double.MAX_VALUE,maxCondRI=0;
+			for(double ri: aveCondRecurIntervalForFltSysRups) {
+				if(!Double.isInfinite(ri)) {
+					if(ri < minCondRI) minCondRI = ri;
+					if(ri > maxCondRI) maxCondRI = ri;
+				}
 			}
+			infoString +="minCondRI="+minCondRI+"\nmaxCondRI="+maxCondRI+"\n\n";			
 		}
-		infoString +="minCondRI="+minCondRI+"\nmaxCondRI="+maxCondRI+"\n\n";
 
 		//write out infoString if verbose
 		if(verbose) System.out.println(infoString);
@@ -1272,6 +1335,9 @@ public class LongTermTD_Simulator {
 				for(int s=0;s<erf.getNumFaultSystemSources();s++) {
 					int fltSysRupIndex = erf.getFltSysRupIndexForSource(s);
 					probGainForFaultSystemSource[s] = probModel.getProbabilityGain(fltSysRupIndex, currentTimeMillis, simDuration);
+// HACK RIGHT HERE
+//probGainForFaultSystemSource[s] /= 1.15;
+
 				}
 
 				// now update totalRate and ruptureSampler (for all rups since start time changed)
@@ -1306,7 +1372,7 @@ public class LongTermTD_Simulator {
 			}
 			else {
 				long numEvents = randomDataSampler.nextPoisson(totalRateAtTime*timeStepYrs);
-				if(numEvents > 0) { // get a random number or events for next time step;  set timeStepYrs low enough that more than 1 event is rare
+				if(numEvents > 0) { // get a random number of events for next time step;  set timeStepYrs low enough that more than 1 event is rare
 					timeToNextInYrs = timeStepYrs*randomDataSampler.nextUniform(0, 1);
 					eventTimeMillis = currentTimeMillis + (long)(timeToNextInYrs*MILLISEC_PER_YEAR);
 				}
@@ -1459,12 +1525,14 @@ public class LongTermTD_Simulator {
 		boolean aveNormTimeSinceLast = true;
 		AperiodicityModel aperModel = null;
 		EqkProbDistCalc renewalCalc=null;
+		double[] aveCondRecurIntervalForFltSysRups = null;
 		if (probModel instanceof UCERF3_ProbabilityModel) {			// U3 calculation type
 			u3ProbModel = (UCERF3_ProbabilityModel)probModel;
 			aveRecurIntervals = u3ProbModel.getAveragingTypeChoice().isAveRI();
 			aveNormTimeSinceLast = u3ProbModel.getAveragingTypeChoice().isAveNTS();
 			aperModel = u3ProbModel.getAperiodicityModel();
 			renewalCalc = u3ProbModel.getRenewalModelChoice().instance();
+			aveCondRecurIntervalForFltSysRups = u3ProbModel.getAveCondRecurIntervalForFltSysRups();
 		} else if (probModel instanceof WG02_ProbabilityModel) {
 			wgProbModel = (WG02_ProbabilityModel)probModel;
 			aperModel = wgProbModel.getAperiodicityModel();
@@ -1622,14 +1690,30 @@ public class LongTermTD_Simulator {
 		// make the target MFD - 
 		SummedMagFreqDist targetMFD=null;
 		double origTotMoRate=Double.NaN;
-		targetMFD = ERF_Calculator.getTotalMFD_ForERF(erf, 5.05, 8.95, 40, true);
+		targetMFD = ERF_Calculator.getTotalMFD_ForERF(erf, 5.05, 9.95, 50, true);
 		origTotMoRate = ERF_Calculator.getTotalMomentRateInRegion(erf, null);
 		System.out.println("originalTotalMomentRate: "+origTotMoRate);
 		targetMFD.setName("Target MFD");
 		String tempString = "total rate = "+(float)targetMFD.getTotalIncrRate();
 		tempString += "\ntotal rate >= 6.7 = "+(float)targetMFD.getCumRate(6.75);
 		tempString += "\ntotal MoRate = "+(float)origTotMoRate;
-		targetMFD.setInfo(tempString);			
+		targetMFD.setInfo(tempString);	
+		
+		// get HashMap of parent name from parent ID
+		HashMap<Integer,String> parentNameFromID_Map = FaultSysSolERF_Calc.getParentSectNameFromID_Map(erf);
+
+		// get HashMap of parent target MFDs
+		HashMap<Integer,IncrementalMagFreqDist> parentTargetPartMFD_FromID_Map = new HashMap<Integer,IncrementalMagFreqDist>();
+		for(int parID:parentNameFromID_Map.keySet()) {
+			String parName = parentNameFromID_Map.get(parID);
+			if(parName != null) {
+				IncrementalMagFreqDist parMFD = erf.getSolution().calcParticipationMFD_forParentSect(parID, 5.05, 9.95, 50);
+				parMFD.setName(parName);
+				parMFD.setInfo("Target Participation MFD");
+				parentTargetPartMFD_FromID_Map.put(parID,parMFD);
+			}
+		}
+
 
 		// reset ERF to original state
 		erf.setCustomProbabilityModel(probModel);
@@ -1637,8 +1721,20 @@ public class LongTermTD_Simulator {
 		erf.updateForecast();
 
 		// MFD & MoRate for simulation
-		SummedMagFreqDist simMFD = new SummedMagFreqDist(5.05,8.95,40);
+		SummedMagFreqDist simMFD = new SummedMagFreqDist(5.05,9.95,50);
 		double simMoRate = 0;
+		
+		// make HashMap of simulated parent participation MFDs
+		HashMap<Integer,SummedMagFreqDist> parentSimPartMFD_FromID_Map = new HashMap<Integer,SummedMagFreqDist>();
+		for(int parID:parentNameFromID_Map.keySet()) {
+			String parName = parentNameFromID_Map.get(parID);
+			if(parName != null) {
+				SummedMagFreqDist parMFD = new SummedMagFreqDist(5.05,9.95,50);
+				parMFD.setName(parName+" (ID="+parID+")");
+				parMFD.setInfo("Simulated Participation MFD");
+				parentSimPartMFD_FromID_Map.put(parID,parMFD);
+			}
+		}
 		
 		// Make local sectIndexArrayForSrcList for faster simulations
 		ArrayList<int[]> sectIndexArrayForSrcList = new ArrayList<int[]>();
@@ -1649,19 +1745,23 @@ public class LongTermTD_Simulator {
 				indexArray[i] = indexList.get(i);
 			sectIndexArrayForSrcList.add(indexArray);
 		}
-		
-		// set the ave cond recurrence intervals
-		double[] aveCondRecurIntervalForFltSysRups = TimeDepUtils.computeAveCondRecurIntervalForFltSysRups(fltSysRupSet, 
-														longTermPartRateForSectArray, aveRecurIntervals);
+
+// This now set above		
+//		// set the ave cond recurrence intervals
+//		double[] aveCondRecurIntervalForFltSysRups = TimeDepUtils.computeAveCondRecurIntervalForFltSysRups(fltSysRupSet, 
+//														longTermPartRateForSectArray, aveRecurIntervals);
+
 		// print minimum and maximum conditional rate of rupture
-		double minCondRI=Double.MAX_VALUE,maxCondRI=0;
-		for(double ri: aveCondRecurIntervalForFltSysRups) {
-			if(!Double.isInfinite(ri)) {
-				if(ri < minCondRI) minCondRI = ri;
-				if(ri > maxCondRI) maxCondRI = ri;
+		if(aveCondRecurIntervalForFltSysRups != null ) {
+			double minCondRI=Double.MAX_VALUE,maxCondRI=0;
+			for(double ri: aveCondRecurIntervalForFltSysRups) {
+				if(!Double.isInfinite(ri)) {
+					if(ri < minCondRI) minCondRI = ri;
+					if(ri > maxCondRI) maxCondRI = ri;
+				}
 			}
+			infoString +="minCondRI="+minCondRI+"\nmaxCondRI="+maxCondRI+"\n\n";			
 		}
-		infoString +="minCondRI="+minCondRI+"\nmaxCondRI="+maxCondRI+"\n\n";
 		
 		// set simulation time
 		double currentYear=origStartYear;
@@ -1690,16 +1790,16 @@ public class LongTermTD_Simulator {
 		File dataFile = new File(resultsDir+"/sampledEventsData.txt");
 		BufferedReader reader=null;
 		boolean firstLine = true; // for skipping header
+
 		try {
 			reader = new BufferedReader(scratch.UCERF3.utils.UCERF3_DataUtils.getReader(dataFile.toURL()));
-
 			String line;
 			while ((line = reader.readLine()) != null) {	
 				
 				if(firstLine) {
 					firstLine = false;
 					continue;
-				}
+				}	
 
 				//parse line from file:
 				String[] st = StringUtils.split(line,"\t");
@@ -1731,6 +1831,14 @@ public class LongTermTD_Simulator {
 				numSimulatedRups+=1;
 				simMFD.addResampledMagRate(rupMag, 1.0, true);
 				simMoRate += MagUtils.magToMoment(rupMag);
+				
+				// add to parent participation MFDs
+				List<Integer> parID_list = fltSysRupSet.getParentSectionsForRup(fltSystRupIndex);
+				for(int parID:parID_list) {
+					if(parentNameFromID_Map.get(parID)==null)
+						continue; // we aren't including faults with null parent names
+					parentSimPartMFD_FromID_Map.get(parID).addResampledMagRate(rupMag, 1.0, true);
+				}
 
 				// USE THIS TO CHECK FOR CONSISTENT ERF SETTINGS
 				double aveNormRI_test;
@@ -1845,9 +1953,14 @@ public class LongTermTD_Simulator {
 		simMFD.scale(1.0/numYears);
 		simMFD.setName("Simulated MFD");
 		simMoRate /= numYears;
+		for(int parID:parentSimPartMFD_FromID_Map.keySet()) {
+			parentSimPartMFD_FromID_Map.get(parID).scale(1.0/numYears);
+		}
 		double obsTotRate = simMFD.getTotalIncrRate();
 		double rateRatio = obsTotRate/targetMFD.getTotalIncrRate();
 		String infoString2 = "total rate = "+(float)obsTotRate+" (ratio="+(float)rateRatio+")";
+		double wtAveMFD_Ratio = getWtAveMFD_Ratio(simMFD,targetMFD);
+		infoString2 = "\nwtAveMFD_Ratio = "+(float)wtAveMFD_Ratio;
 		double obsTotRateAbove6pt7 = simMFD.getCumRate(6.75);
 		double rateAbove6pt7_Ratio = obsTotRateAbove6pt7/targetMFD.getCumRate(6.75);
 		infoString2 += "\ntotal rate >= 6.7 = "+(float)obsTotRateAbove6pt7+" (ratio="+(float)rateAbove6pt7_Ratio+")";
@@ -1855,10 +1968,20 @@ public class LongTermTD_Simulator {
 		infoString2 += "\ntotal MoRate = "+(float)simMoRate+" (ratio="+(float)moRateRatio+")";
 		simMFD.setInfo(infoString2);
 
-		infoString += "\n\nSimulationStats:\n";
-		infoString += "totRate\tratio\ttotRateM>=6.7\tratio\ttotMoRate\tratio\n";
-		infoString += (float)obsTotRate+"\t"+(float)rateRatio+"\t"+(float)obsTotRateAbove6pt7+"\t"+(float)rateAbove6pt7_Ratio+"\t"+(float)simMoRate+"\t"+(float)moRateRatio;			
+//		infoString += "\n\nSimulationStats:\n";
+//		infoString += "totRate\tratio\ttotRateM>=6.7\tratio\ttotMoRate\tratio\twtAveMFD_Ratio\n";
+//		infoString += (float)obsTotRate+"\t"+(float)rateRatio+"\t"
+//		+(float)obsTotRateAbove6pt7+"\t"+(float)rateAbove6pt7_Ratio+"\t"
+//		+(float)simMoRate+"\t"+(float)moRateRatio+"\t"+(float)wtAveMFD_Ratio;			
 
+		infoString += "\n\nSimulationStats:\n\n"+
+				"metric\tsimulated\ttarget\tratio"+
+				"\ntotRate\t"+(float)obsTotRate+"\t"+(float)targetMFD.getTotalIncrRate()+"\t"+(float)rateRatio+
+				"\ntotRateM>=6.7\t"+(float)obsTotRateAbove6pt7+"\t"+(float)targetMFD.getCumRate(6.75)+"\t"+(float)rateAbove6pt7_Ratio+
+				"\ntotMoRate\t"+(float)simMoRate+"\t"+(float)origTotMoRate+"\t"+(float)moRateRatio+
+				"\n\nwtAveMFD_Ratio = "+(float)wtAveMFD_Ratio;
+				
+		
 		double[] srcGainsAtMaxRateTimeArray = null;
 		double[] srcGainsAtMaxAveGainTimeArray = null;
 		//Read srcGainsAtMaxRateTimeArray & srcGainsAtMaxAveGainTimeArray
@@ -1893,8 +2016,33 @@ public class LongTermTD_Simulator {
 		// ******************* Plot Making **************************
 
 		// MFDs
-		ProbModelsPlottingUtils.writeMFD_ComprisonPlot(targetMFD, simMFD, plotsDir);
+		// Make approximate confidence bounds
+		EvenlyDiscretizedFunc minConfMFD = new EvenlyDiscretizedFunc(targetMFD.getMinX(),targetMFD.getMaxX(),targetMFD.size());
+		EvenlyDiscretizedFunc maxConfMFD = new EvenlyDiscretizedFunc(targetMFD.getMinX(),targetMFD.getMaxX(),targetMFD.size());
+		minConfMFD.setName("minConfMFD");
+		minConfMFD.setInfo("95% confidence bound based on stdom");
+		maxConfMFD.setName("maxConfMFD");
+		maxConfMFD.setInfo("95% confidence bound based on stdom");
+		for(int i=0;i<simMFD.size();i++) {
+			double numObs = simMFD.getY(i)*numYears;
+			double normStdom = 1.0/Math.sqrt(numObs); // assuming Poisson (COV=1)
+			minConfMFD.set(i,simMFD.getY(i)*(1.0-2.0*normStdom));
+			maxConfMFD.set(i,simMFD.getY(i)*(1.0+2.0*normStdom));
+		}
+		ProbModelsPlottingUtils.writeMFD_ComprisonPlot(targetMFD, simMFD, minConfMFD, maxConfMFD, plotsDir);
 
+		// make parent section MFD plots
+		File parSectMFD_PlotsDir = new File(plotsDir, "parentSectionMFD_Plots");
+		if(!parSectMFD_PlotsDir.exists()) parSectMFD_PlotsDir.mkdir();
+		Range yAxisRange = new Range(1e-6,0.1); // found by searching for largest Y value
+		for(int parID:parentSimPartMFD_FromID_Map.keySet()) {
+			IncrementalMagFreqDist targetParMFD = parentTargetPartMFD_FromID_Map.get(parID);
+			SummedMagFreqDist mfd = parentSimPartMFD_FromID_Map.get(parID);
+			String parentMFD_FileName = parentNameFromID_Map.get(parID).replace(" ","").replace(",","_");
+			// the following has incremental plots and rations turned off so I could flip through the results faster
+			writeMFD_ComprisonPlot_WithPoissConfBounds(targetParMFD, mfd, (int)numYears, 
+					parSectMFD_PlotsDir, parentMFD_FileName, yAxisRange, false);
+		}
 
 		// make normalized rup recurrence interval plots
 		ArrayList<Double> normalizedRupRecurIntervals = new ArrayList<Double>();
@@ -2025,22 +2173,30 @@ public class LongTermTD_Simulator {
 
 		// write map of observed vs imposed section rates
 		double[] sectPartRateRatioArray = new double[obsSectRateArray.length];
-		double[] sectPartRateRatioSigmaArray = new double[obsSectRateArray.length];
+		double[] sectPartRateRatioObsStdomArray = new double[obsSectRateArray.length];
+		double[] sectPartRateRatioExpStdomArray = new double[obsSectRateArray.length];
+//		for(int i=0;i<obsSectRateArray.length;i++) {
+//			sectPartRateRatioArray[i] = obsSectRateArray[i]/longTermPartRateForSectArray[i];
+//			// Compute sigma as Poisson hi to low confidence bound ratio divided by 4.0.
+//			// use this for now until PoissonRateFromNinT_Calc is moved out of scratch 
+//			double alpha = numObsOnSectionArray[i]+1;  // also called shape parameter
+//			double beta = 1d/numYears; 
+//			GammaDistribution gd = new GammaDistribution(alpha,beta);
+//			sectPartRateRatioSigmaArray[i] = (gd.inverseCumulativeProbability(0.975)/gd.inverseCumulativeProbability(0.025))/4.0;;
+//			//				sectPartRateRatioSigmaArray[i] = 0d;
+//			//				double low95bound = PoissonRateFromNinT_Calc.getRateForCumulativeProb(numObsOnSectionArray[i], numYears, 0.025);
+//			//				double hi95bound = PoissonRateFromNinT_Calc.getRateForCumulativeProb(numObsOnSectionArray[i], numYears, 0.975);
+//			//				sectPartRateRatioSigmaArray[i] = (hi95bound/low95bound)4.0;
+//		}
+		HistogramFunction dist = ProbModelsPlottingUtils.getNormRI_Distribution(normalizedSectRecurIntervals, 0.1);
+		double obsCOV=dist.computeCOV();
 		for(int i=0;i<obsSectRateArray.length;i++) {
 			sectPartRateRatioArray[i] = obsSectRateArray[i]/longTermPartRateForSectArray[i];
-			// Compute sigma as Poisson hi to low confidence bound ratio divided by 4.0.
-			// use this for now until PoissonRateFromNinT_Calc is moved out of scratch 
-			double alpha = numObsOnSectionArray[i]+1;  // also called shape parameter
-			double beta = 1d/numYears; 
-			GammaDistribution gd = new GammaDistribution(alpha,beta);
-			sectPartRateRatioSigmaArray[i] = (gd.inverseCumulativeProbability(0.975)/gd.inverseCumulativeProbability(0.025))/4.0;;
-			//				sectPartRateRatioSigmaArray[i] = 0d;
-			//				double low95bound = PoissonRateFromNinT_Calc.getRateForCumulativeProb(numObsOnSectionArray[i], numYears, 0.025);
-			//				double hi95bound = PoissonRateFromNinT_Calc.getRateForCumulativeProb(numObsOnSectionArray[i], numYears, 0.975);
-			//				sectPartRateRatioSigmaArray[i] = (hi95bound/low95bound)4.0;
+			sectPartRateRatioObsStdomArray[i] = obsCOV/Math.sqrt(numObsOnSectionArray[i]);
+			sectPartRateRatioExpStdomArray[i] = obsCOV/Math.sqrt(longTermPartRateForSectArray[i]*simDuration);
 		}
-		ProbModelsPlottingUtils.writeMapOfSimOverTargetPartRates (sectPartRateRatioArray, sectPartRateRatioSigmaArray, 
-				fltSysRupSet.getFaultSectionDataList(), plotsDir);
+		ProbModelsPlottingUtils.writeMapOfSimOverTargetPartRates (sectPartRateRatioArray, sectPartRateRatioObsStdomArray,
+				sectPartRateRatioExpStdomArray, fltSysRupSet.getFaultSectionDataList(), plotsDir);
 
 		// Turn max source gains into section gains and make map if not poisson
 		if(!isPoisson) {
@@ -2127,7 +2283,7 @@ public class LongTermTD_Simulator {
 				if(mag<7.3)
 					partRateMlow += fltSysSolution.getRateForRup(r);
 				else
-					partRateMhigh = fltSysSolution.getRateForRup(r);
+					partRateMhigh += fltSysSolution.getRateForRup(r);
 			}
 			targetSectRateArrayMlt7pt3[s]=partRateMlow;
 			targetSectRateArrayMgt7pt3[s]=partRateMhigh;
@@ -2161,12 +2317,300 @@ public class LongTermTD_Simulator {
 		if(verbose) System.out.println("INFO STRING:\n\n"+infoString);
 	}
 	
+	/**
+	 * 
+	 */
+	public static void rupPlotsForMultSimulations(String dirName, String runDirPrefix, String runDirSuffix, 
+			int numSims, TimeDepFaultSystemSolutionERF erf, double simDuration) {
+		
+		String outputInfoString="";
+		
+		File outputDir = new File(dirName+"/StatsPlotsFor"+numSims+"_Runs");
+		if(!outputDir.exists())
+			outputDir.mkdir();
+		
+		FSS_ProbabilityModel probModel = erf.getProbabilityModel();
+		UCERF3_ProbabilityModel u3ProbModel = null;
+		WG02_ProbabilityModel wgProbModel = null;
+		boolean isPoisson = false;
+		
+		boolean aveRecurIntervals = true; 		// default value applied by WG02
+		boolean aveNormTimeSinceLast = true;
+		AperiodicityModel aperModel = null;
+		EqkProbDistCalc renewalCalc=null;
+		if (probModel instanceof UCERF3_ProbabilityModel) {			// U3 calculation type
+			u3ProbModel = (UCERF3_ProbabilityModel)probModel;
+			aveRecurIntervals = u3ProbModel.getAveragingTypeChoice().isAveRI();
+			aveNormTimeSinceLast = u3ProbModel.getAveragingTypeChoice().isAveNTS();
+			aperModel = u3ProbModel.getAperiodicityModel();
+			renewalCalc = u3ProbModel.getRenewalModelChoice().instance();
+		} else if (probModel instanceof WG02_ProbabilityModel) {
+			wgProbModel = (WG02_ProbabilityModel)probModel;
+			aperModel = wgProbModel.getAperiodicityModel();
+			renewalCalc = RenewalModels.BPT.instance();
+		}
+		else if (probModel instanceof FSS_ProbabilityModel.Poisson) {
+			isPoisson = true;
+		}
+		else
+			throw new RuntimeException("Unsupported type of FSS_ProbabilityModel: "+probModel.getName());
+		
+		
+		ArrayList<Double> aperValuesList = new ArrayList<Double>();
+		for(int nthRup=0; nthRup<erf.getTotNumRups(); nthRup++) {
+			ProbEqkRupture rup = erf.getNthRupture(nthRup);
+			int fltSysIndex = erf.getFltSysRupIndexForNthRup(nthRup);
+			// aperiodicities list
+			if(!isPoisson) {
+				double aper =aperModel.getRuptureAperiodicity(fltSysIndex);
+				if(!aperValuesList.contains(aper))
+					aperValuesList.add(aper);
+			}
+		}
+		int numAperValues = aperValuesList.size();
+		
+		// temporarily set the forecast as Poisson, to get long-term rates, & no background 
+		IncludeBackgroundOption includeBackground = (IncludeBackgroundOption)erf.getParameter(IncludeBackgroundParam.NAME).getValue();
+		erf.getParameter(IncludeBackgroundParam.NAME).setValue(IncludeBackgroundOption.EXCLUDE);
+		erf.setProbabilityModelChoice(FSS_ProbabilityModels.POISSON);
+		erf.updateForecast();
+		
+		// make the target MFD - 
+		SummedMagFreqDist targetMFD=null;
+		targetMFD = ERF_Calculator.getTotalMFD_ForERF(erf, 5.05, 9.95, 50, true);
+		targetMFD.setName("Target MFD");
+		double targetTotMoRate = ERF_Calculator.getTotalMomentRateInRegion(erf, null);
+		double targetTotRate = targetMFD.getTotalIncrRate();
+		double targetMgt6pt7_Rate = targetMFD.getCumRate(6.75);
+		String mfdString = "total rate = "+(float)targetTotRate;
+		mfdString += "\ntotal rate >= 6.7 = "+(float)targetMgt6pt7_Rate;
+		mfdString += "\ntotal MoRate = "+(float)targetTotMoRate;
+		targetMFD.setInfo(mfdString);	
+		
+		// get HashMap of parent name from parent ID
+		HashMap<Integer,String> parentNameFromID_Map = FaultSysSolERF_Calc.getParentSectNameFromID_Map(erf);
+		// get HashMap of parent target MFDs
+		HashMap<Integer,IncrementalMagFreqDist> parentTargetPartMFD_FromID_Map = new HashMap<Integer,IncrementalMagFreqDist>();
+		for(int parID:parentNameFromID_Map.keySet()) {
+			String parName = parentNameFromID_Map.get(parID);
+			if(parName != null) {
+				IncrementalMagFreqDist parMFD = erf.getSolution().calcParticipationMFD_forParentSect(parID, 5.05, 9.95, 50);
+				parMFD.setName(parName);
+				parMFD.setInfo("Target Participation MFD");
+				parentTargetPartMFD_FromID_Map.put(parID,parMFD);
+			}
+		}
+
+
+//		// reset ERF to original state
+		erf.setCustomProbabilityModel(probModel);
+		erf.getParameter(IncludeBackgroundParam.NAME).setValue(includeBackground);
+		erf.updateForecast();
+
+		// MFD & MoRate for simulation
+		double[] simTotMoRateArray = new double[numSims];
+		double[] simTotRateArray = new double[numSims];
+		double[] simMgt6pt7_RateArray = new double[numSims];
+		double[] wtAveMFD_RatioArray = new double[numSims];
+		double[] aveMFD_RatioArray = new double[numSims];
+
+		ArrayList<SummedMagFreqDist> simMFD_List = new ArrayList<SummedMagFreqDist>();
+		
+		// make HashMap of simulated parent participation MFDs
+		HashMap<Integer,ArrayList<SummedMagFreqDist>> parentSimPartMFD_List_FromID_Map = new HashMap<Integer,ArrayList<SummedMagFreqDist>>();
+		for(int parID:parentNameFromID_Map.keySet()) {
+			String parName = parentNameFromID_Map.get(parID);
+			if(parName != null) {
+				parentSimPartMFD_List_FromID_Map.put(parID,new ArrayList<SummedMagFreqDist>());
+			}
+		}
+	
+		ArrayList<Double> normalizedRupRecurIntervals = new ArrayList<Double>();
+		HashMap<Double,ArrayList<Double>> normalizedRupRecurIntervalsAperMap = new HashMap<Double,ArrayList<Double>>();
+		for(double aper:aperValuesList) {
+			normalizedRupRecurIntervalsAperMap.put(aper, new ArrayList<Double>());
+		}
+		
+		FaultSystemRupSet rupSet = erf.getSolution().getRupSet();
+
+		// read file
+		for(int i=1;i<=numSims;i++) {
+			try {
+				SummedMagFreqDist simMFD = new SummedMagFreqDist(5.05,9.95,50);
+				
+				HashMap<Integer,SummedMagFreqDist> parentSimPartMFD_FromID_Map = new HashMap<Integer,SummedMagFreqDist>();
+				for(int parID:parentNameFromID_Map.keySet()) {
+					String parName = parentNameFromID_Map.get(parID);
+					if(parName != null) {
+						SummedMagFreqDist parMFD = new SummedMagFreqDist(5.05,9.95,50);
+						parMFD.setName(parName+" (ID="+parID+")");
+						parMFD.setInfo("Simulated Participation MFD");
+						parentSimPartMFD_FromID_Map.put(parID,parMFD);
+					}
+				}
+
+				File dataFile = new File(dirName+"/"+runDirPrefix+i+runDirSuffix+"/sampledEventsData.txt");
+				
+				BufferedReader reader = new BufferedReader(scratch.UCERF3.utils.UCERF3_DataUtils.getReader(dataFile.toURL()));
+//		        Path filePath = Paths.get("/Users/field/Library/CloudStorage/OneDrive-DOI/Field_Other/ERF_Coordination/LongTermTD_2026/Analysis/bptSimulationsU3/Run"+i+"_100k/obsVsImposedSectionPartRates.txt"); 
+//		        Charset asciiCharset = Charset.forName("US-ASCII");
+//		        BufferedReader reader = Files.newBufferedReader(filePath, asciiCharset);
+
+		        reader.readLine(); // skip header
+				int n=0;
+				String line;
+				while ((line = reader.readLine()) != null) {
+					String[] st = StringUtils.split(line,"\t");
+					int nthRupIndex = Integer.valueOf(st[0]);
+					int fssRupIndex = Integer.valueOf(st[1]);
+					double year = Double.valueOf(st[2]);	
+					long epoch = Long.valueOf(st[3]);	
+					double normRupRI = Double.valueOf(st[4]);	
+					double rupMag = Double.valueOf(st[5]);	
+					double rupArea = Double.valueOf(st[6]);
+					simTotMoRateArray[i-1] += MagUtils.magToMoment(rupMag)/simDuration;	
+					simTotRateArray[i-1] += 1.0/simDuration;
+					if(rupMag>=6.7)
+						simMgt6pt7_RateArray[i-1] += 1.0/simDuration;
+					simMFD.addResampledMagRate(rupMag, 1.0, true);
+					
+					// add to parent participation MFDs
+					List<Integer> parID_list = rupSet.getParentSectionsForRup(fssRupIndex);
+					for(int parID:parID_list) {
+						if(parentNameFromID_Map.get(parID)==null)
+							continue; // we aren't including faults with null parent names
+						parentSimPartMFD_FromID_Map.get(parID).addResampledMagRate(rupMag, 1.0, true);
+					}
+
+					
+					if(!Double.isNaN(normRupRI)) {
+						normalizedRupRecurIntervals.add(normRupRI);
+						if(numAperValues>0) {
+							double aper = aperModel.getRuptureAperiodicity(fssRupIndex);
+							normalizedRupRecurIntervalsAperMap.get(aper).add(normRupRI);
+						}
+					}
+
+				}
+				simMFD.scale(1.0/simDuration);
+				simMFD_List.add(simMFD);
+				
+				// scale each parent section MFD and add to the simulation list
+				for(int parID:parentSimPartMFD_FromID_Map.keySet()) {
+					parentSimPartMFD_FromID_Map.get(parID).scale(1.0/simDuration);
+					parentSimPartMFD_List_FromID_Map.get(parID).add(parentSimPartMFD_FromID_Map.get(parID));
+				}
+				
+				wtAveMFD_RatioArray[i-1] += getWtAveMFD_Ratio(simMFD, targetMFD);
+				aveMFD_RatioArray[i-1] += getAveMFD_Ratio(simMFD, targetMFD);
+				
+			reader.close();
+			} catch (Exception e) {
+				ExceptionUtils.throwAsRuntimeException(e);
+			}
+		}
+		
+		outputInfoString += getStatsString("Tot Mo Rate", simTotMoRateArray, targetTotMoRate);
+		outputInfoString += getStatsString("Tot Rate", simTotRateArray, targetTotRate);
+		outputInfoString += getStatsString("Tot Mgt6.7 Rate", simMgt6pt7_RateArray, targetMgt6pt7_Rate);
+		outputInfoString += getStatsString("Ave MFD Ratio (wted)", wtAveMFD_RatioArray, 1.0);
+		outputInfoString += getStatsString("Ave MFD Ratio (non-wted)", aveMFD_RatioArray, 1.0);
+				
+		
+		// MFD plots
+		ProbModelsPlottingUtils.writeMFD_ComprisonPlot(targetMFD, simMFD_List, outputDir);
+		
+		// Parent Section MPF Plots
+		File parMFD_PlotsDir = new File(outputDir, "ParentMFD_Plots");
+		if(!parMFD_PlotsDir.exists()) parMFD_PlotsDir.mkdir();
+		System.out.println("Num mags outside incremental parent section MFD confidence bounds (out of total in second column)");
+		for(int parID:parentSimPartMFD_List_FromID_Map.keySet()) {
+			ProbModelsPlottingUtils.writeMFD_ComprisonPlot(parentTargetPartMFD_FromID_Map.get(parID), 
+					parentSimPartMFD_List_FromID_Map.get(parID), parMFD_PlotsDir, parentNameFromID_Map.get(parID));
+		}
+		System.out.println("Done with mags outside confidence bounds.");
+		
+		double aper=Double.NaN;
+		String infoString="";
+		if(numAperValues==1)
+			aper=aperValuesList.get(0);	// only one value, so include for comparison
+		infoString += ProbModelsPlottingUtils.writeNormalizedDistPlotWithFits(normalizedRupRecurIntervals, aper, renewalCalc,
+				outputDir, "Normalized Rupture RIs", "normalizedRupRecurIntervals");		
+
+		// now mag-dep:
+		if(numAperValues >1) {
+			for(double aperVal : aperValuesList) {
+				String label = "aper="+aperVal;
+				infoString += ProbModelsPlottingUtils.writeNormalizedDistPlotWithFits(normalizedRupRecurIntervalsAperMap.get(aperVal), aperVal, renewalCalc,
+						outputDir, "Norm Rup RIs; "+label, "normRupRecurIntsForTargetAper"+aperVal);
+			}
+		}
+		outputInfoString += infoString+"\n";
+		
+		FileWriter infoFile_fw;
+		try {
+			infoFile_fw = new FileWriter(new File(outputDir,"/INFO_ForRupPlots.txt"));
+			infoFile_fw.write(outputInfoString);
+			infoFile_fw.close();
+		} catch (IOException e1) {
+			e1.printStackTrace();
+		}
+	}
+	
+	
+	public static String getStatsString(String title, double[] dataArray, double targetVal) {
+		DescriptiveStatistics stats = new DescriptiveStatistics(dataArray);
+		String str=title+":\n\tSim Mean = "+ (float)stats.getMean();
+		str += "\n\tTarget = "+ (float)targetVal;
+		str += "\n\tSim Vs Target (Ratio) Stats:"+
+		"\n\t\tMean = "+(float)(stats.getMean()/targetVal) +
+		"\n\t\tStdev = "+(float)(stats.getStandardDeviation()/targetVal) +
+		"\n\t\tStdom = "+(float)((stats.getStandardDeviation()/Math.sqrt((double)dataArray.length))/targetVal) +
+		"\n\t\tMin = "+(float)(stats.getMin()/targetVal) +
+		"\n\t\tMax = "+(float)(stats.getMax()/targetVal) + "\n";
+		return str;
+	}
+
+	/**
+	 * This computes the average ratio of mfd/targetMFD, wted by the square root of the expected
+	 * number of samples at each magnitude.
+	 * @param mfd
+	 * @param targetMFD
+	 * @return
+	 */
+	public static double getWtAveMFD_Ratio(EvenlyDiscretizedFunc mfd, EvenlyDiscretizedFunc targetMFD) {
+		double ratioSum = 0;
+		double totWt=0;
+		for(int i=0;i<mfd.size();i++) {
+			double wt = Math.sqrt(targetMFD.getY(i)); // square root of the expected number of observations
+			if(targetMFD.getY(i)>0) {
+// System.out.println(targetMFD.getX(i)+"\t"+wt); // HERE
+				ratioSum += wt*mfd.getY(i)/targetMFD.getY(i);
+				totWt += wt;
+			}
+		}
+		return ratioSum/totWt;
+	}
+	
+	
+	public static double getAveMFD_Ratio(EvenlyDiscretizedFunc mfd, EvenlyDiscretizedFunc targetMFD) {
+		double ratioSum = 0, num = 0;
+		for(int i=0;i<mfd.size();i++) {
+			if(targetMFD.getY(i)>0) {
+				ratioSum += mfd.getY(i)/targetMFD.getY(i);
+				num += 1;
+			}
+		}
+		return ratioSum/num;
+	}
+
+	
 	
 	/**
 	 * 
 	 */
 	public static void sectPlotsForMultSimulations(String dirName, String runDirPrefix, String runDirSuffix, 
-			int numSims, FaultSystemSolution sol) {
+			int numSims, FaultSystemSolution sol, double simDuration) {
 		
 		String outputInfoString="";
 		
@@ -2259,8 +2703,8 @@ public class LongTermTD_Simulator {
 		double minMeanRate = Double.MAX_VALUE;
 		double maxFractError = -Double.MAX_VALUE;
 		int indexForMaxFractError=-1;
-		HistogramFunction ratioHist = new HistogramFunction(0d,8d,201);
-		HistogramFunction ratioHistWted = new HistogramFunction(0d,8d,81);
+		HistogramFunction ratioHist = new HistogramFunction(0d,16d,401);
+		HistogramFunction ratioHistWted = new HistogramFunction(0d,16d,161);
 		for(int s=0;s<numSections;s++) {
 			DescriptiveStatistics simRateStats = new DescriptiveStatistics();
 			DescriptiveStatistics ratioStats = new DescriptiveStatistics();
@@ -2289,8 +2733,10 @@ public class LongTermTD_Simulator {
 			}
 			if(minSectRatio>ratioMeanArray[s]) minSectRatio=ratioMeanArray[s];
 			if(maxSectRatio<ratioMeanArray[s]) maxSectRatio=ratioMeanArray[s];
-			ratioHist.add(ratioMeanArray[s], 1.0);
-			ratioHistWted.add(ratioMeanArray[s], ratioMeanArray[s]/ratioStdomArray[s]);
+			if(ratioMeanArray[s]<ratioHist.getMaxX()) {
+				ratioHist.add(ratioMeanArray[s], 1.0);
+				ratioHistWted.add(ratioMeanArray[s], ratioMeanArray[s]/ratioStdomArray[s]);
+			}
 		}
 		ratioHist.normalizeBySumOfY_Vals();
 		ratioHistWted.normalizeBySumOfY_Vals();
@@ -2345,7 +2791,7 @@ public class LongTermTD_Simulator {
 
 		
 		ArrayList<XY_DataSet> histFuncs = new ArrayList<XY_DataSet>();
-		ratioHist.setInfo("mean="+(float)ratioHist.computeMean());
+		ratioHist.setInfo("mean="+(float)ratioHist.computeMean()+"\nCOV="+(float)ratioHist.computeCOV());
 		histFuncs.add(ratioHist);
 		ArrayList<PlotCurveCharacterstics> histPlotChars = new ArrayList<PlotCurveCharacterstics>();
 		histPlotChars.add(new PlotCurveCharacterstics(PlotLineType.HISTOGRAM, 1f, Color.GRAY));
@@ -2363,10 +2809,31 @@ public class LongTermTD_Simulator {
 				3d,
 				new File(outputDir,"sectRateRatiosHistogram"), 
 				false);
+
 		
-		DefaultXY_DataSet normErrorFunc = new DefaultXY_DataSet(targetRateArray,simFractStdom);
+		// make aveSectNormRI_Hist here so it can be used in what follows (this is plotted below)
+		HistogramFunction aveSectNormRI_Hist = new HistogramFunction(0.05,maxHistSize,0.10);
+		for(HistogramFunction hist:aveSectNormRI_HistList) {
+			for(int n=0;n<hist.size();n++)
+				aveSectNormRI_Hist.add(n,hist.getY(n)/(double)numSims);
+		}
+
+		// comute exected fractional stdom for each section
+		double[] expFractStdom = new double[simFractStdom.length];
+		double sectCOV = aveSectNormRI_Hist.computeCOV();
+		for(int i=0;i<simFractStdom.length;i++) {
+			expFractStdom[i] = sectCOV/Math.sqrt(targetRateArray[i]*numSims*simDuration);
+		}
+		
+		// plot computed normalized stdom as a function or rate for each section
+		DefaultXY_DataSet stdomVsRateFunc = new DefaultXY_DataSet(targetRateArray,simFractStdom);
 		ArrayList<XY_DataSet> funcs2 = new ArrayList<XY_DataSet>();
-		funcs2.add(normErrorFunc);
+		funcs2.add(stdomVsRateFunc);
+		// make the predicted stdom curve
+		DefaultXY_DataSet predStdomVsRateFunc = new DefaultXY_DataSet(targetRateArray,expFractStdom);
+		predStdomVsRateFunc.setInfo("Curve predicted from ave section COV and expected number of observations");
+		funcs2.add(predStdomVsRateFunc);
+		plotChars.add(new PlotCurveCharacterstics(PlotSymbol.FILLED_CIRCLE, 0.5f, Color.BLACK));
 		xAxisRange = new Range(1e-5,4e-2);
 		yAxisRange = null;
 		logX = true;
@@ -2377,6 +2844,7 @@ public class LongTermTD_Simulator {
 		ProbModelsPlottingUtils.writeAndOrPlotFuncs(funcs2,plotChars,"","Imposed Sect Part Rate (/yr)","simFractStdom",xAxisRange,yAxisRange,
 				logX,logY,widthInches,heightInches, new File(outputDir,"simFractStdomVsImposedRatioSectionPartRates"), popupWindow);
 
+		
 		
 		DefaultXY_DataSet ratioVsNormStdomFunc = new DefaultXY_DataSet(simFractStdom,ratioMeanArray);
 		ArrayList<XY_DataSet> funcs3 = new ArrayList<XY_DataSet>();
@@ -2391,7 +2859,7 @@ public class LongTermTD_Simulator {
 		ProbModelsPlottingUtils.writeAndOrPlotFuncs(funcs3,plotChars,"","simFractStdom","AveSimulated/Imposed Sect Part Rate (/yr)",xAxisRange,yAxisRange,
 				logX,logY,widthInches,heightInches, new File(outputDir,"simRateRatioVsSimFractStdom"), popupWindow);
 
-		// look only at data with very small fractStdom
+		// look only at data with very small fractStdom (0.5%)
 		int num =0;
 		double fractStdomThresh=0.005;
 		for(int s=0;s<simFractStdom.length;s++)
@@ -2433,12 +2901,7 @@ public class LongTermTD_Simulator {
 				"", "Select RatioSimFirstHalf Sect Part Rate (/yr)", "Select RatioSimLastHalf Sect Part Rate (/yr)", 0.5,2.0);
 
 		
-//		Make aveSectNormRI_Hist plot
-		HistogramFunction aveSectNormRI_Hist = new HistogramFunction(0.05,maxHistSize,0.10);
-		for(HistogramFunction hist:aveSectNormRI_HistList) {
-			for(int n=0;n<hist.size();n++)
-				aveSectNormRI_Hist.add(n,hist.getY(n)/(double)numSims);
-		}
+//		Plot aveSectNormRI_Hist
 //		System.out.println("maxHistSize="+maxHistSize);
 //		System.out.println(aveSectNormRI_Hist);
 		ArrayList<EvenlyDiscretizedFunc> funcList = new ArrayList<EvenlyDiscretizedFunc>();
@@ -2506,8 +2969,11 @@ public class LongTermTD_Simulator {
 			
 			List<Color> sectColorList = new ArrayList<>();
 			for (int i=0;i<ratioMeanArray.length;i++) {
-//				Color color = ProbModelsPlottingUtils.getRatioMapColor(ratioMeanArray[i], simFractStdom[i]);
-				Color color = ProbModelsPlottingUtils.getRatioMapColor(ratioMeanArray[i]/totMeanRatio, simFractStdom[i]);
+				Color color = Color.black; // default if ration unconstrained
+				if(expFractStdom[i]<0.02 && simFractStdom[i]<0.02) {
+//					color = ProbModelsPlottingUtils.getRatioMapColor(ratioMeanArray[i], simFractStdom[i]);
+					color = ProbModelsPlottingUtils.getRatioMapColor(ratioMeanArray[i]/totMeanRatio, simFractStdom[i]);
+				}
 				sectColorList.add(color);
 			}
 			outputInfoString+="\nRatio values in sectPartRatioMap are corrected by totMeanRatio\n\n";
@@ -2611,6 +3077,144 @@ public class LongTermTD_Simulator {
 		for(int i=0;i<hazardRate.size();i++)
 			hazardRate.set(i,pdf.getY(i)/(1.0-cdf.getInterpolatedY(pdf.getX(i))));
 		return hazardRate;
+	}
+	
+	
+	/**
+	 * Move this to ProbModelsPlottingUtils when the latter is moved out of opensha-dev
+	 * 
+	 * @param targetMFD
+	 * @param obsMFD
+	 * @param numYears
+	 * @param outputDir
+	 * @param faultName
+	 * @param yAxisRange
+	 */
+	public static void writeMFD_ComprisonPlot_WithPoissConfBounds(IncrementalMagFreqDist targetMFD, IncrementalMagFreqDist obsMFD,
+			int numYears, File outputDir, String faultName, Range yAxisRange, boolean includeRatios) {
+
+		String faultNameForFile = null;
+		if(faultName != null && !faultName.equals("")) 
+			faultNameForFile = faultName.replace(" ","").replace(",","_");
+
+		double maxX = Math.ceil(targetMFD.getMaxMagWithNonZeroRate()/0.5)*0.5;
+		double minX = Math.floor(targetMFD.getMinMagWithNonZeroRate()/0.5)*0.5;
+		
+		EvenlyDiscretizedFunc targetCumMFD = targetMFD.getCumRateDistWithOffset();
+		EvenlyDiscretizedFunc obsCumMFD = obsMFD.getCumRateDistWithOffset();
+		
+		EvenlyDiscretizedFunc minConfMFD = new EvenlyDiscretizedFunc(obsMFD.getMinX(),obsMFD.getMaxX(),obsMFD.size());
+		EvenlyDiscretizedFunc maxConfMFD = new EvenlyDiscretizedFunc(obsMFD.getMinX(),obsMFD.getMaxX(),obsMFD.size());
+		minConfMFD.setName("minConfMFD");
+		minConfMFD.setInfo("Lower 95% confidence bound based on stdom");
+		maxConfMFD.setName("maxConfMFD");
+		maxConfMFD.setInfo("Upper 95% confidence bound based on stdom");
+
+		EvenlyDiscretizedFunc minConfCumMFD = new EvenlyDiscretizedFunc(obsCumMFD.getMinX(),obsCumMFD.getMaxX(),obsCumMFD.size());
+		EvenlyDiscretizedFunc maxConfCumMFD = new EvenlyDiscretizedFunc(obsCumMFD.getMinX(),obsCumMFD.getMaxX(),obsCumMFD.size());
+		minConfCumMFD.setName("minConfCumMFD");
+		minConfCumMFD.setInfo("Lower 95% confidence bound based on stdom");
+		maxConfCumMFD.setName("maxConfCumMFD");
+		maxConfCumMFD.setInfo("Upper 95% confidence bound based on stdom");
+
+		for(int i=0;i<obsMFD.size();i++) {
+			int numObs = (int)Math.round(obsMFD.getY(i)*numYears);				
+			if(targetMFD.getY(i)>0) {
+				double[] rateArray = PoissonRateFromNinT_Calc.getRatesFor95PercentConfBounds(numObs, numYears);
+				minConfMFD.set(i,rateArray[0]);
+				maxConfMFD.set(i,rateArray[1]);					
+			}
+			else {
+				minConfMFD.set(i,0.0);
+				maxConfMFD.set(i,0.0);					
+			}
+		}
+		
+		for(int i=0;i<obsCumMFD.size();i++) {
+			int numObs = (int)Math.round(obsCumMFD.getY(i)*numYears);				
+			if(targetCumMFD.getY(i)>0) {
+				double[] rateArray = PoissonRateFromNinT_Calc.getRatesFor95PercentConfBounds(numObs, numYears);
+				minConfCumMFD.set(i,rateArray[0]);
+				maxConfCumMFD.set(i,rateArray[1]);					
+			}
+			else {
+				minConfCumMFD.set(i,0.0);
+				maxConfCumMFD.set(i,0.0);					
+			}
+		}
+		
+		UncertainArbDiscFunc obdsUncertMFD = new UncertainArbDiscFunc(obsMFD,minConfMFD,maxConfMFD,UncertaintyBoundType.CONF_95);
+		UncertainArbDiscFunc obdsUncertCumMFD = new UncertainArbDiscFunc(obsCumMFD,minConfCumMFD,maxConfCumMFD,UncertaintyBoundType.CONF_95);
+		ArrayList<XY_DataSet> funcs = new ArrayList<XY_DataSet>();
+		funcs.add(targetMFD);
+		funcs.add(obdsUncertMFD);
+		funcs.add(obdsUncertMFD);
+//		funcs.add(obsMFD);
+//		funcs.add(minConfMFD);
+//		funcs.add(maxConfMFD);
+		funcs.add(targetCumMFD);
+		funcs.add(obdsUncertCumMFD);
+		funcs.add(obdsUncertCumMFD);
+//		funcs.add(obsCumMFD);
+//		funcs.add(minConfCumMFD);
+//		funcs.add(maxConfCumMFD);
+		ArrayList<PlotCurveCharacterstics> plotChars = new ArrayList<PlotCurveCharacterstics>();
+		plotChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, Color.BLACK));
+		plotChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, Color.RED));
+		plotChars.add(new PlotCurveCharacterstics(PlotLineType.SHADED_UNCERTAIN_TRANS, 1f, new Color(255,128,128)));
+//		plotChars.add(new PlotCurveCharacterstics(PlotLineType.DOTTED, 1f, Color.RED));
+		plotChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 2f, Color.BLACK));
+		plotChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 2f, Color.RED));
+		plotChars.add(new PlotCurveCharacterstics(PlotLineType.SHADED_UNCERTAIN_TRANS, 2f, new Color(255,128,128)));
+//		plotChars.add(new PlotCurveCharacterstics(PlotLineType.DOTTED, 2f, Color.RED));
+
+		String plotName = faultName+" MFD Comparsion";
+		String xAxisLabel = "Magnitude";
+		String yAxisLabel = "Rate (per year)";
+		Range xAxisRange = new Range(minX,maxX);
+		boolean logX = false;
+		boolean logY = true;
+		double widthInches = 7; // inches
+		double heightInches = 6; // inches
+		String fileNamePrefix = "magFreqDists";
+		if(faultNameForFile != null)
+			fileNamePrefix = faultNameForFile+"_"+fileNamePrefix;
+		boolean popupWindow = false;
+		ProbModelsPlottingUtils.writeAndOrPlotFuncs(funcs,plotChars,plotName,xAxisLabel,yAxisLabel,xAxisRange,yAxisRange,
+				logX,logY,widthInches,heightInches, new File(outputDir,fileNamePrefix), popupWindow);
+		
+		
+		// make ratio plot
+		if(includeRatios) {
+			EvenlyDiscretizedFunc obsRatioMFD = new EvenlyDiscretizedFunc(targetMFD.getMinX(),targetMFD.getMaxX(),targetMFD.size());
+			EvenlyDiscretizedFunc minConfRatioMFD = new EvenlyDiscretizedFunc(targetMFD.getMinX(),targetMFD.getMaxX(),targetMFD.size());
+			EvenlyDiscretizedFunc maxConfRatioMFD = new EvenlyDiscretizedFunc(targetMFD.getMinX(),targetMFD.getMaxX(),targetMFD.size());
+			EvenlyDiscretizedFunc targetRatioMFD = new EvenlyDiscretizedFunc(targetMFD.getMinX(),targetMFD.getMaxX(),targetMFD.size());
+			minConfRatioMFD.setName("minConfRatioMFD");
+			minConfRatioMFD.setInfo("Lower 95% confidence bound based on stdom");
+			maxConfRatioMFD.setName("maxConfRatioMFD");
+			maxConfRatioMFD.setInfo("Upper 95% confidence bound based on stdom");
+			for(int m=0;m<targetMFD.size();m++) {
+				targetRatioMFD.set(m,targetMFD.getY(m)/targetMFD.getY(m));
+				obsRatioMFD.set(m,obsMFD.getY(m)/targetMFD.getY(m));
+				minConfRatioMFD.set(m,minConfMFD.getY(m)/targetMFD.getY(m));
+				maxConfRatioMFD.set(m,maxConfMFD.getY(m)/targetMFD.getY(m));
+			}
+			funcs = new ArrayList<XY_DataSet>();
+			funcs.add(targetRatioMFD);
+			funcs.add(obsRatioMFD);
+			funcs.add(minConfRatioMFD);
+			funcs.add(maxConfRatioMFD);
+			plotName = "MFD Ratio (to target)";
+			yAxisLabel = "Ratio";
+			yAxisRange = new Range(0,2);
+			logY = false;
+			fileNamePrefix = "magFreqDistRatio";
+			if(faultNameForFile != null)
+				fileNamePrefix = faultNameForFile+"_"+fileNamePrefix;
+			ProbModelsPlottingUtils.writeAndOrPlotFuncs(funcs,plotChars,plotName,xAxisLabel,yAxisLabel,xAxisRange,yAxisRange,
+					logX,logY,widthInches,heightInches, new File(outputDir,fileNamePrefix), popupWindow);
+		}
 	}
 
 

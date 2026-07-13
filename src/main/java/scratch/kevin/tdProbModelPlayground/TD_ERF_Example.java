@@ -34,7 +34,7 @@ public class TD_ERF_Example {
 		return NSHM23_WUS_BranchAveragedERF.loadSolution();
 	}
 	
-	static FaultSystemSolution fetchU3_BA() throws IOException {
+	public static FaultSystemSolution fetchU3_BA() throws IOException {
 		File storeDir = MeanUCERF3.getStoreDir();
 		File solFile = MeanUCERF3.checkDownload(
 				new File(storeDir, "cached_FM3_1_dep100.0_depMean_rakeMean.zip")).join();

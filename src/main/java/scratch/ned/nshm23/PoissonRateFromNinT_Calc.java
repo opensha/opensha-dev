@@ -66,7 +66,21 @@ public class PoissonRateFromNinT_Calc {
 		GammaDistribution gd = getGammaDistribution(n,t);
 		return gd.inverseCumulativeProbability(cumProb);
 	}
+
 	
+	/**
+	 * This returns an array for which the first and second elements are the 
+	 * 2.5% and 97.5% confidence bounds, respectively
+	 * @param n
+	 * @param t
+	 * @return
+	 */
+	public static double[] getRatesFor95PercentConfBounds(int n, double t) {
+		GammaDistribution gd = getGammaDistribution(n,t);
+		double[] rateArray = {gd.inverseCumulativeProbability(0.025),gd.inverseCumulativeProbability(0.975)};
+		return rateArray;
+	}
+
 	
 	/**
 	 * This fills in the cumulative probability (y-axis value) for each rate on the
