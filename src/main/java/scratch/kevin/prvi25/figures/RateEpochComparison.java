@@ -10,6 +10,7 @@ import java.util.List;
 import org.jfree.chart.ui.RectangleAnchor;
 import org.jfree.data.Range;
 import org.opensha.commons.data.CSVFile;
+import org.opensha.commons.data.WeightedList;
 import org.opensha.commons.data.function.DiscretizedFunc;
 import org.opensha.commons.data.function.EvenlyDiscretizedFunc;
 import org.opensha.commons.data.uncertainty.UncertainArbDiscFunc;
@@ -63,7 +64,7 @@ public class RateEpochComparison {
 		double sumNobs1973 = 0d;
 		
 		List<UncertainArbDiscFunc> avgMFDs = new ArrayList<>();
-		List<List<UncertainArbDiscFunc>> epochMFDs = new ArrayList<>();
+		List<WeightedList<UncertainArbDiscFunc>> epochMFDs = new ArrayList<>();
 		
 		PRVI25_SeismicityRegions[] regions = PRVI25_SeismicityRegions.values();
 		for (PRVI25_SeismicityRegions reg : regions) {
@@ -105,9 +106,8 @@ public class RateEpochComparison {
 				throw new IllegalStateException("Unknown region: "+reg);
 			}
 			
-			List<UncertainBoundedIncrMagFreqDist> epochBounds = new ArrayList<>();
-			List<UncertainArbDiscFunc> epochCmlBounds = new ArrayList<>();
-			List<Double> epochWeights = new ArrayList<>();
+			WeightedList<UncertainBoundedIncrMagFreqDist> epochBounds = new WeightedList<>();
+			WeightedList<UncertainArbDiscFunc> epochCmlBounds = new WeightedList<>();
 			
 			for (int e=0; e<epochs.length; e++) {
 				SeismicityRateModel model;
@@ -158,13 +158,13 @@ public class RateEpochComparison {
 				cmlFuncs.add(cmlPref);
 				cmlChars.add(incrChars.get(incrChars.size()-1));
 				
-				epochBounds.add(bounded);
-				epochCmlBounds.add(new UncertainArbDiscFunc(cmlPref, cmlLower, cmlUpper, bounded.getBoundType(), null));
-				epochWeights.add(epochs[e].getNodeWeight(null));
+				double weight = epochs[e].getNodeWeight();
+				epochBounds.add(bounded, weight);
+				epochCmlBounds.add(new UncertainArbDiscFunc(cmlPref, cmlLower, cmlUpper, bounded.getBoundType(), null), weight);
 			}
 			
-			UncertainBoundedIncrMagFreqDist averageBounded = PRVI25_SeismicityRateEpoch.averageUncert(epochBounds, epochWeights);
-			UncertainArbDiscFunc averageCmlBounded = PRVI25_SeismicityRateEpoch.averageUncertCml(epochCmlBounds, epochWeights);
+			UncertainBoundedIncrMagFreqDist averageBounded = SeismicityRateModel.averageUncert(epochBounds);
+			UncertainArbDiscFunc averageCmlBounded = SeismicityRateModel.averageUncertCml(epochCmlBounds);
 			
 			avgMFDs.add(averageCmlBounded);
 			epochMFDs.add(epochCmlBounds);
@@ -293,7 +293,7 @@ public class RateEpochComparison {
 		double[] epochSums = new double[epochs.length];
 		for (int r=0; r<regions.length; r++) {
 			UncertainArbDiscFunc avg = avgMFDs.get(r);
-			List<UncertainArbDiscFunc> byEpoch = epochMFDs.get(r);
+			WeightedList<UncertainArbDiscFunc> byEpoch = epochMFDs.get(r);
 			
 			System.out.println(regions[r].getName());
 			for (double mag : regCmlMags) {
@@ -312,7 +312,7 @@ public class RateEpochComparison {
 				System.out.println("\tM>"+(float)mag+" rate="+(float)rate+", ri="+(float)ri+" years");
 				if (mag == 5d) {
 					for (int e=0; e<epochs.length; e++) {
-						rate = byEpoch.get(e).getY(closestIndex);
+						rate = byEpoch.getValue(e).getY(closestIndex);
 						System.out.println("\t\t"+epochs[e].getShortName()+": rate="+(float)rate);
 						epochSums[e] += rate;
 					}

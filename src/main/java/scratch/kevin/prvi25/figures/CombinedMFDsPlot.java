@@ -18,6 +18,7 @@ import org.jfree.chart.ui.RectangleAnchor;
 import org.jfree.chart.ui.TextAnchor;
 import org.jfree.data.Range;
 import org.opensha.commons.data.CSVFile;
+import org.opensha.commons.data.WeightedList;
 import org.opensha.commons.data.function.DiscretizedFunc;
 import org.opensha.commons.data.function.EvenlyDiscretizedFunc;
 import org.opensha.commons.data.uncertainty.UncertainArbDiscFunc;
@@ -530,11 +531,10 @@ public class CombinedMFDsPlot {
 					System.out.println(combObsCml);
 					
 					if (useRateModelUncert) {
-						List<UncertainBoundedIncrMagFreqDist> incrBounds95funcs = new ArrayList<>();
-						List<UncertainBoundedIncrMagFreqDist> incrBounds68funcs = new ArrayList<>();
-						List<UncertainArbDiscFunc> cmlBounds95funcs = new ArrayList<>();
-						List<UncertainArbDiscFunc> cmlBounds68funcs = new ArrayList<>();
-						List<Double> epochWeights = new ArrayList<>();
+						WeightedList<UncertainBoundedIncrMagFreqDist> incrBounds95funcs = new WeightedList<>();
+						WeightedList<UncertainBoundedIncrMagFreqDist> incrBounds68funcs = new WeightedList<>();
+						WeightedList<UncertainArbDiscFunc> cmlBounds95funcs = new WeightedList<>();
+						WeightedList<UncertainArbDiscFunc> cmlBounds68funcs = new WeightedList<>();
 						
 						for (PRVI25_SeismicityRateEpoch epoch : PRVI25_SeismicityRateEpoch.values()) {
 							double weight = epoch.getNodeWeight(null);
@@ -602,17 +602,16 @@ public class CombinedMFDsPlot {
 							UncertainArbDiscFunc cmlBounds95 = new UncertainArbDiscFunc(averageCml, cml2p5, cml97p5, UncertaintyBoundType.CONF_95);
 							UncertainArbDiscFunc cmlBounds68 = new UncertainArbDiscFunc(averageCml, cml16, cml84, UncertaintyBoundType.CONF_68);
 							
-							incrBounds95funcs.add(incrBounds95);
-							incrBounds68funcs.add(incrBounds68);
-							cmlBounds95funcs.add(cmlBounds95);
-							cmlBounds68funcs.add(cmlBounds68);
-							epochWeights.add(weight);
+							incrBounds95funcs.add(incrBounds95, weight);
+							incrBounds68funcs.add(incrBounds68, weight);
+							cmlBounds95funcs.add(cmlBounds95, weight);
+							cmlBounds68funcs.add(cmlBounds68, weight);
 						}
 						
-						UncertainBoundedIncrMagFreqDist incrBounds95 = PRVI25_SeismicityRateEpoch.averageUncert(incrBounds95funcs, epochWeights);
-						UncertainBoundedIncrMagFreqDist incrBounds68 = PRVI25_SeismicityRateEpoch.averageUncert(incrBounds68funcs, epochWeights);
-						UncertainArbDiscFunc cmlBounds95 = PRVI25_SeismicityRateEpoch.averageUncertCml(cmlBounds95funcs, epochWeights);
-						UncertainArbDiscFunc cmlBounds68 = PRVI25_SeismicityRateEpoch.averageUncertCml(cmlBounds68funcs, epochWeights);
+						UncertainBoundedIncrMagFreqDist incrBounds95 = SeismicityRateModel.averageUncert(incrBounds95funcs);
+						UncertainBoundedIncrMagFreqDist incrBounds68 = SeismicityRateModel.averageUncert(incrBounds68funcs);
+						UncertainArbDiscFunc cmlBounds95 = SeismicityRateModel.averageUncertCml(cmlBounds95funcs);
+						UncertainArbDiscFunc cmlBounds68 = SeismicityRateModel.averageUncertCml(cmlBounds68funcs);
 						
 						incrBounds95.setName("68% and 95% bounds");
 						myIncrFuncs.add(incrBounds95);

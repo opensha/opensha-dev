@@ -48,10 +48,10 @@ public class SlipProjectionFigures {
 		File outputDir = new File("/tmp/nshm27_slip_projection");
 		Preconditions.checkState(outputDir.exists() || outputDir.mkdir());
 
-		NSHM27_InterfaceFaultModels fm = NSHM27_InterfaceFaultModels.AMSAM_V1;
-		double maxSlip = 150;
-//		NSHM27_InterfaceFaultModels fm = NSHM27_InterfaceFaultModels.GNMI_V1;
-//		double maxSlip = 30d;
+//		NSHM27_InterfaceFaultModels fm = NSHM27_InterfaceFaultModels.AMSAM_V1;
+//		double maxSlip = 120;
+		NSHM27_InterfaceFaultModels fm = NSHM27_InterfaceFaultModels.GNMI_V1;
+		double maxSlip = 20d;
 		
 		List<? extends FaultSection> sects = fm.buildSubSects(fm);
 		

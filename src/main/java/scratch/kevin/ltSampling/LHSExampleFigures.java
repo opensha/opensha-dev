@@ -40,7 +40,7 @@ import org.opensha.commons.logicTree.LogicTreeLevel.SamplingMethod;
 import org.opensha.commons.logicTree.LogicTreeNode;
 import org.opensha.commons.logicTree.LogicTreeNode.SimpleValuedNode;
 import org.opensha.commons.logicTree.LogicTreeNode.ValuedLogicTreeNode;
-import org.opensha.commons.logicTree.LogicTreePairwiseLHSIteration;
+import org.opensha.commons.logicTree.lhs.PairwiseLogicTreeNodeSwapIteration;
 import org.opensha.commons.mapping.gmt.elements.GMT_CPT_Files;
 import org.opensha.commons.util.cpt.CPT;
 
@@ -345,7 +345,7 @@ public class LHSExampleFigures {
 							levelFixedWeights.add(weights);
 						}
 					}
-					LogicTreePairwiseLHSIteration<LogicTreeNode> iter = new LogicTreePairwiseLHSIteration<>(
+					PairwiseLogicTreeNodeSwapIteration<LogicTreeNode> iter = new PairwiseLogicTreeNodeSwapIteration<>(
 							levels, tree2.getBranches(), levelFixedWeights);
 					
 					iter.setTrackSwaps(true);

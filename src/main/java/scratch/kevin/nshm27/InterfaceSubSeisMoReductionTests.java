@@ -33,6 +33,7 @@ import gov.usgs.earthquake.nshmp.erf.nshm27.logicTree.NSHM27_DeclusteringAlgorit
 import gov.usgs.earthquake.nshmp.erf.nshm27.logicTree.NSHM27_InterfaceDeformationModels;
 import gov.usgs.earthquake.nshmp.erf.nshm27.logicTree.NSHM27_InterfaceFaultModels;
 import gov.usgs.earthquake.nshmp.erf.nshm27.logicTree.NSHM27_LogicTree;
+import gov.usgs.earthquake.nshmp.erf.nshm27.logicTree.NSHM27_SeisClassificationMethod;
 import gov.usgs.earthquake.nshmp.erf.nshm27.logicTree.NSHM27_SeisRateModelBranch;
 import gov.usgs.earthquake.nshmp.erf.nshm27.logicTree.NSHM27_SeisSmoothingAlgorithms;
 import gov.usgs.earthquake.nshmp.erf.nshm27.util.InterfaceGridAssociations;
@@ -105,7 +106,8 @@ public class InterfaceSubSeisMoReductionTests {
 		
 		double[] mMins = {6.55, 7.05, 7.55};
 		for (double mMin : mMins) {
-			IncrementalMagFreqDist seisMFD = rateModel.build(reg, TectonicRegionType.SUBDUCTION_INTERFACE, refMFD,
+			IncrementalMagFreqDist seisMFD = rateModel.build(reg, NSHM27_SeisClassificationMethod.PROFACE,
+					TectonicRegionType.SUBDUCTION_INTERFACE, refMFD,
 					refMFD.getX(refMFD.getClosestXIndex(mMin-0.1)));
 //			System.out.println("Seis MFD for interface Mmin="+mMin+":\n"+seisMFD);
 			double[] impliedMoments = new double[sects.size()];
