@@ -64,10 +64,14 @@ import net.mahdilamb.colormap.Colors;
 public class InterfaceLogicTreeMFDExploration {
 
 	public static void main(String[] args) throws IOException {
-		File outputDir = new File("/tmp/interface_mfd_exploration");
+		File outputDir = new File(NSHM27_PaperPaths.FIGURES_DIR, "interface_mfd_exploration");
 		Preconditions.checkState(outputDir.exists() || outputDir.mkdir());
 		ModuleContainer.VERBOSE_DEFAULT = false;
 		NSHM27_SeismicityRegions seisReg = NSHM27_SeismicityRegions.AMSAM;
+		
+		outputDir = new File(outputDir, seisReg.name());
+		Preconditions.checkState(outputDir.exists() || outputDir.mkdir());
+		
 		TectonicRegionType trt = TectonicRegionType.SUBDUCTION_INTERFACE;
 
 		LogicTreeBranch<LogicTreeNode> branch = NSHM27_LogicTree.buildDefault(seisReg, trt, false);
