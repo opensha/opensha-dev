@@ -239,8 +239,7 @@ public class InterfaceLogicTreeMFDExploration {
 				double[] fractiles = {0d, 0.025, 0.16, 0.5, 0.84, 0.975, 1d};
 				String fractileNames = "p[0, 2.5, 16, 84, 97.5, 100]";
 //				Color transColor = new Color(0, 0, 0, 60);
-				Color transColor = Colors.tab_blue;
-				transColor = new Color(transColor.getRed(), transColor.getGreen(), transColor.getBlue(), 80);
+				Color base = Colors.tab_blue;
 				IncrementalMagFreqDist[] incrFractiles = new IncrementalMagFreqDist[fractiles.length];
 				EvenlyDiscretizedFunc[] cmlFractiles = new EvenlyDiscretizedFunc[fractiles.length];
 				for (int f=0; f<fractiles.length; f++) {
@@ -259,11 +258,11 @@ public class InterfaceLogicTreeMFDExploration {
 				UncertainBoundedIncrMagFreqDist incrExtrema = new UncertainBoundedIncrMagFreqDist(
 						incrMedian, incrFractiles[0], incrFractiles[6], null);
 				UncertainArbDiscFunc cmlExtrema = new UncertainArbDiscFunc(cmlMedian, cmlFractiles[0], cmlFractiles[6]);
-				incrExtrema.setName(fractileNames);
-				cmlExtrema.setName(fractileNames);
+				incrExtrema.setName(null);
+				cmlExtrema.setName(null);
 				incrFuncs.add(incrExtrema);
 				cmlFuncs.add(cmlExtrema);
-				chars.add(new PlotCurveCharacterstics(PlotLineType.SHADED_UNCERTAIN, 1f, transColor));
+				chars.add(new PlotCurveCharacterstics(PlotLineType.SHADED_UNCERTAIN, 1f, new Color(base.getRed(), base.getGreen(), base.getBlue(), 50)));
 				
 				UncertainBoundedIncrMagFreqDist incr95 = new UncertainBoundedIncrMagFreqDist(
 						incrMedian, incrFractiles[1], incrFractiles[5], null);
@@ -272,16 +271,16 @@ public class InterfaceLogicTreeMFDExploration {
 				cml95.setName(null);
 				incrFuncs.add(incr95);
 				cmlFuncs.add(cml95);
-				chars.add(new PlotCurveCharacterstics(PlotLineType.SHADED_UNCERTAIN, 1f, transColor));
+				chars.add(new PlotCurveCharacterstics(PlotLineType.SHADED_UNCERTAIN, 1f, new Color(base.getRed(), base.getGreen(), base.getBlue(), 70)));
 				
 				UncertainBoundedIncrMagFreqDist incr68 = new UncertainBoundedIncrMagFreqDist(
 						incrMedian, incrFractiles[2], incrFractiles[4], null);
 				UncertainArbDiscFunc cml68 = new UncertainArbDiscFunc(cmlMedian, cmlFractiles[2], cmlFractiles[4]);
-				incr68.setName(null);
-				cml68.setName(null);
+				incr68.setName(fractileNames);
+				cml68.setName(fractileNames);
 				incrFuncs.add(incr68);
 				cmlFuncs.add(cml68);
-				chars.add(new PlotCurveCharacterstics(PlotLineType.SHADED_UNCERTAIN, 1f, transColor));
+				chars.add(new PlotCurveCharacterstics(PlotLineType.SHADED_UNCERTAIN, 1f, new Color(base.getRed(), base.getGreen(), base.getBlue(), 100)));
 				
 				IncrementalMagFreqDist baseline = defaultMFD.deepClone();
 				baseline.setName(defaultValue.getName());
