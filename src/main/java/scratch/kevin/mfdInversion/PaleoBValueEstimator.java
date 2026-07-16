@@ -19,6 +19,7 @@ import org.apache.commons.statistics.distribution.UniformContinuousDistribution;
 import org.jfree.data.Range;
 import org.opensha.commons.data.WeightedContinuousDistribution;
 import org.opensha.commons.data.WeightedList;
+import org.opensha.commons.data.function.ArbitrarilyDiscretizedFunc;
 import org.opensha.commons.data.function.DiscretizedFunc;
 import org.opensha.commons.data.function.EvenlyDiscrFuncContinuousDistribution;
 import org.opensha.commons.data.function.EvenlyDiscrFuncContinuousDistribution.DiscretizationType;
@@ -34,9 +35,11 @@ import org.opensha.commons.logicTree.LogicTreeNode;
 import org.opensha.commons.util.FileNameUtils;
 import org.opensha.sha.earthquake.faultSysSolution.FaultSystemRupSet;
 import org.opensha.sha.earthquake.faultSysSolution.inversion.constraints.impl.UncertainDataConstraint.SectMappedUncertainDataConstraint;
+import org.opensha.sha.earthquake.faultSysSolution.modules.ClusterRuptures;
 import org.opensha.sha.earthquake.faultSysSolution.modules.InversionTargetMFDs;
 import org.opensha.sha.earthquake.faultSysSolution.modules.NamedFaults;
 import org.opensha.sha.earthquake.faultSysSolution.modules.PaleoseismicConstraintData;
+import org.opensha.sha.earthquake.faultSysSolution.ruptures.plausibility.impl.prob.RuptureProbabilityCalc.BinaryRuptureProbabilityCalc;
 import org.opensha.sha.earthquake.faultSysSolution.util.FaultSysTools;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.NSHM23_InvConfigFactory;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.data.NSHM23_PaleoDataLoader;
@@ -55,7 +58,7 @@ import net.mahdilamb.colormap.Colors;
 public class PaleoBValueEstimator {
 
 	public static void main(String[] args) throws IOException {
-		File outputDir = new File("/tmp/sect_b_val_est");
+		File outputDir = new File("/home/kevin/OpenSHA/nshm23/paleo_b_value");
 		Preconditions.checkState(outputDir.exists() || outputDir.mkdir());
 		LogicTreeBranch<LogicTreeNode> branch = NSHM23_LogicTreeBranch.DEFAULT_ON_FAULT.copy();
 		branch.setValue(NSHM23_DeformationModels.AVERAGE);
@@ -65,6 +68,15 @@ public class PaleoBValueEstimator {
 		NSHM23_InvConfigFactory factory = new NSHM23_InvConfigFactory();
 		factory.setCacheDir(new File("/home/kevin/OpenSHA/nshm23/rup_sets/cache"));
 		FaultSystemRupSet rs = factory.buildRuptureSet(branch, FaultSysTools.defaultNumThreads());
+		
+		ClusterRuptures cRups = rs.requireModule(ClusterRuptures.class);
+		BinaryRuptureProbabilityCalc exclusionModel = NSHM23_InvConfigFactory.getExclusionModel(rs, branch, cRups);
+		BitSet includedRups = exclusionModel == null ? null : new BitSet(rs.getNumRuptures());
+		if (exclusionModel != null) {
+			for (int r=0; r<rs.getNumRuptures(); r++)
+				if (exclusionModel.isRupAllowed(cRups.get(r), false))
+					includedRups.set(r);
+		}
 		
 		ContinuousDistribution priorDist = UniformContinuousDistribution.of(0d, 1d);
 		EvenlyDiscretizedFunc bVals = new EvenlyDiscretizedFunc(0d, 1d, 11);
@@ -242,7 +254,7 @@ public class PaleoBValueEstimator {
 		
 		System.out.println("Building section weighted posteriors");
 		int numSects = rs.getNumSections();
-		List<CompletableFuture<ContinuousDistribution>> sectBDistFutures = new ArrayList<>(numSects);
+		List<CompletableFuture<SectResult>> sectBDistFutures = new ArrayList<>(numSects);
 		
 		for (int s=0; s<numSects; s++) {
 			int sectIndex = s;
@@ -256,51 +268,104 @@ public class PaleoBValueEstimator {
 				} else if (parentPaleoIndexes.containsKey(parentID)) {
 					connectedPaleoIndexes = parentPaleoIndexes.get(parentID);
 				} else {
-					// no paleo data, use prior
-					return priorDist;
+					// no connected paleo data, use prior
+					return new SectResult(priorDist, null, 1d);
 				}
 				
-				Preconditions.checkState(!connectedPaleoIndexes.isEmpty());
-				// for each paleo site, estimate fraction of paleo-visible co-ruptures with that site
 				IncrementalMagFreqDist mfd = priorMeanTargetMFDs.getOnFaultSupraSeisNucleationMFDs().get(sectIndex);
+				
+				if (mfd.calcSumOfY_Vals() == 0d)
+					return new SectResult(priorDist, null, 1d);
+				
+				/*
+				 * Weighting scheme:
+				 * 
+				 * figure out estimated fractional rate of each rupture by converting the MFD to estimated participation
+				 * rates and dividing the total rate for each magnitude bin evenly among them
+				 * 
+				 * for each rupture, give that fractional rate as weight to each paleo PDF that it hits (divided evenly
+				 * among them, or to the prior if none)
+				 */
+				
+				// bin ruptures by magnitude
+				int mMinIndex = mfd.getClosestXIndex(rs.getMinMagForSection(sectIndex));
+				int mMaxIndex = mfd.getClosestXIndex(rs.getMaxMagForSection(sectIndex));
+				int numMag = 1 + mMaxIndex - mMinIndex;
+				List<List<Integer>> magRupIndexes = new ArrayList<>(numMag);
+				for (int m=0; m<numMag; m++)
+					magRupIndexes.add(new ArrayList<>());
+				double[] rupAreaSums = new double[numMag];
+				for (int rupIndex : rs.getRupturesForSection(sectIndex)) {
+					if (includedRups == null || includedRups.get(rupIndex)) {
+						double mag = rs.getMagForRup(rupIndex);
+						int magIndex = mfd.getClosestXIndex(mag) - mMinIndex;
+						rupAreaSums[magIndex] += rs.getAreaForRup(rupIndex);
+						magRupIndexes.get(magIndex).add(rupIndex);
+					}
+				}
+				
+				double sectArea = rs.getAreaForSection(sectIndex);
+				
+				double[] ratePerPaleo = new double[paleoConstraints.size()];
+				double rateNoPaleo = 0d;
+				BitSet rupPaleoIndexes = new BitSet(paleoConstraints.size());
+				double sectParticRate = 0d;
+				for (int m=0; m<numMag; m++) {
+					List<Integer> rups = magRupIndexes.get(m);
+					if (rups.isEmpty())
+						continue;
+					double nuclRate = mfd.getY(m+mMinIndex);
+					if (nuclRate == 0d)
+						continue;
+					double particScalar = rupAreaSums[m] / (rups.size() * sectArea);
+					double particRate = nuclRate * particScalar;
+					double particRateEach = particRate / rups.size();
+					Preconditions.checkState(Double.isFinite(particRateEach) && particRateEach > 0d);
+					for (int rupIndex : rups) {
+						rupPaleoIndexes.clear();
+						for (int paleoIndex : connectedPaleoIndexes)
+							if (siteRups[paleoIndex].get(rupIndex))
+								rupPaleoIndexes.set(paleoIndex);
+						int numPaleo = rupPaleoIndexes.cardinality();
+						if (numPaleo == 0) {
+							// rupture hits no paleo sites
+							rateNoPaleo += particRateEach;
+						} else {
+							double rupRatePerPaleo = particRateEach / (double)numPaleo;
+							for (int i = rupPaleoIndexes.nextSetBit(0); i >= 0; i = rupPaleoIndexes.nextSetBit(i + 1))
+								ratePerPaleo[i] += rupRatePerPaleo;
+						}
+					}
+					sectParticRate += particRate;
+				}
+				
+				Preconditions.checkState(sectParticRate > 0d);
+				
+				// normalize rates to weights
+				rateNoPaleo /= sectParticRate;
+				for (int p=0; p<ratePerPaleo.length; p++)
+					ratePerPaleo[p] /= sectParticRate;
+				
 				WeightedList<ContinuousDistribution> distWeights = new WeightedList<>();
+				
+				if (rateNoPaleo > 0d) {
+					// weight for ruptures that hit no paleo sites
+					distWeights.add(priorDist, rateNoPaleo);
+				}
+				
 				for (int paleoIndex : connectedPaleoIndexes) {
-					int paleoSectIndex = paleoConstraints.get(paleoIndex).sectionIndex;
-					
-					double[] sumParticScalars = new double[mfd.size()];
-					double[] sumPaleoScalars = new double[mfd.size()];
-					int[] binCounts = new int[mfd.size()];
-					double sectArea = rs.getAreaForSection(sectIndex);
-					for (int rupIndex : rs.getRupturesForSection(sectIndex)) {
-						int magIndex = mfd.getClosestXIndex(rs.getMagForRup(rupIndex));
-						binCounts[magIndex]++;
-						double rupArea = rs.getAreaForRup(rupIndex);
-						sumParticScalars[magIndex] += rupArea/sectArea;
-						if (siteRups[paleoIndex].get(rupIndex)) {
-							// this rupture includes this paleo site
-							double paleoVisibleProb =  paleoProb.getProbPaleoVisible(rs, rupIndex, paleoSectIndex);
-							sumPaleoScalars[magIndex] += paleoVisibleProb;
-						}
-					}
-					double corupPaleoVisibleRate = 0d;
-					for (int m=0; m<mfd.size(); m++) {
-						double totNuclRate = mfd.getY(m);
-						if (totNuclRate > 0d) {
-							double particRate = totNuclRate * sumParticScalars[m]/binCounts[m];
-							corupPaleoVisibleRate += particRate * sumPaleoScalars[m]/binCounts[m];
-						}
-					}
-					if (corupPaleoVisibleRate > 0d)
-						distWeights.add(sitePosteriorDists.get(paleoIndex), corupPaleoVisibleRate);
+					double paleoRate = ratePerPaleo[paleoIndex];
+					if (paleoRate > 0d)
+						distWeights.add(sitePosteriorDists.get(paleoIndex), paleoRate);
 				}
 				Preconditions.checkState(!distWeights.isEmpty());
-				distWeights.normalize();
-				return new WeightedContinuousDistribution(distWeights);
+				Preconditions.checkState(distWeights.isNormalized());
+				return new SectResult(new WeightedContinuousDistribution(distWeights), ratePerPaleo, rateNoPaleo);
 			}));
 		}
 
-		List<ContinuousDistribution> sectBDists = new ArrayList<>(numSects);
-		for (CompletableFuture<ContinuousDistribution> future : sectBDistFutures)
+		List<SectResult> sectBDists = new ArrayList<>(numSects);
+		for (CompletableFuture<SectResult> future : sectBDistFutures)
 			sectBDists.add(future.join());
 		
 		System.out.println("DONE, plotting");
@@ -315,7 +380,12 @@ public class PaleoBValueEstimator {
 		PlotCurveCharacterstics parentDistChar = new PlotCurveCharacterstics(PlotLineType.SOLID, 2f, Colors.tab_blue);
 		PlotCurveCharacterstics otherDistChar = new PlotCurveCharacterstics(PlotLineType.DOTTED, 1f, Color.DARK_GRAY);
 		PlotCurveCharacterstics posteriorDistChar = new PlotCurveCharacterstics(PlotLineType.DOTTED, 2f, Colors.tab_orange);
-		PlotCurveCharacterstics posteriorAvgDistChar = new PlotCurveCharacterstics(PlotLineType.SOLID, 3f, Color.BLACK);
+		PlotCurveCharacterstics posteriorAvgDistChar = new PlotCurveCharacterstics(PlotLineType.SOLID, 5f, Color.BLACK);
+		
+		DiscretizedFunc thicknessForWeights = new ArbitrarilyDiscretizedFunc();
+		thicknessForWeights.set(0d, 1d);
+		thicknessForWeights.set(0.5, 4d);
+		thicknessForWeights.set(1d, 5d);
 		for (int parentID : parentMappedSects.keySet()) {
 			String faultName = faults.getFaultName(parentID);
 			List<Integer> connectedPaleoIndexes;
@@ -335,10 +405,25 @@ public class PaleoBValueEstimator {
 			pdfFuncs.add(priorFunc);
 			pdfChars.add(priorDistChar);
 			
+			WeightedList<ContinuousDistribution> mySectDists = new WeightedList<>();
+			double[] paleoSiteWeights = new double[paleoConstraints.size()];
+			for (FaultSection sect : sects) {
+				SectResult sectDist = sectBDists.get(sect.getSectionId());
+				if (sectDist.paleoSiteWeights != null)
+					for (int p=0; p<paleoSiteWeights.length; p++)
+						paleoSiteWeights[p] += sectDist.paleoSiteWeights[p];
+				mySectDists.add(sectDist.distribution, 1d);
+			}
+			for (int p=0; p<paleoSiteWeights.length; p++)
+				paleoSiteWeights[p] /= (double)sects.size();
+			
 			boolean firstSame = true;
 			boolean firstOther = true;
 			for (int paleoIndex : connectedPaleoIndexes) {
 				int paleoSectIndex = paleoConstraints.get(paleoIndex).sectionIndex;
+				if (paleoSiteWeights[paleoIndex] == 0d)
+					continue;
+				float thickness = (float)thicknessForWeights.getInterpolatedY(paleoSiteWeights[paleoIndex]);
 				boolean sameParent = parentID == rs.getFaultSectionData(paleoSectIndex).getParentSectionId();
 				EvenlyDiscretizedFunc misfits = paleoBValMisfits.get(paleoIndex);
 				ContinuousDistribution dist = sitePosteriorDists.get(paleoIndex);
@@ -354,9 +439,9 @@ public class PaleoBValueEstimator {
 						firstSame = false;
 					}
 					misfitFuncs.add(misfits);
-					misfitChars.add(parentDistChar);
+					misfitChars.add(getForThickness(parentDistChar, thickness));
 					pdfFuncs.add(pdf);
-					pdfChars.add(parentDistChar);
+					pdfChars.add(getForThickness(parentDistChar, thickness));
 				} else {
 					if (firstOther) {
 						misfits = misfits.deepClone();
@@ -366,17 +451,15 @@ public class PaleoBValueEstimator {
 						firstOther = false;
 					}
 					misfitFuncs.add(0, misfits);
-					misfitChars.add(0, otherDistChar);
+					misfitChars.add(0, getForThickness(otherDistChar, thickness));
 					pdfFuncs.add(0, pdf);
-					pdfChars.add(0, otherDistChar);
+					pdfChars.add(0, getForThickness(otherDistChar, thickness));
 				}
 			}
-			
-			WeightedList<ContinuousDistribution> mySectDists = new WeightedList<>();
+
 			boolean firstSectDist = true;
-			for (FaultSection sect : sects) {
-				ContinuousDistribution sectDist = sectBDists.get(sect.getSectionId());
-				mySectDists.add(sectDist, 1d);
+			for (int s=0; s<mySectDists.size(); s++) {
+				ContinuousDistribution sectDist = mySectDists.getValue(s);
 				EvenlyDiscretizedFunc sectPDF = bVals.deepClone();
 				for (int i=0; i<sectPDF.size(); i++)
 					sectPDF.set(i, sectDist.density(bVals.getX(i)));
@@ -422,6 +505,12 @@ public class PaleoBValueEstimator {
 		}
 		System.out.println("DONE");
 	}
+	
+	private static PlotCurveCharacterstics getForThickness(PlotCurveCharacterstics pChar, float thickness) {
+		return new PlotCurveCharacterstics(pChar.getLineType(), thickness, pChar.getSymbol(), pChar.getSymbolWidth(), pChar.getColor());
+	}
+	
+	private static record SectResult(ContinuousDistribution distribution, double[] paleoSiteWeights, double noPaleoWeight) {}; 
 	
 	private static InversionTargetMFDs buildTargetsForB(NSHM23_InvConfigFactory factory, FaultSystemRupSet rupSet,
 			LogicTreeBranch<LogicTreeNode> branch, double b) {
