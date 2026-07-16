@@ -69,6 +69,10 @@ public class PaleoBValueEstimator {
 		factory.setCacheDir(new File("/home/kevin/OpenSHA/nshm23/rup_sets/cache"));
 		FaultSystemRupSet rs = factory.buildRuptureSet(branch, FaultSysTools.defaultNumThreads());
 		
+		// if true, sections use weighted combinations of distributions
+		// if false, sections use weighted combinations of likelihoods
+		boolean sectUseWeightedDistribution = false;
+		
 		ClusterRuptures cRups = rs.requireModule(ClusterRuptures.class);
 		BinaryRuptureProbabilityCalc exclusionModel = NSHM23_InvConfigFactory.getExclusionModel(rs, branch, cRups);
 		BitSet includedRups = exclusionModel == null ? null : new BitSet(rs.getNumRuptures());
@@ -80,7 +84,8 @@ public class PaleoBValueEstimator {
 		
 		ContinuousDistribution priorDist = UniformContinuousDistribution.of(0d, 1d);
 		EvenlyDiscretizedFunc bVals = new EvenlyDiscretizedFunc(0d, 1d, 11);
-		double priorMeanB = priorDist.getMean();
+//		double connectivityWeightB = priorDist.getMean();
+		double connectivityWeightB = 1d;
 		
 		PaleoseismicConstraintData paleoData = NSHM23_PaleoDataLoader.load(rs);
 		
@@ -99,7 +104,7 @@ public class PaleoBValueEstimator {
 			double b = bVals.getX(i);
 			targetFutures.add(CompletableFuture.supplyAsync(()->buildTargetsForB(factory, rs, branch, b)));
 		}
-		InversionTargetMFDs priorMeanTargetMFDs = buildTargetsForB(factory, rs, branch, priorMeanB);
+		InversionTargetMFDs connectivityWeightTargetMFDs = buildTargetsForB(factory, rs, branch, connectivityWeightB);
 		InversionTargetMFDs[] bValTargetMFDs = new InversionTargetMFDs[bVals.size()];
 		for (int i=0; i<bValTargetMFDs.length; i++)
 			bValTargetMFDs[i] = targetFutures.get(i).join();
@@ -202,6 +207,7 @@ public class PaleoBValueEstimator {
 		Map<Integer, List<Integer>> parentPaleoIndexes = new HashMap<>();
 		Map<String, List<Integer>> faultPaleoIndexes = new HashMap<>();
 		List<ContinuousDistribution> sitePosteriorDists = new ArrayList<>(paleoConstraints.size());
+		List<double[]> siteLogLikelihoods = new ArrayList<>(paleoConstraints.size());
 		int numRups = rs.getNumRuptures();
 		BitSet[] siteRups = new BitSet[paleoConstraints.size()];
 		for (int s=0; s<paleoConstraints.size(); s++) {
@@ -216,7 +222,8 @@ public class PaleoBValueEstimator {
 					faultPaleoIndexes.put(faultName, new ArrayList<>());
 				faultPaleoIndexes.get(faultName).add(s);
 			}
-			
+
+			double[] logLikelihoods = new double[bVals.size()];
 			double[] posteriorWeights = new double[bVals.size()];
 			double sumWeights = 0d;
 			for (int i=0; i<posteriorWeights.length; i++) {
@@ -229,8 +236,9 @@ public class PaleoBValueEstimator {
 
 				// Unnormalized posterior density:
 				// prior density * Gaussian likelihood
-				double likelihood = Math.exp(-0.5 * misfit * misfit);
-				posteriorWeights[i] = priorDensity * likelihood;
+				double logLikelihood = -0.5 * misfit * misfit;
+				logLikelihoods[i] = logLikelihood;
+				posteriorWeights[i] = priorDensity * Math.exp(logLikelihood);
 				sumWeights += posteriorWeights[i];
 			}
 
@@ -245,6 +253,7 @@ public class PaleoBValueEstimator {
 			for (int i=0; i<posteriorWeights.length; i++)
 				posteriorPDF.set(i, posteriorWeights[i] / normalization);
 			
+			siteLogLikelihoods.add(logLikelihoods);
 			sitePosteriorDists.add(new EvenlyDiscrFuncContinuousDistribution(posteriorPDF, DiscretizationType.INTERPOLATE));
 			
 			siteRups[s] = new BitSet(numRups);
@@ -272,7 +281,7 @@ public class PaleoBValueEstimator {
 					return new SectResult(priorDist, null, 1d);
 				}
 				
-				IncrementalMagFreqDist mfd = priorMeanTargetMFDs.getOnFaultSupraSeisNucleationMFDs().get(sectIndex);
+				IncrementalMagFreqDist mfd = connectivityWeightTargetMFDs.getOnFaultSupraSeisNucleationMFDs().get(sectIndex);
 				
 				if (mfd.calcSumOfY_Vals() == 0d)
 					return new SectResult(priorDist, null, 1d);
@@ -306,8 +315,8 @@ public class PaleoBValueEstimator {
 				
 				double sectArea = rs.getAreaForSection(sectIndex);
 				
-				double[] ratePerPaleo = new double[paleoConstraints.size()];
-				double rateNoPaleo = 0d;
+				double[] weightPerPaleo = new double[paleoConstraints.size()];
+				double weightNoPaleo = 0d;
 				BitSet rupPaleoIndexes = new BitSet(paleoConstraints.size());
 				double sectParticRate = 0d;
 				for (int m=0; m<numMag; m++) {
@@ -329,11 +338,11 @@ public class PaleoBValueEstimator {
 						int numPaleo = rupPaleoIndexes.cardinality();
 						if (numPaleo == 0) {
 							// rupture hits no paleo sites
-							rateNoPaleo += particRateEach;
+							weightNoPaleo += particRateEach;
 						} else {
 							double rupRatePerPaleo = particRateEach / (double)numPaleo;
 							for (int i = rupPaleoIndexes.nextSetBit(0); i >= 0; i = rupPaleoIndexes.nextSetBit(i + 1))
-								ratePerPaleo[i] += rupRatePerPaleo;
+								weightPerPaleo[i] += rupRatePerPaleo;
 						}
 					}
 					sectParticRate += particRate;
@@ -342,25 +351,63 @@ public class PaleoBValueEstimator {
 				Preconditions.checkState(sectParticRate > 0d);
 				
 				// normalize rates to weights
-				rateNoPaleo /= sectParticRate;
-				for (int p=0; p<ratePerPaleo.length; p++)
-					ratePerPaleo[p] /= sectParticRate;
+				weightNoPaleo /= sectParticRate;
+				for (int p=0; p<weightPerPaleo.length; p++)
+					weightPerPaleo[p] /= sectParticRate;
 				
-				WeightedList<ContinuousDistribution> distWeights = new WeightedList<>();
-				
-				if (rateNoPaleo > 0d) {
-					// weight for ruptures that hit no paleo sites
-					distWeights.add(priorDist, rateNoPaleo);
+				ContinuousDistribution distribution;
+				if (sectUseWeightedDistribution) {
+					WeightedList<ContinuousDistribution> distWeights = new WeightedList<>();
+					
+					if (weightNoPaleo > 0d) {
+						// weight for ruptures that hit no paleo sites
+						distWeights.add(priorDist, weightNoPaleo);
+					}
+					
+					for (int paleoIndex : connectedPaleoIndexes) {
+						double paleoWeight = weightPerPaleo[paleoIndex];
+						if (paleoWeight > 0d)
+							distWeights.add(sitePosteriorDists.get(paleoIndex), paleoWeight);
+					}
+					Preconditions.checkState(!distWeights.isEmpty());
+					Preconditions.checkState(distWeights.isNormalized());
+					distribution = new WeightedContinuousDistribution(distWeights);
+				} else {
+					EvenlyDiscretizedFunc posterior = bVals.deepClone();
+
+					double maxLogPosterior = Double.NEGATIVE_INFINITY;
+
+					for (int bIndex=0; bIndex<posterior.size(); bIndex++) {
+						double b = bVals.getX(bIndex);
+						double logPosterior = Math.log(priorDist.density(b));
+
+						for (int paleoIndex : connectedPaleoIndexes) {
+							double paleoWeight = weightPerPaleo[paleoIndex];
+							if (paleoWeight > 0d) {
+								double logLikelihood = siteLogLikelihoods.get(paleoIndex)[bIndex];
+
+								logPosterior += paleoWeight * logLikelihood;
+							}
+						}
+
+						posterior.set(bIndex, logPosterior);
+						maxLogPosterior = Math.max(maxLogPosterior, logPosterior);
+					}
+
+					// exponentiate and normalize
+					double sum = 0d;
+					for (int bIndex=0; bIndex<posterior.size(); bIndex++) {
+						double density = Math.exp(posterior.getY(bIndex) - maxLogPosterior);
+						posterior.set(bIndex, density);
+						sum += density;
+					}
+
+					double scalar = 1d / (sum * posterior.getDelta());
+					posterior.scale(scalar);
+					
+					distribution = new EvenlyDiscrFuncContinuousDistribution(posterior, DiscretizationType.INTERPOLATE);
 				}
-				
-				for (int paleoIndex : connectedPaleoIndexes) {
-					double paleoRate = ratePerPaleo[paleoIndex];
-					if (paleoRate > 0d)
-						distWeights.add(sitePosteriorDists.get(paleoIndex), paleoRate);
-				}
-				Preconditions.checkState(!distWeights.isEmpty());
-				Preconditions.checkState(distWeights.isNormalized());
-				return new SectResult(new WeightedContinuousDistribution(distWeights), ratePerPaleo, rateNoPaleo);
+				return new SectResult(distribution, weightPerPaleo, weightNoPaleo);
 			}));
 		}
 
@@ -402,20 +449,23 @@ public class PaleoBValueEstimator {
 			List<EvenlyDiscretizedFunc> misfitFuncs = new ArrayList<>();
 			List<PlotCurveCharacterstics> misfitChars = new ArrayList<>();
 			
-			pdfFuncs.add(priorFunc);
-			pdfChars.add(priorDistChar);
-			
 			WeightedList<ContinuousDistribution> mySectDists = new WeightedList<>();
 			double[] paleoSiteWeights = new double[paleoConstraints.size()];
+			double noPaleoWeight = 0d;
 			for (FaultSection sect : sects) {
 				SectResult sectDist = sectBDists.get(sect.getSectionId());
 				if (sectDist.paleoSiteWeights != null)
 					for (int p=0; p<paleoSiteWeights.length; p++)
 						paleoSiteWeights[p] += sectDist.paleoSiteWeights[p];
 				mySectDists.add(sectDist.distribution, 1d);
+				noPaleoWeight += sectDist.noPaleoWeight;
 			}
 			for (int p=0; p<paleoSiteWeights.length; p++)
 				paleoSiteWeights[p] /= (double)sects.size();
+			noPaleoWeight /= (double)sects.size();
+			
+			pdfFuncs.add(priorFunc);
+			pdfChars.add(getForThickness(priorDistChar, (float)thicknessForWeights.getInterpolatedY(noPaleoWeight)));
 			
 			boolean firstSame = true;
 			boolean firstOther = true;
@@ -474,7 +524,7 @@ public class PaleoBValueEstimator {
 			EvenlyDiscretizedFunc posteriorFunc = bVals.deepClone();
 			for (int i=0; i<posteriorFunc.size(); i++)
 				posteriorFunc.set(i, poisteriorDist.density(bVals.getX(i)));
-			posteriorFunc.setName("Subsection average posterior");
+			posteriorFunc.setName("Section average posterior");
 			pdfFuncs.add(posteriorFunc);
 			pdfChars.add(posteriorAvgDistChar);
 			
