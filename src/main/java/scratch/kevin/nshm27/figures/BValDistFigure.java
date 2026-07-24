@@ -55,8 +55,8 @@ public class BValDistFigure {
 //		int numSamples = 1000;
 //		int numSamples = 2000;
 //		int numSamples = 5000;
-		int numSamples = 10000;
-//		int numSamples = 50000;
+//		int numSamples = 10000;
+		int numSamples = 50000;
 //		double binWidth = 0.025;
 		ModuleContainer.VERBOSE_DEFAULT = false;
 		double binWidth = 0.05;

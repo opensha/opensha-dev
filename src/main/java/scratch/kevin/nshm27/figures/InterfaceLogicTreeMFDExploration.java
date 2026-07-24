@@ -37,6 +37,7 @@ import org.opensha.commons.util.DataUtils.MinMaxAveTracker;
 import org.opensha.commons.util.cpt.CPT;
 import org.opensha.commons.util.modules.ModuleContainer;
 import org.opensha.sha.earthquake.faultSysSolution.FaultSystemRupSet;
+import org.opensha.sha.earthquake.faultSysSolution.logicTree.dmSampling.DeformationModelDistSampler.FixedFractileSampler;
 import org.opensha.sha.earthquake.faultSysSolution.modules.ClusterRuptures;
 import org.opensha.sha.earthquake.faultSysSolution.modules.FaultGridAssociations;
 import org.opensha.sha.earthquake.faultSysSolution.modules.SectSlipRates;
@@ -321,6 +322,20 @@ public class InterfaceLogicTreeMFDExploration {
 				IncrementalMagFreqDist incrMedian = incrFractiles[3];
 				EvenlyDiscretizedFunc cmlMedian = cmlFractiles[3];
 				
+				if (NSHM27_InterfaceDeformationModels.class.isAssignableFrom(sampledLevel.getType())) {
+					// expand extrema to actual bounds
+					FixedFractileSampler fixedMin = new FixedFractileSampler(NSHM27_InterfaceDeformationModels.MIN_DM_FRACTILE);
+					LogicTreeBranch<LogicTreeNode> myBranch2 = myBranch.copy();
+					myBranch2.setValue(l, new NSHM27_InterfaceDeformationModels("Lower", "Lower", "Lower", 0d, fixedMin));
+					incrFractiles[0] = calculateMFD(factory, rupSet, myBranch2, refMFD, assoc);
+					cmlFractiles[0] = incrFractiles[0].getCumRateDistWithOffset();
+					
+					FixedFractileSampler fixedMax = new FixedFractileSampler(1d);
+					myBranch2.setValue(l, new NSHM27_InterfaceDeformationModels("Upper", "Upper", "Upper", 0d, fixedMax));
+					incrFractiles[6] = calculateMFD(factory, rupSet, myBranch2, refMFD, assoc);
+					cmlFractiles[6] = incrFractiles[6].getCumRateDistWithOffset();
+				}
+				
 				UncertainBoundedIncrMagFreqDist incrExtrema = new UncertainBoundedIncrMagFreqDist(
 						incrMedian, incrFractiles[0], incrFractiles[6], null);
 				UncertainArbDiscFunc cmlExtrema = new UncertainArbDiscFunc(cmlMedian, cmlFractiles[0], cmlFractiles[6]);
@@ -494,6 +509,9 @@ public class InterfaceLogicTreeMFDExploration {
 				Collections.reverse(addChars);
 				incrFuncs.addAll(indexOffset, addFuncs);
 				chars.addAll(indexOffset, addChars);
+				// remove average
+				incrFuncs.remove(incrFuncs.size()-1);
+				chars.remove(chars.size()-1);
 				incrPlot = new PlotSpec(incrFuncs, chars, level.getName(), "Magnitude", "Incremental Rate (1/yr)");
 				incrPlot.setLegendInset(true);
 				gp.drawGraphPanel(incrPlot, false, true, magRange, rateRange);

@@ -28,6 +28,9 @@ import org.opensha.sha.imr.AttenRelRef;
 import com.google.common.base.Preconditions;
 
 import edu.usc.kmilner.mpj.taskDispatch.MPJTaskCalculator;
+import gov.usgs.earthquake.nshmp.erf.nshm27.util.NSHM27_RegionLoader;
+import gov.usgs.earthquake.nshmp.erf.nshm27.util.NSHM27_RegionLoader.NSHM27_MapRegions;
+import gov.usgs.earthquake.nshmp.erf.nshm27.util.NSHM27_RegionLoader.NSHM27_SeismicityRegions;
 
 public class BranchAveragedHazardScriptWriter {
 
@@ -95,59 +98,83 @@ public class BranchAveragedHazardScriptWriter {
 		/*
 		 * PRVI
 		 */
+////		region = PRVI25_RegionLoader.loadPRVI_ModelBroad();
+//		region = PRVI25_RegionLoader.loadPRVI_MapExtents();
+//		gridSpacing = 0.01;
+//		
+//		gmms = new AttenRelRef[] { AttenRelRef.USGS_PRVI_ACTIVE, AttenRelRef.USGS_PRVI_INTERFACE, AttenRelRef.USGS_PRVI_SLAB };
+//		periods = new double[] { 0d, 0.2d, 1d, 5d };
+//		supersample = true;
+//		sigmaTrunc = 3d;
+//		
+////		String date = "2025_01_17";
+//		String date = "2025_09_12";
+//		
+////		String baseDirName = date+"-prvi25_crustal_subduction_combined_branches";
+////		String suffix = "ba_only";
+////		String solFileName = "combined_branch_averaged_solution.zip";
+//		
+////		String baseDirName = date+"-prvi25_crustal_branches-dmSample10x";
+////		String suffix = "ba_only";
+////		String solFileName = "results_PRVI_CRUSTAL_FM_V1p1_branch_averaged_gridded.zip";
+//		
+//		String baseDirName = date+"-prvi25_subduction_branches";
+//		// slab (gridded only)
+////		String suffix = "ba_only-SLAB_only";
+////		String solFileName = "results_PRVI_SLAB_ONLY_branch_averaged_gridded.zip";
+////		bgOps = new IncludeBackgroundOption[] { IncludeBackgroundOption.ONLY };
+//		// interface (will do fault + gridded)
+////		String suffix = "ba_only-INTERFACE_only";
+////		String solFileName = "results_PRVI_INTERFACE_ONLY_branch_averaged_gridded.zip";
+//		// both
+//		String suffix = "ba_only-both_fms";
+//		String solFileName = "results_PRVI_SUB_FMs_combined_branch_averaged_gridded.zip";
+//		
+//		
+//		// one off tests below
+////		String baseDirName = date+"-prvi25_crustal_subduction_combined_branches";
+////		String suffix = "ba_only-quick";
+////		quickGridded = true;
+////		supersampleQuick = true;
+////		String solFileName = "combined_branch_averaged_solution.zip";
+//		
+////		String baseDirName = date+"-prvi25_crustal_subduction_combined_branches";
+////		String suffix = "ba_only-no_sigma_trunc";
+////		sigmaTrunc = null;
+////		String solFileName = "combined_branch_averaged_solution.zip";
+//		
+////		region = PRVI25_RegionLoader.loadPRVI_IntermediateModelMapExtents();
+////		gridSpacing = 0.02;
+////		periods = new double[] { 0d, 1d };
+////		String baseDirName = date+"-prvi25_crustal_subduction_combined_branches";
+////		String suffix = "ba_only-wider_region";
+////		String solFileName = "combined_branch_averaged_solution.zip";
+//		
+////		suffix += "-updatedGMMs";
+//		
+//		vs30 = 760d; suffix += "-vs760";
+////		vs30 = 260d; suffix += "-vs260";
+		
+		/*
+		 * NSHM27
+		 */
+		NSHM27_SeismicityRegions seisReg = NSHM27_SeismicityRegions.AMSAM;
+		String baseDirName = "2026_07_13-nshm27-AMSAM-5000samples-lhs_pairwise";
+		String solFileName = "results_branch_averaged.zip";
+		
+//		NSHM27_SeismicityRegions seisReg = NSHM27_SeismicityRegions.GNMI;
+//		String baseDirName = "2026_07_13-nshm27-GNMI-5000samples-lhs_pairwise";
+//		String solFileName = "results_branch_averaged.zip";
+		
 //		region = PRVI25_RegionLoader.loadPRVI_ModelBroad();
-		region = PRVI25_RegionLoader.loadPRVI_MapExtents();
-		gridSpacing = 0.01;
+		region = NSHM27_MapRegions.valueOf(seisReg.name()).load();
+		gridSpacing = 0.05;
 		
 		gmms = new AttenRelRef[] { AttenRelRef.USGS_PRVI_ACTIVE, AttenRelRef.USGS_PRVI_INTERFACE, AttenRelRef.USGS_PRVI_SLAB };
 		periods = new double[] { 0d, 0.2d, 1d, 5d };
 		supersample = true;
-		sigmaTrunc = 3d;
 		
-//		String date = "2025_01_17";
-		String date = "2025_09_12";
-		
-//		String baseDirName = date+"-prvi25_crustal_subduction_combined_branches";
-//		String suffix = "ba_only";
-//		String solFileName = "combined_branch_averaged_solution.zip";
-		
-//		String baseDirName = date+"-prvi25_crustal_branches-dmSample10x";
-//		String suffix = "ba_only";
-//		String solFileName = "results_PRVI_CRUSTAL_FM_V1p1_branch_averaged_gridded.zip";
-		
-		String baseDirName = date+"-prvi25_subduction_branches";
-		// slab (gridded only)
-//		String suffix = "ba_only-SLAB_only";
-//		String solFileName = "results_PRVI_SLAB_ONLY_branch_averaged_gridded.zip";
-//		bgOps = new IncludeBackgroundOption[] { IncludeBackgroundOption.ONLY };
-		// interface (will do fault + gridded)
-//		String suffix = "ba_only-INTERFACE_only";
-//		String solFileName = "results_PRVI_INTERFACE_ONLY_branch_averaged_gridded.zip";
-		// both
-		String suffix = "ba_only-both_fms";
-		String solFileName = "results_PRVI_SUB_FMs_combined_branch_averaged_gridded.zip";
-		
-		
-		// one off tests below
-//		String baseDirName = date+"-prvi25_crustal_subduction_combined_branches";
-//		String suffix = "ba_only-quick";
-//		quickGridded = true;
-//		supersampleQuick = true;
-//		String solFileName = "combined_branch_averaged_solution.zip";
-		
-//		String baseDirName = date+"-prvi25_crustal_subduction_combined_branches";
-//		String suffix = "ba_only-no_sigma_trunc";
-//		sigmaTrunc = null;
-//		String solFileName = "combined_branch_averaged_solution.zip";
-		
-//		region = PRVI25_RegionLoader.loadPRVI_IntermediateModelMapExtents();
-//		gridSpacing = 0.02;
-//		periods = new double[] { 0d, 1d };
-//		String baseDirName = date+"-prvi25_crustal_subduction_combined_branches";
-//		String suffix = "ba_only-wider_region";
-//		String solFileName = "combined_branch_averaged_solution.zip";
-		
-//		suffix += "-updatedGMMs";
+		String suffix = "ba_only";
 		
 		vs30 = 760d; suffix += "-vs760";
 //		vs30 = 260d; suffix += "-vs260";
@@ -228,7 +255,7 @@ public class BranchAveragedHazardScriptWriter {
 		String dirPath = "$DIR";
 		
 		List<File> classpath = new ArrayList<>();
-		classpath.add(new File(dirPath+"/opensha-dev-all.jar"));
+		classpath.add(new File(dirPath+"/opensha-all.jar"));
 		parallelMPJWrite.setClasspath(classpath);
 		
 		List<File> singleClasspath = new ArrayList<>(classpath);

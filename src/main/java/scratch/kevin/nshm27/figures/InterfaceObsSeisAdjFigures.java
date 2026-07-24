@@ -12,6 +12,7 @@ import org.opensha.commons.logicTree.LogicTreeBranch;
 import org.opensha.commons.logicTree.LogicTreeNode;
 import org.opensha.commons.mapping.gmt.elements.GMT_CPT_Files;
 import org.opensha.commons.util.DataUtils;
+import org.opensha.commons.util.DataUtils.MinMaxAveTracker;
 import org.opensha.commons.util.cpt.CPT;
 import org.opensha.commons.util.modules.ModuleContainer;
 import org.opensha.sha.earthquake.faultSysSolution.FaultSystemRupSet;
@@ -43,7 +44,7 @@ public class InterfaceObsSeisAdjFigures {
 			
 			CSVFile<String> csv = new CSVFile<>(true);
 			csv.addLine("Adjustment", "Overall Moment Reduction Factor", "Section-Averaged Reduction Factor",
-					"Maximum Reduction Factor", "Median Reduction Factor");
+					"Maximum Reduction Factor", "Median Reduction Factor", "Average Slip Rate (mm/yr)", "Maximum Slip Rate (mm/yr)");
 			
 			branch.setValue(NSHM27_InterfaceObsSeisDMAdjustment.NONE);
 			
@@ -55,11 +56,15 @@ public class InterfaceObsSeisAdjFigures {
 			double fullMoment = fullSlips.calcTotalMomentRate();
 			
 			for (NSHM27_InterfaceObsSeisDMAdjustment adj : NSHM27_InterfaceObsSeisDMAdjustment.values()) {
-				if (adj == NSHM27_InterfaceObsSeisDMAdjustment.NONE)
-					continue;
-				branch.setValue(adj);
-				rs = factory.buildRuptureSet(branch, FaultSysTools.defaultNumThreads());
-				SectSlipRates slips = rs.requireModule(SectSlipRates.class);
+				SectSlipRates slips;
+				if (adj == NSHM27_InterfaceObsSeisDMAdjustment.NONE) {
+					slips = fullSlips;
+				} else {
+					branch.setValue(adj);
+					rs = factory.buildRuptureSet(branch, FaultSysTools.defaultNumThreads());
+					slips = rs.requireModule(SectSlipRates.class);
+				}
+				MinMaxAveTracker slipTrack = new MinMaxAveTracker();
 				
 				double branchMoment = slips.calcTotalMomentRate();
 				
@@ -68,6 +73,7 @@ public class InterfaceObsSeisAdjFigures {
 					double fullSlip = fullSlips.getSlipRate(s);
 					double redSlip = slips.getSlipRate(s);
 					factors[s] = (fullSlip - redSlip)/fullSlip;
+					slipTrack.addValue(slips.getSlipRate(s)*1e3);
 				}
 				
 				mapMaker.plotSectScalars(factors, redCPT, "Slip-deficit rate reduction factor");
@@ -79,7 +85,9 @@ public class InterfaceObsSeisAdjFigures {
 						twoDF.format(overall),
 						twoDF.format(StatUtils.mean(factors)),
 						twoDF.format(StatUtils.max(factors)),
-						twoDF.format(DataUtils.median(factors)));
+						twoDF.format(DataUtils.median(factors)),
+						twoDF.format(slipTrack.getAverage()),
+						twoDF.format(slipTrack.getMax()));
 			}
 			
 			csv.writeToFile(new File(outputDir, seisReg.name()+"_factors.csv"));
