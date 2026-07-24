@@ -56,20 +56,18 @@ public class TrueMeanERFDemo {
 		// downsampled model with 1k branches (fault and gridded
 		SolutionLogicTree slt = SolutionLogicTree.load(
 				new File(dataDir, "results_full_gridded_downsampled_1k.zip"));
-		// this contains the branch-averaged gridded seismicity model, including tweaks to active/stable weighting
-		// made in the revised model
-		FaultSystemSolution baSol = FaultSystemSolution.load(
-				new File(dataDir, "results_WUS_FM_v3_branch_averaged_gridded.zip"));
 		
 		// use the branch-averaged gridded seismicity model
-		GridSourceList baGridList = baSol.requireModule(GridSourceList.class);
-		trueMeanSol.setGridSourceProvider(baGridList);
+		GridSourceList meanGridList = trueMeanSol.requireModule(GridSourceList.class);
+		meanGridList = meanGridList.getAboveMinMag(5f);
+		trueMeanSol.setGridSourceProvider(meanGridList);
+		// filter it to only M>5 in order to speed things up later (ruptures below that are skipped anyway)
 		// mapping between grid location, TRT, and source index in the grid sources
-		Table<Integer, TectonicRegionType, Integer> baLocToSourceTable = HashBasedTable.create();
-		for (int s=0; s<baGridList.getNumSources(); s++) {
-			int locIndex = baGridList.getLocationIndexForSource(s);
-			TectonicRegionType trt = baGridList.tectonicRegionTypeForSourceIndex(s);
-			baLocToSourceTable.put(locIndex, trt, s);
+		Table<Integer, TectonicRegionType, Integer> meanLocToSourceTable = HashBasedTable.create();
+		for (int s=0; s<meanGridList.getNumSources(); s++) {
+			int locIndex = meanGridList.getLocationIndexForSource(s);
+			TectonicRegionType trt = meanGridList.tectonicRegionTypeForSourceIndex(s);
+			meanLocToSourceTable.put(locIndex, trt, s);
 		}
 		
 		System.out.println("Building true mean ERF");
@@ -80,12 +78,16 @@ public class TrueMeanERFDemo {
 		// make sure gridded seismicity is enabled
 		trueMeanERF.setParameter(IncludeBackgroundParam.NAME, IncludeBackgroundOption.INCLUDE);
 		// tell it to draw random finite ruptures for each gridded seismicity rupture
-		// these will be reproducible, i.e., each time will draw the same one for each rupture
+		// these will be reproducible, i.e., each time will it draws the same random strike for a given rupture, but the
+		// strikes will vary across all ruptures.
 		GriddedSeismicitySettings gridSettings = GriddedSeismicitySettings.DEFAULT
+				// tell it to use finite ruptures for point sources (rather than distance-corrected point surfaces)
 				.forSurfaceType(BackgroundRupType.FINITE)
+				// this tells it to use 1 random surface per gridded rupture
+				// we could increase this, but it'll be slower and make the mapping more complicated
 				.forFiniteRuptureSettings(GriddedFiniteRuptureSettings.DEFAULT_SINGLE)
-				// ignore gridded ruptures below this magnitude (if they happen to be attached)
-				.forMinimumMagnitude(5d);
+				// use finite ruptures all the way down to M5
+				.forPointSourceMagCutoff(5d);
 		trueMeanERF.setGriddedSeismicitySettings(gridSettings);
 		// this speeds up grid source calculations/mappings, but uses more memory; disable if you run into trouble
 		trueMeanERF.setCacheGridSources(true);
@@ -202,10 +204,10 @@ public class TrueMeanERFDemo {
 			
 			System.out.println("\tValidating gridded rupture mappings...");
 			// now find mappings for each gridded seismicity rupture
-			Preconditions.checkState(branchGridList.getNumLocations() == baGridList.getNumLocations(),
-					"Branch %s grid list has %s locations, but BA has %s", b, branchGridList.getNumLocations(), baGridList.getNumLocations());
-			Preconditions.checkState(branchGridList.getNumSources() <= baGridList.getNumSources(),
-					"Branch %s grid list has %s sources, but BA has %s", b, branchGridList.getNumSources(), baGridList.getNumSources());
+			Preconditions.checkState(branchGridList.getNumLocations() == meanGridList.getNumLocations(),
+					"Branch %s grid list has %s locations, but mean has %s", b, branchGridList.getNumLocations(), meanGridList.getNumLocations());
+			Preconditions.checkState(branchGridList.getNumSources() <= meanGridList.getNumSources(),
+					"Branch %s grid list has %s sources, but mean has %s", b, branchGridList.getNumSources(), meanGridList.getNumSources());
 			int numMappedGrid = 0;
 			double mappedGridRate = 0d;
 			// this will be used to speed up rupture mapping; most sources will have the same rupture lists over and
@@ -215,9 +217,9 @@ public class TrueMeanERFDemo {
 			for (int s=0; s<branchGridList.getNumSources(); s++) {
 				int gridIndex = branchGridList.getLocationIndexForSource(s);
 				TectonicRegionType trt = branchGridList.tectonicRegionTypeForSourceIndex(s);
-				Preconditions.checkState(baLocToSourceTable.contains(gridIndex, trt));
+				Preconditions.checkState(meanLocToSourceTable.contains(gridIndex, trt));
 				// true mean ERF source index is the number of FSS sources, plus source index in the grid list
-				int trueMeanSourceIndex = trueMeanERF.getNumFaultSystemSources()+baLocToSourceTable.get(gridIndex, trt);
+				int trueMeanSourceIndex = trueMeanERF.getNumFaultSystemSources()+meanLocToSourceTable.get(gridIndex, trt);
 				ProbEqkSource source = trueMeanERF.getSource(trueMeanSourceIndex);
 				Preconditions.checkState(source instanceof PointSource,
 						"True mean source %s isn't a point source? %s", trueMeanSourceIndex, source.getClass());
@@ -277,7 +279,7 @@ public class TrueMeanERFDemo {
 				if (myMappings != null)
 					prevMappings = myMappings;
 			}
-			System.out.println("\t\tMapped "+numMappedGrid+" gridded ruptures across "+baGridList.getNumSources()
+			System.out.println("\t\tMapped "+numMappedGrid+" gridded ruptures across "+meanGridList.getNumSources()
 					+" sources with total rate "+(float)mappedGridRate);
 			System.out.println("\tDone; "+timeLeftStr(watch, b+1, logicTree.size())+" remaining");
 			
