@@ -211,9 +211,10 @@ public class TrueMeanERFDemo {
 			int numMappedGrid = 0;
 			double mappedGridRate = 0d;
 			// this will be used to speed up rupture mapping; most sources will have the same rupture lists over and
-			// over again, so doing the index source for each rupture is wasteful; this keeps track of the indexes
-			// from the prior source and reuses it if they agree
+			// over again, so doing the index search for each rupture is wasteful; this keeps track of the indexes
+			// from the prior source and reuses it if they agree, but if anything varies, it'll start fresh.
 			int[] prevMappings = null;
+			int numSourceMappingsReused = 0;
 			for (int s=0; s<branchGridList.getNumSources(); s++) {
 				int gridIndex = branchGridList.getLocationIndexForSource(s);
 				TectonicRegionType trt = branchGridList.tectonicRegionTypeForSourceIndex(s);
@@ -278,10 +279,13 @@ public class TrueMeanERFDemo {
 				}
 				if (myMappings != null)
 					prevMappings = myMappings;
+				else if (prevMappings != null)
+					numSourceMappingsReused++;
 			}
-			System.out.println("\t\tMapped "+numMappedGrid+" gridded ruptures across "+meanGridList.getNumSources()
-					+" sources with total rate "+(float)mappedGridRate);
-			System.out.println("\tDone; "+timeLeftStr(watch, b+1, logicTree.size())+" remaining");
+			System.out.println("\t\tMapped "+numMappedGrid+" gridded ruptures across "+branchGridList.getNumSources()
+					+" sources with total rate "+(float)mappedGridRate+" ("+numSourceMappingsReused+" source mappings reused)");
+			System.out.println("\tDone with branch "+b+"/"+logicTree.size()+"; "+timeStr(watch)+" elapsed, estimated "
+					+timeLeftStr(watch, b+1, logicTree.size())+" remaining");
 			
 		}
 		System.out.println("DONE");
