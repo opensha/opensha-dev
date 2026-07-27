@@ -27,7 +27,7 @@ import com.google.common.collect.Multimap;
 import com.google.common.collect.MultimapBuilder;
 
 import gov.usgs.earthquake.nshmp.data.Indexing;
-import gov.usgs.earthquake.nshmp.model.SystemRuptureSet.SystemSource;
+import gov.usgs.earthquake.nshmp.model.SystemRuptureSet.SystemRupture;
 import gov.usgs.earthquake.nshmp.tree.Branch;
 
 public class NshmErf extends AbstractERF {
@@ -90,7 +90,7 @@ public class NshmErf extends AbstractERF {
         		|| type == SourceType.INTERFACE_GRID || type == SourceType.INTERFACE_SYSTEM) && !subInterface) {
           continue;
         }
-        if ((type == SourceType.SLAB || type == SourceType.SLAB_GRID) && !subSlab) {
+        if ((type == SourceType.SLAB || type == SourceType.INTRASLAB_GRID) && !subSlab) {
           continue;
         }
       }
@@ -153,24 +153,42 @@ public class NshmErf extends AbstractERF {
   }
 
   private List<NshmSource> sourcesFromBranch(
-      Branch<RuptureSet<? extends Source>> branch,
+      Branch<RuptureSet> branch,
       double duration) {
 
-    RuptureSet<? extends Source> ruptureSet = branch.value();
+    RuptureSet ruptureSet = branch.value();
     double weight = branch.weight();
 
     switch (ruptureSet.type()) {
 
       case GRID:
-        GridRuptureSet grs = (GridRuptureSet) ruptureSet;
+        GriddedRuptureSet grs = (GriddedRuptureSet) ruptureSet;
         return (grid)
-            ? pointRuptureSetToSources(grs, weight, duration)
+            ? gridRuptureSetToSources(grs, weight, duration)
             : List.of();
 
       case ZONE:
-        ZoneRuptureSet zrs = (ZoneRuptureSet) ruptureSet;
+        GriddedRuptureSet zrs = (GriddedRuptureSet) ruptureSet;
         return (faults)
-            ? pointRuptureSetToSources(zrs, weight, duration)
+            ? gridRuptureSetToSources(zrs, weight, duration)
+            : List.of();
+
+      case INTERFACE_GRID:
+        GriddedRuptureSet igrs = (GriddedRuptureSet) ruptureSet;
+        return (subInterface && grid)
+            ? gridRuptureSetToSources(igrs, weight, duration)
+            : List.of();
+
+      case INTRASLAB_GRID:
+        GriddedRuptureSet isgrs = (GriddedRuptureSet) ruptureSet;
+        return (subSlab && grid)
+            ? gridRuptureSetToSources(isgrs, weight, duration)
+            : List.of();
+
+      case SLAB:
+        GriddedRuptureSet slabRuptures = (GriddedRuptureSet) ruptureSet;
+        return (subSlab && grid)
+            ? gridRuptureSetToSources(slabRuptures, weight, duration)
             : List.of();
 
       case FAULT_CLUSTER:
@@ -187,7 +205,7 @@ public class NshmErf extends AbstractERF {
 
       case INTERFACE:
         return (subInterface && faults)
-            ? ruptureSetToSources(ruptureSet, weight, duration)
+            ? iterableRuptureSetToSources((IterableRuptureSet) ruptureSet, weight, duration)
             : List.of();
 
       case INTERFACE_CLUSTER:
@@ -202,36 +220,31 @@ public class NshmErf extends AbstractERF {
             ? systemRuptureSetToSources(isrs, weight, duration)
             : List.of();
 
-      case SLAB:
-        return (subSlab && faults)
-            ? ruptureSetToSources(ruptureSet, weight, duration)
-            : List.of();
-
       default:
         return (faults)
-            ? ruptureSetToSources(ruptureSet, weight, duration)
+            ? iterableRuptureSetToSources((IterableRuptureSet) ruptureSet, weight, duration)
             : List.of();
     }
   }
 
-  private static List<NshmSource> pointRuptureSetToSources(
-      RuptureSet<PointSource> ruptureSet,
+  private static List<NshmSource> gridRuptureSetToSources(
+      GriddedRuptureSet ruptureSet,
       double weight,
       double duration) {
 
-    return ruptureSet.stream()
-        .map(ptSrc -> new NshmSource.Point(ptSrc, weight, duration))
-        .collect(toList());
+    List<NshmSource> sources = new ArrayList<>();
+    for (GridSource gridSource : ruptureSet) {
+      sources.add(new NshmSource.Point(gridSource, weight, duration));
+    }
+    return sources;
   }
 
-  private static List<NshmSource> ruptureSetToSources(
-      RuptureSet<? extends Source> ruptureSet,
+  private static List<NshmSource> iterableRuptureSetToSources(
+      IterableRuptureSet ruptureSet,
       double weight,
       double duration) {
 
-    return ruptureSet.stream()
-        .map(src -> new NshmSource.Fault(src, weight, duration))
-        .collect(toList());
+    return List.of(new NshmSource.Fault(ruptureSet, weight, duration));
   }
 
   private static List<NshmSource> systemRuptureSetToSources(
@@ -249,12 +262,12 @@ public class NshmErf extends AbstractERF {
 
     List<NshmSource> sources = new ArrayList<>(srs.size());
     for (int i = 0; i < srs.size(); i++) {
-      SystemSource source = srs.get(i);
+      SystemRupture source = (SystemRupture) srs.get(i);
       int[] sectionIndices = Indexing.bitsToIndices(source.bitset());
       List<NshmSurface> ruptureSurfaces = IntStream.of(sectionIndices)
           .mapToObj(surfaces::get)
           .collect(Collectors.toList());
-      sources.add(new NshmSource.System(source, weight, duration, ruptureSurfaces));
+      sources.add(new NshmSource.System(srs, source, weight, duration, ruptureSurfaces));
     }
     return sources;
   }
@@ -264,11 +277,9 @@ public class NshmErf extends AbstractERF {
       double weight,
       double duration) {
 
-    // cluster and fault rupture sets are both known to have only one source
-    ClusterSource cs = crs.get(0);
-    double rate = cs.rate();
-    return cs.ruptureSets().stream()
-        .map(rs -> new NshmSource.Fault(rs.get(0), weight * rate, duration))
+    double rate = crs.rate();
+    return crs.ruptureSets().stream()
+        .map(rs -> new NshmSource.Fault(rs, weight * rate, duration))
         .collect(toList());
   }
 
