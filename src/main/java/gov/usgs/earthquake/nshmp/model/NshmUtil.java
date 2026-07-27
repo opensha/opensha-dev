@@ -29,7 +29,13 @@ class NshmUtil {
     return Location.create(loc.lon, loc.lat, loc.depth);
   }
 
-  static double distance(Site site, Source source) {
+  static double distance(Site site, RuptureSet ruptureSet) {
+    Location p1 = fromOpenShaLocation(site.getLocation());
+    Location p2 = ruptureSet.location(p1);
+    return Locations.horzDistanceFast(p1, p2);
+  }
+
+  static double distance(Site site, GridSource source) {
     Location p1 = fromOpenShaLocation(site.getLocation());
     Location p2 = source.location(p1);
     return Locations.horzDistanceFast(p1, p2);
@@ -43,7 +49,7 @@ class NshmUtil {
       case STABLE_CRUST:
         return TectonicRegionType.STABLE_SHALLOW;
       case SUBDUCTION:
-        return (type == SourceType.SLAB)
+        return (type == SourceType.SLAB || type == SourceType.INTRASLAB_GRID)
             ? TectonicRegionType.SUBDUCTION_SLAB
             : TectonicRegionType.SUBDUCTION_INTERFACE;
       case VOLCANIC:

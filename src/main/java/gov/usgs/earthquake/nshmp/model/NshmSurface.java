@@ -14,8 +14,8 @@ import org.opensha.sha.faultSurface.cache.SurfaceDistances;
 
 import gov.usgs.earthquake.nshmp.fault.surface.DefaultGriddedSurface;
 import gov.usgs.earthquake.nshmp.fault.surface.GriddedSurface;
-import gov.usgs.earthquake.nshmp.model.PointSource.PointSurface;
-import gov.usgs.earthquake.nshmp.model.PointSourceFinite.FiniteSurface;
+import gov.usgs.earthquake.nshmp.model.GridSource.PointSurface;
+import gov.usgs.earthquake.nshmp.model.GridSourceFinite.FiniteSurface;
 
 /**
  * Rupture surface implementation for USGS NSHMs. Most methods throw an

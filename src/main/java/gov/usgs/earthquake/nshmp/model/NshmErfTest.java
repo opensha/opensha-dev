@@ -80,14 +80,14 @@ public class NshmErfTest {
 
       // Source nshmSrc = ((NshmSource) src).delegate();
       NshmSource nshmSrc = (NshmSource) src;
-      System.out.println(nshmSrc.delegate().id() + " " + nshmSrc.delegate().name());
+      System.out.println(nshmSrc.getNSHM_ID() + " " + nshmSrc.getName());
 
       System.out.println(nshmSrc.getClass());
       if (nshmSrc instanceof NshmSource.Point) {
         System.out.println(true);
 
         NshmSource.Point ptSrc = (NshmSource.Point) nshmSrc;
-        PointSource nhPtSrc = (PointSource) nshmSrc.delegate();
+        GridSource nhPtSrc = (GridSource) nshmSrc.delegate();
 
         // PointSourceFixedStrike ptSrc = (PointSourceFixedStrike) nshmSrc;
 
