@@ -89,7 +89,8 @@ public class InterfaceLogicTreeMFDExploration {
 		LogicTreeBranch<LogicTreeNode> sampledBranch = NSHM27_LogicTree.buildDefault(seisReg, trt, true);
 //		int samples = 50;
 //		int samples = 500;
-		int samples = 1000;
+//		int samples = 1000;
+		int samples = 10000;
 		
 //		boolean skipSampled = true;
 		boolean skipSampled = false;
@@ -121,6 +122,9 @@ public class InterfaceLogicTreeMFDExploration {
 			if (classification.getNodeWeight() > 0d)
 				classificationChoices.add(classification, classification.getNodeWeight());
 		List<NSHM27_SeisClassificationMethod> classificationSamples = classificationChoices.sampleEvenly(samples, new Random(12345l));
+		LogicTreeLevel<?> rateLevel = sampledBranch.getLevel(sampledBranch.getLevelTypeIndex(NSHM27_SeisRateModel.class));
+		((RandomLevel<?, ?>)rateLevel).build(12345l, samples, SamplingMethod.LATIN_HYPERCUBE);
+		List<? extends LogicTreeNode> rateModelSamples = rateLevel.getNodes();
 		
 		NSHM27_InvConfigFactory factory = new NSHM27_InvConfigFactory();
 		FaultSystemRupSet rupSet = factory.buildRuptureSet(branch, FaultSysTools.defaultNumThreads());
@@ -234,17 +238,22 @@ public class InterfaceLogicTreeMFDExploration {
 					System.out.println("Skipping sampling this time");
 					continue;
 				}
+				boolean doRateSamples = SectionSupraSeisBValues.class.isAssignableFrom(sampledLevel.getType());
 				List<LogicTreeLevel<? extends LogicTreeNode>> levels = new ArrayList<>();
 				List<LogicTreeNode> values = new ArrayList<>();
 				for (int i=0; i<branch.size(); i++) {
 					if (i == l) {
 						levels.add(sampledLevel);
 						values.add(null);
+					} else if (doRateSamples && branch.getValue(i) instanceof NSHM27_SeisRateModel) {
+						levels.add(rateLevel);
+						values.add(null);
 					} else {
 						levels.add(branch.getLevel(i));
 						values.add(branch.getValue(i));
 					}
 				}
+				Preconditions.checkNotNull(rateLevel);
 				LogicTreeBranch<LogicTreeNode> myBranch = new LogicTreeBranch<>(levels, values);
 				((RandomLevel<?, ?>)sampledLevel).build(12345l, samples, SamplingMethod.LATIN_HYPERCUBE);
 				Preconditions.checkState(sampledLevel.getNodes().size() == samples);
@@ -256,10 +265,14 @@ public class InterfaceLogicTreeMFDExploration {
 				for (int n=0; n<samples; n++) {
 					LogicTreeNode node = sampledNodes.get(n);
 					LogicTreeNode classNode = classificationSamples.get(n);
+					LogicTreeNode rateNode = rateModelSamples.get(n);
+					Preconditions.checkNotNull(rateNode);
 					mfdFutures.add(CompletableFuture.supplyAsync(()->{
 						LogicTreeBranch<LogicTreeNode> myBranch2 = myBranch.copy();
 						myBranch2.setValue(classNode);
 						myBranch2.setValue(l, node);
+						if (doRateSamples)
+							myBranch2.setValue(rateNode);
 						try {
 							return calculateMFD(factory, rupSet, myBranch2, refMFD, assoc);
 						} catch (IOException e) {
@@ -526,6 +539,7 @@ public class InterfaceLogicTreeMFDExploration {
 	
 	private static IncrementalMagFreqDist calculateMFD(NSHM27_InvConfigFactory factory, FaultSystemRupSet rupSet,
 			LogicTreeBranch<LogicTreeNode> branch, EvenlyDiscretizedFunc refMFD, FaultGridAssociations assoc) throws IOException {
+		System.out.println("Calculating MFD for: "+branch);
 		ClusterRuptures cRups = rupSet.requireModule(ClusterRuptures.class);
 		rupSet = factory.updateRuptureSetForBranch(rupSet, branch);
 		BinaryRuptureProbabilityCalc exclusionModel = NSHM27_InvConfigFactory.getExclusionModel(rupSet, branch, cRups);
