@@ -128,7 +128,16 @@ public class ComparisonPageGen {
 		File modelDir = new File("/data/kevin/nshm23/nshmp-haz-models/nshm-conus-6.1.3");
 //		File modelDir = new File("/data/kevin/nshm23/nshmp-haz-models/nshm-conus-6.2.0");
 		
-		boolean doWrapperCalc = true;
+		boolean doWrapperCalc = false;
+		
+		GriddedRegion mapReg = GriddedRegion.fromFeature(Feature.read(new File(inputDir, "gridded_region.geojson")));
+		boolean plotTraces = false;
+		Region plotReg = mapReg;
+		
+//		plotReg = new Region(new Location(37.5, -122.5), new Location(38.5, -121.5));
+		
+//		plotReg = new Region(new Location(40, -122), new Location(41, -120));
+//		plotTraces = true;
 		
 		Map<TectonicRegionType, AttenRelRef> gmmRefs = Map.of(
 				TectonicRegionType.ACTIVE_SHALLOW, AttenRelRef.USGS_NSHM23_ACTIVE);
@@ -156,17 +165,7 @@ public class ComparisonPageGen {
 		Preconditions.checkState(outputDir.exists() || outputDir.mkdir());
 		File resourcesDir = new File(outputDir, "resources");
 		Preconditions.checkState(resourcesDir.exists() || resourcesDir.mkdir());
-		
-		GriddedRegion mapReg = GriddedRegion.fromFeature(Feature.read(new File(inputDir, "gridded_region.geojson")));
 		List<Site> sites = SolHazardMapCalc.loadSites(mapReg, gmmRefs);
-		
-		boolean plotTraces = false;
-		Region plotReg = mapReg;
-		
-//		plotReg = new Region(new Location(37.5, -122.5), new Location(38.5, -121.5));
-		
-		plotReg = new Region(new Location(40, -122), new Location(41, -120));
-		plotTraces = true;
 		
 		Map<IncludeBackgroundOption, DiscretizedFunc[]> myCurvesMap = new EnumMap<>(IncludeBackgroundOption.class);
 		for (IncludeBackgroundOption bgOp : bgOps)
@@ -996,8 +995,9 @@ public class ComparisonPageGen {
 			diff = diff.copy();
 			diff.scale(0.01);
 		}
-		
+
 		List<Double> allConsidered = new ArrayList<>();
+		List<Double> allConsideredAbs = new ArrayList<>();
 		
 		for (int i=0; i<diff.size(); i++) {
 			if (!plotReg.contains(diff.getLocation(i)))
@@ -1016,14 +1016,16 @@ public class ComparisonPageGen {
 				sumDiff += v;
 				sumAbsDiff += abs;
 				allConsidered.add(v);
+				allConsideredAbs.add(abs);
 			}
 		}
 		
 		int numConsidered = allConsidered.size();
 		double avg = sumDiff/(double)numConsidered;
 		double avgAbs = sumAbsDiff/(double)numConsidered;
-		
+
 		double median = StatUtils.mean(Doubles.toArray(allConsidered));
+		double medianAbs = StatUtils.mean(Doubles.toArray(allConsideredAbs));
 		
 		DecimalFormat df;
 		if (isPDiff)
@@ -1032,7 +1034,8 @@ public class ComparisonPageGen {
 			df = new DecimalFormat("0.000");
 		
 		return "Range=["+df.format(min)+", "+df.format(max)+"]; maxAbs="+df.format(maxAbs)
-				+"<p>avg="+df.format(avg)+"; avgAbs="+df.format(avgAbs)+"; median="+df.format(median)
+				+"<p>avg="+df.format(avg)+"; avgAbs="+df.format(avgAbs)
+				+"<p>median="+df.format(median)+"; medianAbs="+df.format(medianAbs)
 				+"<p>"+numNan+" NaN; "+numInf+" inf";
 	}
 	
