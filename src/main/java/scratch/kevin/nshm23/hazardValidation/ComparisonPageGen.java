@@ -7,13 +7,21 @@ import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.EnumMap;
 import java.util.EnumSet;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.BiFunction;
+import java.util.stream.Collectors;
 
 import org.apache.commons.math3.stat.StatUtils;
+import org.jfree.chart.ui.RectangleAnchor;
 import org.jfree.data.Range;
 import org.opensha.commons.data.CSVFile;
+import org.opensha.commons.data.Site;
+import org.opensha.commons.data.function.ArbitrarilyDiscretizedFunc;
 import org.opensha.commons.data.function.DiscretizedFunc;
+import org.opensha.commons.data.function.EvenlyDiscretizedFunc;
+import org.opensha.commons.data.function.HistogramFunction;
 import org.opensha.commons.data.function.LightFixedXFunc;
 import org.opensha.commons.data.function.XY_DataSet;
 import org.opensha.commons.data.siteData.SiteDataValue;
@@ -30,19 +38,42 @@ import org.opensha.commons.gui.plot.PlotLineType;
 import org.opensha.commons.gui.plot.PlotSpec;
 import org.opensha.commons.gui.plot.PlotUtils;
 import org.opensha.commons.mapping.gmt.elements.GMT_CPT_Files;
+import org.opensha.commons.param.Parameter;
 import org.opensha.commons.util.MarkdownUtils;
 import org.opensha.commons.util.MarkdownUtils.TableBuilder;
 import org.opensha.commons.util.cpt.CPT;
+import org.opensha.sha.calc.HazardCurveCalculator;
+import org.opensha.sha.calc.sourceFilters.SourceFilterManager;
+import org.opensha.sha.calc.sourceFilters.SourceFilters;
+import org.opensha.sha.earthquake.AbstractERF;
+import org.opensha.sha.earthquake.ProbEqkRupture;
+import org.opensha.sha.earthquake.ProbEqkSource;
 import org.opensha.sha.earthquake.faultSysSolution.FaultSystemRupSet;
 import org.opensha.sha.earthquake.faultSysSolution.FaultSystemSolution;
+import org.opensha.sha.earthquake.faultSysSolution.erf.BaseFaultSystemSolutionERF;
 import org.opensha.sha.earthquake.faultSysSolution.util.SolHazardMapCalc;
 import org.opensha.sha.earthquake.faultSysSolution.util.SolHazardMapCalc.ReturnPeriods;
 import org.opensha.sha.earthquake.param.IncludeBackgroundOption;
+import org.opensha.sha.earthquake.param.IncludeBackgroundParam;
+import org.opensha.sha.earthquake.param.UseRupMFDsParam;
+import org.opensha.sha.earthquake.util.GridCellSupersamplingSettings;
+import org.opensha.sha.earthquake.util.GriddedSeismicitySettings;
+import org.opensha.sha.faultSurface.RuptureSurface;
+import org.opensha.sha.imr.AttenRelRef;
+import org.opensha.sha.imr.ScalarIMR;
+import org.opensha.sha.imr.attenRelImpl.nshmp.NSHMP_GMM_Wrapper;
+import org.opensha.sha.imr.param.IntensityMeasureParams.PGA_Param;
+import org.opensha.sha.imr.param.IntensityMeasureParams.SA_Param;
+import org.opensha.sha.imr.param.OtherParams.SigmaTruncLevelParam;
+import org.opensha.sha.imr.param.OtherParams.SigmaTruncTypeParam;
+import org.opensha.sha.util.SiteTranslator;
 import org.opensha.sha.util.TectonicRegionType;
 
 import com.google.common.base.Preconditions;
 import com.google.common.primitives.Doubles;
 
+import gov.usgs.earthquake.nshmp.model.HazardModel;
+import gov.usgs.earthquake.nshmp.model.NshmErf;
 import net.mahdilamb.colormap.Colors;
 
 public class ComparisonPageGen {
@@ -86,13 +117,36 @@ public class ComparisonPageGen {
 		EnumSet<IncludeBackgroundOption> bgOps = EnumSet.allOf(IncludeBackgroundOption.class);
 		File inputSolFile = new File("/home/kevin/OpenSHA/fss_inversions/2024_02_02-nshm23_branches-WUS_FM_v3/"
 				+ "results_WUS_FM_v3_branch_averaged_gridded_simplified_revised2026.zip");
+		boolean rupMFDs = false;
 		
 		File compDirActiveSub = new File("/home/kevin/OpenSHA/nshm23/nshmp-haz-models/ext_hazard_calcs/"
 				+ "conus_2023.R2-no_gmm_region-by_source-active_subduction-vs760-0p1-20260515-95ae7e82fbb85d");
 		File compDirStable = new File("/home/kevin/OpenSHA/nshm23/nshmp-haz-models/ext_hazard_calcs/"
 				+ "conus_2023.R2-no_gmm_region-by_source-stable-vs760-0p1-20260515-ea28700aef6c6f");
 		File outputDir = new File(inputDir, "nshmp_haz_comparisons_"+imtDir);
-		double sourceSpacing = 0.1;
+		
+		File modelDir = new File("/data/kevin/nshm23/nshmp-haz-models/nshm-conus-6.1.3");
+//		File modelDir = new File("/data/kevin/nshm23/nshmp-haz-models/nshm-conus-6.2.0");
+		
+		boolean doWrapperCalc = true;
+		
+		Map<TectonicRegionType, AttenRelRef> gmmRefs = Map.of(
+				TectonicRegionType.ACTIVE_SHALLOW, AttenRelRef.USGS_NSHM23_ACTIVE);
+//				TectonicRegionType.ACTIVE_SHALLOW, AttenRelRef.NGAWest_2014_AVG_NOIDRISS);
+		Map<TectonicRegionType, ScalarIMR> gmms = new HashMap<>();
+		for (TectonicRegionType trt : gmmRefs.keySet()) {
+			ScalarIMR gmm = gmmRefs.get(trt).get();
+			gmm.setParamDefaults();
+			gmm.getParameter(SigmaTruncTypeParam.NAME).setValue(SigmaTruncTypeParam.SIGMA_TRUNC_TYPE_1SIDED);
+			gmm.getParameter(SigmaTruncLevelParam.NAME).setValue(3d);
+			if (period == 0d) {
+				gmm.setIntensityMeasure(PGA_Param.NAME);
+			} else {
+				gmm.setIntensityMeasure(SA_Param.NAME);
+				SA_Param.setPeriodInSA_Param(gmm.getIntensityMeasure(), period);
+			}
+			gmms.put(trt, gmm);
+		}
 		
 		File sourcesDirActiveSub = new File(compDirActiveSub, "vs30-"+vs30+"/"+imtDir+"/source");
 		File sourcesDirStable = new File(compDirStable, "vs30-"+vs30+"/"+imtDir+"/source");
@@ -104,7 +158,7 @@ public class ComparisonPageGen {
 		Preconditions.checkState(resourcesDir.exists() || resourcesDir.mkdir());
 		
 		GriddedRegion mapReg = GriddedRegion.fromFeature(Feature.read(new File(inputDir, "gridded_region.geojson")));
-		SiteDataValueListList siteData = mapReg.getSiteData();
+		List<Site> sites = SolHazardMapCalc.loadSites(mapReg, gmmRefs);
 		
 		boolean plotTraces = false;
 		Region plotReg = mapReg;
@@ -165,12 +219,24 @@ public class ComparisonPageGen {
 				extCurvesMap.put(bgOp, ratesToProbs(extCurvesMap.get(bgOp)));
 		}
 		
+		FaultSystemSolution sol = null;
+		if (plotTraces || doWrapperCalc)
+			sol = FaultSystemSolution.load(inputSolFile);
 		GeographicMapMaker mapMaker = new GeographicMapMaker(plotReg);
 		if (plotTraces) {
-			mapMaker.setFaultSections(FaultSystemRupSet.load(inputSolFile).getFaultSectionDataList());
+			mapMaker.setFaultSections(sol.getRupSet().getFaultSectionDataList());
 			mapMaker.setSectOutlineChar(null);
 		}
 //		mapMaker.setDefaultPlotWidth(1000);
+		
+		BaseFaultSystemSolutionERF solERF = null;
+		if (doWrapperCalc) {
+			solERF = new BaseFaultSystemSolutionERF();
+			solERF.setSolution(sol);
+			solERF.setGriddedSeismicitySettings(solERF.getGriddedSeismicitySettings().forSupersamplingSettings(GridCellSupersamplingSettings.QUICK));
+			solERF.setParameter(UseRupMFDsParam.NAME, rupMFDs);
+			solERF.getTimeSpan().setDuration(1d);
+		}
 		
 		Color transparent = new Color(255, 255, 255, 0);
 		
@@ -181,6 +247,10 @@ public class ComparisonPageGen {
 //		CPT pDiffCPT = MethodsAndIngredientsHazChangeFigures.getCenterMaskedCPT(GMT_CPT_Files.DIVERGING_VIK_UNIFORM.instance(), 10d, 50d);
 		CPT pDiffCPT = GMT_CPT_Files.DIVERGING_VIK_UNIFORM.instance().rescale(-10d, 10d);
 		pDiffCPT.setNanColor(transparent);
+		
+		HazardModel model = null;
+		if (doWrapperCalc)
+			model = HazardModel.load(modelDir.toPath());
 		
 		double diffScale;
 		if (period == 0d)
@@ -213,6 +283,16 @@ public class ComparisonPageGen {
 			DiscretizedFunc[] myCurves = myCurvesMap.get(bgOp);
 			DiscretizedFunc[] extCurves = extCurvesMap.get(bgOp);
 			
+			NshmErf wrapperERF = null;
+			if (doWrapperCalc) {
+				wrapperERF = new NshmErf(model, trts, bgOp);
+				wrapperERF.getTimeSpan().setDuration(1d);
+				wrapperERF.updateForecast();
+				
+				solERF.setParameter(IncludeBackgroundParam.NAME, bgOp);
+				solERF.updateForecast();
+			}
+			
 			String mapLabelAdd;
 			switch (bgOp) {
 			case INCLUDE:
@@ -235,6 +315,8 @@ public class ComparisonPageGen {
 			for (ReturnPeriods rp : rps) {
 				GriddedGeoDataSet myMap = curvestoMap(myCurves, mapReg, rp);
 				GriddedGeoDataSet extMap = curvestoMap(extCurves, mapReg, rp);
+				
+				System.out.println("Doing "+bgOp+", "+rp);
 				
 				lines.add("### "+rp.label);
 				lines.add(topLink); lines.add("");
@@ -272,7 +354,7 @@ public class ComparisonPageGen {
 				table.addColumn("![Map]("+resourcesDir.getName()+"/"+prefix+"_diff.png)");
 				
 				table.finalizeLine();
-				table.addLine(diffStr(pDiff, true), diffStr(diff, false));
+				table.addLine(diffStr(pDiff, true, plotReg), diffStr(diff, false, plotReg));
 				
 				lines.addAll(table.build());
 				lines.add("");
@@ -282,6 +364,8 @@ public class ComparisonPageGen {
 				int maxDiffIndex = -1;
 				int minDiffIndex = -1;
 				for (int i=0; i<diff.size(); i++) {
+					if (!plotReg.contains(diff.getLocation(i)))
+						continue;
 					double v = diff.get(i);
 					if (Double.isFinite(v)) {
 						if (v > maxDiff) {
@@ -300,6 +384,9 @@ public class ComparisonPageGen {
 				table.addLine("Min difference", "Max difference");
 				
 				table.initNewLine();
+				Site minSite = sites.get(minDiffIndex);
+				Site maxSite = sites.get(maxDiffIndex);
+				HazardCurveCalculator calc = new HazardCurveCalculator(new SourceFilterManager(SourceFilters.TRT_DIST_CUTOFFS));
 				for (boolean min : new boolean[] {true,false}) {
 					int index = min ? minDiffIndex : maxDiffIndex;
 					Preconditions.checkState(index >= 0);
@@ -316,8 +403,46 @@ public class ComparisonPageGen {
 					funcs.add(extCurve);
 					chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 3f, Colors.tab_orange));
 					
+					Site site = min ? minSite : maxSite;
+					
+					if (doWrapperCalc) {
+						DiscretizedFunc wrappedCurve = extCurve.deepClone();
+						DiscretizedFunc logCurve = new ArbitrarilyDiscretizedFunc();
+						for (int i=0; i<wrappedCurve.size(); i++)
+							logCurve.set(Math.log(wrappedCurve.getX(i)), 0d);
+						
+						
+						calc.getHazardCurve(logCurve, site, gmms, wrapperERF);
+						
+						for (int i=0; i<wrappedCurve.size(); i++)
+							wrappedCurve.set(i, logCurve.getY(i));
+						
+						wrappedCurve.setName("Wrapper");
+						funcs.add(wrappedCurve);
+						chars.add(new PlotCurveCharacterstics(PlotLineType.SHORT_DASHED, 3f, Colors.tab_green));
+						
+					}
+					
 					funcs.add(myCurve);
 					chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 3f, Colors.tab_blue));
+					
+					if (doWrapperCalc) {
+						DiscretizedFunc fssCurve = myCurve.deepClone();
+						DiscretizedFunc logCurve = new ArbitrarilyDiscretizedFunc();
+						for (int i=0; i<fssCurve.size(); i++)
+							logCurve.set(Math.log(fssCurve.getX(i)), 0d);
+						
+						
+						calc.getHazardCurve(logCurve, site, gmms, solERF);
+						
+						for (int i=0; i<fssCurve.size(); i++)
+							fssCurve.set(i, logCurve.getY(i));
+						
+						fssCurve.setName(nameMine+" (recalc)");
+						funcs.add(fssCurve);
+						chars.add(new PlotCurveCharacterstics(PlotLineType.SHORT_DASHED, 3f, Colors.tab_lightblue));
+						
+					}
 					
 					PlotSpec plot = new PlotSpec(funcs, chars, (float)loc.lat+", "+(float)loc.lon, hazLabel, "Annual Probability of Exceedance");
 					plot.setLegendInset(true);
@@ -337,18 +462,291 @@ public class ComparisonPageGen {
 					int index = min ? minDiffIndex : maxDiffIndex;
 					Location loc = mapReg.getLocation(index);
 					String str = "Site: "+(float)loc.getLatitude()+", "+(float)loc.getLongitude();
-					if (siteData != null) {
-						for (SiteDataValue<?> data : siteData.getDataList(index)) {
-							str += "<p>"+data.getDataType()+": ";
-							if (data.getValue() != null && data.getValue() instanceof Number)
-								str += ((Number)data.getValue()).floatValue();
-							else
-								 str += data.getValue();
-						}
-					}
+					Site site = min ? minSite : maxSite;
+					for (Parameter<?> param : site)
+						str += "<p>"+param.getName()+": "+param.getValue();
 					table.addColumn(str);
 				}
 				table.finalizeLine();
+				
+				if (doWrapperCalc && bgOp == IncludeBackgroundOption.EXCLUDE) {
+					// add distance hists
+					double maxDist = 50d;
+					double maxQuickDist = 60d;
+					int bins = 50;
+					
+					List<ProbEqkSource> minWrapperSources = getSourcesWithinCutoff(wrapperERF, mapReg.getLocation(minDiffIndex), maxQuickDist);
+					List<ProbEqkSource> maxWrapperSources = getSourcesWithinCutoff(wrapperERF, mapReg.getLocation(maxDiffIndex), maxQuickDist);
+					List<ProbEqkSource> minFSSSources = getSourcesWithinCutoff(solERF, mapReg.getLocation(minDiffIndex), maxQuickDist);
+					List<ProbEqkSource> maxFSSSources = getSourcesWithinCutoff(solERF, mapReg.getLocation(maxDiffIndex), maxQuickDist);
+					
+					System.out.println("Max rate source within "+(float)maxDist+" km");
+					table.initNewLine();
+					for (boolean min : new boolean[] {true,false}) {
+						if (min)
+							System.out.println("Min site");
+						else
+							System.out.println("Max site");
+						Site site = min ? minSite : maxSite;
+						
+						List<DiscretizedFunc> funcs = new ArrayList<>();
+						List<PlotCurveCharacterstics> chars = new ArrayList<>();
+						ProbEqkRupture fssRup = null;
+						for (boolean fss : new boolean[] {true,false}) {
+							List<ProbEqkSource> sources;
+							if (fss) {
+								System.out.print("FSS ERF:\t");
+								sources = min ? minFSSSources : maxFSSSources;
+							} else {
+								System.out.print("Wrapped ERF:\t");
+								sources = min ? minWrapperSources : maxWrapperSources;
+							}
+							double maxProb = 0d;
+							double maxRate = 0d;
+							ProbEqkSource maxSource = null;
+							ProbEqkRupture maxRup = null;
+							for (ProbEqkSource source : sources) {
+								for (ProbEqkRupture rup : source) {
+									double prob = rup.getProbability();
+									double rate = rup.getMeanAnnualRate(1d);
+									if (prob > maxProb) {
+										maxProb = prob;
+										maxRate = rate;
+										maxSource = source;
+										maxRup = rup;
+									}
+								}
+							}
+							String maxName = "M"+(float)maxRup.getMag()+", rake="+(float)maxRup.getAveRake()
+									+", P="+(float)maxProb+" rate="+(float)maxRate;
+							System.out.println("maxProb="+(float)maxProb+", maxRate="+(float)maxRate+", "+maxName+"; "+maxSource.getName());
+							if (fss)
+								fssRup = maxRup;
+							
+							int index = min ? minDiffIndex : maxDiffIndex;
+							DiscretizedFunc curve = fss ? myCurves[index] : extCurves[index];
+							
+							DiscretizedFunc logIMs = new ArbitrarilyDiscretizedFunc();
+							for (int i=0; i<curve.size(); i++)
+								logIMs.set(Math.log(curve.getX(i)), 0d);
+							
+							ScalarIMR gmm = gmms.size() == 1 ? gmms.values().iterator().next() : gmms.get(maxSource.getTectonicRegionType());
+							calc.getHazardCurve(logIMs, site, gmm, maxRup);
+							
+							if (gmm instanceof NSHMP_GMM_Wrapper)
+								System.out.println("\tGMM input:\t"+((NSHMP_GMM_Wrapper)gmm).getCurrentGmmInput());
+							
+							DiscretizedFunc ims = new ArbitrarilyDiscretizedFunc();
+							for (int i=0; i<logIMs.size(); i++)
+								ims.set(curve.getX(i), logIMs.getY(i));
+							
+							String name = fss ? nameMine : nameTheirs;
+							name += " ("+maxName+")";
+							ims.setName(name);
+							funcs.add(ims);
+							chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 3f, fss ? Colors.tab_blue : Colors.tab_green));
+							
+							if (!fss) {
+//								double mag = maxRup.getMag();
+//								maxRup.setMag(fssRup.getMag());
+//								
+//								calc.getHazardCurve(logIMs, site, gmm, maxRup);
+//								
+//								ims = new ArbitrarilyDiscretizedFunc();
+//								for (int i=0; i<logIMs.size(); i++)
+//									ims.set(curve.getX(i), logIMs.getY(i));
+//								
+//								ims.setName(nameTheirs+" w/ "+nameMine+" mag");
+//								funcs.add(ims);
+//								chars.add(new PlotCurveCharacterstics(PlotLineType.SHORT_DASHED, 3f, Colors.tab_lightgreen));
+								
+								double rake = maxRup.getAveRake();
+								maxRup.setAveRake(fssRup.getAveRake());
+								
+								calc.getHazardCurve(logIMs, site, gmm, maxRup);
+								
+								ims = new ArbitrarilyDiscretizedFunc();
+								for (int i=0; i<logIMs.size(); i++)
+									ims.set(curve.getX(i), logIMs.getY(i));
+								
+//								ims.setName(nameTheirs+" w/ "+nameMine+" mag & rake");
+								ims.setName(nameTheirs+" w/ "+nameMine+" rake");
+								funcs.add(ims);
+								chars.add(new PlotCurveCharacterstics(PlotLineType.SHORT_DASHED, 3f, Colors.tab_olive));
+//								chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 3f, Colors.tab_olive));
+								
+//								RuptureSurface surf = maxRup.getRuptureSurface();
+//								maxRup.setRuptureSurface(fssRup.getRuptureSurface());
+//								
+//								calc.getHazardCurve(logIMs, site, gmm, maxRup);
+//								
+//								ims = new ArbitrarilyDiscretizedFunc();
+//								for (int i=0; i<logIMs.size(); i++)
+//									ims.set(curve.getX(i), logIMs.getY(i));
+//								
+//								ims.setName(nameTheirs+" w/ "+nameMine+" mag & rake & surf");
+//								funcs.add(ims);
+//								chars.add(new PlotCurveCharacterstics(PlotLineType.SHORT_DASHED, 3f, Colors.tab_brown));
+								
+//								maxRup.setMag(mag);
+								maxRup.setAveRake(rake);
+//								maxRup.setRuptureSurface(surf);
+							}
+						}
+						
+						Location loc = site.getLocation();
+						PlotSpec plot = new PlotSpec(funcs, chars, (float)loc.lat+", "+(float)loc.lon, hazLabel, "Conditional Probability of Exceedance");
+						plot.setLegendInset(true);
+						
+						HeadlessGraphPanel gp = PlotUtils.initScreenHeadless();
+						
+						gp.getPlotPrefs().setLegendFontSize(14);
+						
+						gp.drawGraphPanel(plot, true, false, new Range(1e-3, 1e1), new Range(0d, 1d));
+						
+						String curvePrefix = min ? prefix+"_cond_prob_min" : prefix+"_cond_prob_max";
+						
+						PlotUtils.writePlots(resourcesDir, curvePrefix, gp, 800, 800, true, true, false);
+						
+						table.addColumn("![Curve]("+resourcesDir.getName()+"/"+curvePrefix+".png)");
+					}
+					table.finalizeLine();
+					
+					// rake hist
+					table.initNewLine();
+					for (boolean min : new boolean[] {true,false}) {
+						int index = min ? minDiffIndex : maxDiffIndex;
+						Preconditions.checkState(index >= 0);
+						Location loc = mapReg.getLocation(index);
+						List<ProbEqkSource> wrapperSources = min ? minWrapperSources : maxWrapperSources;
+						List<ProbEqkSource> fssSources = min ? minFSSSources : maxFSSSources;
+						
+						EvenlyDiscretizedFunc rakeHistFSS = new EvenlyDiscretizedFunc(-180d, 180d, 181);
+						EvenlyDiscretizedFunc rakeHistWrapper = new EvenlyDiscretizedFunc(-180d, 180d, 181);
+						
+						for (ProbEqkSource source : fssSources)
+							for (ProbEqkRupture rup : source)
+								rakeHistFSS.add(rakeHistFSS.getClosestXIndex(rup.getAveRake()), rup.getMeanAnnualRate(1d));
+						for (ProbEqkSource source : wrapperSources)
+							for (ProbEqkRupture rup : source)
+								rakeHistWrapper.add(rakeHistWrapper.getClosestXIndex(rup.getAveRake()), rup.getMeanAnnualRate(1d));
+						
+						List<DiscretizedFunc> funcs = new ArrayList<>();
+						List<PlotCurveCharacterstics> chars = new ArrayList<>();
+						
+						rakeHistWrapper.setName("Wrapper");
+						funcs.add(rakeHistWrapper);
+						chars.add(new PlotCurveCharacterstics(PlotLineType.HISTOGRAM, 1f, trans(Colors.tab_green, 127)));
+						
+						rakeHistFSS.setName(nameMine);
+						funcs.add(rakeHistFSS);
+						chars.add(new PlotCurveCharacterstics(PlotLineType.HISTOGRAM, 1f, trans(Colors.tab_blue, 127)));
+						
+						PlotSpec plot = new PlotSpec(funcs, chars, " ", "Nearby rupture rake (degrees)", "Rate");
+						plot.setLegendInset(RectangleAnchor.TOP_LEFT);
+						
+						HeadlessGraphPanel gp = PlotUtils.initScreenHeadless();
+						
+						gp.drawGraphPanel(plot, false, false, new Range(-180, 180d), null);
+						
+						String histPrefix = prefix+"_hist_rake";
+						if (min)
+							histPrefix += "_min";
+						else
+							histPrefix += "_max";
+						
+						PlotUtils.writePlots(resourcesDir, histPrefix, gp, 800, 800, true, true, false);
+						
+						table.addColumn("![Rake hist]("+resourcesDir.getName()+"/"+histPrefix+".png)");
+					}
+					table.finalizeLine();
+					
+					for (int d=0; d<3; d++) {
+						String distName;
+						HistogramFunction histFSS;
+						BiFunction<RuptureSurface, Location, Double> distFunc;
+						if (d == 0) {
+							distName = "Rrup";
+							histFSS = new HistogramFunction(0d, maxDist, bins);
+							distFunc = (S,L) -> S.getDistanceRup(L);
+						} else if (d == 1) {
+							distName = "Rjb";
+							histFSS = new HistogramFunction(0d, maxDist, bins);
+							distFunc = (S,L) -> S.getDistanceJB(L);
+						} else {
+							distName = "RX";
+							histFSS = new HistogramFunction(-maxDist, maxDist, bins);
+							distFunc = (S,L) -> S.getDistanceX(L);
+						}
+						
+						EvenlyDiscretizedFunc histWrapper = histFSS.deepClone();
+						
+						table.initNewLine();
+						for (boolean min : new boolean[] {true,false}) {
+							int index = min ? minDiffIndex : maxDiffIndex;
+							Preconditions.checkState(index >= 0);
+							Location loc = mapReg.getLocation(index);
+							List<ProbEqkSource> wrapperSources = min ? minWrapperSources : maxWrapperSources;
+							List<ProbEqkSource> fssSources = min ? minFSSSources : maxFSSSources;
+							
+							histFSS.scale(0d);
+							histWrapper.scale(0d);
+							
+							fillDistanceHist(fssSources, distFunc, histFSS, loc);
+							fillDistanceHist(wrapperSources, distFunc, histWrapper, loc);
+							
+							List<DiscretizedFunc> funcs = new ArrayList<>();
+							List<PlotCurveCharacterstics> chars = new ArrayList<>();
+							
+							histWrapper.setName(null);
+							funcs.add(histWrapper);
+							chars.add(new PlotCurveCharacterstics(PlotLineType.HISTOGRAM, 1f, trans(Colors.tab_green, 127)));
+							
+							histFSS.setName(null);
+							funcs.add(histFSS);
+							chars.add(new PlotCurveCharacterstics(PlotLineType.HISTOGRAM, 1f, trans(Colors.tab_blue, 127)));
+							
+							EvenlyDiscretizedFunc cmlFSS = new EvenlyDiscretizedFunc(histFSS.getMinX()-0.5*histFSS.getDelta(), histFSS.size(), histFSS.getDelta());
+							double sum = 0d;
+							for (int i=0; i<cmlFSS.size(); i++) {
+								sum += histFSS.getY(i);
+								cmlFSS.set(i, sum);
+							}
+							EvenlyDiscretizedFunc cmlWrapper = cmlFSS.deepClone();
+							sum = 0d;
+							for (int i=0; i<cmlWrapper.size(); i++) {
+								sum += histWrapper.getY(i);
+								cmlWrapper.set(i, sum);
+							}
+							
+							cmlFSS.setName("Wrapper");
+							funcs.add(cmlFSS);
+							chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 2f, Colors.tab_green));
+							
+							cmlWrapper.setName(nameMine);
+							funcs.add(cmlWrapper);
+							chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 2f, Colors.tab_blue));
+							
+							PlotSpec plot = new PlotSpec(funcs, chars, " ", distName+" (km)", "Rate");
+							plot.setLegendInset(RectangleAnchor.TOP_LEFT);
+							
+							HeadlessGraphPanel gp = PlotUtils.initScreenHeadless();
+							
+							gp.drawGraphPanel(plot, false, false, new Range(cmlFSS.getMinX(), cmlFSS.getMaxX()+cmlFSS.getDelta()), null);
+							
+							String histPrefix = prefix+"_hist_"+distName;
+							if (min)
+								histPrefix += "_min";
+							else
+								histPrefix += "_max";
+							
+							PlotUtils.writePlots(resourcesDir, histPrefix, gp, 800, 800, true, true, false);
+							
+							table.addColumn("!["+distName+" hist]("+resourcesDir.getName()+"/"+histPrefix+".png)");
+						}
+						table.finalizeLine();
+					}
+				}
 				
 				lines.addAll(table.build());
 				lines.add("");
@@ -585,8 +983,9 @@ public class ComparisonPageGen {
 		return ret;
 	}
 	
-	private static String diffStr(GriddedGeoDataSet diff, boolean isPDiff) {
+	private static String diffStr(GriddedGeoDataSet diff, boolean isPDiff, Region plotReg) {
 		int numNan = 0;
+		int numInf = 0;
 		double max = Double.NEGATIVE_INFINITY;
 		double min = Double.POSITIVE_INFINITY;
 		double maxAbs = 0d;
@@ -601,10 +1000,15 @@ public class ComparisonPageGen {
 		List<Double> allConsidered = new ArrayList<>();
 		
 		for (int i=0; i<diff.size(); i++) {
+			if (!plotReg.contains(diff.getLocation(i)))
+				continue;
 			double v = diff.get(i);
 			if (Double.isNaN(v)) {
 				numNan++;
+			} else if (Double.isInfinite(v)) {
+				numInf++;
 			} else {
+				Preconditions.checkState(Double.isFinite(v), "Non-finite (but non-nan) value: %s", v);
 				max = Math.max(max, v);
 				min = Math.min(min, v);
 				double abs = Math.abs(v);
@@ -628,7 +1032,34 @@ public class ComparisonPageGen {
 			df = new DecimalFormat("0.000");
 		
 		return "Range=["+df.format(min)+", "+df.format(max)+"]; maxAbs="+df.format(maxAbs)
-				+"<p>avg="+df.format(avg)+"; avgAbs="+df.format(avgAbs)+"; median="+df.format(median)+"; "+numNan+" NaN";
+				+"<p>avg="+df.format(avg)+"; avgAbs="+df.format(avgAbs)+"; median="+df.format(median)
+				+"<p>"+numNan+" NaN; "+numInf+" inf";
+	}
+	
+	private static List<ProbEqkSource> getSourcesWithinCutoff(AbstractERF erf, Location loc, double cutoff) {
+		Site site = new Site(loc);
+		return erf.getSourceList().parallelStream().filter(S->(float)S.getMinDistance(site) <= (float)cutoff).collect(Collectors.toList());
+	}
+	
+	private static void fillDistanceHist(List<ProbEqkSource> sources, BiFunction<RuptureSurface, Location, Double> distFunc,
+			EvenlyDiscretizedFunc hist, Location loc) {
+		float min = (float)(hist.getMinX() < 0 ? hist.getMinX() - 0.5*hist.getDelta() : 0d);
+		float max = (float)(hist.getMaxX() + 0.5*hist.getDelta());
+		sources.parallelStream().forEach((source)->{
+			for (ProbEqkRupture rup : source) {
+				double dist = distFunc.apply(rup.getRuptureSurface(), loc);
+				if ((float)dist >= min && (float)dist <= max) {
+					int index = hist.getClosestXIndex(dist);
+					synchronized (hist) {
+						hist.add(index, rup.getMeanAnnualRate(1d));
+					}
+				}
+			}
+		});
+	}
+	
+	private static Color trans(Color c, int a) {
+		return new Color(c.getRed(), c.getGreen(), c.getBlue(), a);
 	}
 
 }
