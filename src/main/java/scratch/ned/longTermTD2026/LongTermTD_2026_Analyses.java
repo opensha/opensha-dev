@@ -13,6 +13,8 @@ import org.apache.commons.math3.analysis.UnivariateFunction;
 import org.apache.commons.math3.analysis.solvers.BisectionSolver;
 import org.apache.commons.math3.stat.descriptive.DescriptiveStatistics;
 import org.jfree.data.Range;
+import org.opensha.commons.data.function.ArbDiscrEmpiricalDistFunc;
+import org.opensha.commons.data.function.DiscretizedFunc;
 import org.opensha.commons.data.function.HistogramFunction;
 import org.opensha.commons.data.function.XY_DataSet;
 import org.opensha.commons.geo.Location;
@@ -37,6 +39,9 @@ import org.opensha.sha.earthquake.faultSysSolution.erf.td.TimeDepFaultSystemSolu
 import org.opensha.sha.earthquake.faultSysSolution.erf.td.TimeDepUtils;
 import org.opensha.sha.earthquake.faultSysSolution.erf.td.UCERF3_ProbabilityModel;
 import org.opensha.sha.earthquake.faultSysSolution.erf.td.WG02_ProbabilityModel;
+import org.opensha.sha.earthquake.faultSysSolution.modules.BranchAveragingOrder;
+import org.opensha.sha.earthquake.faultSysSolution.modules.BranchParentSectParticMFDs;
+import org.opensha.sha.earthquake.faultSysSolution.modules.BranchSectParticMFDs;
 import org.opensha.sha.earthquake.param.BPTAveragingTypeOptions;
 import org.opensha.sha.earthquake.param.BPTAveragingTypeParam;
 import org.opensha.sha.earthquake.param.IncludeBackgroundOption;
@@ -51,6 +56,9 @@ import org.opensha.sha.earthquake.rupForecastImpl.nshm23.timeDependence.DOLE_Sub
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.timeDependence.TimeDependentReportPageGen.DataToInclude;
 import org.opensha.sha.faultSurface.FaultSection;
 import org.opensha.sha.faultSurface.GeoJSONFaultSection;
+import org.opensha.sha.magdist.IncrementalMagFreqDist;
+
+import com.google.common.base.Preconditions;
 
 import scratch.UCERF3.erf.FaultSystemSolutionERF;
 import scratch.UCERF3.erf.mean.MeanUCERF3;
@@ -191,8 +199,13 @@ public class LongTermTD_2026_Analyses {
 	private static FaultSystemSolution getUCERF3_BranchAveFaultSysSol() {
 		// get UCERF3 branch-ave solution
 		File storeDir = MeanUCERF3.getStoreDir();
-		File solFile = MeanUCERF3.checkDownload(new File(storeDir, "cached_FM3_1_dep100.0_depMean_rakeMean.zip")).join();
+		// this is the old file that did not have slip rates (it also has a different section indexing)
+//		File solFile = MeanUCERF3.checkDownload(new File(storeDir, "cached_FM3_1_dep100.0_depMean_rakeMean.zip")).join();
+		// this is a new file from Kevin on July 20, 2026 (see Teams chat that day)
+//		File solFile = MeanUCERF3.checkDownload(new File(storeDir, "FM3_1_branch_averaged_modular_from_erf.zip")).join();
+		File solFile = new File("/Users/field/.opensha/ucerf3_erf/FM3_1_branch_averaged_modular_from_erf.zip");
 		FaultSystemSolution sol=null;
+		System.out.println(storeDir);
 		try {
 			sol = FaultSystemSolution.load(solFile);
 		} catch (IOException e) {
@@ -976,7 +989,7 @@ public class LongTermTD_2026_Analyses {
 			}	
 		}
 	}
-
+	
 	
 
 	public static void main(String[] args) {
@@ -1007,6 +1020,7 @@ public class LongTermTD_2026_Analyses {
 //		listParentSectionsThatContainStringInName("Peninsula",getFullPrefUS26_ERF());
 		
 		generatePreliminaryResults();
+//		TimeDependentReportPageGen.getNSHM23_WUS_SectRI_CumDistFuncArray();
 		System.exit(0);
 		
 		
