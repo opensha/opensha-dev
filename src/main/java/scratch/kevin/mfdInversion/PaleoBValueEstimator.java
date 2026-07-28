@@ -12,10 +12,12 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
+import java.util.function.DoubleFunction;
 import java.util.stream.Collectors;
 
 import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.apache.commons.statistics.distribution.ContinuousDistribution;
+import org.apache.commons.statistics.distribution.TDistribution;
 import org.apache.commons.statistics.distribution.UniformContinuousDistribution;
 import org.jfree.chart.ui.RectangleAnchor;
 import org.jfree.data.Range;
@@ -37,9 +39,11 @@ import org.opensha.commons.gui.plot.PlotUtils;
 import org.opensha.commons.data.function.EvenlyDiscretizedFunc;
 import org.opensha.commons.data.function.XY_DataSet;
 import org.opensha.commons.geo.Location;
+import org.opensha.commons.geo.LocationUtils.LocationAverager;
 import org.opensha.commons.logicTree.LogicTreeBranch;
 import org.opensha.commons.logicTree.LogicTreeLevel;
 import org.opensha.commons.logicTree.LogicTreeNode;
+import org.opensha.commons.util.ComparablePairing;
 import org.opensha.commons.util.DataUtils.MinMaxAveTracker;
 import org.opensha.commons.util.FileNameUtils;
 import org.opensha.commons.util.Interpolate;
@@ -62,6 +66,7 @@ import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_Segmen
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.SectionSupraSeisBValues;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.SupraSeisBValues;
 import org.opensha.sha.faultSurface.FaultSection;
+import org.opensha.sha.faultSurface.FaultTrace;
 import org.opensha.sha.magdist.IncrementalMagFreqDist;
 
 import com.google.common.base.Preconditions;
@@ -101,6 +106,20 @@ public class PaleoBValueEstimator {
 		EvenlyDiscretizedFunc bVals = new EvenlyDiscretizedFunc(0d, 1d, 21);
 		double connectivityWeightB = priorDist.getMean();
 //		double connectivityWeightB = 1d;
+		
+		DoubleFunction<Double> logLikelihoodFunction;
+		
+		// Gaussian likelihood
+		logLikelihoodFunction = (misfit) -> -0.5 * misfit * misfit;
+		
+		// Student's t
+////		double nu = 4.0;
+//		double nu = 3.0;
+//		TDistribution tDist = TDistribution.of(nu);
+//		// Preserve the meaning of the original 95% bounds: make the t's
+//		// 95% interval coincide with the Gaussian-derived 95% interval.
+//		double scaleFactor = tDist.inverseCumulativeProbability(0.975) / 1.96;
+//		logLikelihoodFunction = (misfit) -> tDist.logDensity(misfit * scaleFactor);
 		
 		PaleoseismicConstraintData paleoData = NSHM23_PaleoDataLoader.load(rs);
 		
@@ -248,12 +267,13 @@ public class PaleoBValueEstimator {
 				double priorDensity = priorDist.density(b);
 				Preconditions.checkState(Double.isFinite(priorDensity) && priorDensity > 0d);
 				
+				// z-score
 				double misfit = paleoBValMisfits.get(s).getY(i);
 				Preconditions.checkState(Double.isFinite(misfit));
 
 				// Unnormalized posterior density:
 				// prior density * Gaussian likelihood
-				double logLikelihood = -0.5 * misfit * misfit;
+				double logLikelihood = logLikelihoodFunction.apply(misfit);
 				logLikelihoods[i] = logLikelihood;
 				posteriorWeights[i] = priorDensity * Math.exp(logLikelihood);
 				sumWeights += posteriorWeights[i];
@@ -446,6 +466,65 @@ public class PaleoBValueEstimator {
 		PlotCurveCharacterstics posteriorDistChar = new PlotCurveCharacterstics(PlotLineType.DOTTED, 2f, Colors.tab_orange);
 		PlotCurveCharacterstics posteriorAvgDistChar = new PlotCurveCharacterstics(PlotLineType.SOLID, 5f, Color.BLACK);
 		
+		Map<Integer, String> parentWithinNamedPrefixes = new HashMap<>();
+//		namedFaultResults
+		for (String faultName : faults.getFaultNames()) {
+			List<Integer> parents = faults.getParentIDsForFault(faultName);
+			MinMaxAveTracker latTrack = new MinMaxAveTracker();
+			MinMaxAveTracker lonTrack = new MinMaxAveTracker();
+			List<Location> parentMiddles = new ArrayList<>();
+			for (int parentID : parents) {
+				LocationAverager avg = new LocationAverager();
+				for (FaultSection sect : parentMappedSects.get(parentID)) {
+					FaultTrace trace = sect.getFaultTrace();
+					Location loc = trace.first();
+					avg.add(loc, 1d);
+					latTrack.addValue(loc.lat);
+					lonTrack.addValue(loc.lon);
+					loc = trace.last();
+					avg.add(loc, 1d);
+					latTrack.addValue(loc.lat);
+					lonTrack.addValue(loc.lon);
+				}
+				parentMiddles.add(avg.getAverage());
+			}
+			
+			boolean latX = isLatX(faultName, latTrack, lonTrack);
+			
+			List<Double> parentComps = new ArrayList<>(parents.size());
+			for (Location loc : parentMiddles)
+				parentComps.add(latX ? loc.lat : loc.lon);
+			
+			System.out.println(faultName+" latX="+latX);
+			System.out.println("\tParents (unsorted):");
+			for (int p=0; p<parents.size(); p++) {
+				int parentID = parents.get(p);
+				String parentName = parentMappedSects.get(parentID).get(0).getParentSectionName();
+				System.out.println("\t\t"+p+". "+parentName+"\tsort="+parentComps.get(p).floatValue()+"\tloc="+parentMiddles.get(p));
+			}
+			
+			// sort
+			parents = ComparablePairing.getSortedData(parentComps, parents);
+			
+			String faultPrefix = FileNameUtils.simplify(faultName);
+			
+			String pattern = "0";
+			while (pattern.length() < ((parents.size()-1)+"").length())
+				pattern += "0";
+			DecimalFormat parentDF = new DecimalFormat(pattern);
+			System.out.println("\tParents (sorted):");
+			for (int p=0; p<parents.size(); p++) {
+				int parentID = parents.get(p);
+				String parentName = parentMappedSects.get(parentID).get(0).getParentSectionName();
+				System.out.println("\t\t"+p+". "+parentName);
+				if (parentName.startsWith(faultName))
+					parentName = parentName.substring(faultName.length()).trim();
+				String parentPrefix = faultPrefix+"_"+parentDF.format(p)+"_"+FileNameUtils.simplify(parentName);
+				parentWithinNamedPrefixes.put(parentID, parentPrefix);
+			}
+		}
+//		System.exit(0);
+		
 		DiscretizedFunc thicknessForWeights = new ArbitrarilyDiscretizedFunc();
 		thicknessForWeights.set(0d, 1d);
 		thicknessForWeights.set(0.5, 4d);
@@ -566,7 +645,11 @@ public class PaleoBValueEstimator {
 			
 			gp.drawGraphPanel(List.of(pdfPlot, misfitsPlot), false, false, List.of(new Range(bVals.getMinX(), bVals.getMaxX())), null);
 			
-			String prefix = FileNameUtils.simplify(parentName);
+			String prefix;
+			if (parentWithinNamedPrefixes.containsKey(parentID))
+				prefix = parentWithinNamedPrefixes.get(parentID);
+			else
+				prefix = FileNameUtils.simplify(parentName);
 			
 			PlotUtils.writePlots(outputDir, prefix, gp, 800, 1200, true, true, false);
 		}
@@ -597,7 +680,7 @@ public class PaleoBValueEstimator {
 			Range latRange = new Range(latTrack.getMin(), latTrack.getMax());
 			Range lonRange = new Range(lonTrack.getMin(), lonTrack.getMax());
 			
-			boolean latX = latRange.getLength() > 0.6*lonRange.getLength() || faultName.contains("San Andreas");
+			boolean latX = isLatX(faultName, latTrack, lonTrack);
 			String xLabel;
 			Range xRange;
 			if (latX) {
@@ -620,102 +703,10 @@ public class PaleoBValueEstimator {
 				emptySectFuncs.add(func);
 			}
 			
-			// top plot: paleo fits
-			
-			List<XY_DataSet> funcs = new ArrayList<>();
-			List<PlotCurveCharacterstics> chars = new ArrayList<>();
-			
-			DefaultXY_DataSet dataXY = new DefaultXY_DataSet();
-			double halfWhisker = 0.005*xRange.getLength();
-			
-			double minY = Double.POSITIVE_INFINITY;
-			double maxY = 0d;
-			for (int c=0; c<paleoConstraints.size(); c++) {
-				SectMappedUncertainDataConstraint constraint = paleoConstraints.get(c);
-				int parentID = rs.getFaultSectionData(constraint.sectionIndex).getParentSectionId();
-				if (parentsMap.containsKey(parentID)) {
-					double x = latX ? constraint.dataLocation.getLatitude() : constraint.dataLocation.getLongitude();
-					dataXY.set(x, constraint.bestEstimate);
-					
-					BoundedUncertainty range95 = constraint.estimateUncertaintyBounds(UncertaintyBoundType.CONF_95);
-					
-					funcs.add(line(x-halfWhisker, range95.upperBound, x+halfWhisker, range95.upperBound));
-					chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, Color.GRAY));
-					
-					funcs.add(line(x, range95.lowerBound, x, range95.upperBound));
-					chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, Color.GRAY));
-					
-					funcs.add(line(x-halfWhisker, range95.lowerBound, x+halfWhisker, range95.lowerBound));
-					chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, Color.GRAY));
-					
-					BoundedUncertainty range68 = constraint.estimateUncertaintyBounds(UncertaintyBoundType.CONF_68);
-					// check against a smaller range
-					// but 68 could even be negative (determined from std dev, whereas 95 might be direct), so guard against that
-					double lowerCheck = Math.max(range68.lowerBound, 0.5*(constraint.bestEstimate + range95.lowerBound));
-					double upperCheck = Math.min(range68.upperBound, 0.5*(constraint.bestEstimate + range95.upperBound));
-					minY = Math.min(minY, lowerCheck);
-					maxY = Math.max(maxY, upperCheck);
-				}
-			}
-			if (dataXY.size() > 0) {
-				dataXY.setName("Paleo Constraints");
-				funcs.add(dataXY);
-				chars.add(new PlotCurveCharacterstics(PlotSymbol.FILLED_CIRCLE, 5f, Color.BLACK));
-			} else {
-				continue;
-			}
-			
-			List<CompletableFuture<double[]>> sectPaleoFutures = new ArrayList<>();
-			for (int i=0; i<sects.size(); i++) {
-				int sectIndex = sects.get(i).getSectionId();
-				sectPaleoFutures.add(CompletableFuture.supplyAsync(()->{
-					double[] ret = new double[bVals.size()];
-					for (int b=0; b<bVals.size(); b++)
-						ret[b] = estimatePaleoRate(rs, sectIndex,
-								bValTargetMFDs[b].getOnFaultSupraSeisNucleationMFDs().get(sectIndex), paleoProb, includedRups);
-					return ret;
-				}));
-			}
-			List<double[]> sectPaleoRates = new ArrayList<>();
-			for (int i=0; i<sects.size(); i++)
-				sectPaleoRates.add(sectPaleoFutures.get(i).join());
-			
 			PlotCurveCharacterstics charBounds = new PlotCurveCharacterstics(PlotLineType.SOLID, 2f, Color.DARK_GRAY);
-			DecimalFormat oDF = new DecimalFormat("0.#");
-			for (int i=0; i<sects.size(); i++) {
-				XY_DataSet emptyFunc = emptySectFuncs.get(i);
-				
-				double rate0 = sectPaleoRates.get(i)[0];
-				double rate1 = sectPaleoRates.get(i)[bVals.size()-1];
-				
-				funcs.add(copyAtY(emptyFunc, rate0));
-				chars.add(charBounds);
-				if (i == 0)
-					funcs.get(funcs.size()-1).setName("b={"+oDF.format(bVals.getMinX())+", "+oDF.format(bVals.getMaxX())+"}");
-				funcs.add(copyAtY(emptyFunc, rate1));
-				chars.add(charBounds);
-				minY = Math.min(minY, rate0);
-				minY = Math.min(minY, rate1);
-				maxY = Math.max(maxY, rate0);
-				maxY = Math.max(maxY, rate1);
-			}
-			for (int i=0; i<sects.size(); i++) {
-				XY_DataSet emptyFunc = emptySectFuncs.get(i);
-				
-				double sumWeight = 0d;
-				double sumRateWeight = 0d;
-				for (int b=0; b<bVals.size(); b++) {
-					double weight = priorDist.density(bVals.getX(b));
-					sumWeight += weight;
-					sumRateWeight += sectPaleoRates.get(i)[b]*weight;
-				}
-				
-				funcs.add(copyAtY(emptyFunc, sumRateWeight/sumWeight));
-				chars.add(priorDistChar);
-				if (i == 0)
-					funcs.get(funcs.size()-1).setName("Average prior");
-			}
 			PlotCurveCharacterstics postModeChar = new PlotCurveCharacterstics(PlotLineType.SOLID, 3f, Colors.tab_blue);
+			PlotCurveCharacterstics postAvgChar = new PlotCurveCharacterstics(PlotLineType.SOLID, 4f, Colors.tab_orange);
+
 			double[] modes = new double[sects.size()];
 			for (int i=0; i<sects.size(); i++) {
 				FaultSection sect = sects.get(i);
@@ -734,47 +725,153 @@ public class PaleoBValueEstimator {
 				Preconditions.checkState(Double.isFinite(mode));
 				modes[i] = mode;
 			}
-			for (int i=0; i<sects.size(); i++) {
-				XY_DataSet emptyFunc = emptySectFuncs.get(i);
-				int bIndex = bVals.getClosestXIndex(modes[i]);
+			
+			// top plot: overall rates
+			// 2nd plot: paleo fits
+			boolean anyPaleo = false;
+			
+//			for (boolean paleoVisible : new boolean[] {false,true}) {
+			for (boolean paleoVisible : new boolean[] {false}) {
+				double minY = Double.POSITIVE_INFINITY;
+				double maxY = 0d;
 				
-				funcs.add(copyAtY(emptyFunc, sectPaleoRates.get(i)[bIndex]));
-				chars.add(postModeChar);
-				if (i == 0)
-					funcs.get(funcs.size()-1).setName("Modal posterior");
-			}
-			PlotCurveCharacterstics postAvgChar = new PlotCurveCharacterstics(PlotLineType.SOLID, 4f, Colors.tab_orange);
-			for (int i=0; i<sects.size(); i++) {
-				XY_DataSet emptyFunc = emptySectFuncs.get(i);
-				FaultSection sect = sects.get(i);
-				int sectIndex = sect.getSectionId();
+				List<XY_DataSet> funcs = new ArrayList<>();
+				List<PlotCurveCharacterstics> chars = new ArrayList<>();
 				
-				ContinuousDistribution dist = sectBDists.get(sectIndex).distribution;
-				double sumWeight = 0d;
-				double sumRateWeight = 0d;
-				for (int b=0; b<bVals.size(); b++) {
-					double weight = dist.density(bVals.getX(b));
-					sumWeight += weight;
-					sumRateWeight += sectPaleoRates.get(i)[b]*weight;
+				if (paleoVisible) {
+					DefaultXY_DataSet dataXY = new DefaultXY_DataSet();
+					double halfWhisker = 0.005*xRange.getLength();
+					for (int c=0; c<paleoConstraints.size(); c++) {
+						SectMappedUncertainDataConstraint constraint = paleoConstraints.get(c);
+						int parentID = rs.getFaultSectionData(constraint.sectionIndex).getParentSectionId();
+						if (parentsMap.containsKey(parentID)) {
+							double x = latX ? constraint.dataLocation.getLatitude() : constraint.dataLocation.getLongitude();
+							dataXY.set(x, constraint.bestEstimate);
+							
+							BoundedUncertainty range95 = constraint.estimateUncertaintyBounds(UncertaintyBoundType.CONF_95);
+							
+							funcs.add(line(x-halfWhisker, range95.upperBound, x+halfWhisker, range95.upperBound));
+							chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, Color.GRAY));
+							
+							funcs.add(line(x, range95.lowerBound, x, range95.upperBound));
+							chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, Color.GRAY));
+							
+							funcs.add(line(x-halfWhisker, range95.lowerBound, x+halfWhisker, range95.lowerBound));
+							chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, Color.GRAY));
+							
+							BoundedUncertainty range68 = constraint.estimateUncertaintyBounds(UncertaintyBoundType.CONF_68);
+							// check against a smaller range
+							// but 68 could even be negative (determined from std dev, whereas 95 might be direct), so guard against that
+							double lowerCheck = Math.max(range68.lowerBound, 0.5*(constraint.bestEstimate + range95.lowerBound));
+							double upperCheck = Math.min(range68.upperBound, 0.5*(constraint.bestEstimate + range95.upperBound));
+							minY = Math.min(minY, lowerCheck);
+							maxY = Math.max(maxY, upperCheck);
+						}
+					}
+					if (dataXY.size() > 0) {
+						dataXY.setName("Paleo Constraints");
+						funcs.add(dataXY);
+						chars.add(new PlotCurveCharacterstics(PlotSymbol.FILLED_CIRCLE, 5f, Color.BLACK));
+						anyPaleo = true;
+					} else {
+						break;
+					}
 				}
 				
-				funcs.add(copyAtY(emptyFunc, sumRateWeight/sumWeight));
-				chars.add(postAvgChar);
-				if (i == 0)
-					funcs.get(funcs.size()-1).setName("Average posterior");
+				List<CompletableFuture<double[]>> sectPaleoFutures = new ArrayList<>();
+				for (int i=0; i<sects.size(); i++) {
+					int sectIndex = sects.get(i).getSectionId();
+					sectPaleoFutures.add(CompletableFuture.supplyAsync(()->{
+						double[] ret = new double[bVals.size()];
+						for (int b=0; b<bVals.size(); b++)
+							ret[b] = estimateParticRate(rs, sectIndex,
+									bValTargetMFDs[b].getOnFaultSupraSeisNucleationMFDs().get(sectIndex),
+									paleoVisible ? paleoProb : null, includedRups);
+						return ret;
+					}));
+				}
+				List<double[]> sectPaleoRates = new ArrayList<>();
+				for (int i=0; i<sects.size(); i++)
+					sectPaleoRates.add(sectPaleoFutures.get(i).join());
+				
+				DecimalFormat oDF = new DecimalFormat("0.#");
+				for (int i=0; i<sects.size(); i++) {
+					XY_DataSet emptyFunc = emptySectFuncs.get(i);
+					
+					double rate0 = sectPaleoRates.get(i)[0];
+					double rate1 = sectPaleoRates.get(i)[bVals.size()-1];
+					
+					funcs.add(copyAtY(emptyFunc, rate0));
+					chars.add(charBounds);
+					if (i == 0)
+						funcs.get(funcs.size()-1).setName("b={"+oDF.format(bVals.getMinX())+", "+oDF.format(bVals.getMaxX())+"}");
+					funcs.add(copyAtY(emptyFunc, rate1));
+					chars.add(charBounds);
+					minY = Math.min(minY, rate0);
+					minY = Math.min(minY, rate1);
+					maxY = Math.max(maxY, rate0);
+					maxY = Math.max(maxY, rate1);
+				}
+				for (int i=0; i<sects.size(); i++) {
+					XY_DataSet emptyFunc = emptySectFuncs.get(i);
+					
+					double sumWeight = 0d;
+					double sumRateWeight = 0d;
+					for (int b=0; b<bVals.size(); b++) {
+						double weight = priorDist.density(bVals.getX(b));
+						sumWeight += weight;
+						sumRateWeight += sectPaleoRates.get(i)[b]*weight;
+					}
+					
+					funcs.add(copyAtY(emptyFunc, sumRateWeight/sumWeight));
+					chars.add(priorDistChar);
+					if (i == 0)
+						funcs.get(funcs.size()-1).setName("Average prior");
+				}
+				for (int i=0; i<sects.size(); i++) {
+					XY_DataSet emptyFunc = emptySectFuncs.get(i);
+					int bIndex = bVals.getClosestXIndex(modes[i]);
+					
+					funcs.add(copyAtY(emptyFunc, sectPaleoRates.get(i)[bIndex]));
+					chars.add(postModeChar);
+					if (i == 0)
+						funcs.get(funcs.size()-1).setName("Modal posterior");
+				}
+				for (int i=0; i<sects.size(); i++) {
+					XY_DataSet emptyFunc = emptySectFuncs.get(i);
+					FaultSection sect = sects.get(i);
+					int sectIndex = sect.getSectionId();
+					
+					ContinuousDistribution dist = sectBDists.get(sectIndex).distribution;
+					double sumWeight = 0d;
+					double sumRateWeight = 0d;
+					for (int b=0; b<bVals.size(); b++) {
+						double weight = dist.density(bVals.getX(b));
+						sumWeight += weight;
+						sumRateWeight += sectPaleoRates.get(i)[b]*weight;
+					}
+					
+					funcs.add(copyAtY(emptyFunc, sumRateWeight/sumWeight));
+					chars.add(postAvgChar);
+					if (i == 0)
+						funcs.get(funcs.size()-1).setName("Average posterior");
+				}
+				
+				PlotSpec plot = new PlotSpec(funcs, chars, " ", xLabel,
+						paleoVisible ? "Paleo-visible rate estimate" : "Participation rate estimate");
+				plot.setLegendInset(RectangleAnchor.BOTTOM_LEFT, 0.025, 0.025, 0.95, false);
+				
+				Range yRange = new Range(Math.pow(10, Math.floor(Math.log10(minY))), Math.pow(10, Math.ceil(Math.log10(maxY))));
+				
+				plots.add(new AlongStrikePlot(plot, funcs, chars, yRange, true));
 			}
-			
-			PlotSpec plot = new PlotSpec(funcs, chars, " ", xLabel, "Paleo-visible rate estimate");
-			plot.setLegendInset(RectangleAnchor.BOTTOM_LEFT, 0.025, 0.025, 0.95, false);
-			
-			Range yRange = new Range(Math.pow(10, Math.floor(Math.log10(minY))), Math.pow(10, Math.ceil(Math.log10(maxY))));
-			
-			plots.add(new AlongStrikePlot(plot, funcs, chars, yRange, true));
+			if (!anyPaleo)
+				continue;
 			
 			// b-value plot
 			
-			funcs = new ArrayList<>();
-			chars = new ArrayList<>();
+			List<XY_DataSet> funcs = new ArrayList<>();
+			List<PlotCurveCharacterstics> chars = new ArrayList<>();
 			double priorAvg = priorDist.getMean();
 			for (int i=0; i<sects.size(); i++) {
 				XY_DataSet emptyFunc = emptySectFuncs.get(i);
@@ -805,10 +902,10 @@ public class PaleoBValueEstimator {
 					funcs.get(funcs.size()-1).setName("Average posterior");
 			}
 			
-			plot = new PlotSpec(funcs, chars, " ", xLabel, "b-value");
+			PlotSpec plot = new PlotSpec(funcs, chars, " ", xLabel, "b-value");
 			plot.setLegendInset(RectangleAnchor.BOTTOM_LEFT, 0.025, 0.025, 0.95, false);
 			
-			yRange = new Range(bVals.getMinX()-0.02, bVals.getMaxX()+0.02);
+			Range yRange = new Range(bVals.getMinX()-0.02, bVals.getMaxX()+0.02);
 			
 			plots.add(new AlongStrikePlot(plot, funcs, chars, yRange, false));
 			
@@ -855,7 +952,7 @@ public class PaleoBValueEstimator {
 		}
 	}
 	
-	private static double estimatePaleoRate(FaultSystemRupSet rs, int sectIndex,
+	private static double estimateParticRate(FaultSystemRupSet rs, int sectIndex,
 			IncrementalMagFreqDist nuclMFD, NSHM23_PaleoProbabilityModel paleoProb, BitSet includedRups) {
 		int mMinIndex = nuclMFD.getClosestXIndex(rs.getMinMagForSection(sectIndex));
 		int mMaxIndex = nuclMFD.getClosestXIndex(rs.getMaxMagForSection(sectIndex));
@@ -886,10 +983,14 @@ public class PaleoBValueEstimator {
 				continue;
 			double particScalar = rupAreaSums[m] / (rups.size() * sectArea);
 			double particRate = nuclRate * particScalar;
-			double particRateEach = particRate / rups.size();
-			Preconditions.checkState(Double.isFinite(particRateEach) && particRateEach > 0d);
-			for (int rupIndex : rups)
-				ret += particRateEach * paleoProb.getProbPaleoVisible(rs, rupIndex, sectIndex);
+			if (paleoProb == null) {
+				ret += particRate;
+			} else {
+				double particRateEach = particRate / rups.size();
+				Preconditions.checkState(Double.isFinite(particRateEach) && particRateEach > 0d);
+				for (int rupIndex : rups)
+					ret += particRateEach * paleoProb.getProbPaleoVisible(rs, rupIndex, sectIndex);
+			}
 		}
 		return ret;
 	}
@@ -906,6 +1007,10 @@ public class PaleoBValueEstimator {
 
 	private static XY_DataSet line(double x1, double y1, double x2, double y2) {
 		return new DefaultXY_DataSet(new double[] { x1, x2 }, new double[] { y1, y2 });
+	}
+	
+	private static boolean isLatX(String faultName, MinMaxAveTracker latTrack, MinMaxAveTracker lonTrack) {
+		return latTrack.getLength() > 0.6*lonTrack.getLength() || faultName.contains("San Andreas");
 	}
 	
 }
