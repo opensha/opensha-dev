@@ -1,7 +1,6 @@
 package gov.usgs.earthquake.nshmp.model;
 
-import static java.util.stream.Collectors.toList;
-
+import java.util.ArrayList;
 import java.util.List;
 
 import org.opensha.commons.data.Site;
@@ -13,15 +12,17 @@ import org.opensha.sha.faultSurface.CompoundSurface;
 import org.opensha.sha.faultSurface.RuptureSurface;
 
 import gov.usgs.earthquake.nshmp.Maths;
-import gov.usgs.earthquake.nshmp.model.SystemRuptureSet.SystemSource;
+import gov.usgs.earthquake.nshmp.model.SystemRuptureSet.SystemRupture;
 
 public abstract class NshmSource extends ProbEqkSource {
 
-  final Source delegate;
+  final Object delegate;
+  private final int id;
 
-  NshmSource(Source delegate) {
+  NshmSource(Object delegate, String name, int id) {
     this.delegate = delegate;
-    this.setName(delegate.name());
+    this.id = id;
+    this.setName(name);
   }
 
   public abstract void setDuration(double duration);
@@ -31,21 +32,11 @@ public abstract class NshmSource extends ProbEqkSource {
   }
 
   public int getNSHM_ID() {
-    return delegate.id();
+    return id;
   }
 
-  public Source delegate() {
+  public Object delegate() {
     return delegate;
-  }
-
-  @Override
-  public double getMinDistance(Site site) {
-    return NshmUtil.distance(site, delegate);
-  }
-
-  @Override
-  public int getNumRuptures() {
-    return delegate.size();
   }
 
   @Override
@@ -58,7 +49,7 @@ public abstract class NshmSource extends ProbEqkSource {
     throw new UnsupportedOperationException();
   }
 
-  public Source getDelegate() {
+  public Object getDelegate() {
     return delegate;
   }
 
@@ -67,20 +58,31 @@ public abstract class NshmSource extends ProbEqkSource {
     private final List<NshmRupture> ruptures;
 
     Fault(
-        Source delegate,
+        IterableRuptureSet delegate,
         double weight,
         double duration) {
 
-      super(delegate);
-      this.ruptures = delegate.stream()
-          .map(rupture -> new NshmRupture(
-              rupture.mag(),
-              rupture.rake(),
-              rupture.rate(),
-              weight,
-              duration,
-              new NshmSurface(rupture.surface())))
-          .collect(toList());
+      super(delegate, delegate.name(), delegate.id());
+      this.ruptures = new ArrayList<>();
+      for (Rupture rupture : delegate) {
+        ruptures.add(new NshmRupture(
+            rupture.magnitude(),
+            rupture.rake(),
+            rupture.rate(),
+            weight,
+            duration,
+            new NshmSurface(rupture.surface())));
+      }
+    }
+
+    @Override
+    public double getMinDistance(Site site) {
+      return NshmUtil.distance(site, (IterableRuptureSet) delegate);
+    }
+
+    @Override
+    public int getNumRuptures() {
+      return ruptures.size();
     }
 
     @Override
@@ -103,20 +105,30 @@ public abstract class NshmSource extends ProbEqkSource {
     double duration;
 
     Point(
-        PointSource delegate,
+        GridSource delegate,
         double weight,
         double duration) {
 
-      super(delegate);
+      super(delegate, delegate.name(), delegate.id());
       this.weight = weight;
       this.duration = duration;
     }
 
     @Override
+    public double getMinDistance(Site site) {
+      return NshmUtil.distance(site, (GridSource) delegate);
+    }
+
+    @Override
+    public int getNumRuptures() {
+      return ((GridSource) delegate).size();
+    }
+
+    @Override
     public ProbEqkRupture getRupture(int index) {
-      Rupture rupture = ((PointSource) delegate).get(index);
+      Rupture rupture = ((GridSource) delegate).get(index);
       return new NshmRupture(
-          rupture.mag(),
+          rupture.magnitude(),
           rupture.rake(),
           rupture.rate(),
           weight,
@@ -136,12 +148,13 @@ public abstract class NshmSource extends ProbEqkSource {
     final NshmRupture rupture;
 
     System(
-        SystemSource delegate,
+        SystemRuptureSet ruptureSet,
+        SystemRupture delegate,
         double weight,
         double duration,
         List<NshmSurface> surfaces) {
 
-      super(delegate);
+      super(delegate, ruptureSet.name(), ruptureSet.id());
       this.surfaces = surfaces;
       this.rupture = new NshmRupture(
           delegate.magnitude(),
@@ -159,6 +172,11 @@ public abstract class NshmSource extends ProbEqkSource {
           .mapToDouble(p -> LocationUtils.horzDistanceFast(site.getLocation(), p))
           .min()
           .orElseThrow();
+    }
+
+    @Override
+    public int getNumRuptures() {
+      return 1;
     }
 
     @Override

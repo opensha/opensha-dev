@@ -25,7 +25,8 @@ public class CrustalNucleationAroundFaultZoom {
 	public static void main(String[] args) throws IOException {
 		Region reg = new Region(new Location(13, 144), new Location(16, 146));
 		FaultSystemSolution sol = FaultSystemSolution.load(new File(
-				"/data/kevin/nshm23/batch_inversions/2026_03_27-nshm26-GNMI-2000samples-gridded/"
+//				"/data/kevin/nshm23/batch_inversions/2026_03_27-nshm26-GNMI-2000samples-gridded/"
+				"/data/kevin/nshm23/batch_inversions/2026_07_13-nshm27-GNMI-5000samples-lhs_pairwise/"
 				+ "results_GNMI_V1_ACTIVE_SHALLOW_branch_averaged.zip"));
 		File outputDir = new File("/tmp");
 		GridSourceList gridList = sol.requireModule(GridSourceList.class);

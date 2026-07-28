@@ -13,8 +13,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 
+import org.apache.commons.math3.stat.StatUtils;
 import org.apache.commons.math3.util.Precision;
 import org.jfree.chart.annotations.XYTextAnnotation;
+import org.jfree.chart.ui.RectangleAnchor;
+import org.jfree.chart.ui.RectangleInsets;
 import org.jfree.chart.ui.TextAnchor;
 import org.jfree.data.Range;
 import org.opensha.commons.data.function.ArbitrarilyDiscretizedFunc;
@@ -23,11 +26,17 @@ import org.opensha.commons.data.function.DiscretizedFunc;
 import org.opensha.commons.data.function.EvenlyDiscretizedFunc;
 import org.opensha.commons.data.function.HistogramFunction;
 import org.opensha.commons.data.function.XY_DataSet;
+import org.opensha.commons.data.xyz.EvenlyDiscrXYZ_DataSet;
 import org.opensha.commons.gui.plot.HeadlessGraphPanel;
 import org.opensha.commons.gui.plot.PlotCurveCharacterstics;
 import org.opensha.commons.gui.plot.PlotLineType;
 import org.opensha.commons.gui.plot.PlotSpec;
+import org.opensha.commons.gui.plot.PlotSymbol;
 import org.opensha.commons.gui.plot.PlotUtils;
+import org.opensha.commons.gui.plot.jfreechart.xyzPlot.XYZPlotSpec;
+import org.opensha.commons.mapping.gmt.elements.GMT_CPT_Files;
+import org.opensha.commons.util.DataUtils.MinMaxAveTracker;
+import org.opensha.commons.util.cpt.CPT;
 import org.opensha.sha.earthquake.faultSysSolution.util.FaultSysTools;
 import org.opensha.sha.magdist.GutenbergRichterMagFreqDist;
 import org.opensha.sha.util.TectonicRegionType;
@@ -70,6 +79,12 @@ public class ObsUncertaintyBoundsFigure {
 				PlotLineType.DOTTED
 		};
 		
+		PlotSymbol[] symbolTypes = {
+				PlotSymbol.FILLED_SQUARE,
+				PlotSymbol.FILLED_CIRCLE,
+				PlotSymbol.FILLED_INV_TRIANGLE
+		};
+		
 		RateType[] types = {
 			RateType.M1,
 			RateType.M1_TO_MMAX,
@@ -100,8 +115,12 @@ public class ObsUncertaintyBoundsFigure {
 					Double mMax = null;
 					Map<RateType, EvenlyDiscretizedFunc[]> typeMagFuncs = new HashMap<>();
 					EvenlyDiscretizedFunc overallMean = null;
-					for (RateType type : types) {
-						SeismicityRateModel rateModel = NSHM27_SeisRateModelBranch.loadRateModel(seisReg, classification, trt, type);
+					SeismicityRateModel[] rateModels = new SeismicityRateModel[types.length];
+					for (int t=0; t<types.length; t++)
+						rateModels[t] = NSHM27_SeisRateModelBranch.loadRateModel(seisReg, classification, trt, types[t]);
+					for (int t=0; t<types.length; t++) {
+						RateType type = types[t];
+						SeismicityRateModel rateModel = rateModels[t];
 						
 						RateRecord meanRec = rateModel.getMeanRecord();
 						if (m1 == null)
@@ -139,7 +158,7 @@ public class ObsUncertaintyBoundsFigure {
 						
 						typeMagFuncs.put(type, new EvenlyDiscretizedFunc[] {lowMFD, highMFD});
 						
-						lowMFD.setName(type.toString().replace("Branches", "branches"));
+						lowMFD.setName(typeName(type));
 						funcs.add(lowMFD);
 						chars.add(new PlotCurveCharacterstics(plt, 3f, color));
 						highMFD.setName(null);
@@ -162,7 +181,7 @@ public class ObsUncertaintyBoundsFigure {
 								System.out.println("\tMmax="+mMax.floatValue());
 							}
 							
-							weightAvg.setName(type.toString()+" Average");
+							weightAvg.setName(typeName(type)+" Average");
 							funcs.add(weightAvg);
 							chars.add(new PlotCurveCharacterstics(plt, 3f, Color.DARK_GRAY));
 						}
@@ -338,7 +357,7 @@ public class ObsUncertaintyBoundsFigure {
 								DefaultXY_DataSet lowerXY = new DefaultXY_DataSet();
 								lowerXY.set(typeLowers[t], 0d);
 								lowerXY.set(typeLowers[t], maxY);
-								lowerXY.setName(type.toString());
+								lowerXY.setName(typeName(type));
 								
 								DefaultXY_DataSet upperXY = new DefaultXY_DataSet();
 								upperXY.set(typeUppers[t], 0d);
@@ -358,10 +377,131 @@ public class ObsUncertaintyBoundsFigure {
 							
 							PlotUtils.writePlots(outputDir, prefix+"_hist_m"+oDF.format(histMag), gp, 700, 650, true, true, false);
 						}
+						
+						// write rate vs b
+						MinMaxAveTracker rateTrack = new MinMaxAveTracker();
+						MinMaxAveTracker bTrack = new MinMaxAveTracker();
+						double[] bValues = new double[samples.size()];
+						double[] rates = new double[samples.size()];
+						for (int s=0; s<samples.size(); s++) {
+							PureGR gr = samples.get(s);
+							rateTrack.addValue(gr.rateAboveM1);
+							bTrack.addValue(gr.b);
+							bValues[s] = gr.b;
+							rates[s] = gr.rateAboveM1;
+							
+						}
+						int numBinsEach = 20;
+						double rateLength = rateTrack.getLength();
+						double bLenth = bTrack.getLength();
+						double rateDelta = rateLength/(numBinsEach-1);
+						double bDelta = bLenth/(numBinsEach-1);
+						
+//						double bMin = bTrack.getMin()-0.5*bDelta;
+//						double rateMin = Math.max(0, rateTrack.getMin()-0.5*rateDelta);
+						double bMin = bTrack.getMin();
+						double rateMin = rateTrack.getMin();
+						
+						System.out.println("b range: "+bTrack);
+						System.out.println("\tbinMin="+bMin);
+						System.out.println("\tbinDelta="+bDelta);
+						System.out.println("rate range: "+rateTrack);
+						System.out.println("\tbinMin="+rateMin);
+						System.out.println("\tbinDelta="+rateDelta);
+						
+						float symbolWidth = 7f;
+						
+						EvenlyDiscrXYZ_DataSet rateVsB = new EvenlyDiscrXYZ_DataSet(numBinsEach, numBinsEach,
+								bMin, rateMin, bDelta, rateDelta);
+						
+						for (PureGR gr : samples)
+							rateVsB.add(gr.b, gr.rateAboveM1, 1d);
+						
+						funcs = new ArrayList<>();
+						chars = new ArrayList<>();
+						
+						DefaultXY_DataSet mean = new DefaultXY_DataSet();
+						mean.setName("Mean");
+						
+						mean.set(StatUtils.mean(bValues), StatUtils.mean(rates));
+						
+						funcs.add(mean);
+						chars.add(new PlotCurveCharacterstics(PlotSymbol.FILLED_CIRCLE, symbolWidth, Color.BLACK));
+						
+						XY_DataSet meanCopy = mean.deepClone();
+						meanCopy.setName(null);
+						funcs.add(meanCopy);
+						chars.add(new PlotCurveCharacterstics(PlotSymbol.CIRCLE, symbolWidth, Color.WHITE));
+						
+						for (int t=0; t<types.length; t++) {
+							RateType type = types[t];
+							SeismicityRateModel rateModel = rateModels[t];
+							PlotSymbol symbol = symbolTypes[type.ordinal()];
+							Color color = colors[type.ordinal()];
+							
+							RateRecord lower = rateModel.getLowerRecord();
+							RateRecord upper = rateModel.getUpperRecord();
+							if (lower instanceof PureGR) {
+								DefaultXY_DataSet xy = new DefaultXY_DataSet();
+								xy.setName(typeName(type));
+								
+								PureGR gr = (PureGR)lower;
+								xy.set(gr.b, gr.rateAboveM1);
+								gr = (PureGR)upper;
+								xy.set(gr.b, gr.rateAboveM1);
+								
+								funcs.add(xy);
+								chars.add(new PlotCurveCharacterstics(symbol, symbolWidth, color));
+							}
+						}
+						
+						double lowerB = StatUtils.percentile(bValues, 2.5d);
+						double upperB = StatUtils.percentile(bValues, 97.5d);
+						double lowerRate = StatUtils.percentile(rates, 2.5d);
+						double upperRate = StatUtils.percentile(rates, 97.5d);
+						
+						DefaultXY_DataSet xy = new DefaultXY_DataSet();
+						xy.setName("95% marginal bounds");
+						
+						xy.set(lowerB, lowerRate);
+						xy.set(upperB, upperRate);
+						
+						funcs.add(xy);
+						chars.add(new PlotCurveCharacterstics(PlotSymbol.FILLED_INV_TRIANGLE, symbolWidth, Colors.tab_red));
+						
+						gp = PlotUtils.initPrintHeadless();
+						int tickLabelFontSize = gp.getPlotPrefs().getTickLabelFontSize();
+						gp.getPlotPrefs().setPlotPadding(new RectangleInsets(tickLabelFontSize/2d, 5, 0, tickLabelFontSize+4));
+//						gp.getPlotPrefs().setCptPadding(10);
+						
+						rateVsB.scale(1d/samples.size());
+						CPT cpt = GMT_CPT_Files.SEQUENTIAL_OSLO_UNIFORM.instance().reverse().rescale(0d, rateVsB.getMaxZ());
+						XYZPlotSpec xyzPlot = new XYZPlotSpec(rateVsB, funcs, chars, cpt, title,
+								"b-value", "M>"+oDF.format(m1)+" Rate", "Fraction of "+samples.size()+" samples");
+						xyzPlot.setLegendInset(RectangleAnchor.TOP_LEFT);
+						xyzPlot.setIncludeZlabelInLegend(false);
+						
+						double ratePlotMax = Math.min(rateVsB.getMaxY()-0.5*rateDelta, StatUtils.percentile(rates, 99.99));
+						double ratePlotMin = Math.max(rateVsB.getMinY()+0.5*rateDelta, StatUtils.percentile(rates, 0.01));
+						double bPlotMax = Math.min(rateVsB.getMaxX()-0.5*bDelta, StatUtils.percentile(bValues, 99.99));
+						double bPlotMin = Math.max(rateVsB.getMinX()+0.5*bDelta, StatUtils.percentile(bValues, 0.01));
+						
+						gp.drawGraphPanel(xyzPlot, false, false, new Range(bPlotMin, bPlotMax), new Range(ratePlotMin, ratePlotMax));
+//								new Range(rateVsB.getMinX()-0.5*rateVsB.getGridSpacingX(), rateVsB.getMaxX()+0.5*rateVsB.getGridSpacingX()),
+//								new Range(rateVsB.getMinY()-0.5*rateVsB.getGridSpacingY(), rateVsB.getMaxY()+0.5*rateVsB.getGridSpacingY()));
+						
+						PlotUtils.writePrintPlots(outputDir, prefix+"_rate_vs_b", gp,
+								PlotUtils.DEFAULT_USABLE_PAGE_WIDTH*2d/3d, PlotUtils.DEFAULT_USABLE_PAGE_WIDTH*2d/3d, 
+								150, true, true, false);
 					}
 				}
 			}
 		}
+	}
+	
+	private static String typeName(RateType type) {
+		String name = type.toString();
+		return name.replace("Branches", "branches");
 	}
 	
 	private static EvenlyDiscretizedFunc cmlMFD(RateRecord record, EvenlyDiscretizedFunc refMFD) {

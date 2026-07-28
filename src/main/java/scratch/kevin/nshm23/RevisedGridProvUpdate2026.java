@@ -10,10 +10,13 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import org.opensha.commons.util.DataUtils;
+import org.opensha.commons.util.modules.OpenSHA_Module;
 import org.opensha.sha.earthquake.faultSysSolution.FaultSystemRupSet;
 import org.opensha.sha.earthquake.faultSysSolution.FaultSystemSolution;
 import org.opensha.sha.earthquake.faultSysSolution.modules.GridSourceList;
 import org.opensha.sha.earthquake.faultSysSolution.modules.GridSourceProvider;
+import org.opensha.sha.earthquake.faultSysSolution.modules.RupMFDsModule;
 import org.opensha.sha.earthquake.faultSysSolution.modules.RupSetTectonicRegimes;
 import org.opensha.sha.earthquake.faultSysSolution.modules.GridSourceList.GriddedRupture;
 import org.opensha.sha.earthquake.faultSysSolution.modules.GridSourceList.GriddedRuptureProperties;
@@ -34,7 +37,11 @@ public class RevisedGridProvUpdate2026 {
 //		File inFile = new File(dir, "results_WUS_FM_v3_branch_averaged_gridded.zip");
 		File inFile = new File(dir, "results_WUS_FM_v3_branch_averaged_gridded_simplified.zip");
 		
-		File outFile = new File(dir, inFile.getName().substring(0, inFile.getName().indexOf(".zip"))+"_revised2026.zip");
+//		boolean updateRakes = true;
+//		File outFile = new File(dir, inFile.getName().substring(0, inFile.getName().indexOf(".zip"))+"_revised2026.zip");
+		
+		boolean updateRakes = false;
+		File outFile = new File(dir, inFile.getName().substring(0, inFile.getName().indexOf(".zip"))+"_revised2026_origRakes.zip");
 		
 		FaultSystemSolution sol = FaultSystemSolution.load(inFile);
 		FaultSystemRupSet rupSet = sol.getRupSet();
@@ -42,19 +49,46 @@ public class RevisedGridProvUpdate2026 {
 		if (rupSet.hasModule(RupSetTectonicRegimes.class))
 			rupSet.addModule(RupSetTectonicRegimes.constant(rupSet, TectonicRegionType.ACTIVE_SHALLOW));
 		
-		if (sol.hasModule(GridSourceProvider.class)) {
+		if (updateRakes) {
+			// update rakes to match Peter's rounding, which unfortunately matters because it pushes ruptures across GMM
+			// fault style bins, e.g., -135 is normal but -135.4 is SS. (although Peter's bins are also wrong, it should be
+			// 150 for most NGA-W2's).
+			// also apply minor rounding to mags via the build(true) call below 
+			double[] rakes = new double[rupSet.getNumRuptures()];
+			for (int i=0; i<rakes.length; i++)
+				rakes[i] = DataUtils.roundFixed(rupSet.getAveRakeForRup(i), 0);
+			rupSet = FaultSystemRupSet.buildFromExisting(rupSet, true).rupRakes(rakes).build(true);
+			List<OpenSHA_Module> prevSolModules = sol.getModules(true);
+			sol = new FaultSystemSolution(rupSet, sol.getRateForAllRups());
+			for (OpenSHA_Module module : prevSolModules)
+				sol.addModule(module);
+		}
+		
+		// remove rup MFDs (not used by Peter)
+		sol.removeModuleInstances(RupMFDsModule.class);
+		
+		// now update the grid list
+		if (sol.getGridSourceProvider() != null) {
 			GridSourceList origGridList = sol.requireModule(GridSourceList.class);
+			System.out.println("Orig grid list Mmin="+(float)minMag(origGridList));
 			sol.setGridSourceProvider(updateGridList(origGridList));
 		}
 		
 		sol.write(outFile);
 	}
 	
-	private static GridSourceList updateGridList(GridSourceList origGridList) {
-		double ACTIVE_FRACT = 2d/3d;
-		double STABLE_FRACT = 1d/3d;
-		
-		
+	private static double minMag(GridSourceList gridList) {
+		double minMag = Double.POSITIVE_INFINITY;
+		for (int l=0; l<gridList.getNumLocations(); l++)
+			for (GriddedRupture rup : gridList.getRuptures(null, l))
+				minMag = Math.min(minMag, rup.properties.magnitude);
+		return minMag;
+	}
+	
+	private static final double ACTIVE_FRACT = 2d/3d;
+	private static final double STABLE_FRACT = 1d/3d;
+	
+	public static GridSourceList updateGridList(GridSourceList origGridList) {
 		EnumMap<TectonicRegionType, List<? extends List<GriddedRupture>>> trtRuptureLists = new EnumMap<>(TectonicRegionType.class);
 		List<List<GriddedRupture>> activeList = new ArrayList<>();
 		trtRuptureLists.put(TectonicRegionType.ACTIVE_SHALLOW, activeList);

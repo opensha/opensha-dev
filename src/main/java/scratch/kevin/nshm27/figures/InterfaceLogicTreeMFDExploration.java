@@ -1,19 +1,25 @@
 package scratch.kevin.nshm27.figures;
 
+import static scratch.kevin.nshm27.figures.NSHM27_PaperPaths.*;
+
 import java.awt.Color;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.BitSet;
+import java.util.Collections;
 import java.util.List;
 import java.util.Random;
 import java.util.concurrent.CompletableFuture;
 
+import org.apache.commons.statistics.distribution.ContinuousDistribution;
 import org.jfree.data.Range;
 import org.opensha.commons.data.WeightedList;
 import org.opensha.commons.data.function.ArbDiscrEmpiricalDistFunc;
+import org.opensha.commons.data.function.ArbitrarilyDiscretizedFunc;
 import org.opensha.commons.data.function.DiscretizedFunc;
 import org.opensha.commons.data.function.EvenlyDiscretizedFunc;
+import org.opensha.commons.data.function.LightFixedXFunc;
 import org.opensha.commons.data.uncertainty.UncertainArbDiscFunc;
 import org.opensha.commons.data.uncertainty.UncertainBoundedIncrMagFreqDist;
 import org.opensha.commons.gui.plot.HeadlessGraphPanel;
@@ -31,7 +37,9 @@ import org.opensha.commons.util.DataUtils.MinMaxAveTracker;
 import org.opensha.commons.util.cpt.CPT;
 import org.opensha.commons.util.modules.ModuleContainer;
 import org.opensha.sha.earthquake.faultSysSolution.FaultSystemRupSet;
+import org.opensha.sha.earthquake.faultSysSolution.logicTree.dmSampling.DeformationModelDistSampler.FixedFractileSampler;
 import org.opensha.sha.earthquake.faultSysSolution.modules.ClusterRuptures;
+import org.opensha.sha.earthquake.faultSysSolution.modules.FaultGridAssociations;
 import org.opensha.sha.earthquake.faultSysSolution.modules.SectSlipRates;
 import org.opensha.sha.earthquake.faultSysSolution.ruptures.plausibility.impl.prob.RuptureProbabilityCalc.BinaryRuptureProbabilityCalc;
 import org.opensha.sha.earthquake.faultSysSolution.util.FaultSysTools;
@@ -74,11 +82,18 @@ public class InterfaceLogicTreeMFDExploration {
 		
 		TectonicRegionType trt = TectonicRegionType.SUBDUCTION_INTERFACE;
 
+		boolean includeObs = true;
+		boolean includeTotalObs = true;
+
 		LogicTreeBranch<LogicTreeNode> branch = NSHM27_LogicTree.buildDefault(seisReg, trt, false);
 		LogicTreeBranch<LogicTreeNode> sampledBranch = NSHM27_LogicTree.buildDefault(seisReg, trt, true);
 //		int samples = 50;
 //		int samples = 500;
-		int samples = 1000;
+//		int samples = 1000;
+		int samples = 10000;
+		
+//		boolean skipSampled = true;
+		boolean skipSampled = false;
 		
 		for (int l=0; l<branch.size(); l++) {
 			LogicTreeLevel<? extends LogicTreeNode> level = branch.getLevel(l);
@@ -107,13 +122,23 @@ public class InterfaceLogicTreeMFDExploration {
 			if (classification.getNodeWeight() > 0d)
 				classificationChoices.add(classification, classification.getNodeWeight());
 		List<NSHM27_SeisClassificationMethod> classificationSamples = classificationChoices.sampleEvenly(samples, new Random(12345l));
+		LogicTreeLevel<?> rateLevel = sampledBranch.getLevel(sampledBranch.getLevelTypeIndex(NSHM27_SeisRateModel.class));
+		((RandomLevel<?, ?>)rateLevel).build(12345l, samples, SamplingMethod.LATIN_HYPERCUBE);
+		List<? extends LogicTreeNode> rateModelSamples = rateLevel.getNodes();
 		
 		NSHM27_InvConfigFactory factory = new NSHM27_InvConfigFactory();
 		FaultSystemRupSet rupSet = factory.buildRuptureSet(branch, FaultSysTools.defaultNumThreads());
 		
-		EvenlyDiscretizedFunc refMFD = FaultSysTools.initEmptyMFD(6.01, 9.99);
+		EvenlyDiscretizedFunc refMFD = FaultSysTools.initEmptyMFD(5.01, 9.99);
 		
-		IncrementalMagFreqDist defaultMFD = calculateMFD(factory, rupSet, branch, refMFD);
+		FaultGridAssociations assoc = rupSet.requireModule(FaultGridAssociations.class);
+		
+		IncrementalMagFreqDist defaultMFD = calculateMFD(factory, rupSet, branch, refMFD, assoc);
+		
+		double defaultMmax = 0d;
+		for (int m=0; m<defaultMFD.size(); m++)
+			if (defaultMFD.getY(m) > 0)
+				defaultMmax = defaultMFD.getX(m);
 		
 		CPT tab10CPT = GMT_CPT_Files.CATEGORICAL_TAB10_NOGRAY.instance();
 		Color[] tab10 = new Color[tab10CPT.size()];
@@ -124,6 +149,31 @@ public class InterfaceLogicTreeMFDExploration {
 		Range rateRange = new Range(1e-5, 1e0);
 		
 		List<String> avgStrings = new ArrayList<>();
+
+		IncrementalMagFreqDist obsMFD = null;
+		EvenlyDiscretizedFunc obsCmlMFD = null;
+		if (includeObs) {
+			NSHM27_SeisRateModel rateModel = branch.requireValue(NSHM27_SeisRateModel.class);
+			obsMFD = rateModel.build(seisReg, branch.requireValue(NSHM27_SeisClassificationMethod.class), trt, refMFD, defaultMmax);
+			obsMFD.setName("Observed (interface)");
+			System.out.println("Observed rate M>5: "+obsMFD.getCumRate(obsMFD.getClosestXIndex(5.01)));
+			System.out.println("Observed rate M>6: "+obsMFD.getCumRate(obsMFD.getClosestXIndex(6.01)));
+			obsCmlMFD = obsMFD.getCumRateDistWithOffset();
+			// this could be used to make it appear flat to Mmax, but it's not realistic and won't match the extrap branch
+//			IncrementalMagFreqDist obsTmp = obsMFD.deepClone();
+//			obsTmp.scaleToIncrRate(0, obsCmlMFD.getY(0));
+//			obsCmlMFD = obsTmp;
+		}
+		IncrementalMagFreqDist obsTotalMFD = null;
+		EvenlyDiscretizedFunc obsTotalCmlMFD = null;
+		if (includeTotalObs) {
+			NSHM27_SeisRateModel rateModel = branch.requireValue(NSHM27_SeisRateModel.class);
+			obsTotalMFD = rateModel.build(seisReg, branch.requireValue(NSHM27_SeisClassificationMethod.class), null, refMFD, defaultMmax);
+			obsTotalMFD.setName("Observed (total)");
+			System.out.println("Observed total rate M>5: "+obsTotalMFD.getCumRate(obsTotalMFD.getClosestXIndex(5.01)));
+			System.out.println("Observed total rate M>6: "+obsTotalMFD.getCumRate(obsTotalMFD.getClosestXIndex(6.01)));
+			obsTotalCmlMFD = obsTotalMFD.getCumRateDistWithOffset();
+		}
 		
 		for (int l : levelIndexes) {
 			Preconditions.checkState(l >= 0);
@@ -134,6 +184,19 @@ public class InterfaceLogicTreeMFDExploration {
 			List<DiscretizedFunc> incrFuncs = new ArrayList<>();
 			List<DiscretizedFunc> cmlFuncs = new ArrayList<>();
 			List<PlotCurveCharacterstics> chars = new ArrayList<>();
+			
+			if (includeTotalObs) {
+				incrFuncs.add(obsTotalMFD);
+				cmlFuncs.add(obsTotalCmlMFD);
+				chars.add(new PlotCurveCharacterstics(PlotLineType.DOTTED, 3f, Color.GRAY));
+			}
+			
+			if (includeObs) {
+				incrFuncs.add(obsMFD);
+				cmlFuncs.add(obsCmlMFD);
+				chars.add(new PlotCurveCharacterstics(PlotLineType.DOTTED, 3f, OBS_RATE_COLOR));
+			}
+			
 			if (sampledLevel == level) {
 				System.out.println("\tNormal level");
 				SummedMagFreqDist avgMFD = new SummedMagFreqDist(refMFD.getMinX(), refMFD.getMaxX(), refMFD.size());
@@ -144,7 +207,7 @@ public class InterfaceLogicTreeMFDExploration {
 					double weight = node.getNodeWeight(branch);
 					if (weight > 0d) {
 						branch.setValue(node);
-						IncrementalMagFreqDist mfd = calculateMFD(factory, rupSet, branch, refMFD);
+						IncrementalMagFreqDist mfd = calculateMFD(factory, rupSet, branch, refMFD, assoc);
 						avgMFD.addIncrementalMagFreqDist(mfd, weight);
 						sumWeight += weight;
 						Color color = tab10[index++ % tab10.length];
@@ -171,17 +234,26 @@ public class InterfaceLogicTreeMFDExploration {
 //				baselineMFD = defaultMFD.deepClone();
 //				baselineMFD.setName(defaultValue.getName());
 				System.out.println("\tSampled version: "+sampledLevel.getName());
+				if (skipSampled) {
+					System.out.println("Skipping sampling this time");
+					continue;
+				}
+				boolean doRateSamples = SectionSupraSeisBValues.class.isAssignableFrom(sampledLevel.getType());
 				List<LogicTreeLevel<? extends LogicTreeNode>> levels = new ArrayList<>();
 				List<LogicTreeNode> values = new ArrayList<>();
 				for (int i=0; i<branch.size(); i++) {
 					if (i == l) {
 						levels.add(sampledLevel);
 						values.add(null);
+					} else if (doRateSamples && branch.getValue(i) instanceof NSHM27_SeisRateModel) {
+						levels.add(rateLevel);
+						values.add(null);
 					} else {
 						levels.add(branch.getLevel(i));
 						values.add(branch.getValue(i));
 					}
 				}
+				Preconditions.checkNotNull(rateLevel);
 				LogicTreeBranch<LogicTreeNode> myBranch = new LogicTreeBranch<>(levels, values);
 				((RandomLevel<?, ?>)sampledLevel).build(12345l, samples, SamplingMethod.LATIN_HYPERCUBE);
 				Preconditions.checkState(sampledLevel.getNodes().size() == samples);
@@ -193,12 +265,16 @@ public class InterfaceLogicTreeMFDExploration {
 				for (int n=0; n<samples; n++) {
 					LogicTreeNode node = sampledNodes.get(n);
 					LogicTreeNode classNode = classificationSamples.get(n);
+					LogicTreeNode rateNode = rateModelSamples.get(n);
+					Preconditions.checkNotNull(rateNode);
 					mfdFutures.add(CompletableFuture.supplyAsync(()->{
 						LogicTreeBranch<LogicTreeNode> myBranch2 = myBranch.copy();
 						myBranch2.setValue(classNode);
 						myBranch2.setValue(l, node);
+						if (doRateSamples)
+							myBranch2.setValue(rateNode);
 						try {
-							return calculateMFD(factory, rupSet, myBranch2, refMFD);
+							return calculateMFD(factory, rupSet, myBranch2, refMFD, assoc);
 						} catch (IOException e) {
 							e.printStackTrace();
 							System.err.flush();
@@ -259,6 +335,20 @@ public class InterfaceLogicTreeMFDExploration {
 				IncrementalMagFreqDist incrMedian = incrFractiles[3];
 				EvenlyDiscretizedFunc cmlMedian = cmlFractiles[3];
 				
+				if (NSHM27_InterfaceDeformationModels.class.isAssignableFrom(sampledLevel.getType())) {
+					// expand extrema to actual bounds
+					FixedFractileSampler fixedMin = new FixedFractileSampler(NSHM27_InterfaceDeformationModels.MIN_DM_FRACTILE);
+					LogicTreeBranch<LogicTreeNode> myBranch2 = myBranch.copy();
+					myBranch2.setValue(l, new NSHM27_InterfaceDeformationModels("Lower", "Lower", "Lower", 0d, fixedMin));
+					incrFractiles[0] = calculateMFD(factory, rupSet, myBranch2, refMFD, assoc);
+					cmlFractiles[0] = incrFractiles[0].getCumRateDistWithOffset();
+					
+					FixedFractileSampler fixedMax = new FixedFractileSampler(1d);
+					myBranch2.setValue(l, new NSHM27_InterfaceDeformationModels("Upper", "Upper", "Upper", 0d, fixedMax));
+					incrFractiles[6] = calculateMFD(factory, rupSet, myBranch2, refMFD, assoc);
+					cmlFractiles[6] = incrFractiles[6].getCumRateDistWithOffset();
+				}
+				
 				UncertainBoundedIncrMagFreqDist incrExtrema = new UncertainBoundedIncrMagFreqDist(
 						incrMedian, incrFractiles[0], incrFractiles[6], null);
 				UncertainArbDiscFunc cmlExtrema = new UncertainArbDiscFunc(cmlMedian, cmlFractiles[0], cmlFractiles[6]);
@@ -286,11 +376,51 @@ public class InterfaceLogicTreeMFDExploration {
 				cmlFuncs.add(cml68);
 				chars.add(new PlotCurveCharacterstics(PlotLineType.SHADED_UNCERTAIN, 1f, new Color(base.getRed(), base.getGreen(), base.getBlue(), 100)));
 				
-				IncrementalMagFreqDist baseline = defaultMFD.deepClone();
-				baseline.setName(defaultValue.getName());
-				incrFuncs.add(baseline);
-				cmlFuncs.add(baseline.getCumRateDistWithOffset());
-				chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 4f, Color.BLACK));
+				if (sampledLevel instanceof MaxRuptureLengthBranchNode.DistributionSamplingLevel) {
+					MaxRuptureLengthBranchNode.DistributionSamplingLevel distSampleLevel =
+							(MaxRuptureLengthBranchNode.DistributionSamplingLevel)sampledLevel;
+					MaxRuptureLengthBranchNode.FixedValueLevel fixedValueLevel = (MaxRuptureLengthBranchNode.FixedValueLevel)level;
+					ContinuousDistribution dist = distSampleLevel.getDistribution();
+					double origFixedValue = fixedValueLevel.getValue();
+					
+					fixedValueLevel.setValue(dist.getSupportLowerBound());
+					branch.setValue(l, fixedValueLevel.getNodes().get(0));
+					IncrementalMagFreqDist mfdLow = calculateMFD(factory, rupSet, branch, refMFD, assoc);
+					mfdLow.setName("Lmax="+(int)dist.getSupportLowerBound()+" km");
+					incrFuncs.add(mfdLow);
+					cmlFuncs.add(mfdLow.getCumRateDistWithOffset());
+					chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 2f, Colors.tab_green));
+					
+					IncrementalMagFreqDist baseline = defaultMFD.deepClone();
+					baseline.setName("Lmax="+((MaxRuptureLengthBranchNode)defaultValue).getValue().intValue()+" km");
+					incrFuncs.add(baseline);
+					cmlFuncs.add(baseline.getCumRateDistWithOffset());
+					chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 4f, Color.BLACK));
+					
+					fixedValueLevel.setValue(dist.getSupportUpperBound());
+					branch.setValue(l, fixedValueLevel.getNodes().get(0));
+					IncrementalMagFreqDist mfdHigh = calculateMFD(factory, rupSet, branch, refMFD, assoc);
+					mfdHigh.setName("Lmax="+(int)dist.getSupportUpperBound()+" km");
+					incrFuncs.add(mfdHigh);
+					cmlFuncs.add(mfdHigh.getCumRateDistWithOffset());
+					chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 2f, Colors.tab_orange));
+					
+					// again on top
+					baseline = baseline.deepClone();
+					baseline.setName(null);
+					incrFuncs.add(baseline);
+					cmlFuncs.add(baseline.getCumRateDistWithOffset());
+					chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 4f, Color.BLACK));
+					
+					fixedValueLevel.setValue(origFixedValue);
+					branch.setValue(l, fixedValueLevel.getNodes().get(0));
+				} else {
+					IncrementalMagFreqDist baseline = defaultMFD.deepClone();
+					baseline.setName(defaultValue.getName());
+					incrFuncs.add(baseline);
+					cmlFuncs.add(baseline.getCumRateDistWithOffset());
+					chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 4f, Color.BLACK));
+				}
 				
 				if (SectionSupraSeisBValues.class.isAssignableFrom(level.getType())) {
 					SummedMagFreqDist avgHingedMFD = new SummedMagFreqDist(refMFD.getMinX(), refMFD.getMaxX(), refMFD.size());
@@ -350,6 +480,57 @@ public class InterfaceLogicTreeMFDExploration {
 			gp.drawGraphPanel(cmlPlot, false, true, magRange, rateRange);
 			
 			PlotUtils.writePlots(outputDir, prefix+"_cml", gp, 800, 800, true, true, true);
+			
+			if (includeObs && level.getType().isAssignableFrom(NSHM27_InterfaceMinSubSects.class)) {
+				int indexOffset = includeTotalObs ? 2 : 1;
+				// do special version with sub-seis to mMin lines
+				List<DiscretizedFunc> origIncrs = new ArrayList<>();
+				List<? extends LogicTreeNode> nodes = level.getNodes();
+				for (int i=0; i<nodes.size(); i++)
+					origIncrs.add(incrFuncs.get(i+indexOffset));
+				List<IncrementalMagFreqDist> addFuncs = new ArrayList<>();
+				List<PlotCurveCharacterstics> addChars = new ArrayList<>();
+				CPT tab10light = GMT_CPT_Files.CATEGORICAL_TAB10_LIGHT_NOGRAY.instance();
+				for (int i=0; i<origIncrs.size(); i++) {
+					Color color = tab10light.get(i).minColor;
+					DiscretizedFunc fault = origIncrs.get(i);
+					IncrementalMagFreqDist subSeis = obsMFD.deepClone();
+					int faultMminIndex = 0;
+					for (faultMminIndex=0; faultMminIndex<fault.size(); faultMminIndex++)
+						if (fault.getY(faultMminIndex) > 0)
+							break;
+					for (int m=faultMminIndex+1; m<subSeis.size(); m++)
+						subSeis.set(m, 0d);
+					subSeis.setName(null);
+					addFuncs.add(subSeis);
+					addChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 3f, color));
+					DiscretizedFunc faultClone = new ArbitrarilyDiscretizedFunc();
+					// prevent the down spikes
+					for (int m=0; m<faultMminIndex; m++)
+						faultClone.set(fault.getX(m), Double.NaN);
+					// stitch it to fault
+					faultClone.set(fault.getX(faultMminIndex-1), subSeis.getY(faultMminIndex-1));
+					for (int m=faultMminIndex; m<fault.size(); m++)
+						faultClone.set(fault.getX(m), fault.getY(m));
+					faultClone.setName(fault.getName());
+					incrFuncs.set(i+indexOffset, faultClone);
+					// prevent sub-seis down spike
+					for (int m=faultMminIndex; m<subSeis.size(); m++)
+						subSeis.set(m, Double.NaN);
+				}
+				Collections.reverse(addFuncs);
+				Collections.reverse(addChars);
+				incrFuncs.addAll(indexOffset, addFuncs);
+				chars.addAll(indexOffset, addChars);
+				// remove average
+				incrFuncs.remove(incrFuncs.size()-1);
+				chars.remove(chars.size()-1);
+				incrPlot = new PlotSpec(incrFuncs, chars, level.getName(), "Magnitude", "Incremental Rate (1/yr)");
+				incrPlot.setLegendInset(true);
+				gp.drawGraphPanel(incrPlot, false, true, magRange, rateRange);
+				
+				PlotUtils.writePlots(outputDir, prefix+"_sub_seis", gp, 800, 800, true, true, false);
+			}
 		}
 		
 		for (String str : avgStrings)
@@ -357,7 +538,8 @@ public class InterfaceLogicTreeMFDExploration {
 	}
 	
 	private static IncrementalMagFreqDist calculateMFD(NSHM27_InvConfigFactory factory, FaultSystemRupSet rupSet,
-			LogicTreeBranch<LogicTreeNode> branch, EvenlyDiscretizedFunc refMFD) throws IOException {
+			LogicTreeBranch<LogicTreeNode> branch, EvenlyDiscretizedFunc refMFD, FaultGridAssociations assoc) throws IOException {
+		System.out.println("Calculating MFD for: "+branch);
 		ClusterRuptures cRups = rupSet.requireModule(ClusterRuptures.class);
 		rupSet = factory.updateRuptureSetForBranch(rupSet, branch);
 		BinaryRuptureProbabilityCalc exclusionModel = NSHM27_InvConfigFactory.getExclusionModel(rupSet, branch, cRups);
@@ -399,9 +581,12 @@ public class InterfaceLogicTreeMFDExploration {
 		SummedMagFreqDist mfd = new SummedMagFreqDist(refMFD.getMinX(), refMFD.getMaxX(), refMFD.size());
 		for (int s=0; s<rupSet.getNumSections(); s++) {
 			double moRate = slipRates.calcMomentRate(s);
-			GutenbergRichterMagFreqDist gr = new GutenbergRichterMagFreqDist(refMFD.getMinX(), refMFD.getMaxX(), refMFD.size());
-			gr.setAllButTotCumRate(mMin, mMax, moRate, b);
-			mfd.addIncrementalMagFreqDist(gr);
+			moRate *= assoc.getSectionFractInRegion(s);
+			if (moRate > 0d) {
+				GutenbergRichterMagFreqDist gr = new GutenbergRichterMagFreqDist(refMFD.getMinX(), refMFD.getMaxX(), refMFD.size());
+				gr.setAllButTotCumRate(mMin, mMax, moRate, b);
+				mfd.addIncrementalMagFreqDist(gr);
+			}
 		}
 		
 		return mfd;

@@ -48,10 +48,10 @@ public class SlipProjectionFigures {
 		File outputDir = new File("/tmp/nshm27_slip_projection");
 		Preconditions.checkState(outputDir.exists() || outputDir.mkdir());
 
-//		NSHM27_InterfaceFaultModels fm = NSHM27_InterfaceFaultModels.AMSAM_V1;
-//		double maxSlip = 120;
-		NSHM27_InterfaceFaultModels fm = NSHM27_InterfaceFaultModels.GNMI_V1;
-		double maxSlip = 20d;
+		NSHM27_InterfaceFaultModels fm = NSHM27_InterfaceFaultModels.AMSAM_V1;
+		double maxSlip = 120;
+//		NSHM27_InterfaceFaultModels fm = NSHM27_InterfaceFaultModels.GNMI_V1;
+//		double maxSlip = 20d;
 		
 		List<? extends FaultSection> sects = fm.buildSubSects(fm);
 		
@@ -249,8 +249,6 @@ public class SlipProjectionFigures {
 		
 		branch.setValue(NSHM27_InterfaceCouplingDepthModels.AVERAGE);
 		for (NSHM27_InterfaceDeformationModels.Aggregated odm : NSHM27_InterfaceDeformationModels.Aggregated.values()) {
-			if (odm.getNodeWeight() == 0d)
-				continue;
 			
 			branch.setValue(odm);
 			List<? extends FaultSection> dmSects = odm.apply(fm, branch, sects);
