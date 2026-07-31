@@ -7,23 +7,23 @@ import gov.usgs.earthquake.nshmp.Maths;
 
 class NshmRupture extends ProbEqkRupture {
 
-	final double rate;
-	final double weight;
+  final double rate;
+  final double weight;
 
-	NshmRupture(
-			double mag,
-			double rake,
-			double rate,
-			double weight,
-			double duration,
-			RuptureSurface surface) {
+  NshmRupture(
+      double mag,
+      double rake,
+      double rate,
+      double weight,
+      double duration,
+      RuptureSurface surface) {
 
-		super(
-				mag, rake,
-				Maths.rateToProbability(rate * weight, duration),
-				surface, null);
+    super(
+        mag, rake,
+        Maths.rateToProbability(rate * weight, duration),
+        surface, null);
 
-		this.rate = rate;
-		this.weight = weight;
-	}
+    this.rate = rate;
+    this.weight = weight;
+  }
 }

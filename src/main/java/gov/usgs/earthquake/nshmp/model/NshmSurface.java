@@ -11,6 +11,8 @@ import org.opensha.sha.faultSurface.FaultTrace;
 import org.opensha.sha.faultSurface.RuptureSurface;
 import org.opensha.sha.faultSurface.cache.CacheEnabledSurface;
 import org.opensha.sha.faultSurface.cache.SurfaceDistances;
+import org.opensha.sha.faultSurface.utils.ptSrcCorr.PointSourceDistanceCorrection;
+import org.opensha.sha.util.TectonicRegionType;
 
 import gov.usgs.earthquake.nshmp.fault.surface.DefaultGriddedSurface;
 import gov.usgs.earthquake.nshmp.fault.surface.GriddedSurface;
@@ -35,6 +37,64 @@ public class NshmSurface implements CacheEnabledSurface {
 
 	public NshmSurface(gov.usgs.earthquake.nshmp.fault.surface.RuptureSurface delegate) {
 		this.delegate = delegate;
+	}
+	
+	/**
+	 * This creates a point surface that will work with existing OpenSHA point-source optimizations
+	 * @param delegate
+	 * @return
+	 */
+	public static org.opensha.sha.faultSurface.PointSurface buildPointSurface(
+			gov.usgs.earthquake.nshmp.fault.surface.RuptureSurface delegate) {
+		// this is the point surface
+		double len = 0d;
+		try {
+			len = delegate.length();
+		} catch (Exception e) {}
+		org.opensha.sha.faultSurface.PointSurface surf = new org.opensha.sha.faultSurface.PointSurface(
+				NshmUtil.toOpenShaLocation(delegate.centroid()), delegate.dip(), delegate.depth(),
+				delegate.depth() + delegate.width()*Math.sin(Math.toRadians(delegate.dip())), len);
+		return new org.opensha.sha.faultSurface.PointSurface.DistanceCorrecting(
+				surf, new DelegatePointSourceCorrection(delegate), null, Double.NaN);
+	}
+	
+	/**
+	 * Delegate point source correction that passes through to NSHMP-haz. This is required for point source
+	 * optimizations to work with wrapped point sources. As part of that, equals/hashCode have to be constant
+	 * for all delegate corrections.
+	 */
+	private static class DelegatePointSourceCorrection implements PointSourceDistanceCorrection.Single {
+		
+		private gov.usgs.earthquake.nshmp.fault.surface.RuptureSurface delegate;
+
+		private DelegatePointSourceCorrection(gov.usgs.earthquake.nshmp.fault.surface.RuptureSurface delegate) {
+			this.delegate = delegate;
+		}
+
+		@Override
+		public SurfaceDistances getCorrectedDistance(Location location, org.opensha.sha.faultSurface.PointSurface surf,
+				TectonicRegionType trt, double mag, double horzDist) {
+			Distance distance = delegate.distanceTo(NshmUtil.fromOpenShaLocation(location));
+			return new SurfaceDistances.Precomputed(location, distance.rRup, distance.rJB, distance.rX);
+		}
+		
+		private static final int hashCode = DelegatePointSourceCorrection.class.hashCode();
+
+		@Override
+		public int hashCode() {
+			return hashCode;
+		}
+
+		@Override
+		public boolean equals(Object obj) {
+//			return obj instanceof DelegatePointSourceCorrection;
+			if (!(obj instanceof DelegatePointSourceCorrection))
+				return false;
+			DelegatePointSourceCorrection other = (DelegatePointSourceCorrection)obj;
+//			System.out.println("Delegate classes:\t"+delegate.getClass()+"\t"+other.delegate.getClass());
+			return other.delegate.getClass().equals(delegate.getClass());
+		}
+		
 	}
 
 	// return nshmp-haz rupture centroid as OpenSHA location for

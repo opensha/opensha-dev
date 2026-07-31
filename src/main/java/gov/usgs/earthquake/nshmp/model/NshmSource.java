@@ -49,11 +49,7 @@ public abstract class NshmSource<E> extends ProbEqkSource {
 		throw new UnsupportedOperationException();
 	}
 
-	public Object getDelegate() {
-		return delegate;
-	}
-
-	static class Fault extends NshmSource<IterableRuptureSet> {
+	public static class Fault extends NshmSource<IterableRuptureSet> {
 
 		private final List<NshmRupture> ruptures;
 
@@ -99,7 +95,7 @@ public abstract class NshmSource<E> extends ProbEqkSource {
 		}
 	}
 
-	static class Point extends NshmSource<GridSource> {
+	public static class Point extends NshmSource<GridSource> {
 
 		final double weight;
 		double duration;
@@ -133,7 +129,8 @@ public abstract class NshmSource<E> extends ProbEqkSource {
 					rupture.rate(),
 					weight,
 					duration,
-					new NshmSurface(rupture.surface()));
+					NshmSurface.buildPointSurface(rupture.surface()));
+//					new NshmSurface(rupture.surface()));
 		}
 
 		@Override
@@ -142,7 +139,7 @@ public abstract class NshmSource<E> extends ProbEqkSource {
 		}
 	}
 
-	static class System extends NshmSource<SystemRupture> {
+	public static class System extends NshmSource<SystemRupture> {
 
 		final List<NshmSurface> surfaces;
 		final NshmRupture rupture;
