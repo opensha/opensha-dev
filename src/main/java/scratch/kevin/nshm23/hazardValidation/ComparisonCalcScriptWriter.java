@@ -2,6 +2,7 @@ package scratch.kevin.nshm23.hazardValidation;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
@@ -32,15 +33,16 @@ import gov.usgs.earthquake.nshmp.erf.mpj.RunConfig;
 public class ComparisonCalcScriptWriter {
 
 	public static void main(String[] args) throws IOException {
+		List<String> extraTokens = new ArrayList<>();
 		// start with WUS-only
 		String regToken = "WUS";
 		Region reg = NSHM23_RegionLoader.loadFullConterminousWUS();
 		double spacing = 0.1;
 		String linkFromDir = "2024_02_02-nshm23_branches-WUS_FM_v3";
-//		String solFileName = "results_WUS_FM_v3_branch_averaged_gridded_simplified_revised2026.zip";
-//		String extraToken = null;
-		String solFileName = "results_WUS_FM_v3_branch_averaged_gridded_simplified_revised2026_origRakes.zip";
-		String extraToken = "origRakes";
+		String solFileName = "results_WUS_FM_v3_branch_averaged_gridded_simplified_revised2026.zip";
+		
+//		String solFileName = "results_WUS_FM_v3_branch_averaged_gridded_simplified_revised2026_origRakes.zip";
+//		extraTokens.add("origRakes");
 
 		File localMainDir = new File("/home/kevin/OpenSHA/fss_inversions");
 		
@@ -58,10 +60,22 @@ public class ComparisonCalcScriptWriter {
 		} 
 		gridReg.setSiteData(siteData);
 		
-		String gmpeToken = null;
 		Map<TectonicRegionType, AttenRelRef> gmpes = new EnumMap<>(TectonicRegionType.class);
 		gmpes.put(TectonicRegionType.ACTIVE_SHALLOW, AttenRelRef.USGS_NSHM23_ACTIVE);
-		gmpes.put(TectonicRegionType.ACTIVE_SHALLOW, AttenRelRef.USGS_NSHM23_STABLE);
+		gmpes.put(TectonicRegionType.STABLE_SHALLOW, AttenRelRef.USGS_NSHM23_STABLE);
+		
+		Double maxDist = null; // use TRT defaults
+		boolean nshmpIMLs = false;
+		boolean disablePointOptimize = false;
+		
+		extraTokens.add("maxDist300");
+		maxDist = 300d;
+		
+//		disablePointOptimize = true;
+//		extraTokens.add("noPointOptimize");
+		
+		nshmpIMLs = true;
+		extraTokens.add("nshmpIMLs");
 		
 		SolHazardMapCalc.loadSites(gridReg, gmpes);
 		
@@ -78,6 +92,9 @@ public class ComparisonCalcScriptWriter {
 				.sigmaTruncation(3d)
 				.gmpes(gmpes.values())
 				.vs30(760d)
+				.maxDistance(maxDist)
+				.disablePointOptimizations(disablePointOptimize)
+				.setUseNSHMP_IMLs(nshmpIMLs)
 				.build();
 
 
@@ -85,8 +102,7 @@ public class ComparisonCalcScriptWriter {
 				.baseName("nshm23")
 				.addNameToken("hazard_validation")
 				.addNameToken(regToken)
-				.addNameToken(gmpeToken)
-				.addNameToken(extraToken)
+				.addNameTokens(extraTokens)
 				.build();
 
 		MPJ_BranchAveragedHazardScriptWriter.Request request = MPJ_BranchAveragedHazardScriptWriter.Request.builder()
