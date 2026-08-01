@@ -95,13 +95,13 @@ import scratch.kevin.nshm23.hazardValidation.WrapperRupSetRupMapper.WrapperMatch
 public class ComparisonPageGen {
 	
 	public static void main(String[] args) throws IOException {
-//		String imtName = "PGA";
-//		String imtDir = "PGA";
-//		double period = 0d;
+		String imtName = "PGA";
+		String imtDir = "PGA";
+		double period = 0d;
 		
-		String imtName = "1s SA";
-		String imtDir = "SA1P0";
-		double period = 1d;
+//		String imtName = "1s SA";
+//		String imtDir = "SA1P0";
+//		double period = 1d;
 		
 		double closestDist = Double.POSITIVE_INFINITY;
 		for (Location loc : NSHM23_RegionLoader.GridSystemRegions.CEUS_STABLE.load().getBorder())
@@ -134,7 +134,10 @@ public class ComparisonPageGen {
 //		EnumSet<IncludeBackgroundOption> bgOps = EnumSet.of(IncludeBackgroundOption.ONLY);
 //		File inputDir = new File(fssDir, "2026_07_30-nshm23-hazard_validation-WUS");
 //		File inputDir = new File(fssDir, "2026_07_30-nshm23-hazard_validation-WUS-maxDist300");
-		File inputDir = new File(fssDir, "2026_07_30-nshm23-hazard_validation-WUS-maxDist300-nshmpIMLs");
+//		File inputDir = new File(fssDir, "2026_07_30-nshm23-hazard_validation-WUS-maxDist300-nshmpIMLs");
+//		File inputDir = new File(fssDir, "2026_07_31-nshm23-hazard_validation-WUS-origRakes-maxDist300-nshmpIMLs");
+//		File inputDir = new File(fssDir, "2026_08_01-nshm23-hazard_validation-WUS-origNGAW2-maxDist300-nshmpIMLs");
+		File inputDir = new File(fssDir, "2026_08_01-nshm23-hazard_validation-WUS-origRakes-origNGAW2-maxDist300-nshmpIMLs");
 		File inputSolFile = new File(nshm23Dir, "results_WUS_FM_v3_branch_averaged_gridded_simplified_revised2026.zip");
 		boolean rupMFDs = false;
 

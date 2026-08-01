@@ -64,6 +64,9 @@ public class ComparisonCalcScriptWriter {
 		gmpes.put(TectonicRegionType.ACTIVE_SHALLOW, AttenRelRef.USGS_NSHM23_ACTIVE);
 		gmpes.put(TectonicRegionType.STABLE_SHALLOW, AttenRelRef.USGS_NSHM23_STABLE);
 		
+		extraTokens.add("origNGAW2");
+		gmpes.put(TectonicRegionType.ACTIVE_SHALLOW, AttenRelRef.NGAWest_2014_AVG_NOIDRISS);
+		
 		Double maxDist = null; // use TRT defaults
 		boolean nshmpIMLs = false;
 		boolean disablePointOptimize = false;
