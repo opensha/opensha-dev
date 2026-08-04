@@ -17,6 +17,7 @@ import org.opensha.sha.calc.sourceFilters.SourceFilterManager;
 import org.opensha.sha.calc.sourceFilters.SourceFilters;
 import org.opensha.sha.earthquake.faultSysSolution.hazard.mpj.AbstractSitewiseThreadedLogicTreeCalc;
 import org.opensha.sha.earthquake.faultSysSolution.modules.SolutionLogicTree;
+import org.opensha.sha.earthquake.faultSysSolution.util.FaultSysHazardCalcSettings;
 import org.opensha.sha.earthquake.param.IncludeBackgroundOption;
 import org.opensha.sha.earthquake.util.GriddedSeismicitySettings;
 import org.opensha.sha.imr.AttenRelRef;
@@ -50,7 +51,7 @@ class GmmInputCacheBenchmark {
 		ExecutorService exec = Executors.newSingleThreadExecutor();
 		AbstractSitewiseThreadedLogicTreeCalc calc = new AbstractSitewiseThreadedLogicTreeCalc(exec, 1, slt,
 				AttenRelRef.ASK_2014, periods, bgOp, GriddedSeismicitySettings.DEFAULT,
-				new SourceFilterManager(SourceFilters.TRT_DIST_CUTOFFS)) {
+				new SourceFilterManager(SourceFilters.TRT_DIST_CUTOFFS), FaultSysHazardCalcSettings.getXValManager()) {
 			
 			@Override
 			public Site siteForIndex(int siteIndex, Map<TectonicRegionType, ScalarIMR> gmms) {

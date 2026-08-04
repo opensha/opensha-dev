@@ -11,6 +11,8 @@ import org.opensha.sha.faultSurface.FaultTrace;
 import org.opensha.sha.faultSurface.RuptureSurface;
 import org.opensha.sha.faultSurface.cache.CacheEnabledSurface;
 import org.opensha.sha.faultSurface.cache.SurfaceDistances;
+import org.opensha.sha.faultSurface.utils.ptSrcCorr.PointSourceDistanceCorrection;
+import org.opensha.sha.util.TectonicRegionType;
 
 import gov.usgs.earthquake.nshmp.fault.surface.DefaultGriddedSurface;
 import gov.usgs.earthquake.nshmp.fault.surface.GriddedSurface;
@@ -26,30 +28,88 @@ import gov.usgs.earthquake.nshmp.model.GridSourceFinite.FiniteSurface;
  */
 public class NshmSurface implements CacheEnabledSurface {
 
-  private final gov.usgs.earthquake.nshmp.fault.surface.RuptureSurface delegate;
+	private final gov.usgs.earthquake.nshmp.fault.surface.RuptureSurface delegate;
 
-  // distance metrics for reference site; this should
-  // work for single threaded calculations
-  private Location location;
-  private Distance distance;
+	// distance metrics for reference site; this should
+	// work for single threaded calculations
+	private Location location;
+	private Distance distance;
 
-  public NshmSurface(gov.usgs.earthquake.nshmp.fault.surface.RuptureSurface delegate) {
-    this.delegate = delegate;
-  }
+	public NshmSurface(gov.usgs.earthquake.nshmp.fault.surface.RuptureSurface delegate) {
+		this.delegate = delegate;
+	}
+	
+	/**
+	 * This creates a point surface that will work with existing OpenSHA point-source optimizations
+	 * @param delegate
+	 * @return
+	 */
+	public static org.opensha.sha.faultSurface.PointSurface buildPointSurface(
+			gov.usgs.earthquake.nshmp.fault.surface.RuptureSurface delegate) {
+		// this is the point surface
+		double len = 0d;
+		try {
+			len = delegate.length();
+		} catch (Exception e) {}
+		org.opensha.sha.faultSurface.PointSurface surf = new org.opensha.sha.faultSurface.PointSurface(
+				NshmUtil.toOpenShaLocation(delegate.centroid()), delegate.dip(), delegate.depth(),
+				delegate.depth() + delegate.width()*Math.sin(Math.toRadians(delegate.dip())), len);
+		return new org.opensha.sha.faultSurface.PointSurface.DistanceCorrecting(
+				surf, new DelegatePointSourceCorrection(delegate), null, Double.NaN);
+	}
+	
+	/**
+	 * Delegate point source correction that passes through to NSHMP-haz. This is required for point source
+	 * optimizations to work with wrapped point sources. As part of that, equals/hashCode have to be constant
+	 * for all delegate corrections.
+	 */
+	private static class DelegatePointSourceCorrection implements PointSourceDistanceCorrection.Single {
+		
+		private gov.usgs.earthquake.nshmp.fault.surface.RuptureSurface delegate;
 
-  // return nshmp-haz rupture centroid as OpenSHA location for
-  // use in computing min distance to a fault system subsection
-  public Location centroid() {
-    return NshmUtil.toOpenShaLocation(delegate.centroid());
-  }
+		private DelegatePointSourceCorrection(gov.usgs.earthquake.nshmp.fault.surface.RuptureSurface delegate) {
+			this.delegate = delegate;
+		}
 
-  // OpenSHA RupureSurface interface methods
+		@Override
+		public SurfaceDistances getCorrectedDistance(Location location, org.opensha.sha.faultSurface.PointSurface surf,
+				TectonicRegionType trt, double mag, double horzDist) {
+			Distance distance = delegate.distanceTo(NshmUtil.fromOpenShaLocation(location));
+			return new SurfaceDistances.Precomputed(location, distance.rRup, distance.rJB, distance.rX);
+		}
+		
+		private static final int hashCode = DelegatePointSourceCorrection.class.hashCode();
 
-  // @formatter:off
-  @Override public double getAveDip() { return delegate.dip(); }
-  @Override public double getAveWidth() { return delegate.width(); }
-  @Override public double getAveHorizontalWidth() { return delegate.width()*Math.cos(Math.toRadians(delegate.dip())); }
-  @Override public double getArea() { return delegate.area(); }
+		@Override
+		public int hashCode() {
+			return hashCode;
+		}
+
+		@Override
+		public boolean equals(Object obj) {
+//			return obj instanceof DelegatePointSourceCorrection;
+			if (!(obj instanceof DelegatePointSourceCorrection))
+				return false;
+			DelegatePointSourceCorrection other = (DelegatePointSourceCorrection)obj;
+//			System.out.println("Delegate classes:\t"+delegate.getClass()+"\t"+other.delegate.getClass());
+			return other.delegate.getClass().equals(delegate.getClass());
+		}
+		
+	}
+
+	// return nshmp-haz rupture centroid as OpenSHA location for
+	// use in computing min distance to a fault system subsection
+	public Location centroid() {
+		return NshmUtil.toOpenShaLocation(delegate.centroid());
+	}
+
+	// OpenSHA RupureSurface interface methods
+
+	// @formatter:off
+	@Override public double getAveDip() { return delegate.dip(); }
+	@Override public double getAveWidth() { return delegate.width(); }
+	@Override public double getAveHorizontalWidth() { return delegate.width()*Math.cos(Math.toRadians(delegate.dip())); }
+	@Override public double getArea() { return delegate.area(); }
 
 
 	@Override public double getAveRupTopDepth() {
@@ -58,13 +118,13 @@ public class NshmSurface implements CacheEnabledSurface {
 		}
 		return delegate.depth();
 	}
-	
-  	@Override public double getAveRupBottomDepth() {
-  		if (delegate instanceof DefaultGriddedSurface) {
-  			return ((DefaultGriddedSurface) delegate).get(((DefaultGriddedSurface) delegate).getNumRows()-1, 0).depth;
-  		}
-  		return delegate.depth() + delegate.width()*Math.sin(Math.toRadians(delegate.dip()));
-  	}
+
+	@Override public double getAveRupBottomDepth() {
+		if (delegate instanceof DefaultGriddedSurface) {
+			return ((DefaultGriddedSurface) delegate).get(((DefaultGriddedSurface) delegate).getNumRows()-1, 0).depth;
+		}
+		return delegate.depth() + delegate.width()*Math.sin(Math.toRadians(delegate.dip()));
+	}
 
 	@Override
 	public synchronized double getDistanceRup(Location location) {
@@ -89,7 +149,7 @@ public class NshmSurface implements CacheEnabledSurface {
 		}
 		return distance.rX;
 	}
-	
+
 	@Override
 	public synchronized SurfaceDistances getDistances(Location location) {
 		if (location != this.location) {
@@ -166,15 +226,15 @@ public class NshmSurface implements CacheEnabledSurface {
 		return NshmUtil.toOpenShaLocationList(
 				((GriddedSurface) delegate).getEvenlyDiscritizedListOfLocsOnSurface());
 	}
-	
+
 	@Override
 	public double getAveLength() {
 		return delegate.length();
 	}
-	
-  @Override public double getQuickDistance(Location siteLoc) {
-    return calcQuickDistance(siteLoc);
-  }
+
+	@Override public double getQuickDistance(Location siteLoc) {
+		return calcQuickDistance(siteLoc);
+	}
 
 	// Unnecessary methods for hazard calculations
 
