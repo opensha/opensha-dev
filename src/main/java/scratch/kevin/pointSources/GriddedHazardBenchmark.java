@@ -15,7 +15,7 @@ import org.opensha.sha.calc.sourceFilters.SourceFilters;
 import org.opensha.sha.earthquake.param.BackgroundRupType;
 import org.opensha.sha.earthquake.param.IncludeBackgroundOption;
 import org.opensha.sha.earthquake.param.IncludeBackgroundParam;
-import org.opensha.sha.earthquake.rupForecastImpl.nshm23.erf.NSHM23_WUS_BranchAveragedERF;
+import org.opensha.sha.earthquake.rupForecastImpl.nshm23.erf.NSHM23_BranchAveragedERF;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.util.NSHM23_RegionLoader;
 import org.opensha.sha.earthquake.util.GridCellSupersamplingSettings;
 import org.opensha.sha.earthquake.util.GriddedSeismicitySettings;
@@ -33,7 +33,7 @@ import gov.usgs.earthquake.nshmp.gmm.Gmm;
 public class GriddedHazardBenchmark {
 
 	public static void main(String[] args) throws IOException {
-		NSHM23_WUS_BranchAveragedERF erf = new NSHM23_WUS_BranchAveragedERF();
+		NSHM23_BranchAveragedERF erf = new NSHM23_BranchAveragedERF();
 		erf.setParameter(IncludeBackgroundParam.NAME, IncludeBackgroundOption.ONLY);
 		
 		GriddedSeismicitySettings settings = erf.getGriddedSeismicitySettings();

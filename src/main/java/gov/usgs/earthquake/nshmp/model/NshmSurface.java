@@ -14,8 +14,8 @@ import org.opensha.sha.faultSurface.cache.SurfaceDistances;
 
 import gov.usgs.earthquake.nshmp.fault.surface.DefaultGriddedSurface;
 import gov.usgs.earthquake.nshmp.fault.surface.GriddedSurface;
-import gov.usgs.earthquake.nshmp.model.PointSource.PointSurface;
-import gov.usgs.earthquake.nshmp.model.PointSourceFinite.FiniteSurface;
+import gov.usgs.earthquake.nshmp.model.GridSource.PointSurface;
+import gov.usgs.earthquake.nshmp.model.GridSourceFinite.FiniteSurface;
 
 /**
  * Rupture surface implementation for USGS NSHMs. Most methods throw an
@@ -26,30 +26,30 @@ import gov.usgs.earthquake.nshmp.model.PointSourceFinite.FiniteSurface;
  */
 public class NshmSurface implements CacheEnabledSurface {
 
-  private final gov.usgs.earthquake.nshmp.fault.surface.RuptureSurface delegate;
+	private final gov.usgs.earthquake.nshmp.fault.surface.RuptureSurface delegate;
 
-  // distance metrics for reference site; this should
-  // work for single threaded calculations
-  private Location location;
-  private Distance distance;
+	// distance metrics for reference site; this should
+	// work for single threaded calculations
+	private Location location;
+	private Distance distance;
 
-  public NshmSurface(gov.usgs.earthquake.nshmp.fault.surface.RuptureSurface delegate) {
-    this.delegate = delegate;
-  }
+	public NshmSurface(gov.usgs.earthquake.nshmp.fault.surface.RuptureSurface delegate) {
+		this.delegate = delegate;
+	}
 
-  // return nshmp-haz rupture centroid as OpenSHA location for
-  // use in computing min distance to a fault system subsection
-  public Location centroid() {
-    return NshmUtil.toOpenShaLocation(delegate.centroid());
-  }
+	// return nshmp-haz rupture centroid as OpenSHA location for
+	// use in computing min distance to a fault system subsection
+	public Location centroid() {
+		return NshmUtil.toOpenShaLocation(delegate.centroid());
+	}
 
-  // OpenSHA RupureSurface interface methods
+	// OpenSHA RupureSurface interface methods
 
-  // @formatter:off
-  @Override public double getAveDip() { return delegate.dip(); }
-  @Override public double getAveWidth() { return delegate.width(); }
-  @Override public double getAveHorizontalWidth() { return delegate.width()*Math.cos(Math.toRadians(delegate.dip())); }
-  @Override public double getArea() { return delegate.area(); }
+	// @formatter:off
+	@Override public double getAveDip() { return delegate.dip(); }
+	@Override public double getAveWidth() { return delegate.width(); }
+	@Override public double getAveHorizontalWidth() { return delegate.width()*Math.cos(Math.toRadians(delegate.dip())); }
+	@Override public double getArea() { return delegate.area(); }
 
 
 	@Override public double getAveRupTopDepth() {
@@ -58,13 +58,13 @@ public class NshmSurface implements CacheEnabledSurface {
 		}
 		return delegate.depth();
 	}
-	
-  	@Override public double getAveRupBottomDepth() {
-  		if (delegate instanceof DefaultGriddedSurface) {
-  			return ((DefaultGriddedSurface) delegate).get(((DefaultGriddedSurface) delegate).getNumRows()-1, 0).depth;
-  		}
-  		return delegate.depth() + delegate.width()*Math.sin(Math.toRadians(delegate.dip()));
-  	}
+
+	@Override public double getAveRupBottomDepth() {
+		if (delegate instanceof DefaultGriddedSurface) {
+			return ((DefaultGriddedSurface) delegate).get(((DefaultGriddedSurface) delegate).getNumRows()-1, 0).depth;
+		}
+		return delegate.depth() + delegate.width()*Math.sin(Math.toRadians(delegate.dip()));
+	}
 
 	@Override
 	public synchronized double getDistanceRup(Location location) {
@@ -89,7 +89,7 @@ public class NshmSurface implements CacheEnabledSurface {
 		}
 		return distance.rX;
 	}
-	
+
 	@Override
 	public synchronized SurfaceDistances getDistances(Location location) {
 		if (location != this.location) {
@@ -166,15 +166,15 @@ public class NshmSurface implements CacheEnabledSurface {
 		return NshmUtil.toOpenShaLocationList(
 				((GriddedSurface) delegate).getEvenlyDiscritizedListOfLocsOnSurface());
 	}
-	
+
 	@Override
 	public double getAveLength() {
 		return delegate.length();
 	}
-	
-  @Override public double getQuickDistance(Location siteLoc) {
-    return calcQuickDistance(siteLoc);
-  }
+
+	@Override public double getQuickDistance(Location siteLoc) {
+		return calcQuickDistance(siteLoc);
+	}
 
 	// Unnecessary methods for hazard calculations
 

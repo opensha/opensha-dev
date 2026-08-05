@@ -1,7 +1,6 @@
 package gov.usgs.earthquake.nshmp.model;
 
-import static java.util.stream.Collectors.toList;
-
+import java.util.ArrayList;
 import java.util.List;
 
 import org.opensha.commons.data.Site;
@@ -13,166 +12,185 @@ import org.opensha.sha.faultSurface.CompoundSurface;
 import org.opensha.sha.faultSurface.RuptureSurface;
 
 import gov.usgs.earthquake.nshmp.Maths;
-import gov.usgs.earthquake.nshmp.model.SystemRuptureSet.SystemSource;
+import gov.usgs.earthquake.nshmp.model.SystemRuptureSet.SystemRupture;
 
-public abstract class NshmSource extends ProbEqkSource {
+public abstract class NshmSource<E> extends ProbEqkSource {
 
-  final Source delegate;
+	final E delegate;
+	private final int id;
 
-  NshmSource(Source delegate) {
-    this.delegate = delegate;
-    this.setName(delegate.name());
-  }
+	NshmSource(E delegate, String name, int id) {
+		this.delegate = delegate;
+		this.id = id;
+		this.setName(name);
+	}
 
-  public abstract void setDuration(double duration);
+	public abstract void setDuration(double duration);
 
-  public void setName(String name) {
-    this.name = name;
-  }
+	public void setName(String name) {
+		this.name = name;
+	}
 
-  public int getNSHM_ID() {
-    return delegate.id();
-  }
+	public int getNSHM_ID() {
+		return id;
+	}
 
-  public Source delegate() {
-    return delegate;
-  }
+	public E delegate() {
+		return delegate;
+	}
 
-  @Override
-  public double getMinDistance(Site site) {
-    return NshmUtil.distance(site, delegate);
-  }
+	@Override
+	public LocationList getAllSourceLocs() {
+		throw new UnsupportedOperationException();
+	}
 
-  @Override
-  public int getNumRuptures() {
-    return delegate.size();
-  }
+	@Override
+	public RuptureSurface getSourceSurface() {
+		throw new UnsupportedOperationException();
+	}
 
-  @Override
-  public LocationList getAllSourceLocs() {
-    throw new UnsupportedOperationException();
-  }
+	public Object getDelegate() {
+		return delegate;
+	}
 
-  @Override
-  public RuptureSurface getSourceSurface() {
-    throw new UnsupportedOperationException();
-  }
+	static class Fault extends NshmSource<IterableRuptureSet> {
 
-  public Source getDelegate() {
-    return delegate;
-  }
+		private final List<NshmRupture> ruptures;
 
-  static class Fault extends NshmSource {
+		Fault(
+				IterableRuptureSet delegate,
+				double weight,
+				double duration) {
 
-    private final List<NshmRupture> ruptures;
+			super(delegate, delegate.name(), delegate.id());
+			this.ruptures = new ArrayList<>();
+			for (Rupture rupture : delegate) {
+				ruptures.add(new NshmRupture(
+						rupture.magnitude(),
+						rupture.rake(),
+						rupture.rate(),
+						weight,
+						duration,
+						new NshmSurface(rupture.surface())));
+			}
+		}
 
-    Fault(
-        Source delegate,
-        double weight,
-        double duration) {
+		@Override
+		public double getMinDistance(Site site) {
+			return NshmUtil.distance(site, delegate);
+		}
 
-      super(delegate);
-      this.ruptures = delegate.stream()
-          .map(rupture -> new NshmRupture(
-              rupture.mag(),
-              rupture.rake(),
-              rupture.rate(),
-              weight,
-              duration,
-              new NshmSurface(rupture.surface())))
-          .collect(toList());
-    }
+		@Override
+		public int getNumRuptures() {
+			return ruptures.size();
+		}
 
-    @Override
-    public ProbEqkRupture getRupture(int index) {
-      return ruptures.get(index);
-    }
+		@Override
+		public ProbEqkRupture getRupture(int index) {
+			return ruptures.get(index);
+		}
 
-    @Override
-    public void setDuration(double duration) {
-      ruptures.forEach(rup -> rup.setProbability(
-          Maths.rateToProbability(
-              rup.rate * rup.weight,
-              duration)));
-    }
-  }
+		@Override
+		public void setDuration(double duration) {
+			ruptures.forEach(rup -> rup.setProbability(
+					Maths.rateToProbability(
+							rup.rate * rup.weight,
+							duration)));
+		}
+	}
 
-  static class Point extends NshmSource {
+	static class Point extends NshmSource<GridSource> {
 
-    final double weight;
-    double duration;
+		final double weight;
+		double duration;
 
-    Point(
-        PointSource delegate,
-        double weight,
-        double duration) {
+		Point(
+				GridSource delegate,
+				double weight,
+				double duration) {
 
-      super(delegate);
-      this.weight = weight;
-      this.duration = duration;
-    }
+			super(delegate, delegate.name(), delegate.id());
+			this.weight = weight;
+			this.duration = duration;
+		}
 
-    @Override
-    public ProbEqkRupture getRupture(int index) {
-      Rupture rupture = ((PointSource) delegate).get(index);
-      return new NshmRupture(
-          rupture.mag(),
-          rupture.rake(),
-          rupture.rate(),
-          weight,
-          duration,
-          new NshmSurface(rupture.surface()));
-    }
+		@Override
+		public double getMinDistance(Site site) {
+			return NshmUtil.distance(site, delegate);
+		}
 
-    @Override
-    public void setDuration(double duration) {
-      this.duration = duration;
-    }
-  }
+		@Override
+		public int getNumRuptures() {
+			return ((GridSource) delegate).size();
+		}
 
-  static class System extends NshmSource {
+		@Override
+		public ProbEqkRupture getRupture(int index) {
+			Rupture rupture = ((GridSource) delegate).get(index);
+			return new NshmRupture(
+					rupture.magnitude(),
+					rupture.rake(),
+					rupture.rate(),
+					weight,
+					duration,
+					new NshmSurface(rupture.surface()));
+		}
 
-    final List<NshmSurface> surfaces;
-    final NshmRupture rupture;
+		@Override
+		public void setDuration(double duration) {
+			this.duration = duration;
+		}
+	}
 
-    System(
-        SystemSource delegate,
-        double weight,
-        double duration,
-        List<NshmSurface> surfaces) {
+	static class System extends NshmSource<SystemRupture> {
 
-      super(delegate);
-      this.surfaces = surfaces;
-      this.rupture = new NshmRupture(
-          delegate.magnitude(),
-          delegate.rake(),
-          delegate.rate(),
-          weight,
-          duration,
-          CompoundSurface.get(surfaces));
-    }
+		final List<NshmSurface> surfaces;
+		final NshmRupture rupture;
 
-    @Override
-    public double getMinDistance(Site site) {
-      return surfaces.stream()
-          .map(NshmSurface::centroid)
-          .mapToDouble(p -> LocationUtils.horzDistanceFast(site.getLocation(), p))
-          .min()
-          .orElseThrow();
-    }
+		System(
+				SystemRuptureSet ruptureSet,
+				SystemRupture delegate,
+				double weight,
+				double duration,
+				List<NshmSurface> surfaces) {
 
-    @Override
-    public ProbEqkRupture getRupture(int index) {
-      return rupture;
-    }
+			super(delegate, ruptureSet.name(), ruptureSet.id());
+			this.surfaces = surfaces;
+			this.rupture = new NshmRupture(
+					delegate.magnitude(),
+					delegate.rake(),
+					delegate.rate(),
+					weight,
+					duration,
+					CompoundSurface.get(surfaces));
+		}
 
-    @Override
-    public void setDuration(double duration) {
-      double p = Maths.rateToProbability(
-          rupture.rate * rupture.weight,
-          duration);
-      rupture.setProbability(p);
-    }
-  }
+		@Override
+		public double getMinDistance(Site site) {
+			return surfaces.stream()
+					.map(NshmSurface::centroid)
+					.mapToDouble(p -> LocationUtils.horzDistanceFast(site.getLocation(), p))
+					.min()
+					.orElseThrow();
+		}
+
+		@Override
+		public int getNumRuptures() {
+			return 1;
+		}
+
+		@Override
+		public ProbEqkRupture getRupture(int index) {
+			return rupture;
+		}
+
+		@Override
+		public void setDuration(double duration) {
+			double p = Maths.rateToProbability(
+					rupture.rate * rupture.weight,
+					duration);
+			rupture.setProbability(p);
+		}
+	}
 
 }
