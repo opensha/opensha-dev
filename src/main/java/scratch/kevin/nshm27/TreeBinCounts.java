@@ -10,13 +10,12 @@ import org.opensha.commons.logicTree.LogicTree;
 import org.opensha.commons.logicTree.LogicTreeBranch;
 import org.opensha.commons.logicTree.LogicTreeLevel;
 import org.opensha.commons.logicTree.LogicTreeNode;
+import org.opensha.commons.logicTree.TectonicRegionBranchTreeNode;
 import org.opensha.commons.logicTree.LogicTreeLevel.BinnableLevel;
 import org.opensha.commons.logicTree.LogicTreeLevel.BinnedLevel;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
-
-import gov.usgs.earthquake.nshmp.erf.logicTree.TectonicRegionBranchTreeNode;
 
 public class TreeBinCounts {
 

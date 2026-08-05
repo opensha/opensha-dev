@@ -16,19 +16,18 @@ import org.opensha.commons.geo.GriddedRegion;
 import org.opensha.commons.geo.LocationList;
 import org.opensha.commons.geo.Region;
 import org.opensha.commons.param.Parameter;
+import org.opensha.sha.earthquake.faultSysSolution.mpj.HPCConfig;
+import org.opensha.sha.earthquake.faultSysSolution.mpj.HazardConfig;
+import org.opensha.sha.earthquake.faultSysSolution.mpj.MPJ_BranchAveragedHazardScriptWriter;
+import org.opensha.sha.earthquake.faultSysSolution.mpj.RunConfig;
+import org.opensha.sha.earthquake.faultSysSolution.mpj.HPCConfig.HPCSite;
+import org.opensha.sha.earthquake.faultSysSolution.mpj.MPJ_BranchAveragedHazardScriptWriter.SupersamplingMode;
 import org.opensha.sha.earthquake.faultSysSolution.util.SolHazardMapCalc;
 import org.opensha.sha.earthquake.param.IncludeBackgroundOption;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.util.NSHM23_RegionLoader;
 import org.opensha.sha.faultSurface.utils.ptSrcCorr.PointSourceDistanceCorrections;
 import org.opensha.sha.imr.AttenRelRef;
 import org.opensha.sha.util.TectonicRegionType;
-
-import gov.usgs.earthquake.nshmp.erf.mpj.HPCConfig;
-import gov.usgs.earthquake.nshmp.erf.mpj.HPCConfig.HPCSite;
-import gov.usgs.earthquake.nshmp.erf.mpj.HazardConfig;
-import gov.usgs.earthquake.nshmp.erf.mpj.MPJ_BranchAveragedHazardScriptWriter;
-import gov.usgs.earthquake.nshmp.erf.mpj.MPJ_BranchAveragedHazardScriptWriter.SupersamplingMode;
-import gov.usgs.earthquake.nshmp.erf.mpj.RunConfig;
 
 public class ComparisonCalcScriptWriter {
 
