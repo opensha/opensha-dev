@@ -22,7 +22,7 @@ import org.opensha.sha.earthquake.faultSysSolution.erf.td.RenewalModels;
 import org.opensha.sha.earthquake.faultSysSolution.erf.td.TimeDepFaultSystemSolutionERF;
 import org.opensha.sha.earthquake.faultSysSolution.erf.td.UCERF3_ProbabilityModel;
 import org.opensha.sha.earthquake.faultSysSolution.erf.td.WG02_ProbabilityModel;
-import org.opensha.sha.earthquake.rupForecastImpl.nshm23.erf.NSHM23_WUS_BranchAveragedERF;
+import org.opensha.sha.earthquake.rupForecastImpl.nshm23.erf.NSHM23_BranchAveragedERF;
 
 import com.google.common.base.Preconditions;
 
@@ -31,7 +31,7 @@ import scratch.UCERF3.erf.mean.MeanUCERF3;
 public class TD_ERF_Example {
 	
 	static FaultSystemSolution fetchNSHM23() throws IOException {
-		return NSHM23_WUS_BranchAveragedERF.loadSolution();
+		return NSHM23_BranchAveragedERF.loadSolution(NSHM23_BranchAveragedERF.ModelVersions.WUS_R2);
 	}
 	
 	public static FaultSystemSolution fetchU3_BA() throws IOException {
