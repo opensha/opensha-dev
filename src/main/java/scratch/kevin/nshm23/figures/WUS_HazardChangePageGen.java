@@ -59,8 +59,8 @@ import org.opensha.sha.util.TectonicRegionType;
 
 import com.google.common.base.Preconditions;
 
-import gov.usgs.earthquake.nshmp.model.HazardModel;
-import gov.usgs.earthquake.nshmp.model.NshmErf;
+import org.opensha.nshmp.shaded.model.NshmpHazardModel;
+import org.opensha.nshmp.shaded.model.NshmErf;
 import scratch.kevin.nshm23.SimpleSmoothHazardMapCalc;
 import scratch.kevin.nshm23.MomentRateCompNSHM18;
 import scratch.kevin.nshm23.SingleSiteHazardAndDataComparisonPageGen;
@@ -1126,7 +1126,7 @@ public class WUS_HazardChangePageGen {
 			trts.add(TectonicRegionType.SUBDUCTION_SLAB);
 		}
 
-		HazardModel model = HazardModel.load(erfPath);
+		NshmpHazardModel model = NshmpHazardModel.load(erfPath);
 		NshmErf faultERF = new NshmErf(model, trts, IncludeBackgroundOption.EXCLUDE);
 		System.out.println("NSHM Fault ERF size: " + faultERF.getNumSources());
 		faultERF.getTimeSpan().setDuration(1.0);

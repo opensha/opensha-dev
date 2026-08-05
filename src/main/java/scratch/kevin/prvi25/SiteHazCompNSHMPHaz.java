@@ -47,14 +47,14 @@ import org.opensha.sha.imr.param.OtherParams.SigmaTruncTypeParam;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 
-import gov.usgs.earthquake.nshmp.gmm.Gmm;
-import gov.usgs.earthquake.nshmp.gmm.GmmInput;
-import gov.usgs.earthquake.nshmp.gmm.GroundMotion;
-import gov.usgs.earthquake.nshmp.gmm.GroundMotions;
-import gov.usgs.earthquake.nshmp.gmm.UsgsPrviBackbone2025;
-import gov.usgs.earthquake.nshmp.gmm.GmmInput.Constraints;
-import gov.usgs.earthquake.nshmp.gmm.GmmInput.Field;
-import gov.usgs.earthquake.nshmp.tree.LogicTree;
+import org.opensha.nshmp.shaded.gmm.NshmpGmm;
+import org.opensha.nshmp.shaded.gmm.NshmpGmmInput;
+import org.opensha.nshmp.shaded.gmm.NshmpGroundMotion;
+import org.opensha.nshmp.shaded.gmm.NshmpGroundMotions;
+import org.opensha.nshmp.shaded.gmm.NshmpUsgsPrviBackbone2025;
+import org.opensha.nshmp.shaded.gmm.NshmpGmmInput.Constraints;
+import org.opensha.nshmp.shaded.gmm.NshmpGmmInput.Field;
+import org.opensha.nshmp.shaded.tree.NshmpLogicTree;
 import net.mahdilamb.colormap.Colors;
 
 public class SiteHazCompNSHMPHaz {
@@ -64,25 +64,25 @@ public class SiteHazCompNSHMPHaz {
 		Preconditions.checkState(outputDir.exists() || outputDir.mkdir(),
 				"Output directory %s does not exist and could not be created", outputDir.getAbsolutePath());
 		
-//		NSHMP_GMM_Wrapper gmm = new NSHMP_GMM_Wrapper.Single(Gmm.ASK_14_BASE);
+//		NSHMP_GMM_Wrapper gmm = new NSHMP_GMM_Wrapper.Single(NshmpGmm.ASK_14_BASE);
 //		CSVFile<String> inCSV = CSVFile.readFile(new File("/home/kevin/Downloads/"
 //				+ "prvi-0.2s-ask14base-crustalFaultOnly-PRVI_2025_ACTIVE_CRUST_NO_EPI_SIGMA_NGA.csv"), true);
 		
-//		NSHMP_GMM_Wrapper gmm = new NSHMP_GMM_Wrapper.Single(Gmm.PRVI_2025_ACTIVE_CRUST);
+//		NSHMP_GMM_Wrapper gmm = new NSHMP_GMM_Wrapper.Single(NshmpGmm.PRVI_2025_ACTIVE_CRUST);
 ////		gmm.setGroundMotionTreeFilter(new GroundMotionLogicTreeFilter.StringMatching(
-//////				UsgsPrviBackbone2025.SIGMA_NGA_ID,
-////				GroundMotions.EPI_OFF
+//////				NshmpUsgsPrviBackbone2025.SIGMA_NGA_ID,
+////				NshmpGroundMotions.EPI_OFF
 ////				));
 //		CSVFile<String> inCSV = CSVFile.readFile(new File("/home/kevin/Downloads/"
 //				+ "prvi-0.2s-prvi25active-crustalFaultOnly-curves.csv"), true);
 		
 		NSHMP_GMM_Wrapper gmm = new NSHMP_GMM_Wrapper.WeightedCombination(
-				WeightedList.of(new WeightedValue<>(Gmm.PRVI_2025_ACTIVE_CRUST, 0.5),
-				new WeightedValue<>(Gmm.PRVI_2025_ACTIVE_CRUST_ADJUSTED, 0.5)), "Name", "Name");
-//		NSHMP_GMM_Wrapper gmm = new NSHMP_GMM_Wrapper.Single(Gmm.TOTAL_TREE_PRVI_ACTIVE_CRUST_2025);
+				WeightedList.of(new WeightedValue<>(NshmpGmm.PRVI_2025_ACTIVE_CRUST, 0.5),
+				new WeightedValue<>(NshmpGmm.PRVI_2025_ACTIVE_CRUST_ADJUSTED, 0.5)), "Name", "Name");
+//		NSHMP_GMM_Wrapper gmm = new NSHMP_GMM_Wrapper.Single(NshmpGmm.TOTAL_TREE_PRVI_ACTIVE_CRUST_2025);
 //		gmm.setGroundMotionTreeFilter(new GroundMotionLogicTreeFilter.StringMatching(
-//				UsgsPrviBackbone2025.SIGMA_NGA_ID,
-//				GroundMotions.EPI_OFF
+//				NshmpUsgsPrviBackbone2025.SIGMA_NGA_ID,
+//				NshmpGroundMotions.EPI_OFF
 //				));
 		CSVFile<String> inCSV = CSVFile.readFile(new File("/home/kevin/Downloads/"
 				+ "prvi-0.2s-prvi25activeTotal-crustalFaultOnly-curves.csv"), true);
@@ -96,11 +96,11 @@ public class SiteHazCompNSHMPHaz {
 		gmm.getOtherParams().setValue(SigmaTruncLevelParam.NAME, 3d);
 		
 		
-		System.out.println("Zhype used ? Gmm.PRVI_2025_ACTIVE_CRUST: "+Gmm.PRVI_2025_ACTIVE_CRUST.constraints().get(Field.ZHYP).isPresent());
-		System.out.println("Zhype used ? Gmm.PRVI_2025_ACTIVE_CRUST: "+Gmm.TOTAL_TREE_PRVI_ACTIVE_CRUST_2025.constraints().get(Field.ZHYP).isPresent());
+		System.out.println("Zhype used ? NshmpGmm.PRVI_2025_ACTIVE_CRUST: "+NshmpGmm.PRVI_2025_ACTIVE_CRUST.constraints().get(Field.ZHYP).isPresent());
+		System.out.println("Zhype used ? NshmpGmm.PRVI_2025_ACTIVE_CRUST: "+NshmpGmm.TOTAL_TREE_PRVI_ACTIVE_CRUST_2025.constraints().get(Field.ZHYP).isPresent());
 		
 		if (gmm instanceof NSHMP_GMM_Wrapper.Single) {
-			Gmm singleGMM = ((NSHMP_GMM_Wrapper.Single)gmm).getGmmRef();
+			NshmpGmm singleGMM = ((NSHMP_GMM_Wrapper.Single)gmm).getGmmRef();
 			Constraints constraints = singleGMM.constraints();
 			for (Field field : Field.values()) {
 				if (constraints.get(field).isPresent()) {
@@ -179,8 +179,8 @@ public class SiteHazCompNSHMPHaz {
 			for (int r=0; r<testSource.getNumRuptures(); r++) {
 				ProbEqkRupture rup = testSource.getRupture(r);
 				gmm.setEqkRupture(rup);
-				GmmInput gmmInput = gmm.getCurrentGmmInput();
-				LogicTree<GroundMotion> gmmTree = gmm.getGroundMotionTree();
+				NshmpGmmInput gmmInput = gmm.getCurrentGmmInput();
+				NshmpLogicTree<NshmpGroundMotion> gmmTree = gmm.getGroundMotionTree();
 				System.out.println("FSS rup "+testRupID+", ERF source "+testSourceID+" ("+r+")");
 				System.out.println(gmmInput);
 				System.out.println(gmmTree);

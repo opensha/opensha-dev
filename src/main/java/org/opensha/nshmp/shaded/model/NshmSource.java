@@ -1,4 +1,4 @@
-package gov.usgs.earthquake.nshmp.model;
+package org.opensha.nshmp.shaded.model;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -11,8 +11,8 @@ import org.opensha.sha.earthquake.ProbEqkSource;
 import org.opensha.sha.faultSurface.CompoundSurface;
 import org.opensha.sha.faultSurface.RuptureSurface;
 
-import gov.usgs.earthquake.nshmp.Maths;
-import gov.usgs.earthquake.nshmp.model.SystemRuptureSet.SystemRupture;
+import org.opensha.nshmp.shaded.NshmpMaths;
+import org.opensha.nshmp.shaded.model.NshmpSystemRuptureSet.SystemRupture;
 
 public abstract class NshmSource<E> extends ProbEqkSource {
 
@@ -53,18 +53,18 @@ public abstract class NshmSource<E> extends ProbEqkSource {
 		return delegate;
 	}
 
-	static class Fault extends NshmSource<IterableRuptureSet> {
+	static class Fault extends NshmSource<NshmpIterableRuptureSet> {
 
 		private final List<NshmRupture> ruptures;
 
 		Fault(
-				IterableRuptureSet delegate,
+				NshmpIterableRuptureSet delegate,
 				double weight,
 				double duration) {
 
 			super(delegate, delegate.name(), delegate.id());
 			this.ruptures = new ArrayList<>();
-			for (Rupture rupture : delegate) {
+			for (NshmpRupture rupture : delegate) {
 				ruptures.add(new NshmRupture(
 						rupture.magnitude(),
 						rupture.rake(),
@@ -93,19 +93,19 @@ public abstract class NshmSource<E> extends ProbEqkSource {
 		@Override
 		public void setDuration(double duration) {
 			ruptures.forEach(rup -> rup.setProbability(
-					Maths.rateToProbability(
+					NshmpMaths.rateToProbability(
 							rup.rate * rup.weight,
 							duration)));
 		}
 	}
 
-	static class Point extends NshmSource<GridSource> {
+	static class Point extends NshmSource<NshmpGridSource> {
 
 		final double weight;
 		double duration;
 
 		Point(
-				GridSource delegate,
+				NshmpGridSource delegate,
 				double weight,
 				double duration) {
 
@@ -121,12 +121,12 @@ public abstract class NshmSource<E> extends ProbEqkSource {
 
 		@Override
 		public int getNumRuptures() {
-			return ((GridSource) delegate).size();
+			return ((NshmpGridSource) delegate).size();
 		}
 
 		@Override
 		public ProbEqkRupture getRupture(int index) {
-			Rupture rupture = ((GridSource) delegate).get(index);
+			NshmpRupture rupture = ((NshmpGridSource) delegate).get(index);
 			return new NshmRupture(
 					rupture.magnitude(),
 					rupture.rake(),
@@ -148,7 +148,7 @@ public abstract class NshmSource<E> extends ProbEqkSource {
 		final NshmRupture rupture;
 
 		System(
-				SystemRuptureSet ruptureSet,
+				NshmpSystemRuptureSet ruptureSet,
 				SystemRupture delegate,
 				double weight,
 				double duration,
@@ -186,7 +186,7 @@ public abstract class NshmSource<E> extends ProbEqkSource {
 
 		@Override
 		public void setDuration(double duration) {
-			double p = Maths.rateToProbability(
+			double p = NshmpMaths.rateToProbability(
 					rupture.rate * rupture.weight,
 					duration);
 			rupture.setProbability(p);

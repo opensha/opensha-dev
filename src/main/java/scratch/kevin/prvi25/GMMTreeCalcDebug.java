@@ -53,16 +53,16 @@ import org.opensha.sha.util.TectonicRegionType;
 
 import com.google.common.base.Preconditions;
 
-import gov.usgs.earthquake.nshmp.gmm.Gmm;
-import gov.usgs.earthquake.nshmp.gmm.GmmInput;
-import gov.usgs.earthquake.nshmp.gmm.GroundMotion;
-import gov.usgs.earthquake.nshmp.gmm.GroundMotionModel;
-import gov.usgs.earthquake.nshmp.gmm.Imt;
+import org.opensha.nshmp.shaded.gmm.NshmpGmm;
+import org.opensha.nshmp.shaded.gmm.NshmpGmmInput;
+import org.opensha.nshmp.shaded.gmm.NshmpGroundMotion;
+import org.opensha.nshmp.shaded.gmm.NshmpGroundMotionModel;
+import org.opensha.nshmp.shaded.gmm.NshmpImt;
 
 public class GMMTreeCalcDebug {
 	
 	public static void main(String[] args) throws IOException {
-		simpleGMMTest(Gmm.PRVI_2025_ACTIVE_CRUST, Imt.PGA);
+		simpleGMMTest(NshmpGmm.PRVI_2025_ACTIVE_CRUST, NshmpImt.PGA);
 //		System.exit(0);
 //		Site site = new Site(new Location(18.4653, -66.1167));
 		Site site = new Site(new Location(18, -68));
@@ -306,14 +306,14 @@ public class GMMTreeCalcDebug {
 	
 	private static final boolean RATE_CURVES = false;
 	
-	private static final GmmInput defaultInput = GmmInput.builder().withDefaults().mag(7d).rJB(10d).rRup(10d).rX(1d).dip(90d).width(15d)
+	private static final NshmpGmmInput defaultInput = NshmpGmmInput.builder().withDefaults().mag(7d).rJB(10d).rRup(10d).rX(1d).dip(90d).width(15d)
 			.zTor(0d).zHyp(5d).rake(0d).vs30(760).z1p0(0.2).z2p5(1d).build();
 	
-	private static void simpleGMMTest(Gmm avgGMM, Imt imt) {
+	private static void simpleGMMTest(NshmpGmm avgGMM, NshmpImt imt) {
 		System.out.println("GMM input: "+defaultInput);
-		GroundMotionModel avgModel = avgGMM.instance(imt);
+		NshmpGroundMotionModel avgModel = avgGMM.instance(imt);
 		System.out.println("Average GMM: "+avgGMM);
-		gov.usgs.earthquake.nshmp.tree.LogicTree<GroundMotion> avgTree = avgModel.calc(defaultInput);
+		org.opensha.nshmp.shaded.tree.NshmpLogicTree<NshmpGroundMotion> avgTree = avgModel.calc(defaultInput);
 		System.out.println("Average tree:\n"+avgTree);
 	}
 	

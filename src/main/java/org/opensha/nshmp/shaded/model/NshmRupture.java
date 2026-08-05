@@ -1,9 +1,9 @@
-package gov.usgs.earthquake.nshmp.model;
+package org.opensha.nshmp.shaded.model;
 
 import org.opensha.sha.earthquake.ProbEqkRupture;
 import org.opensha.sha.faultSurface.RuptureSurface;
 
-import gov.usgs.earthquake.nshmp.Maths;
+import org.opensha.nshmp.shaded.NshmpMaths;
 
 class NshmRupture extends ProbEqkRupture {
 
@@ -20,7 +20,7 @@ class NshmRupture extends ProbEqkRupture {
 
 		super(
 				mag, rake,
-				Maths.rateToProbability(rate * weight, duration),
+				NshmpMaths.rateToProbability(rate * weight, duration),
 				surface, null);
 
 		this.rate = rate;
