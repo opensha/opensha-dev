@@ -15,7 +15,7 @@ import org.opensha.commons.param.Parameter;
 import org.opensha.sha.calc.HazardCurveCalculator;
 import org.opensha.sha.calc.sourceFilters.SourceFilterManager;
 import org.opensha.sha.calc.sourceFilters.SourceFilters;
-import org.opensha.sha.earthquake.rupForecastImpl.nshm23.erf.NSHM23_WUS_BranchAveragedERF;
+import org.opensha.sha.earthquake.rupForecastImpl.nshm23.erf.NSHM23_BranchAveragedERF;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.util.NSHM23_RegionLoader;
 import org.opensha.sha.gui.infoTools.IMT_Info;
 import org.opensha.sha.imr.AttenRelRef;
@@ -26,7 +26,7 @@ public class ThreadedHazardCurveCalcExample {
 
 	public static void main(String[] args) throws IOException {
 		// ERF
-		NSHM23_WUS_BranchAveragedERF erf = new NSHM23_WUS_BranchAveragedERF();
+		NSHM23_BranchAveragedERF erf = new NSHM23_BranchAveragedERF();
 		erf.getTimeSpan().setDuration(1d);
 		erf.updateForecast();
 		

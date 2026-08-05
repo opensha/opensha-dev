@@ -34,7 +34,7 @@ import org.opensha.sha.earthquake.faultSysSolution.util.SolHazardMapCalc.ReturnP
 import org.opensha.sha.earthquake.param.BackgroundRupType;
 import org.opensha.sha.earthquake.param.IncludeBackgroundOption;
 import org.opensha.sha.earthquake.param.IncludeBackgroundParam;
-import org.opensha.sha.earthquake.rupForecastImpl.nshm23.erf.NSHM23_WUS_BranchAveragedERF;
+import org.opensha.sha.earthquake.rupForecastImpl.nshm23.erf.NSHM23_BranchAveragedERF;
 import org.opensha.sha.earthquake.util.GridCellSupersamplingSettings;
 import org.opensha.sha.earthquake.util.GriddedFiniteRuptureSettings;
 import org.opensha.sha.earthquake.util.GriddedSeismicitySettings;
@@ -53,7 +53,7 @@ import net.mahdilamb.colormap.Colors;
 public class GriddedHazardSingleSiteComparison {
 
 	public static void main(String[] args) throws IOException {
-		BaseFaultSystemSolutionERF erf = new NSHM23_WUS_BranchAveragedERF();
+		BaseFaultSystemSolutionERF erf = new NSHM23_BranchAveragedERF();
 		erf.updateForecast();
 		
 //		PointSourceDistanceCorrections corrType = PointSourceDistanceCorrections.ANALYTICAL_TWENTY_POINT;

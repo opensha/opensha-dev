@@ -31,7 +31,7 @@ import org.opensha.sha.earthquake.EqkRupture;
 import org.opensha.sha.earthquake.faultSysSolution.FaultSystemRupSet;
 import org.opensha.sha.earthquake.faultSysSolution.FaultSystemSolution;
 import org.opensha.sha.earthquake.faultSysSolution.util.FaultSectionUtils;
-import org.opensha.sha.earthquake.rupForecastImpl.nshm23.erf.NSHM23_WUS_BranchAveragedERF;
+import org.opensha.sha.earthquake.rupForecastImpl.nshm23.erf.NSHM23_BranchAveragedERF;
 import org.opensha.sha.faultSurface.FaultSection;
 import org.opensha.sha.faultSurface.RuptureSurface;
 import org.opensha.sha.gui.infoTools.IMT_Info;
@@ -48,7 +48,7 @@ public class SingleEventAndFullHazardCurve {
 
 	public static void main(String[] args) throws IOException {
 		ModuleArchive.VERBOSE_DEFAULT = false;
-		NSHM23_WUS_BranchAveragedERF erf = new NSHM23_WUS_BranchAveragedERF();
+		NSHM23_BranchAveragedERF erf = new NSHM23_BranchAveragedERF();
 		
 		File outputDir = new File("/tmp");
 		
