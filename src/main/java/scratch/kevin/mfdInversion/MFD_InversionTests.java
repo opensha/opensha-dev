@@ -54,6 +54,7 @@ import org.opensha.sha.earthquake.faultSysSolution.ruptures.ClusterRupture;
 import org.opensha.sha.earthquake.faultSysSolution.ruptures.Jump;
 import org.opensha.sha.earthquake.faultSysSolution.ruptures.plausibility.impl.prob.JumpProbabilityCalc;
 import org.opensha.sha.earthquake.faultSysSolution.util.SubSectionBuilder;
+import org.opensha.sha.earthquake.nshmp.inversion.mfdPreInversion.MFD_ScaledInversionAdjustment;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.NSHM23_ConstraintBuilder;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.NSHM23_InvConfigFactory;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_ScalingRelationships;
@@ -69,7 +70,6 @@ import org.opensha.sha.magdist.SummedMagFreqDist;
 
 import com.google.common.base.Preconditions;
 
-import gov.usgs.earthquake.nshmp.erf.inversion.mfdPreInversion.MFD_ScaledInversionAdjustment;
 import net.mahdilamb.colormap.Colors;
 
 public class MFD_InversionTests {

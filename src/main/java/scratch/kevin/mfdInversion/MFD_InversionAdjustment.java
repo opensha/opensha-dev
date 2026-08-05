@@ -38,6 +38,7 @@ import org.opensha.sha.earthquake.faultSysSolution.ruptures.Jump;
 import org.opensha.sha.earthquake.faultSysSolution.ruptures.Jump.UniqueDistJump;
 import org.opensha.sha.earthquake.faultSysSolution.ruptures.plausibility.impl.prob.JumpProbabilityCalc;
 import org.opensha.sha.earthquake.faultSysSolution.ruptures.util.RuptureTreeNavigator;
+import org.opensha.sha.earthquake.nshmp.inversion.mfdPreInversion.MFD_ScaledInversionAdjustment;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.targetMFDs.estimators.GRParticRateEstimator;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.targetMFDs.estimators.SectNucleationMFD_Estimator;
 import org.opensha.sha.faultSurface.FaultSection;
@@ -50,7 +51,6 @@ import com.google.common.primitives.Ints;
 
 import cern.colt.matrix.tdouble.DoubleMatrix2D;
 import cern.colt.matrix.tdouble.impl.SparseDoubleMatrix2D;
-import gov.usgs.earthquake.nshmp.erf.inversion.mfdPreInversion.MFD_ScaledInversionAdjustment;
 
 /**
  * This is an old attempt at solving for the MFDs directly with lots of normalization constraints to force them to be G-R.
