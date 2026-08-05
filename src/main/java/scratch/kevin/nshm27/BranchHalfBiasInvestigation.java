@@ -7,11 +7,10 @@ import org.opensha.commons.logicTree.LogicTree;
 import org.opensha.commons.logicTree.LogicTreeBranch;
 import org.opensha.commons.logicTree.LogicTreeLevel;
 import org.opensha.commons.logicTree.LogicTreeNode;
-
-import gov.usgs.earthquake.nshmp.erf.logicTree.TectonicRegionBranchTreeNode;
-import gov.usgs.earthquake.nshmp.erf.nshm27.logicTree.NSHM27_InterfaceObsSeisDMAdjustment;
-import gov.usgs.earthquake.nshmp.erf.nshm27.logicTree.NSHM27_InterfaceCouplingDepthModels;
-import gov.usgs.earthquake.nshmp.erf.nshm27.logicTree.NSHM27_InterfaceHingedBValue.CombinedSampledType;
+import org.opensha.commons.logicTree.TectonicRegionBranchTreeNode;
+import org.opensha.sha.earthquake.rupForecastImpl.nshm27.logicTree.NSHM27_InterfaceCouplingDepthModels;
+import org.opensha.sha.earthquake.rupForecastImpl.nshm27.logicTree.NSHM27_InterfaceObsSeisDMAdjustment;
+import org.opensha.sha.earthquake.rupForecastImpl.nshm27.logicTree.NSHM27_InterfaceHingedBValue.CombinedSampledType;
 
 public class BranchHalfBiasInvestigation {
 

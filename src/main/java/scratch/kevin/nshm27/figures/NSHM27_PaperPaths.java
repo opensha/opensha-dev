@@ -9,9 +9,9 @@ import org.opensha.commons.logicTree.LogicTree;
 import org.opensha.commons.logicTree.LogicTreeNode;
 import org.opensha.sha.earthquake.faultSysSolution.FaultSystemSolution;
 import org.opensha.sha.earthquake.param.IncludeBackgroundOption;
+import org.opensha.sha.earthquake.rupForecastImpl.nshm27.util.NSHM27_RegionLoader.NSHM27_SeismicityRegions;
 import org.opensha.sha.util.TectonicRegionType;
 
-import gov.usgs.earthquake.nshmp.erf.nshm27.util.NSHM27_RegionLoader.NSHM27_SeismicityRegions;
 import net.mahdilamb.colormap.Colors;
 
 public class NSHM27_PaperPaths {

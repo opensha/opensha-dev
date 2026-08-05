@@ -45,6 +45,8 @@ import org.opensha.sha.earthquake.faultSysSolution.modules.GridSourceList;
 import org.opensha.sha.earthquake.faultSysSolution.modules.RegionsOfInterest;
 import org.opensha.sha.earthquake.faultSysSolution.util.FaultSectionUtils;
 import org.opensha.sha.earthquake.faultSysSolution.util.FaultSysTools;
+import org.opensha.sha.earthquake.nshmp.seismicity.SeismicityRateModel;
+import org.opensha.sha.earthquake.nshmp.seismicity.SeismicityRateFileLoader.RateType;
 import org.opensha.sha.earthquake.param.IncludeBackgroundOption;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_SegmentationModels;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.gridded.PRVI25_GridSourceBuilder;
@@ -66,8 +68,6 @@ import org.opensha.sha.util.TectonicRegionType;
 import com.google.common.base.Preconditions;
 import com.google.common.primitives.Ints;
 
-import gov.usgs.earthquake.nshmp.erf.seismicity.SeismicityRateModel;
-import gov.usgs.earthquake.nshmp.erf.seismicity.SeismicityRateFileLoader.RateType;
 import gov.usgs.earthquake.nshmp.model.NshmErf;
 import net.mahdilamb.colormap.Colors;
 import scratch.kevin.latex.LaTeXUtils;

@@ -21,6 +21,10 @@ import org.opensha.commons.gui.plot.PlotLineType;
 import org.opensha.commons.gui.plot.PlotSpec;
 import org.opensha.commons.gui.plot.PlotUtils;
 import org.opensha.sha.earthquake.faultSysSolution.util.FaultSysTools;
+import org.opensha.sha.earthquake.nshmp.seismicity.SeismicityRateFileLoader;
+import org.opensha.sha.earthquake.nshmp.seismicity.SeismicityRateModel;
+import org.opensha.sha.earthquake.nshmp.seismicity.SeismicityRateFileLoader.Direct;
+import org.opensha.sha.earthquake.nshmp.seismicity.SeismicityRateFileLoader.RateType;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_CrustalSeismicityRate;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_SeismicityRateEpoch;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.util.PRVI25_RegionLoader.PRVI25_SeismicityRegions;
@@ -28,10 +32,6 @@ import org.opensha.sha.magdist.IncrementalMagFreqDist;
 
 import com.google.common.base.Preconditions;
 
-import gov.usgs.earthquake.nshmp.erf.seismicity.SeismicityRateFileLoader;
-import gov.usgs.earthquake.nshmp.erf.seismicity.SeismicityRateModel;
-import gov.usgs.earthquake.nshmp.erf.seismicity.SeismicityRateFileLoader.Direct;
-import gov.usgs.earthquake.nshmp.erf.seismicity.SeismicityRateFileLoader.RateType;
 import net.mahdilamb.colormap.Colors;
 
 public class RateModelComparison {

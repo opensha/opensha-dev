@@ -33,7 +33,17 @@ import org.opensha.sha.earthquake.faultSysSolution.modules.BranchRegionalMFDs.MF
 import org.opensha.sha.earthquake.faultSysSolution.modules.GridSourceList;
 import org.opensha.sha.earthquake.faultSysSolution.modules.RegionsOfInterest;
 import org.opensha.sha.earthquake.faultSysSolution.util.FaultSysTools;
+import org.opensha.sha.earthquake.nshmp.seismicity.SeismicityRateFileLoader.PureGR;
 import org.opensha.sha.earthquake.param.IncludeBackgroundOption;
+import org.opensha.sha.earthquake.rupForecastImpl.nshm27.logicTree.NSHM27_DeclusteringAlgorithms;
+import org.opensha.sha.earthquake.rupForecastImpl.nshm27.logicTree.NSHM27_SeisClassificationMethod;
+import org.opensha.sha.earthquake.rupForecastImpl.nshm27.logicTree.NSHM27_SeisRateModelBranch;
+import org.opensha.sha.earthquake.rupForecastImpl.nshm27.logicTree.NSHM27_SeisRateModelSamples;
+import org.opensha.sha.earthquake.rupForecastImpl.nshm27.logicTree.NSHM27_SeisSmoothingAlgorithms;
+import org.opensha.sha.earthquake.rupForecastImpl.nshm27.util.NSHM27_RegionLoader;
+import org.opensha.sha.earthquake.rupForecastImpl.nshm27.util.NSHM27_SeisPDF_Loader;
+import org.opensha.sha.earthquake.rupForecastImpl.nshm27.util.NSHM27_RegionLoader.NSHM27_MapRegions;
+import org.opensha.sha.earthquake.rupForecastImpl.nshm27.util.NSHM27_RegionLoader.NSHM27_SeismicityRegions;
 import org.opensha.sha.faultSurface.FaultSection;
 import org.opensha.sha.magdist.GutenbergRichterMagFreqDist;
 import org.opensha.sha.magdist.IncrementalMagFreqDist;
@@ -42,16 +52,6 @@ import org.opensha.sha.util.TectonicRegionType;
 
 import com.google.common.base.Preconditions;
 
-import gov.usgs.earthquake.nshmp.erf.nshm27.logicTree.NSHM27_DeclusteringAlgorithms;
-import gov.usgs.earthquake.nshmp.erf.nshm27.logicTree.NSHM27_SeisClassificationMethod;
-import gov.usgs.earthquake.nshmp.erf.nshm27.logicTree.NSHM27_SeisRateModelBranch;
-import gov.usgs.earthquake.nshmp.erf.nshm27.logicTree.NSHM27_SeisRateModelSamples;
-import gov.usgs.earthquake.nshmp.erf.nshm27.logicTree.NSHM27_SeisSmoothingAlgorithms;
-import gov.usgs.earthquake.nshmp.erf.nshm27.util.NSHM27_RegionLoader;
-import gov.usgs.earthquake.nshmp.erf.nshm27.util.NSHM27_RegionLoader.NSHM27_MapRegions;
-import gov.usgs.earthquake.nshmp.erf.nshm27.util.NSHM27_RegionLoader.NSHM27_SeismicityRegions;
-import gov.usgs.earthquake.nshmp.erf.nshm27.util.NSHM27_SeisPDF_Loader;
-import gov.usgs.earthquake.nshmp.erf.seismicity.SeismicityRateFileLoader.PureGR;
 import net.mahdilamb.colormap.Colors;
 import oracle.net.aso.i;
 

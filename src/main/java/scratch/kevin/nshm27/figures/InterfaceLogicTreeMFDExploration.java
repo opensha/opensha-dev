@@ -44,7 +44,20 @@ import org.opensha.sha.earthquake.faultSysSolution.modules.SectSlipRates;
 import org.opensha.sha.earthquake.faultSysSolution.ruptures.plausibility.impl.prob.RuptureProbabilityCalc.BinaryRuptureProbabilityCalc;
 import org.opensha.sha.earthquake.faultSysSolution.util.FaultSysTools;
 import org.opensha.sha.earthquake.faultSysSolution.util.MaxRuptureLengthBranchNode;
+import org.opensha.sha.earthquake.nshmp.seismicity.SeismicityRateFileLoader.PureGR;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.SectionSupraSeisBValues;
+import org.opensha.sha.earthquake.rupForecastImpl.nshm27.NSHM27_InvConfigFactory;
+import org.opensha.sha.earthquake.rupForecastImpl.nshm27.logicTree.NSHM27_InterfaceCouplingDepthModels;
+import org.opensha.sha.earthquake.rupForecastImpl.nshm27.logicTree.NSHM27_InterfaceDeformationModels;
+import org.opensha.sha.earthquake.rupForecastImpl.nshm27.logicTree.NSHM27_InterfaceFaultModels;
+import org.opensha.sha.earthquake.rupForecastImpl.nshm27.logicTree.NSHM27_InterfaceHingedBValue;
+import org.opensha.sha.earthquake.rupForecastImpl.nshm27.logicTree.NSHM27_InterfaceMinSubSects;
+import org.opensha.sha.earthquake.rupForecastImpl.nshm27.logicTree.NSHM27_InterfaceObsSeisDMAdjustment;
+import org.opensha.sha.earthquake.rupForecastImpl.nshm27.logicTree.NSHM27_LogicTree;
+import org.opensha.sha.earthquake.rupForecastImpl.nshm27.logicTree.NSHM27_SeisClassificationMethod;
+import org.opensha.sha.earthquake.rupForecastImpl.nshm27.logicTree.NSHM27_SeisRateModel;
+import org.opensha.sha.earthquake.rupForecastImpl.nshm27.logicTree.NSHM27_InterfaceHingedBValue.CombinedSampledType;
+import org.opensha.sha.earthquake.rupForecastImpl.nshm27.util.NSHM27_RegionLoader.NSHM27_SeismicityRegions;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_SubductionScalingRelationships;
 import org.opensha.sha.faultSurface.FaultSection;
 import org.opensha.sha.magdist.GutenbergRichterMagFreqDist;
@@ -54,19 +67,6 @@ import org.opensha.sha.util.TectonicRegionType;
 
 import com.google.common.base.Preconditions;
 
-import gov.usgs.earthquake.nshmp.erf.nshm27.NSHM27_InvConfigFactory;
-import gov.usgs.earthquake.nshmp.erf.nshm27.logicTree.NSHM27_InterfaceCouplingDepthModels;
-import gov.usgs.earthquake.nshmp.erf.nshm27.logicTree.NSHM27_InterfaceDeformationModels;
-import gov.usgs.earthquake.nshmp.erf.nshm27.logicTree.NSHM27_InterfaceFaultModels;
-import gov.usgs.earthquake.nshmp.erf.nshm27.logicTree.NSHM27_InterfaceHingedBValue;
-import gov.usgs.earthquake.nshmp.erf.nshm27.logicTree.NSHM27_InterfaceHingedBValue.CombinedSampledType;
-import gov.usgs.earthquake.nshmp.erf.nshm27.logicTree.NSHM27_InterfaceMinSubSects;
-import gov.usgs.earthquake.nshmp.erf.nshm27.logicTree.NSHM27_InterfaceObsSeisDMAdjustment;
-import gov.usgs.earthquake.nshmp.erf.nshm27.logicTree.NSHM27_LogicTree;
-import gov.usgs.earthquake.nshmp.erf.nshm27.logicTree.NSHM27_SeisClassificationMethod;
-import gov.usgs.earthquake.nshmp.erf.nshm27.logicTree.NSHM27_SeisRateModel;
-import gov.usgs.earthquake.nshmp.erf.nshm27.util.NSHM27_RegionLoader.NSHM27_SeismicityRegions;
-import gov.usgs.earthquake.nshmp.erf.seismicity.SeismicityRateFileLoader.PureGR;
 import net.mahdilamb.colormap.Colors;
 
 public class InterfaceLogicTreeMFDExploration {

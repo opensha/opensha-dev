@@ -38,22 +38,22 @@ import org.opensha.commons.mapping.gmt.elements.GMT_CPT_Files;
 import org.opensha.commons.util.DataUtils.MinMaxAveTracker;
 import org.opensha.commons.util.cpt.CPT;
 import org.opensha.sha.earthquake.faultSysSolution.util.FaultSysTools;
+import org.opensha.sha.earthquake.nshmp.seismicity.SeismicityRateFileLoader;
+import org.opensha.sha.earthquake.nshmp.seismicity.SeismicityRateModel;
+import org.opensha.sha.earthquake.nshmp.seismicity.SeismicityRateFileLoader.Exact;
+import org.opensha.sha.earthquake.nshmp.seismicity.SeismicityRateFileLoader.PureGR;
+import org.opensha.sha.earthquake.nshmp.seismicity.SeismicityRateFileLoader.RateRecord;
+import org.opensha.sha.earthquake.nshmp.seismicity.SeismicityRateFileLoader.RateType;
+import org.opensha.sha.earthquake.rupForecastImpl.nshm27.logicTree.NSHM27_SeisClassificationMethod;
+import org.opensha.sha.earthquake.rupForecastImpl.nshm27.logicTree.NSHM27_SeisRateModelBranch;
+import org.opensha.sha.earthquake.rupForecastImpl.nshm27.logicTree.NSHM27_SeisRateModelSamples;
+import org.opensha.sha.earthquake.rupForecastImpl.nshm27.util.NSHM27_RegionLoader;
+import org.opensha.sha.earthquake.rupForecastImpl.nshm27.util.NSHM27_RegionLoader.NSHM27_SeismicityRegions;
 import org.opensha.sha.magdist.GutenbergRichterMagFreqDist;
 import org.opensha.sha.util.TectonicRegionType;
 
 import com.google.common.base.Preconditions;
 
-import gov.usgs.earthquake.nshmp.erf.nshm27.logicTree.NSHM27_SeisClassificationMethod;
-import gov.usgs.earthquake.nshmp.erf.nshm27.logicTree.NSHM27_SeisRateModelBranch;
-import gov.usgs.earthquake.nshmp.erf.nshm27.logicTree.NSHM27_SeisRateModelSamples;
-import gov.usgs.earthquake.nshmp.erf.nshm27.util.NSHM27_RegionLoader;
-import gov.usgs.earthquake.nshmp.erf.nshm27.util.NSHM27_RegionLoader.NSHM27_SeismicityRegions;
-import gov.usgs.earthquake.nshmp.erf.seismicity.SeismicityRateFileLoader;
-import gov.usgs.earthquake.nshmp.erf.seismicity.SeismicityRateFileLoader.Exact;
-import gov.usgs.earthquake.nshmp.erf.seismicity.SeismicityRateFileLoader.PureGR;
-import gov.usgs.earthquake.nshmp.erf.seismicity.SeismicityRateFileLoader.RateRecord;
-import gov.usgs.earthquake.nshmp.erf.seismicity.SeismicityRateFileLoader.RateType;
-import gov.usgs.earthquake.nshmp.erf.seismicity.SeismicityRateModel;
 import net.mahdilamb.colormap.Colors;
 
 import static scratch.kevin.nshm27.figures.NSHM27_PaperPaths.*;

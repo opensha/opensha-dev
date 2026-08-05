@@ -7,14 +7,13 @@ import java.util.List;
 
 import org.opensha.commons.data.CSVFile;
 import org.opensha.commons.data.uncertainty.UncertaintyBoundType;
+import org.opensha.sha.earthquake.nshmp.seismicity.SeismicityRateModel;
+import org.opensha.sha.earthquake.nshmp.seismicity.SeismicityRateFileLoader.RateType;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_CrustalSeismicityRate;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_SeismicityRateEpoch;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.util.PRVI25_RegionLoader.PRVI25_SeismicityRegions;
 
 import com.google.common.base.Preconditions;
-
-import gov.usgs.earthquake.nshmp.erf.seismicity.SeismicityRateModel;
-import gov.usgs.earthquake.nshmp.erf.seismicity.SeismicityRateFileLoader.RateType;
 
 public class RateFileScale1973to1900 {
 

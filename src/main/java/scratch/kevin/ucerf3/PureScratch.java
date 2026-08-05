@@ -154,6 +154,8 @@ import org.opensha.sha.earthquake.faultSysSolution.util.FaultSectionUtils;
 import org.opensha.sha.earthquake.faultSysSolution.util.FaultSysHazardCalcSettings;
 import org.opensha.sha.earthquake.faultSysSolution.util.FaultSysTools;
 import org.opensha.sha.earthquake.faultSysSolution.util.SolHazardMapCalc.ReturnPeriods;
+import org.opensha.sha.earthquake.nshmp.seismicity.SeismicityRateModel;
+import org.opensha.sha.earthquake.nshmp.seismicity.SeismicityRateFileLoader.RateType;
 import org.opensha.sha.earthquake.faultSysSolution.util.SubSectionBuilder;
 import org.opensha.sha.earthquake.observedEarthquake.ObsEqkRupList;
 import org.opensha.sha.earthquake.param.ApplyGardnerKnopoffAftershockFilterParam;
@@ -226,8 +228,6 @@ import com.google.common.primitives.Ints;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 
-import gov.usgs.earthquake.nshmp.erf.seismicity.SeismicityRateModel;
-import gov.usgs.earthquake.nshmp.erf.seismicity.SeismicityRateFileLoader.RateType;
 import gov.usgs.earthquake.nshmp.gmm.Gmm;
 import gov.usgs.earthquake.nshmp.gmm.GmmInput;
 import gov.usgs.earthquake.nshmp.gmm.GroundMotion;
