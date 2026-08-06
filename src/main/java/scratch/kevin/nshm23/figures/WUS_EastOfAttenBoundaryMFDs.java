@@ -31,8 +31,8 @@ import org.opensha.sha.earthquake.rupForecastImpl.nshm23.util.NSHM23_RegionLoade
 import org.opensha.sha.magdist.IncrementalMagFreqDist;
 import org.opensha.sha.util.TectonicRegionType;
 
-import gov.usgs.earthquake.nshmp.model.HazardModel;
-import gov.usgs.earthquake.nshmp.model.NshmErf;
+import org.opensha.nshmp.shaded.model.NshmpHazardModel;
+import org.opensha.nshmp.shaded.model.NshmErf;
 import scratch.kevin.nshm23.SingleSiteHazardAndDataComparisonPageGen;
 import scratch.kevin.nshm23.SingleSiteHazardAndDataComparisonPageGen.RegionalParticipationResult;
 
@@ -72,7 +72,7 @@ public class WUS_EastOfAttenBoundaryMFDs {
 		
 		Set<TectonicRegionType> trts = EnumSet.of(TectonicRegionType.ACTIVE_SHALLOW, TectonicRegionType.STABLE_SHALLOW);
 		
-		HazardModel model = HazardModel.load(Path.of("/home/kevin/OpenSHA/nshm23/nshmp-haz-models/nshm-conus-5.3.0"));
+		NshmpHazardModel model = NshmpHazardModel.load(Path.of("/home/kevin/OpenSHA/nshm23/nshmp-haz-models/nshm-conus-5.3.0"));
 		NshmErf faultERF = new NshmErf(model, trts, IncludeBackgroundOption.EXCLUDE);
 		System.out.println("NSHM Fault ERF size: " + faultERF.getNumSources());
 		faultERF.getTimeSpan().setDuration(1.0);

@@ -34,8 +34,8 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 
-import gov.usgs.earthquake.nshmp.model.NshmErf;
-import gov.usgs.earthquake.nshmp.model.NshmSource;
+import org.opensha.nshmp.shaded.model.NshmErf;
+import org.opensha.nshmp.shaded.model.NshmSource;
 
 /**
  * This class creates a list of fault system solutions (FSS) out of the 2023 CEUS fault-based sources.  All fault 

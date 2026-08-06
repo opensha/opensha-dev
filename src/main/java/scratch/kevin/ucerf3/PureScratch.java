@@ -228,14 +228,14 @@ import com.google.common.primitives.Ints;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 
-import gov.usgs.earthquake.nshmp.gmm.Gmm;
-import gov.usgs.earthquake.nshmp.gmm.GmmInput;
-import gov.usgs.earthquake.nshmp.gmm.GroundMotion;
-import gov.usgs.earthquake.nshmp.gmm.GroundMotionModel;
-import gov.usgs.earthquake.nshmp.gmm.Imt;
-import gov.usgs.earthquake.nshmp.mfd.Mfd.Properties.GutenbergRichter;
-import gov.usgs.earthquake.nshmp.model.NshmErf;
-import gov.usgs.earthquake.nshmp.model.NshmSurface;
+import org.opensha.nshmp.shaded.gmm.NshmpGmm;
+import org.opensha.nshmp.shaded.gmm.NshmpGmmInput;
+import org.opensha.nshmp.shaded.gmm.NshmpGroundMotion;
+import org.opensha.nshmp.shaded.gmm.NshmpGroundMotionModel;
+import org.opensha.nshmp.shaded.gmm.NshmpImt;
+import org.opensha.nshmp.shaded.mfd.NshmpMfd.Properties.GutenbergRichter;
+import org.opensha.nshmp.shaded.model.NshmErf;
+import org.opensha.nshmp.shaded.model.NshmSurface;
 import net.mahdilamb.colormap.Colors;
 import scratch.UCERF3.enumTreeBranches.DeformationModels;
 import scratch.UCERF3.enumTreeBranches.FaultModels;
@@ -2724,7 +2724,7 @@ public class PureScratch {
 	
 	private static void test321() throws IOException {
 //		NSHMP_GMM_EpistemicBranchLevel level = new NSHMP_GMM_EpistemicBranchLevel(
-//				NSHMP_GMM_EpistemicBranchLevel.buildNodes(Gmm.USGS_PRVI_ACTIVE_CRUST, "Active", true), "Crustal GMM", "CrustalGMM");
+//				NSHMP_GMM_EpistemicBranchLevel.buildNodes(NshmpGmm.USGS_PRVI_ACTIVE_CRUST, "Active", true), "Crustal GMM", "CrustalGMM");
 //		System.out.println("Level name: "+level.getName());
 //		System.out.println("Level short name: "+level.getShortName());
 //		for (NSHMP_GMM_Branch branch : level.getNodes()) {
@@ -3164,7 +3164,7 @@ public class PureScratch {
 	}
 	
 	private static void test341() throws IOException {
-		GroundMotionModel gmm = Gmm.COMBINED_PRVI_INTRASLAB_2025.instance(Imt.SA0P2);
+		NshmpGroundMotionModel gmm = NshmpGmm.COMBINED_PRVI_INTRASLAB_2025.instance(NshmpImt.SA0P2);
 		
 		double depth = 80d;
 		double rJB = 0d;
@@ -3177,10 +3177,10 @@ public class PureScratch {
 		double vs30 = 760;
 		double width = 0d;
 		
-		GmmInput input = GmmInput.builder().dip(dip).distances(rJB, rRup, rX).mag(mag).rake(rake).vs30(vs30)
+		NshmpGmmInput input = NshmpGmmInput.builder().dip(dip).distances(rJB, rRup, rX).mag(mag).rake(rake).vs30(vs30)
 				.width(width).z1p0(Double.NaN).z2p5(Double.NaN).zSed(Double.NaN).zHyp(depth).zTor(depth).build();
 		System.out.println(input);
-		gov.usgs.earthquake.nshmp.tree.LogicTree<GroundMotion> result = gmm.calc(input);
+		org.opensha.nshmp.shaded.tree.NshmpLogicTree<NshmpGroundMotion> result = gmm.calc(input);
 		System.out.println("Ground motion logic tree:\n"+result);
 		System.out.println("weighted mean="+(float)Math.exp(NSHMP_GMM_Wrapper.getWeightedMean(result))
 			+", sigma="+(float)NSHMP_GMM_Wrapper.getWeightedStdDev(result));

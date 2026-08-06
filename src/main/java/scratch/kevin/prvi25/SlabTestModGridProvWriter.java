@@ -70,8 +70,8 @@ import org.opensha.sha.util.TectonicRegionType;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 
-import gov.usgs.earthquake.nshmp.model.HazardModel;
-import gov.usgs.earthquake.nshmp.model.NshmErf;
+import org.opensha.nshmp.shaded.model.NshmpHazardModel;
+import org.opensha.nshmp.shaded.model.NshmErf;
 
 public class SlabTestModGridProvWriter {
 
@@ -107,7 +107,7 @@ public class SlabTestModGridProvWriter {
 		GriddedRegion fullGrid = new GriddedRegion(PRVI25_SeismicityRegions.CRUSTAL.load(), 0.1, GriddedRegion.ANCHOR_0_0);
 		
 		// write out 2003 as is, and keep track of the overall rate and PDF while we're at it
-		HazardModel prevModel = HazardModel.load(Path.of("/home/kevin/OpenSHA/nshm23/nshmp-haz-models/nshm-prvi-2003-main"));
+		NshmpHazardModel prevModel = NshmpHazardModel.load(Path.of("/home/kevin/OpenSHA/nshm23/nshmp-haz-models/nshm-prvi-2003-main"));
 		// needs to be include for slab and interface
 		NshmErf subERF = new NshmErf(prevModel, Set.of(TectonicRegionType.SUBDUCTION_SLAB),
 				IncludeBackgroundOption.INCLUDE);

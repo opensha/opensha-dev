@@ -78,9 +78,9 @@ import org.opensha.sha.util.TectonicRegionType;
 import com.google.common.base.Preconditions;
 import com.google.common.primitives.Doubles;
 
-import gov.usgs.earthquake.nshmp.model.HazardModel;
-import gov.usgs.earthquake.nshmp.model.NshmErf;
-import gov.usgs.earthquake.nshmp.model.NshmSurface;
+import org.opensha.nshmp.shaded.model.NshmpHazardModel;
+import org.opensha.nshmp.shaded.model.NshmErf;
+import org.opensha.nshmp.shaded.model.NshmSurface;
 import scratch.UCERF3.erf.FaultSystemSolutionERF;
 
 public class SingleSiteHazardAndDataComparisonPageGen {
@@ -168,7 +168,7 @@ public class SingleSiteHazardAndDataComparisonPageGen {
 		if (cmd.hasOption("comp-nshm-erf")) {
 			Preconditions.checkState(!cmd.hasOption("comp-sol"), "Can't supply both --comp-nshm-erf and --comp-sol");
 			Path path = Path.of(cmd.getOptionValue("comp-nshm-erf"));
-			HazardModel model = HazardModel.load(path);
+			NshmpHazardModel model = NshmpHazardModel.load(path);
 			
 			// TODO subduction option?
 			Set<TectonicRegionType> trts = EnumSet.of(TectonicRegionType.ACTIVE_SHALLOW,

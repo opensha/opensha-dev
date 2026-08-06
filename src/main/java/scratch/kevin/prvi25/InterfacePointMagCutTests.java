@@ -25,7 +25,7 @@ import org.opensha.sha.util.TectonicRegionType;
 
 import com.google.common.base.Preconditions;
 
-import gov.usgs.earthquake.nshmp.gmm.Gmm;
+import org.opensha.nshmp.shaded.gmm.NshmpGmm;
 
 public class InterfacePointMagCutTests {
 
@@ -53,9 +53,9 @@ public class InterfacePointMagCutTests {
 		
 //		ScalarIMR gmm = AttenRelRef.USGS_PRVI_INTERFACE.get();
 		
-//		Gmm gmmRef = Gmm.AG_20_GLOBAL_INTERFACE;
-//		Gmm gmmRef = Gmm.KBCG_20_GLOBAL_INTERFACE;
-		Gmm gmmRef = Gmm.PSBAH_20_GLOBAL_INTERFACE;
+//		NshmpGmm gmmRef = NshmpGmm.AG_20_GLOBAL_INTERFACE;
+//		NshmpGmm gmmRef = NshmpGmm.KBCG_20_GLOBAL_INTERFACE;
+		NshmpGmm gmmRef = NshmpGmm.PSBAH_20_GLOBAL_INTERFACE;
 		ScalarIMR gmm = new NSHMP_GMM_Wrapper.Single(gmmRef, gmmRef.toString(), gmmRef.name(), false, null);
 		gmm.setIntensityMeasure(PGA_Param.NAME);
 		

@@ -31,8 +31,8 @@ import org.opensha.sha.util.TectonicRegionType;
 import com.google.common.base.Preconditions;
 import com.google.common.io.Files;
 
-import gov.usgs.earthquake.nshmp.model.HazardModel;
-import gov.usgs.earthquake.nshmp.model.NshmErf;
+import org.opensha.nshmp.shaded.model.NshmpHazardModel;
+import org.opensha.nshmp.shaded.model.NshmErf;
 import scratch.kevin.nshm23.SimpleSmoothHazardMapCalc;
 import scratch.kevin.nshm23.SingleSiteHazardAndDataComparisonPageGen;
 import scratch.kevin.nshm23.SingleSiteHazardAndDataComparisonPageGen.RegionalParticipationResult;
@@ -67,8 +67,8 @@ public class WrapperComparisonPageGen {
 		GeographicMapMaker mapMaker = new RupSetMapMaker(List.of(), reg);
 		mapMaker.setDefaultPlotWidthPixels(1200);
 		
-		HazardModel model1 = HazardModel.load(new File(modelsDir, dirName1).toPath());
-		HazardModel model2 = HazardModel.load(new File(modelsDir, dirName2).toPath());
+		NshmpHazardModel model1 = NshmpHazardModel.load(new File(modelsDir, dirName1).toPath());
+		NshmpHazardModel model2 = NshmpHazardModel.load(new File(modelsDir, dirName2).toPath());
 		
 		GriddedRegion gridReg = new GriddedRegion(reg, 0.1, GriddedRegion.ANCHOR_0_0);
 		GriddedRegion smoothHazGridReg = new GriddedRegion(reg, 0.1, GriddedRegion.ANCHOR_0_0);

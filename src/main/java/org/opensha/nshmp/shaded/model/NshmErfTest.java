@@ -1,4 +1,4 @@
-package gov.usgs.earthquake.nshmp.model;
+package org.opensha.nshmp.shaded.model;
 
 import java.awt.geom.Point2D;
 import java.nio.file.Path;
@@ -30,13 +30,13 @@ public class NshmErfTest {
 	// private static final Path MODEL = Path.of("../nshm-conus-2018-5.x-maint");
 	private static final Path MODEL = Path.of("../nshm-prvi");
 
-	static gov.usgs.earthquake.nshmp.geo.Location testLoc =
-			gov.usgs.earthquake.nshmp.geo.Location.create(-66.117, 18.465);
-	//  static gov.usgs.earthquake.nshmp.geo.Location testLoc =
-	//      gov.usgs.earthquake.nshmp.geo.Location.create(-80, 33.2);
+	static org.opensha.nshmp.shaded.geo.NshmpLocation testLoc =
+			org.opensha.nshmp.shaded.geo.NshmpLocation.create(-66.117, 18.465);
+	//  static org.opensha.nshmp.shaded.geo.NshmpLocation testLoc =
+	//      org.opensha.nshmp.shaded.geo.NshmpLocation.create(-80, 33.2);
 
-	// static gov.usgs.earthquake.nshmp.geo.Location testLoc =
-	// gov.usgs.earthquake.nshmp.geo.Location.create(-110, 37.5);
+	// static org.opensha.nshmp.shaded.geo.NshmpLocation testLoc =
+	// org.opensha.nshmp.shaded.geo.NshmpLocation.create(-110, 37.5);
 
 	public static void main(String[] args) {
 
@@ -44,16 +44,16 @@ public class NshmErfTest {
 		//        EnumSet.of(TectonicRegionType.STABLE_SHALLOW);
 		Set<TectonicRegionType> trts = EnumSet.noneOf(TectonicRegionType.class);
 
-		HazardModel model = HazardModel.load(MODEL);
+		NshmpHazardModel model = NshmpHazardModel.load(MODEL);
 		NshmErf erf = new NshmErf(model, trts, IncludeBackgroundOption.INCLUDE);
 		System.out.println("NSHM ERF size: " + erf.getNumSources());
 		erf.getTimeSpan().setDuration(1.0);
 		erf.updateForecast();
 
-		System.out.println(Models.mfd(
+		System.out.println(NshmpModels.mfd(
 				model,
-				TectonicSetting.SUBDUCTION,
-				Optional.of(SourceType.INTERFACE)));
+				NshmpTectonicSetting.SUBDUCTION,
+				Optional.of(NshmpSourceType.INTERFACE)));
 
 		// for (ProbEqkSource src : erf) {
 		//
@@ -66,7 +66,7 @@ public class NshmErfTest {
 		// if (ptSrc.loc.equals(testLoc)) {
 		// System.out.println(testLoc);
 		// System.out.println(ptSrc.mfd);
-		// for (Rupture rup : ptSrc) {
+		// for (NshmpRupture rup : ptSrc) {
 		// PointSourceFinite.FiniteSurface surf =
 		// (PointSourceFinite.FiniteSurface) rup.surface();
 		// System.out.println(surf.mag + " " + surf.zTor + " " + surf.dip());
@@ -87,7 +87,7 @@ public class NshmErfTest {
 				System.out.println(true);
 
 				NshmSource.Point ptSrc = (NshmSource.Point) nshmSrc;
-				GridSource nhPtSrc = (GridSource) nshmSrc.delegate();
+				NshmpGridSource nhPtSrc = (NshmpGridSource) nshmSrc.delegate();
 
 				// PointSourceFixedStrike ptSrc = (PointSourceFixedStrike) nshmSrc;
 
