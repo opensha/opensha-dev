@@ -20,7 +20,6 @@ dependencies {
     implementation 'com.github.haifengl:smile-core:2.6.0'
     
     /* no remote repo */
-    implementation files('lib/EventWebService.jar')
     api files('lib/flanagan.jar') // FFT and PSD library along with other tools
 
     implementation project(path: ':opensha')
