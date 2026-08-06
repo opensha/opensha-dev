@@ -17,10 +17,10 @@ import org.opensha.sha.util.TectonicRegionType;
 
 import com.google.common.base.Preconditions;
 
-import gov.usgs.earthquake.nshmp.model.HazardModel;
-import gov.usgs.earthquake.nshmp.model.NshmErf;
-import gov.usgs.earthquake.nshmp.model.NshmSource;
-import gov.usgs.earthquake.nshmp.model.SystemRuptureSet.SystemRupture;
+import org.opensha.nshmp.shaded.model.NshmpHazardModel;
+import org.opensha.nshmp.shaded.model.NshmErf;
+import org.opensha.nshmp.shaded.model.NshmSource;
+import org.opensha.nshmp.shaded.model.NshmpSystemRuptureSet.SystemRupture;
 
 public class WrapperRupSetRupMapper {
 
@@ -33,7 +33,7 @@ public class WrapperRupSetRupMapper {
 		
 		FaultSystemSolution sol = FaultSystemSolution.load(inputSolFile);
 		
-		HazardModel model = HazardModel.load(modelDir.toPath());
+		NshmpHazardModel model = NshmpHazardModel.load(modelDir.toPath());
 		
 		NshmErf wrapper = new NshmErf(model, Set.of(TectonicRegionType.ACTIVE_SHALLOW), IncludeBackgroundOption.EXCLUDE);
 		wrapper.getTimeSpan().setDuration(1d);

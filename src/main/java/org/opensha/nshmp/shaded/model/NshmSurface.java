@@ -45,7 +45,7 @@ public class NshmSurface implements CacheEnabledSurface {
 	 * @return
 	 */
 	public static org.opensha.sha.faultSurface.PointSurface buildPointSurface(
-			gov.usgs.earthquake.nshmp.fault.surface.RuptureSurface delegate) {
+			org.opensha.nshmp.shaded.fault.surface.NshmpRuptureSurface delegate) {
 		// this is the point surface
 		double len = 0d;
 		try {
@@ -65,16 +65,16 @@ public class NshmSurface implements CacheEnabledSurface {
 	 */
 	private static class DelegatePointSourceCorrection implements PointSourceDistanceCorrection.Single {
 		
-		private gov.usgs.earthquake.nshmp.fault.surface.RuptureSurface delegate;
+		private org.opensha.nshmp.shaded.fault.surface.NshmpRuptureSurface delegate;
 
-		private DelegatePointSourceCorrection(gov.usgs.earthquake.nshmp.fault.surface.RuptureSurface delegate) {
+		private DelegatePointSourceCorrection(org.opensha.nshmp.shaded.fault.surface.NshmpRuptureSurface delegate) {
 			this.delegate = delegate;
 		}
 
 		@Override
 		public SurfaceDistances getCorrectedDistance(Location location, org.opensha.sha.faultSurface.PointSurface surf,
 				TectonicRegionType trt, double mag, double horzDist) {
-			Distance distance = delegate.distanceTo(NshmUtil.fromOpenShaLocation(location));
+			NshmpDistance distance = delegate.distanceTo(NshmUtil.fromOpenShaLocation(location));
 			return new SurfaceDistances.Precomputed(location, distance.rRup, distance.rJB, distance.rX);
 		}
 		

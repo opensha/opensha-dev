@@ -13,8 +13,8 @@ import org.opensha.sha.faultSurface.CompoundSurface;
 import org.opensha.sha.faultSurface.RuptureSurface;
 import org.opensha.sha.util.TectonicRegionType;
 
-import gov.usgs.earthquake.nshmp.model.HazardModel;
-import gov.usgs.earthquake.nshmp.model.NshmErf;
+import org.opensha.nshmp.shaded.model.NshmpHazardModel;
+import org.opensha.nshmp.shaded.model.NshmErf;
 import scratch.kevin.nshm23.hazardValidation.WrapperRupSetRupMapper.WrapperMatch;
 
 public class DipCalcTests {
@@ -28,7 +28,7 @@ public class DipCalcTests {
 		
 		FaultSystemSolution sol = FaultSystemSolution.load(inputSolFile);
 		
-		HazardModel model = HazardModel.load(modelDir.toPath());
+		NshmpHazardModel model = NshmpHazardModel.load(modelDir.toPath());
 		
 		NshmErf wrapper = new NshmErf(model, Set.of(TectonicRegionType.ACTIVE_SHALLOW), IncludeBackgroundOption.EXCLUDE);
 		wrapper.getTimeSpan().setDuration(1d);

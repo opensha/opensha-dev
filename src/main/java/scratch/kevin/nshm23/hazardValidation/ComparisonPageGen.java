@@ -85,10 +85,10 @@ import org.opensha.sha.util.TectonicRegionType;
 import com.google.common.base.Preconditions;
 import com.google.common.primitives.Doubles;
 
-import gov.usgs.earthquake.nshmp.gmm.Gmm;
-import gov.usgs.earthquake.nshmp.gmm.GmmInput;
-import gov.usgs.earthquake.nshmp.model.HazardModel;
-import gov.usgs.earthquake.nshmp.model.NshmErf;
+import org.opensha.nshmp.shaded.gmm.NshmpGmm;
+import org.opensha.nshmp.shaded.gmm.NshmpGmmInput;
+import org.opensha.nshmp.shaded.model.NshmpHazardModel;
+import org.opensha.nshmp.shaded.model.NshmErf;
 import net.mahdilamb.colormap.Colors;
 import scratch.kevin.nshm23.hazardValidation.WrapperRupSetRupMapper.WrapperMatch;
 
@@ -210,8 +210,8 @@ public class ComparisonPageGen {
 		}
 		
 //		NSHMP_GMM_Wrapper mixedForWrapperGMM = new NSHMP_GMM_Wrapper.WeightedCombination(
-//				Map.of(Gmm.TOTAL_TREE_CONUS_ACTIVE_CRUST_2023, 2d/3d,
-//						Gmm.TOTAL_TREE_CONUS_STABLE_CRUST_2023, 1d/3d), "Hack Mixed GMM", "HackMixed", false);
+//				Map.of(NshmpGmm.TOTAL_TREE_CONUS_ACTIVE_CRUST_2023, 2d/3d,
+//						NshmpGmm.TOTAL_TREE_CONUS_STABLE_CRUST_2023, 1d/3d), "Hack Mixed GMM", "HackMixed", false);
 //		mixedForWrapperGMM.setParamDefaults();
 //		mixedForWrapperGMM.getParameter(SigmaTruncLevelParam.NAME).setValue(3d);
 //		if (period == 0d) {
@@ -321,9 +321,9 @@ public class ComparisonPageGen {
 		CPT pDiffCPT = GMT_CPT_Files.DIVERGING_VIK_UNIFORM.instance().rescale(-10d, 10d);
 		pDiffCPT.setNanColor(transparent);
 		
-		HazardModel model = null;
+		NshmpHazardModel model = null;
 		if (doWrapperCalc)
-			model = HazardModel.load(modelDir.toPath());
+			model = NshmpHazardModel.load(modelDir.toPath());
 		
 		double diffScale;
 		if (period == 0d)
@@ -703,25 +703,25 @@ public class ComparisonPageGen {
 								if (wrapGMM != null) {
 									// extra tests
 									wrapGMM.setEqkRupture(fssRup);
-									GmmInput fssInput = wrapGMM.getCurrentGmmInput();
+									NshmpGmmInput fssInput = wrapGMM.getCurrentGmmInput();
 									wrapGMM.setEqkRupture(wrapperRup);
-									GmmInput wrapInput = wrapGMM.getCurrentGmmInput();
+									NshmpGmmInput wrapInput = wrapGMM.getCurrentGmmInput();
 									
-									List<GmmInput> updates = new ArrayList<>();
+									List<NshmpGmmInput> updates = new ArrayList<>();
 									List<PlotCurveCharacterstics> updateChars = new ArrayList<>();
 									List<String> updateNames = new ArrayList<>();
 									
-									updates.add(GmmInput.builder().fromCopy(fssInput)
+									updates.add(NshmpGmmInput.builder().fromCopy(fssInput)
 											.rake(wrapInput.rake).build());
 									updateNames.add("wrapper rake");
 									updateChars.add(new PlotCurveCharacterstics(PlotLineType.SHORT_DASHED, 3f, Colors.tab_orange));
 									
-									updates.add(GmmInput.builder().fromCopy(fssInput)
+									updates.add(NshmpGmmInput.builder().fromCopy(fssInput)
 											.rake(wrapInput.rake).dip(wrapInput.dip).build());
 									updateNames.add("wrapper rake/dip");
 									updateChars.add(new PlotCurveCharacterstics(PlotLineType.SHORT_DASHED, 3f, Colors.tab_purple));
 									
-									updates.add(GmmInput.builder().fromCopy(fssInput)
+									updates.add(NshmpGmmInput.builder().fromCopy(fssInput)
 											.rake(wrapInput.rake).dip(wrapInput.dip).zHyp(wrapInput.zHyp).build());
 									updateNames.add("wrapper rake/dip/zHyp");
 									updateChars.add(new PlotCurveCharacterstics(PlotLineType.SHORT_DASHED, 3f, Colors.tab_olive));
