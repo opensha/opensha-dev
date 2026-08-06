@@ -26,5 +26,5 @@ dependencies {
     implementation project(path: ':opensha')
     implementation project(path: ':opensha', configuration: 'implResolvable')
 
-    testImplementation 'junit:junit:4.12'
+    testImplementation 'junit:junit:4.13.2'
 }
