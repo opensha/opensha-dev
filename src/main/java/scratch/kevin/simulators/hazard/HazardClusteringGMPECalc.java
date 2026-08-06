@@ -56,7 +56,6 @@ import org.opensha.sha.util.NEHRP_TestCity;
 import com.google.common.base.Preconditions;
 import com.google.common.io.Files;
 
-import oracle.net.aso.e;
 import scratch.UCERF3.erf.FaultSystemSolutionERF;
 import scratch.kevin.simCompare.GroundMotionScatterPlot;
 import scratch.kevin.simulators.RSQSimCatalog;
