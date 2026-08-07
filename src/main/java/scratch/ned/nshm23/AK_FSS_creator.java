@@ -35,8 +35,8 @@ import org.opensha.sha.util.TectonicRegionType;
 
 import com.google.common.base.Preconditions;
 
-import gov.usgs.earthquake.nshmp.model.NshmErf;
-import gov.usgs.earthquake.nshmp.model.NshmSource;
+import org.opensha.nshmp.shaded.model.NshmErf;
+import org.opensha.nshmp.shaded.model.NshmSource;
 import scratch.ned.nshm23.CEUS_FSS_creator.FaultModelEnum;
 
 public class AK_FSS_creator {

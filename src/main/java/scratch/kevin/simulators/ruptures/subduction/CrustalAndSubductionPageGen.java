@@ -69,7 +69,7 @@ import com.google.common.collect.Table;
 import com.google.common.collect.Table.Cell;
 import com.google.common.primitives.Doubles;
 
-import gov.usgs.earthquake.nshmp.gmm.Gmm;
+import org.opensha.nshmp.shaded.gmm.NshmpGmm;
 import scratch.kevin.bbp.BBP_Module.VelocityModel;
 import scratch.kevin.bbp.BBP_Site;
 import scratch.kevin.simCompare.MultiRupGMPE_ComparePageGen;
@@ -209,7 +209,7 @@ public class CrustalAndSubductionPageGen {
 		
 //		AttenRelSupplier subductionGMM = AttenRelRef.ZHAO_2006;
 		AttenRelSupplier subductionGMM = new NSHMP_AttenRelSupplier(
-				Gmm.AG_20_GLOBAL_INTERFACE, "AG2020 (Global)", false);
+				NshmpGmm.AG_20_GLOBAL_INTERFACE, "AG2020 (Global)", false);
 		AttenRelSupplier crustalGMM = AttenRelRef.ASK_2014;
 		
 		Quantity[] mapQuantities = {Quantity.SUM_SQ};

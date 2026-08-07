@@ -29,10 +29,10 @@ import org.opensha.sha.util.TectonicRegionType;
 
 import com.google.common.base.Preconditions;
 
-import gov.usgs.earthquake.nshmp.model.GridSource;
-import gov.usgs.earthquake.nshmp.model.HazardModel;
-import gov.usgs.earthquake.nshmp.model.NshmErf;
-import gov.usgs.earthquake.nshmp.model.NshmSource;
+import org.opensha.nshmp.shaded.model.NshmpGridSource;
+import org.opensha.nshmp.shaded.model.NshmpHazardModel;
+import org.opensha.nshmp.shaded.model.NshmErf;
+import org.opensha.nshmp.shaded.model.NshmSource;
 
 public class GriddedParticipationComparison {
 
@@ -57,7 +57,7 @@ public class GriddedParticipationComparison {
 		// we want direct mappings
 		sol.getRupSet().removeModuleInstances(FaultGridAssociations.class);
 
-		HazardModel model = HazardModel.load(modelDir.toPath());
+		NshmpHazardModel model = NshmpHazardModel.load(modelDir.toPath());
 
 		GriddedGeoDataSet[] fssXYZs = new GriddedGeoDataSet[minMags.length];
 		GriddedGeoDataSet[] nhXYZs = new GriddedGeoDataSet[minMags.length];
@@ -125,12 +125,12 @@ public class GriddedParticipationComparison {
 		for (ProbEqkSource source : erf) {
 			NshmSource nshmSource = (NshmSource)source;
 			Object delegate = nshmSource.delegate();
-			boolean gridLike = delegate instanceof GridSource;
+			boolean gridLike = delegate instanceof NshmpGridSource;
 			if (!includeForBackgroundOption(gridLike, bgOp))
 				continue;
 			int gridSourceIndex = -1;
 			if (gridLike)
-				gridSourceIndex = gridReg.indexForLocation(toOpenSHALocation(((GridSource)delegate).location(null)));
+				gridSourceIndex = gridReg.indexForLocation(toOpenSHALocation(((NshmpGridSource)delegate).location(null)));
 			numNSHMPSources++;
 			for (ProbEqkRupture rup : source) {
 				numNSHMPRups++;
@@ -209,7 +209,7 @@ public class GriddedParticipationComparison {
 		}
 	}
 
-	private static Location toOpenSHALocation(gov.usgs.earthquake.nshmp.geo.Location loc) {
+	private static Location toOpenSHALocation(org.opensha.nshmp.shaded.geo.NshmpLocation loc) {
 		return new Location(loc.latitude, loc.longitude, loc.depth);
 	}
 

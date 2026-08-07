@@ -25,8 +25,8 @@ import org.opensha.sha.imr.param.OtherParams.SigmaTruncTypeParam;
 import org.opensha.sha.imr.param.SiteParams.Vs30_Param;
 import org.opensha.sha.util.TectonicRegionType;
 
-import gov.usgs.earthquake.nshmp.gmm.GmmInput;
-import gov.usgs.earthquake.nshmp.gmm.GroundMotion;
+import org.opensha.nshmp.shaded.gmm.NshmpGmmInput;
+import org.opensha.nshmp.shaded.gmm.NshmpGroundMotion;
 
 class GMMFilterTests {
 	
@@ -66,8 +66,8 @@ class GMMFilterTests {
 					System.out.println("\t\t\tTrunc is "+gmm.getParameter(SigmaTruncTypeParam.NAME).getValue());
 					if (gmm.getOtherParams().containsParameter(SigmaTruncLevelParam.NAME))
 						System.out.println("\t\t\tTrunc level is "+gmm.getParameter(SigmaTruncLevelParam.NAME).getValue());
-					gmm.setCurrentGmmInput(GmmInput.builder().withDefaults().build());
-					gov.usgs.earthquake.nshmp.tree.LogicTree<GroundMotion> gmmTree = gmm.getGroundMotionTree();
+					gmm.setCurrentGmmInput(NshmpGmmInput.builder().withDefaults().build());
+					org.opensha.nshmp.shaded.tree.NshmpLogicTree<NshmpGroundMotion> gmmTree = gmm.getGroundMotionTree();
 					System.out.println("\t\t\tTree has "+gmmTree.size()+" values: "+gmmTree);
 				}
 			}

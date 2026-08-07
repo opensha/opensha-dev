@@ -29,8 +29,8 @@ import org.opensha.sha.earthquake.rupForecastImpl.nshm23.util.NSHM23_RegionLoade
 
 import com.google.common.base.Preconditions;
 
-import gov.usgs.earthquake.nshmp.model.HazardModel;
-import gov.usgs.earthquake.nshmp.model.SiteData.Values;
+import org.opensha.nshmp.shaded.model.NshmpHazardModel;
+import org.opensha.nshmp.shaded.model.NshmpSiteData.Values;
 
 public class SiteDataDiagnostics {
 	
@@ -63,8 +63,8 @@ public class SiteDataDiagnostics {
 		File outputDir = new File("/home/kevin/OpenSHA/nshm23/nshmp-haz-models/site_data_debug");
 		Preconditions.checkState(outputDir.exists() || outputDir.mkdir());
 		
-		HazardModel model = HazardModel.load(Path.of("/data/kevin/nshm23/nshmp-haz-models/nshm-conus-6.2.0"));
-		gov.usgs.earthquake.nshmp.model.SiteData modelSiteData = model.siteData();
+		NshmpHazardModel model = NshmpHazardModel.load(Path.of("/data/kevin/nshm23/nshmp-haz-models/nshm-conus-6.2.0"));
+		org.opensha.nshmp.shaded.model.NshmpSiteData modelSiteData = model.siteData();
 		
 		for (int t=0; t<types.length; t++) {
 			String type = types[t];
@@ -114,7 +114,7 @@ public class SiteDataDiagnostics {
 				GriddedGeoDataSet modelXYZ = new GriddedGeoDataSet(dataReg);
 				for (int i=0; i<xyz.size(); i++) {
 					Location loc = modelXYZ.getLocation(i);
-					Values modelVals = modelSiteData.get(gov.usgs.earthquake.nshmp.geo.Location.create(loc.lon, loc.lat));
+					Values modelVals = modelSiteData.get(org.opensha.nshmp.shaded.geo.NshmpLocation.create(loc.lon, loc.lat));
 					OptionalDouble val = getFromModel(modelVals, type);
 					if (val.isPresent())
 						modelXYZ.set(i, val.getAsDouble());

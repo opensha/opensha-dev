@@ -30,8 +30,8 @@ import org.opensha.sha.util.TectonicRegionType;
 
 import com.google.common.base.Preconditions;
 
-import gov.usgs.earthquake.nshmp.model.HazardModel;
-import gov.usgs.earthquake.nshmp.model.NshmErf;
+import org.opensha.nshmp.shaded.model.NshmpHazardModel;
+import org.opensha.nshmp.shaded.model.NshmErf;
 
 public class GridPropInvestigation {
 
@@ -56,7 +56,7 @@ public class GridPropInvestigation {
 		
 		gmm.setParamDefaults();
 		
-		HazardModel model = HazardModel.load(modelDir.toPath());
+		NshmpHazardModel model = NshmpHazardModel.load(modelDir.toPath());
 		
 		NshmErf wrapper = new NshmErf(model, Set.of(trt), IncludeBackgroundOption.ONLY);
 		wrapper.getTimeSpan().setDuration(1d);
