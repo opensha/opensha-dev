@@ -116,7 +116,7 @@ public class RupSetStatsTexWriter {
 			avgMmax += weight*avgRupSet.getMaxMag();
 			weightSum += weight;
 			ClusterRuptures cRups = avgRupSet.requireModule(ClusterRuptures.class);
-			BinaryRuptureProbabilityCalc exclusion = PRVI25_InvConfigFactory.getExclusionModel(
+			BinaryRuptureProbabilityCalc exclusion = PRVI25_InvConfigFactory.buildExclusionModel(
 					avgRupSet, avgBranch, cRups);
 			double myMaxMin = 0d;
 			double myMinMin = Double.POSITIVE_INFINITY;
@@ -185,7 +185,7 @@ public class RupSetStatsTexWriter {
 		for (LogicTreeBranch<?> branch : scaleBranches) {
 			FaultSystemRupSet rupSet = factory.buildRuptureSet(branch, FaultSysTools.defaultNumThreads());
 			ClusterRuptures cRups = rupSet.requireModule(ClusterRuptures.class);
-			BinaryRuptureProbabilityCalc exclusion = PRVI25_InvConfigFactory.getExclusionModel(
+			BinaryRuptureProbabilityCalc exclusion = PRVI25_InvConfigFactory.buildExclusionModel(
 					rupSet, branch, cRups);
 			double mMin, mMax;
 			if (exclusion == null) {
