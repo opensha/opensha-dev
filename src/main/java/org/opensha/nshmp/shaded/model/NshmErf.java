@@ -140,13 +140,17 @@ public class NshmErf extends AbstractERF {
 			NshmpSourceType type = tree.type();
 			TectonicRegionType origTRT = NshmUtil.tectonicSettingToType(setting, type);
 			
-			for (NshmpBranch<NshmpRuptureSet> rs : tree) {
+			System.out.println("Processing tree "+tree.id()+". "+tree.name()+" ("+origTRT.name()+")");
+			
+			for (NshmpBranch<NshmpRuptureSet> branch : tree) {
 				if (origTRT == VOLCANIC) {
 					// copy over as is, no current GMM type for volcanic
-					ret.add(new NshmpTRTBranch(origTRT, rs));
+					ret.add(new NshmpTRTBranch(origTRT, branch));
 					continue;
 				}
-				NshmpGmmTree gmmTree = rs.value().gmmTree();
+				NshmpRuptureSet rs = branch.value();
+				System.out.println("\tProcessing RS "+rs.id()+". "+rs.name()+" ("+origTRT.name()+")");
+				NshmpGmmTree gmmTree = rs.gmmTree();
 				double weightOrig = 0d;
 				double weightOverrideSum = 0d;
 				Map<TectonicRegionType, Double> overrideWeights = new EnumMap<>(TectonicRegionType.class);
@@ -166,13 +170,19 @@ public class NshmErf extends AbstractERF {
 				if (weightOverrideSum > 0d) {
 					// we have overrides to process
 					Preconditions.checkState(Precision.equals(weightOverrideSum + weightOrig, 1d, 1e-4));
-					if (weightOrig > 0d)
-						ret.add(new NshmpTRTBranch(origTRT, new WeightScaledBranch(rs, weightOrig, origTRT)));
-					for (TectonicRegionType trt : overrideWeights.keySet())
-						ret.add(new NshmpTRTBranch(trt, new WeightScaledBranch(rs, overrideWeights.get(trt), trt)));
+					System.err.println("Detected a GMM TRT override for source "+rs.id()+". "+rs.name()+" with original TRT="+origTRT.name());
+					if (weightOrig > 0d) {
+						System.err.println("\t"+origTRT.name()+":\t"+weightOrig);
+						ret.add(new NshmpTRTBranch(origTRT, new WeightScaledBranch(branch, weightOrig, origTRT)));
+					}
+					for (TectonicRegionType trt : overrideWeights.keySet()) {
+						double weight = overrideWeights.get(trt);
+						System.err.println("\t"+trt.name()+":\t"+weight);
+						ret.add(new NshmpTRTBranch(trt, new WeightScaledBranch(branch, weight, trt)));
+					}
 				} else {
 					// copy over as is
-					ret.add(new NshmpTRTBranch(origTRT, rs));
+					ret.add(new NshmpTRTBranch(origTRT, branch));
 				}
 			}
 		}
