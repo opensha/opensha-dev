@@ -17,12 +17,9 @@ import org.opensha.commons.geo.Location;
 import org.opensha.commons.geo.LocationUtils;
 import org.opensha.commons.util.FaultUtils;
 import org.opensha.commons.util.FileUtils;
-import org.opensha.commons.util.GMT_GrdFile;
 import org.opensha.sha.faultSurface.ApproxEvenlyGriddedSurface;
 import org.opensha.sha.faultSurface.AbstractEvenlyGriddedSurfaceWithSubsets;
 import org.opensha.sha.faultSurface.FaultTrace;
-
-import ucar.ma2.InvalidRangeException;
 
 /**
  * This class generates surfaces from the subduction-zone data at http://geohazards.cr.usgs.gov/staffweb/ghayes/Site/Slab1.0.html
@@ -93,19 +90,20 @@ public class SlabSurfaceGenerator {
 		// create the surface object that will be returned
 		ApproxEvenlyGriddedSurface surf = new ApproxEvenlyGriddedSurface(nRows, resampTopTrace.size(), aveGridSpacing);
 
-		// open the surface grd data file (used for setting depths)
-		GMT_GrdFile grdSurfData=null;
-		try {
-			//			grdSurfData = new GMT_GrdFile(new URI("http://geohazards.cr.usgs.gov/staffweb/ghayes/Site/Slab1.0_files/sam_slab1.0_clip.grd"));
-
-			grdSurfData = new GMT_GrdFile(this.getClass().getResource("/"+grdSurfaceFilename).toURI());
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} catch (URISyntaxException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
+		// disabled: just use the XYZ file if you need this again
+//		// open the surface grd data file (used for setting depths)
+//		GMT_GrdFile grdSurfData=null;
+//		try {
+//			//			grdSurfData = new GMT_GrdFile(new URI("http://geohazards.cr.usgs.gov/staffweb/ghayes/Site/Slab1.0_files/sam_slab1.0_clip.grd"));
+//
+//			grdSurfData = new GMT_GrdFile(this.getClass().getResource("/"+grdSurfaceFilename).toURI());
+//		} catch (IOException e) {
+//			// TODO Auto-generated catch block
+//			e.printStackTrace();
+//		} catch (URISyntaxException e) {
+//			// TODO Auto-generated catch block
+//			e.printStackTrace();
+//		}
 
 		//		System.out.println(grdSurfData.getNumX()+"\t"+grdSurfData.getNumY());
 
@@ -124,17 +122,17 @@ public class SlabSurfaceGenerator {
 				double dist = s*subSectLen;
 				dir.setHorzDistance(dist);
 				Location loc = LocationUtils.location(topLoc, dir);
-				double depth= 0;
-				try {
-					//					depth = -grdSurfData.getClosestZ(loc);  // notice the minus sign
-					depth = -grdSurfData.getWtAveZ(loc);
-				} catch (IOException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				} catch (InvalidRangeException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				}
+				double depth= 0; // TODO disabled, see above
+//				try {
+//					//					depth = -grdSurfData.getClosestZ(loc);  // notice the minus sign
+//					depth = -grdSurfData.getWtAveZ(loc);
+//				} catch (IOException e) {
+//					// TODO Auto-generated catch block
+//					e.printStackTrace();
+//				} catch (InvalidRangeException e) {
+//					// TODO Auto-generated catch block
+//					e.printStackTrace();
+//				}
 				if(Double.isNaN(depth)) {
 					numNaN+=1;
 					//					System.out.println("row="+s+"\tcol="+i+"\t"+loc.getLongitude()+"\t"+loc.getLatitude());

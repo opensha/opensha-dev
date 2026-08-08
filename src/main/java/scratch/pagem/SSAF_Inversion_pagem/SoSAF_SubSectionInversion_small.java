@@ -1555,7 +1555,7 @@ public class SoSAF_SubSectionInversion_small {
 					continue;
 				HSSFCell cell = row.getCell((short) 1);
 				if (cell == null
-						|| cell.getCellType() == HSSFCell.CELL_TYPE_STRING)
+						|| cell.getCellType() == org.apache.poi.ss.usermodel.CellType.STRING)
 					continue;
 				lat = cell.getNumericCellValue();
 				siteName = row.getCell((short) 0).getStringCellValue().trim();
