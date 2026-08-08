@@ -140,37 +140,37 @@ public class CFM5ExcelParser {
 		return -1;
 //		HSSFCell cell = row.getCell(groupStartCol);
 //		Preconditions.checkNotNull(cell);
-//		if (cell.getCellType() == HSSFCell.CELL_TYPE_NUMERIC)
+//		if (cell.getCellType() == org.apache.poi.ss.usermodel.CellType.NUMERIC)
 //			return (int)cell.getNumericCellValue();
 //		else
 //			return Integer.parseInt(cell.getStringCellValue());
 		
 		
-//		Preconditions.checkState(cell != null && cell.getCellType() == HSSFCell.CELL_TYPE_NUMERIC);
+//		Preconditions.checkState(cell != null && cell.getCellType() == org.apache.poi.ss.usermodel.CellType.NUMERIC);
 //		return (int)cell.getNumericCellValue();
 	}
 	
 	private static String getGroupName(HSSFRow row, int groupStartCol) {
 		HSSFCell cell = row.getCell(groupStartCol+1);
-		if (cell == null || cell.getCellType() == HSSFCell.CELL_TYPE_BLANK)
+		if (cell == null || cell.getCellType() == org.apache.poi.ss.usermodel.CellType.BLANK)
 			return "";  // blank ok for name
-		Preconditions.checkState(cell.getCellType() == HSSFCell.CELL_TYPE_STRING);
+		Preconditions.checkState(cell.getCellType() == org.apache.poi.ss.usermodel.CellType.STRING);
 		return cell.getStringCellValue();
 	}
 	
 	private static String getGroupShortName(HSSFRow row, int groupStartCol) {
 		HSSFCell cell = row.getCell(groupStartCol+2);
-		if (cell == null || cell.getCellType() == HSSFCell.CELL_TYPE_BLANK)
+		if (cell == null || cell.getCellType() == org.apache.poi.ss.usermodel.CellType.BLANK)
 			return getGroupName(row, groupStartCol).replaceAll(" ", "");
 		Preconditions.checkNotNull(cell);
-		if (cell.getCellType() == HSSFCell.CELL_TYPE_NUMERIC) {
+		if (cell.getCellType() == org.apache.poi.ss.usermodel.CellType.NUMERIC) {
 			double val = cell.getNumericCellValue();
 			if (val == Math.round(val))
 				return (int)val+"";
 			else
 				return val+"";
 		}
-		Preconditions.checkState(cell.getCellType() == HSSFCell.CELL_TYPE_STRING);
+		Preconditions.checkState(cell.getCellType() == org.apache.poi.ss.usermodel.CellType.STRING);
 		if (cell.getStringCellValue().isEmpty())
 			return getGroupName(row, groupStartCol).replaceAll(" ", "");
 		return cell.getStringCellValue();
