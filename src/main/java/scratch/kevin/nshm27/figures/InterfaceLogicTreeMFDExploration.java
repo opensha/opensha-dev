@@ -542,7 +542,7 @@ public class InterfaceLogicTreeMFDExploration {
 		System.out.println("Calculating MFD for: "+branch);
 		ClusterRuptures cRups = rupSet.requireModule(ClusterRuptures.class);
 		rupSet = factory.updateRuptureSetForBranch(rupSet, branch);
-		BinaryRuptureProbabilityCalc exclusionModel = NSHM27_InvConfigFactory.getExclusionModel(rupSet, branch, cRups);
+		BinaryRuptureProbabilityCalc exclusionModel = NSHM27_InvConfigFactory.buildExclusionModel(rupSet, branch, cRups);
 		
 		BitSet includedRups = new BitSet(rupSet.getNumRuptures());
 		for (int rupIndex=0; rupIndex<rupSet.getNumRuptures(); rupIndex++)

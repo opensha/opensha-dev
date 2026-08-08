@@ -22,7 +22,6 @@ import org.opensha.sha.faultSurface.GeoJSONFaultSection;
 
 import scratch.alessandro.WasatchInversion;
 import scratch.alessandro.logicTreeEnums.WasatchSlipRatesEnum;
-import ucar.ma2.MAMath.MinMax;
 
 public class LegacyWasatchPaleoDataWriter {
 

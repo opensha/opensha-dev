@@ -36,7 +36,7 @@ public class InversionDebugForSingleFault {
 		
 		LogicTreeBranch<?> branch = rupSet.requireModule(LogicTreeBranch.class);
 		ClusterRuptures cRups = rupSet.requireModule(ClusterRuptures.class);
-		BinaryRuptureProbabilityCalc exclusion = NSHM23_InvConfigFactory.getExclusionModel(
+		BinaryRuptureProbabilityCalc exclusion = NSHM23_InvConfigFactory.buildExclusionModel(
 				rupSet, branch, cRups);
 		
 		double rateSum = 0d;
