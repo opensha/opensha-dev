@@ -17,7 +17,7 @@ import org.opensha.commons.mapping.gmt.elements.GMT_CPT_Files;
 import org.opensha.commons.util.cpt.CPT;
 import org.opensha.commons.util.modules.ModuleContainer;
 import org.opensha.sha.earthquake.faultSysSolution.FaultSystemSolution;
-import org.opensha.sha.earthquake.faultSysSolution.logicTree.dmSampling.RupSetDeformationModelDistribution.BinnedUniformSamplingLevel;
+import org.opensha.sha.earthquake.faultSysSolution.logicTree.sectDistSampling.SectDistributionSampleLevels.BinnedUniformSamplingLevel;
 import org.opensha.sha.earthquake.faultSysSolution.modules.SolutionLogicTree;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm27.logicTree.NSHM27_InterfaceCouplingDepthModels;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm27.logicTree.NSHM27_InterfaceDeformationModels;
