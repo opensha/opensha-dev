@@ -326,7 +326,7 @@ public class LongTermTD_2026_Analyses {
 		PaleoMappingAlgorithm paleoMapping = PaleoMappingAlgorithm.NEIGHBORING_SECTS;
 		DataToInclude paleoDataToInclude = DataToInclude.HIST_RUPS_ONLY;
 		boolean includeUCERF3_Comp = false;
-		
+				
 		// Reference calculation
 		outputDir = referenceDir;
 		titleString = "Reference 2026 Time-Dependent Model";
@@ -338,15 +338,16 @@ public class LongTermTD_2026_Analyses {
 				referenceDir, titleString, infoString, includeUCERF3_Comp);
 	
 		
-		// UCERF3 results
+//		// UCERF3 results
 //		outputDir = rootDir+"ReferenceUCERF3/";
 //		titleString = "Reference UCERF3";
 //		infoString = "Reference parameters applied to UCERF3 branch-average fault system solution, and using UCERF3 DOLE data. ";
 //		generateReportPageUCERF3(outputDir, startYear, duration, 
 //				histOpenIntYear, probModChoice, aperModelChoice,  
-//				renewalModelChoice, averagingChoice, titleString, infoString, includeUCERF3_Comp);	
+//				renewalModelChoice, averagingChoice, titleString, infoString);	
 		
-//		// BPTAveragingTypeOptions.AVE_RI_AVE_TIME_SINCE option
+		
+		// BPTAveragingTypeOptions.AVE_RI_AVE_TIME_SINCE option
 //		outputDir = rootDir+"ReferencelModel_AVE_RI_AVE_TIME_SINCE/";
 //		titleString = "Reference, But With BPTAveragingTypeOptions.AVE_RI_AVE_NORM_TIME_SINCE";
 //		infoString = "This is the Reference (preferred) model, but with AVE_RI_AVE_NORM_TIME_SINCE chosen for BPTAveragingTypeOptions. ";
@@ -354,8 +355,7 @@ public class LongTermTD_2026_Analyses {
 //		generateReportPage(outputDir,  fss_fileNameWithPath,  startYear,  duration, 
 //				 histOpenIntYear,  probModChoice,  aperModelChoice,  
 //				renewalModelChoice,  averagingChoice, paleoMapping,  paleoDataToInclude,  
-//				referenceDir, titleString, infoString);
-
+//				referenceDir, titleString, infoString, includeUCERF3_Comp);
 	
 		
 //		outputDir = rootDir+"ReferencelModel_LowCOV/";
@@ -365,7 +365,7 @@ public class LongTermTD_2026_Analyses {
 //		generateReportPage(outputDir,  fss_fileNameWithPath,  startYear,  duration, 
 //				 histOpenIntYear,  probModChoice,  aperModelChoice,  
 //				renewalModelChoice,  averagingChoice, paleoMapping,  paleoDataToInclude,  
-//				referenceDir, titleString, infoString);
+//				referenceDir, titleString, infoString, includeUCERF3_Comp);
 
 		
 //		outputDir = rootDir+"ReferencelModel_HighCOV/";
@@ -375,7 +375,7 @@ public class LongTermTD_2026_Analyses {
 //		generateReportPage(outputDir,  fss_fileNameWithPath,  startYear,  duration, 
 //				 histOpenIntYear,  probModChoice,  aperModelChoice,  
 //				renewalModelChoice,  averagingChoice, paleoMapping,  paleoDataToInclude,  
-//				referenceDir, titleString, infoString);
+//				referenceDir, titleString, infoString, includeUCERF3_Comp);
 		
 		
 //		outputDir = rootDir+"ReferencelModel_PlusPaleoDOLE/";
@@ -385,7 +385,7 @@ public class LongTermTD_2026_Analyses {
 //		generateReportPage(outputDir,  fss_fileNameWithPath,  startYear,  duration, 
 //				 histOpenIntYear,  probModChoice,  aperModelChoice,  
 //				renewalModelChoice,  averagingChoice, paleoMapping,  paleoDataToInclude,  
-//				referenceDir, titleString, infoString);
+//				referenceDir, titleString, infoString, includeUCERF3_Comp);
 
 //		outputDir = rootDir+"ReferencelModel_OnlyPaleoDOLE/";
 //		titleString = "Reference, But With Only Paleo DOLE";
@@ -394,7 +394,7 @@ public class LongTermTD_2026_Analyses {
 //		generateReportPage(outputDir,  fss_fileNameWithPath,  startYear,  duration, 
 //				 histOpenIntYear,  probModChoice,  aperModelChoice,  
 //				renewalModelChoice,  averagingChoice, paleoMapping,  paleoDataToInclude,  
-//				referenceDir, titleString, infoString);
+//				referenceDir, titleString, infoString, includeUCERF3_Comp);
 
 		
 //		outputDir = rootDir+"LognormalModel/";
@@ -404,7 +404,7 @@ public class LongTermTD_2026_Analyses {
 //		generateReportPage(outputDir,  fss_fileNameWithPath,  startYear,  duration, 
 //				 histOpenIntYear,  probModChoice,  aperModelChoice,  
 //				renewalModelChoice,  averagingChoice, paleoMapping,  paleoDataToInclude,  
-//				referenceDir, titleString, infoString);
+//				referenceDir, titleString, infoString, includeUCERF3_Comp);
 
 
 //		outputDir = rootDir+"NoOpenIntervalModel/";
@@ -414,7 +414,7 @@ public class LongTermTD_2026_Analyses {
 //		generateReportPage(outputDir,  fss_fileNameWithPath,  startYear,  duration, 
 //				 histOpenIntYear,  probModChoice,  aperModelChoice,  
 //				renewalModelChoice,  averagingChoice, paleoMapping,  paleoDataToInclude,  
-//				referenceDir, titleString, infoString);
+//				referenceDir, titleString, infoString, includeUCERF3_Comp);
 		
 
 //		outputDir = rootDir+"WeibullModel/";
@@ -424,7 +424,7 @@ public class LongTermTD_2026_Analyses {
 //		generateReportPage(outputDir, fss_fileNameWithPath,  startYear,  duration, 
 //				 histOpenIntYear,  probModChoice,  aperModelChoice,  
 //				renewalModelChoice,  averagingChoice, paleoMapping,  paleoDataToInclude,  
-//				referenceDir, titleString, infoString);
+//				referenceDir, titleString, infoString, includeUCERF3_Comp);
 		
 
 //		outputDir = rootDir+"BPT_SlipRateDepAperiodicity/";
@@ -434,8 +434,16 @@ public class LongTermTD_2026_Analyses {
 //		generateReportPage(outputDir, fss_fileNameWithPath,  startYear,  duration, 
 //				 histOpenIntYear,  probModChoice,  aperModelChoice,  
 //				renewalModelChoice,  averagingChoice, paleoMapping,  paleoDataToInclude,  
-//				referenceDir, titleString, infoString);
+//				referenceDir, titleString, infoString, includeUCERF3_Comp);
 
+//		outputDir = rootDir+"SingleAperiodicity0.4/";
+//		aperModelChoice = AperiodicityModels.SINGLE_VALUED_0pt4;
+//		titleString = "Reference, But With Single Aperiodicity = 0.4";
+//		infoString = "This is the Reference model, but with a constant aperiodicity (COV) of 0.4. ";
+//		generateReportPage(outputDir, fss_fileNameWithPath,  startYear,  duration, 
+//				 histOpenIntYear,  probModChoice,  aperModelChoice,  
+//				renewalModelChoice,  averagingChoice, paleoMapping,  paleoDataToInclude,  
+//				referenceDir, titleString, infoString, includeUCERF3_Comp);
 
 	}
 
@@ -996,31 +1004,9 @@ public class LongTermTD_2026_Analyses {
 		
 //		weibullSamplingOskinTests();
 		
-//		getNSHM23_For_U3_ParentFaultID_Mapping();
-//		old_getNSHM23_For_U3_SubsectionID_Mapping();
-//		System.exit(0);
-	
-//		// temp junk
-//		TimeDepFaultSystemSolutionERF erf2 = getFullPrefUS26_ERF();
-//		HashMap<Integer,String> nameFromID_Map = new HashMap<Integer,String>();
-//		for (FaultSection sect:erf2.getSolution().getRupSet().getFaultSectionDataList()) {
-//			if(!nameFromID_Map.keySet().contains(sect.getParentSectionId())) {
-//				String name = sect.getParentSectionName();
-//				nameFromID_Map.put(sect.getParentSectionId(), name);
-////				System.out.println(sect.getParentSectionId()+"\t"+name);
-//				if(name == null) {
-//					System.out.println(sect.getParentSectionId()+"\t"+sect.getSectionId()+"\t"+sect.getSectionName());
-//				}
-//			}
-//		}
-//		System.exit(0);
-		
-//		testU3_NSHM23_CA_Fault_Mappings(); System.exit(0);		
-
 //		listParentSectionsThatContainStringInName("Peninsula",getFullPrefUS26_ERF());
 		
 		generatePreliminaryResults();
-//		TimeDependentReportPageGen.getNSHM23_WUS_SectRI_CumDistFuncArray();
 		System.exit(0);
 		
 		
@@ -1159,37 +1145,37 @@ public class LongTermTD_2026_Analyses {
 		
 
 //		// Weibull SIMULTATIONS fixed/single aperiodicity
-		TimeDepFaultSystemSolutionERF erf = getFullPrefUS26_ERF();
-		UCERF3_ProbabilityModel u3ProbModel = (UCERF3_ProbabilityModel)erf.getProbabilityModel();
-		u3ProbModel.setRenewalModelChoice(RenewalModels.WEIBULL);
-		//	double[] aperArray = {0.1,0.3,0.5,0.7,0.9};
-		double[] aperArray = {0.4};
-		for(double aper:aperArray) {
-
-			u3ProbModel.setAperiodicityModelChoice(AperiodicityModels.SINGLE_VALUED);
-			((AperiodicityModel.SingleValued)u3ProbModel.getAperiodicityModel()).setValue(aper);
-			u3ProbModel.setCustomHistOpenIntervalModel(new HistoricalOpenInterval.SingleYear(erf.getTimeSpan().getStartTimeYear(), true));
-			File parentDir = new File(rootDir+"weibullSimulationsUS26_SingleAper/");
-			if(!parentDir.exists()) 
-				parentDir.mkdir();
-			int numYrs = 50000;
-			String aperString = Double.toString(aper).replace("0.", "_pt");
-			for(int i=2; i<3;i++) {
-				File outputDir = new File(parentDir,"Run"+i+"_"+numYrs+"yrs"+aperString); 
-				long seed = 984087634+i*1000;
-				String inputFile=null;
-				if(i==1)
-					setDOLE_asFractionOfRI(erf, 0.75);
-				else
-					inputFile = rootDir+"weibullSimulationsUS26_SingleAper/Run"+(i-1)+"_"+numYrs+"yrs"+aperString+"/outputTimesinceLast.txt"; // make simulations consecutive
-
-				LongTermTD_Simulator.simulateEvents(erf, inputFile,"outputTimesinceLast.txt", numYrs, outputDir, 
-						seed, true, true, Double.NaN);
-				if(i==1)
-					setDOLE_asFractionOfRI(erf, 0.75); // this has to be redone
-				LongTermTD_Simulator.generateSimulationPlots(erf, inputFile, numYrs, outputDir, true);	
-			}
-		}
+//		TimeDepFaultSystemSolutionERF erf = getFullPrefUS26_ERF();
+//		UCERF3_ProbabilityModel u3ProbModel = (UCERF3_ProbabilityModel)erf.getProbabilityModel();
+//		u3ProbModel.setRenewalModelChoice(RenewalModels.WEIBULL);
+//		//	double[] aperArray = {0.1,0.3,0.5,0.7,0.9};
+//		double[] aperArray = {0.4};
+//		for(double aper:aperArray) {
+//
+//			u3ProbModel.setAperiodicityModelChoice(AperiodicityModels.SINGLE_VALUED);
+//			((AperiodicityModel.SingleValued)u3ProbModel.getAperiodicityModel()).setValue(aper);
+//			u3ProbModel.setCustomHistOpenIntervalModel(new HistoricalOpenInterval.SingleYear(erf.getTimeSpan().getStartTimeYear(), true));
+//			File parentDir = new File(rootDir+"weibullSimulationsUS26_SingleAper/");
+//			if(!parentDir.exists()) 
+//				parentDir.mkdir();
+//			int numYrs = 50000;
+//			String aperString = Double.toString(aper).replace("0.", "_pt");
+//			for(int i=2; i<3;i++) {
+//				File outputDir = new File(parentDir,"Run"+i+"_"+numYrs+"yrs"+aperString); 
+//				long seed = 984087634+i*1000;
+//				String inputFile=null;
+//				if(i==1)
+//					setDOLE_asFractionOfRI(erf, 0.75);
+//				else
+//					inputFile = rootDir+"weibullSimulationsUS26_SingleAper/Run"+(i-1)+"_"+numYrs+"yrs"+aperString+"/outputTimesinceLast.txt"; // make simulations consecutive
+//
+//				LongTermTD_Simulator.simulateEvents(erf, inputFile,"outputTimesinceLast.txt", numYrs, outputDir, 
+//						seed, true, true, Double.NaN);
+//				if(i==1)
+//					setDOLE_asFractionOfRI(erf, 0.75); // this has to be redone
+//				LongTermTD_Simulator.generateSimulationPlots(erf, inputFile, numYrs, outputDir, true);	
+//			}
+//		}
 
 		
 //		// FULL US2026 Weibull SIMULTATIONS
@@ -1215,23 +1201,23 @@ public class LongTermTD_2026_Analyses {
 ////				inputFile = rootDir+"poissonSimulationsUS26/Run1_1000000yrs/outputTimesinceLast.txt";
 //			else
 //				inputFile = rootDir+"weibullSimulationsUS26/Run"+(i-1)+"_"+numYrs+"yrs/outputTimesinceLast.txt"; // make simulations consecutive
-//			LongTermTD_Simulator.simulateEvents(erf, inputFile,"outputTimesinceLast.txt", numYrs, outputDir, 
-//					seed, true, true, Double.NaN);
-//
-//			setDOLE_asFractionOfRI(erf, 0.75); // need to do again
+////			LongTermTD_Simulator.simulateEvents(erf, inputFile,"outputTimesinceLast.txt", numYrs, outputDir, 
+////					seed, true, true, Double.NaN);
+////
+////			setDOLE_asFractionOfRI(erf, 0.75); // need to do again
 //			LongTermTD_Simulator.generateSimulationPlots(erf, inputFile, numYrs, outputDir, true);	
 //		}
 
 		
-//		// FULL US2026 Lognormal SIMULTATIONS
+		// FULL US2026 Lognormal SIMULTATIONS
 //		TimeDepFaultSystemSolutionERF erf = getFullPrefUS26_ERF();
 //		UCERF3_ProbabilityModel u3ProbModel = (UCERF3_ProbabilityModel)erf.getProbabilityModel();
 //		String aperSuffix ="";
 //		// Alt Aper?
-//		u3ProbModel.setAperiodicityModelChoice(AperiodicityModels.NSHM26_LOW);
-//		aperSuffix = "_aperLOW";
-////		u3ProbModel.setAperiodicityModelChoice(AperiodicityModels.NSHM26_HIGH);
-////		aperSuffix = "_aperHIGH";
+////		u3ProbModel.setAperiodicityModelChoice(AperiodicityModels.NSHM26_LOW);
+////		aperSuffix = "_aperLOW";
+//		u3ProbModel.setAperiodicityModelChoice(AperiodicityModels.NSHM26_HIGH);
+//		aperSuffix = "_aperHIGH";
 //		u3ProbModel.setRenewalModelChoice(RenewalModels.LOGNORMAL);		
 //		File parentDir = new File(rootDir+"lognormalSimulationsUS26"+aperSuffix+"/");
 //		if(!parentDir.exists()) 
@@ -1245,9 +1231,8 @@ public class LongTermTD_2026_Analyses {
 //				inputFile = rootDir+"poissonSimulationsUS26/Run1_1000000yrs/outputTimesinceLast.txt";
 //			else
 //				inputFile = rootDir+"lognormalSimulationsUS26/Run"+(i-1)+"_"+numYrs+"yrs/outputTimesinceLast.txt"; // make simulations consecutive
-//			LongTermTD_Simulator.simulateEvents(erf, inputFile,"outputTimesinceLast.txt", numYrs, outputDir, 
-//					seed, true, true, Double.NaN);
-//			setDOLE_asFractionOfRI(erf, 0.75); // needed this for LOW APER (absolutely all sections need DOLE)
+////			LongTermTD_Simulator.simulateEvents(erf, inputFile,"outputTimesinceLast.txt", numYrs, outputDir, 
+////					seed, true, true, Double.NaN);
 //			LongTermTD_Simulator.generateSimulationPlots(erf, inputFile, numYrs, outputDir, true);	
 //		}
 
@@ -1279,8 +1264,8 @@ public class LongTermTD_2026_Analyses {
 //			LongTermTD_Simulator.generateSimulationPlots(erf, inputFile, numYrs, outputDir, true);	
 //		}
 //		// do plots for multiple simulations
-//		LongTermTD_Simulator.sectPlotsForMultSimulations(rootDir+"bptSimulationsUS26/", "Run", "_"+numYrs+"yrs", 20, erf.getSolution(), numYrs);
-//		LongTermTD_Simulator.rupPlotsForMultSimulations(rootDir+"bptSimulationsUS26/", "Run", "_"+numYrs+"yrs", 20, erf, numYrs);
+////		LongTermTD_Simulator.sectPlotsForMultSimulations(rootDir+"bptSimulationsUS26/", "Run", "_"+numYrs+"yrs", 20, erf.getSolution(), numYrs);
+////		LongTermTD_Simulator.rupPlotsForMultSimulations(rootDir+"bptSimulationsUS26/", "Run", "_"+numYrs+"yrs", 20, erf, numYrs);
 	
 		
 		// POISSON SIMULATIONS
@@ -1302,7 +1287,7 @@ public class LongTermTD_2026_Analyses {
 
 
 		
-//		// TEST OF BIAS CORR - FULL US2026 BPT SIMULTATIONS - 
+//		// TEST OF BIAS CORR - FULL US2026 BPT SIMULTATIONS - Implemented at "// HACK RIGHT HERE" in simulator
 //		TimeDepFaultSystemSolutionERF erf = getFullPrefUS26_ERF();
 //		String aperSuffix ="";
 //		// Alt Aper?
@@ -1388,6 +1373,29 @@ public class LongTermTD_2026_Analyses {
 //					seed, true, true, Double.NaN);
 //			LongTermTD_Simulator.generateSimulationPlots(erf, inputFile, numYrs, outputDir, true);	
 //		}
+
+		
+//		getNSHM23_For_U3_ParentFaultID_Mapping();
+//		old_getNSHM23_For_U3_SubsectionID_Mapping();
+//		System.exit(0);
+	
+//		// temp junk
+//		TimeDepFaultSystemSolutionERF erf2 = getFullPrefUS26_ERF();
+//		HashMap<Integer,String> nameFromID_Map = new HashMap<Integer,String>();
+//		for (FaultSection sect:erf2.getSolution().getRupSet().getFaultSectionDataList()) {
+//			if(!nameFromID_Map.keySet().contains(sect.getParentSectionId())) {
+//				String name = sect.getParentSectionName();
+//				nameFromID_Map.put(sect.getParentSectionId(), name);
+////				System.out.println(sect.getParentSectionId()+"\t"+name);
+//				if(name == null) {
+//					System.out.println(sect.getParentSectionId()+"\t"+sect.getSectionId()+"\t"+sect.getSectionName());
+//				}
+//			}
+//		}
+//		System.exit(0);
+		
+//		testU3_NSHM23_CA_Fault_Mappings(); System.exit(0);		
+
 
 		
 	}
