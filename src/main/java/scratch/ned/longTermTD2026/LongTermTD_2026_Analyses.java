@@ -136,8 +136,9 @@ public class LongTermTD_2026_Analyses {
 		else if (probModel instanceof FSS_ProbabilityModel.Poisson) {
 			// do nothing
 		}
-		else
-			throw new RuntimeException("Unsupported type of FSS_ProbabilityModel: "+probModel.getName());
+		else {
+//			throw new RuntimeException("Unsupported type of FSS_ProbabilityModel: "+probModel.getName());
+		}
 		erf.getTimeSpan().setStartTime(startYear);
 		erf.getTimeSpan().setDuration(duration);
 		// not sure this is needed here
@@ -173,6 +174,7 @@ public class LongTermTD_2026_Analyses {
 			erfU3.getTimeSpan().setDuration(duration);
 			// not sure this is needed here
 			erfU3.updateForecast();
+			
 		}
 
 		try {
@@ -327,16 +329,26 @@ public class LongTermTD_2026_Analyses {
 		DataToInclude paleoDataToInclude = DataToInclude.HIST_RUPS_ONLY;
 		boolean includeUCERF3_Comp = false;
 				
-		// Reference calculation
-		outputDir = referenceDir;
-		titleString = "Reference 2026 Time-Dependent Model";
-		infoString = "This is the Reference (preferred) model. ";
-		includeUCERF3_Comp=true;
-		generateReportPage(outputDir,  fss_fileNameWithPath,  startYear,  duration, 
-				 histOpenIntYear,  probModChoice,  aperModelChoice,  
-				renewalModelChoice,  averagingChoice, paleoMapping,  paleoDataToInclude,  
-				referenceDir, titleString, infoString, includeUCERF3_Comp);
+//		// Reference calculation
+//		outputDir = referenceDir;
+//		titleString = "Reference 2026 Time-Dependent Model";
+//		infoString = "This is the Reference (preferred) model. ";
+//		includeUCERF3_Comp=true;
+//		generateReportPage(outputDir,  fss_fileNameWithPath,  startYear,  duration, 
+//				 histOpenIntYear,  probModChoice,  aperModelChoice,  
+//				renewalModelChoice,  averagingChoice, paleoMapping,  paleoDataToInclude,  
+//				referenceDir, titleString, infoString, includeUCERF3_Comp);
 	
+//		// Preferred blend test
+//		outputDir = rootDir+"TESTPreferredBlend/";
+//		titleString = "Reference, But Preferred Blend";
+//		infoString = "This is the Reference (preferred) model, but with UCERF3 logic tree branches applied. ";
+//		probModChoice = FSS_ProbabilityModels.UCERF3_PREF_BLEND;
+//		generateReportPage(outputDir,  fss_fileNameWithPath,  startYear,  duration, 
+//				 histOpenIntYear,  probModChoice,  aperModelChoice,  
+//				renewalModelChoice,  averagingChoice, paleoMapping,  paleoDataToInclude,  
+//				referenceDir, titleString, infoString, includeUCERF3_Comp);
+
 		
 //		// UCERF3 results
 //		outputDir = rootDir+"ReferenceUCERF3/";
@@ -348,14 +360,14 @@ public class LongTermTD_2026_Analyses {
 		
 		
 		// BPTAveragingTypeOptions.AVE_RI_AVE_TIME_SINCE option
-//		outputDir = rootDir+"ReferencelModel_AVE_RI_AVE_TIME_SINCE/";
-//		titleString = "Reference, But With BPTAveragingTypeOptions.AVE_RI_AVE_NORM_TIME_SINCE";
-//		infoString = "This is the Reference (preferred) model, but with AVE_RI_AVE_NORM_TIME_SINCE chosen for BPTAveragingTypeOptions. ";
-//		averagingChoice = BPTAveragingTypeOptions.AVE_RI_AVE_TIME_SINCE;
-//		generateReportPage(outputDir,  fss_fileNameWithPath,  startYear,  duration, 
-//				 histOpenIntYear,  probModChoice,  aperModelChoice,  
-//				renewalModelChoice,  averagingChoice, paleoMapping,  paleoDataToInclude,  
-//				referenceDir, titleString, infoString, includeUCERF3_Comp);
+		outputDir = rootDir+"ReferencelModel_AVE_RI_AVE_TIME_SINCE/";
+		titleString = "Reference, But With BPTAveragingTypeOptions.AVE_RI_AVE_NORM_TIME_SINCE";
+		infoString = "This is the Reference (preferred) model, but with AVE_RI_AVE_NORM_TIME_SINCE chosen for BPTAveragingTypeOptions. ";
+		averagingChoice = BPTAveragingTypeOptions.AVE_RI_AVE_TIME_SINCE;
+		generateReportPage(outputDir,  fss_fileNameWithPath,  startYear,  duration, 
+				 histOpenIntYear,  probModChoice,  aperModelChoice,  
+				renewalModelChoice,  averagingChoice, paleoMapping,  paleoDataToInclude,  
+				referenceDir, titleString, infoString, includeUCERF3_Comp);
 	
 		
 //		outputDir = rootDir+"ReferencelModel_LowCOV/";
