@@ -29,7 +29,6 @@ public class PaleoBValueEstimatorRunner {
 //		branch.setValue(NSHM23_SegmentationModels.CLASSIC);
 		System.out.println(branch);
 		
-		NSHM23_InvConfigFactory.APPLY_DEF_MODEL_UNCERTAINTIES_DEFAULT = false;
 		NSHM23_InvConfigFactory factory = new NSHM23_InvConfigFactory();
 		factory.setCacheDir(new File("/home/kevin/OpenSHA/nshm23/rup_sets/cache"));
 		
@@ -38,6 +37,10 @@ public class PaleoBValueEstimatorRunner {
 		EvenlyDiscretizedFunc bVals = new EvenlyDiscretizedFunc(0d, 1d, 21);
 		
 		PaleoBValueEstimator estimator = new PaleoBValueEstimator(priorDist, bVals, factory);
+		
+		estimator.setTargetMFDCalc((I)->{
+			return NSHM23_InvConfigFactory.getConstraintBuilder(I.rupSet(), I.branch()).getRateOnlyTargetMFDs();
+		});
 		
 		FaultSystemRupSet rs = factory.buildRuptureSet(branch, FaultSysTools.defaultNumThreads());
 		
