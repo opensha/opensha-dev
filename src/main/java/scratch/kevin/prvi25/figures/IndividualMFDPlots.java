@@ -68,7 +68,7 @@ import org.opensha.sha.util.TectonicRegionType;
 import com.google.common.base.Preconditions;
 import com.google.common.primitives.Ints;
 
-import gov.usgs.earthquake.nshmp.model.NshmErf;
+import org.opensha.nshmp.shaded.model.NshmErf;
 import net.mahdilamb.colormap.Colors;
 import scratch.kevin.latex.LaTeXUtils;
 import scratch.kevin.prvi25.SubductionCombinedModelCreator;

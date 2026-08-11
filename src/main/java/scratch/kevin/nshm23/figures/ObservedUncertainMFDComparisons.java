@@ -56,7 +56,7 @@ import org.opensha.sha.util.TectonicRegionType;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Table;
 
-import gov.usgs.earthquake.nshmp.model.HazardModel;
+import org.opensha.nshmp.shaded.model.NshmpHazardModel;
 
 public class ObservedUncertainMFDComparisons {
 	
@@ -281,7 +281,7 @@ public class ObservedUncertainMFDComparisons {
 			// conus east
 			NSHM23_BaseRegion baseReg = AnalysisRegions.CONUS_EAST;
 			Set<TectonicRegionType> trts = EnumSet.of(TectonicRegionType.ACTIVE_SHALLOW, TectonicRegionType.STABLE_SHALLOW);
-			HazardModel model = HazardModel.load(modelDir.toPath());
+			NshmpHazardModel model = NshmpHazardModel.load(modelDir.toPath());
 			Table<NSHM23_BaseRegion, MFDType, IncrementalMagFreqDist> mfds = Regional_MFD_Plots.calcModelMFDs(
 					model, trts, new NSHM23_BaseRegion[] {baseReg}, refIncrMFD);
 			modelSupraCml = mfds.get(baseReg, MFDType.SUPRA_ONLY).getCumRateDistWithOffset();

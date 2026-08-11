@@ -1,4 +1,4 @@
-package gov.usgs.earthquake.nshmp.model;
+package org.opensha.nshmp.shaded.model;
 
 import static java.util.stream.Collectors.toList;
 import static org.opensha.sha.util.TectonicRegionType.ACTIVE_SHALLOW;
@@ -26,13 +26,13 @@ import org.opensha.sha.util.TectonicRegionType;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.MultimapBuilder;
 
-import gov.usgs.earthquake.nshmp.data.Indexing;
-import gov.usgs.earthquake.nshmp.model.SystemRuptureSet.SystemRupture;
-import gov.usgs.earthquake.nshmp.tree.Branch;
+import org.opensha.nshmp.shaded.data.NshmpIndexing;
+import org.opensha.nshmp.shaded.model.NshmpSystemRuptureSet.SystemRupture;
+import org.opensha.nshmp.shaded.tree.NshmpBranch;
 
 public class NshmErf extends AbstractERF {
 
-	private final HazardModel model;
+	private final NshmpHazardModel model;
 	private final List<NshmSource> allSources;
 	private final Multimap<TectonicRegionType, NshmSource> sourceMap;
 
@@ -46,10 +46,10 @@ public class NshmErf extends AbstractERF {
 
 	public NshmErf(Path path, Set<TectonicRegionType> trts,
 			IncludeBackgroundOption gridOption) {
-		this(HazardModel.load(path), trts, gridOption);
+		this(NshmpHazardModel.load(path), trts, gridOption);
 	}
 
-	public NshmErf(HazardModel model, Set<TectonicRegionType> trts,
+	public NshmErf(NshmpHazardModel model, Set<TectonicRegionType> trts,
 			IncludeBackgroundOption gridOption) {
 		this.model = model;
 		allSources = new ArrayList<>();
@@ -78,29 +78,29 @@ public class NshmErf extends AbstractERF {
 		setTimeSpan(timeSpan);
 
 		// nshmp-haz initializers
-		Multimap<TectonicSetting, SourceTree> trees = model.trees();
-		for (Entry<TectonicSetting, SourceTree> entry : trees.entries()) {
+		Multimap<NshmpTectonicSetting, NshmpSourceTree> trees = model.trees();
+		for (Entry<NshmpTectonicSetting, NshmpSourceTree> entry : trees.entries()) {
 
-			TectonicSetting setting = entry.getKey();
-			SourceTree tree = entry.getValue();
-			SourceType type = tree.type();
+			NshmpTectonicSetting setting = entry.getKey();
+			NshmpSourceTree tree = entry.getValue();
+			NshmpSourceType type = tree.type();
 
-			if (setting == TectonicSetting.SUBDUCTION) {
-				if ((type == SourceType.INTERFACE || type == SourceType.INTERFACE_CLUSTER
-						|| type == SourceType.INTERFACE_GRID || type == SourceType.INTERFACE_SYSTEM) && !subInterface) {
+			if (setting == NshmpTectonicSetting.SUBDUCTION) {
+				if ((type == NshmpSourceType.INTERFACE || type == NshmpSourceType.INTERFACE_CLUSTER
+						|| type == NshmpSourceType.INTERFACE_GRID || type == NshmpSourceType.INTERFACE_SYSTEM) && !subInterface) {
 					continue;
 				}
-				if ((type == SourceType.SLAB || type == SourceType.INTRASLAB_GRID) && !subSlab) {
+				if ((type == NshmpSourceType.SLAB || type == NshmpSourceType.INTRASLAB_GRID) && !subSlab) {
 					continue;
 				}
 			}
-			if (setting == TectonicSetting.STABLE_CRUST && !stableCrust) {
+			if (setting == NshmpTectonicSetting.STABLE_CRUST && !stableCrust) {
 				continue;
 			}
-			if (setting == TectonicSetting.ACTIVE_CRUST && !activeCrust) {
+			if (setting == NshmpTectonicSetting.ACTIVE_CRUST && !activeCrust) {
 				continue;
 			}
-			if (setting == TectonicSetting.VOLCANIC && !volcanic) {
+			if (setting == NshmpTectonicSetting.VOLCANIC && !volcanic) {
 				continue;
 			}
 
@@ -120,7 +120,7 @@ public class NshmErf extends AbstractERF {
 		return sourceMap;
 	}
 
-	private List<NshmSource> initTree(SourceTree tree) {
+	private List<NshmSource> initTree(NshmpSourceTree tree) {
 		List<NshmSource> sources = new ArrayList<>();
 		double duration = getTimeSpan().getDuration();
 		tree.stream()
@@ -153,94 +153,94 @@ public class NshmErf extends AbstractERF {
 	}
 
 	private List<NshmSource> sourcesFromBranch(
-			Branch<RuptureSet> branch,
+			NshmpBranch<NshmpRuptureSet> branch,
 			double duration) {
 
-		RuptureSet ruptureSet = branch.value();
+		NshmpRuptureSet ruptureSet = branch.value();
 		double weight = branch.weight();
 
 		switch (ruptureSet.type()) {
 
 		case GRID:
-			GriddedRuptureSet grs = (GriddedRuptureSet) ruptureSet;
+			NshmpGriddedRuptureSet grs = (NshmpGriddedRuptureSet) ruptureSet;
 			return (grid)
 					? gridRuptureSetToSources(grs, weight, duration)
 							: List.of();
 
 		case ZONE:
-			GriddedRuptureSet zrs = (GriddedRuptureSet) ruptureSet;
+			NshmpGriddedRuptureSet zrs = (NshmpGriddedRuptureSet) ruptureSet;
 			return (faults)
 					? gridRuptureSetToSources(zrs, weight, duration)
 							: List.of();
 
 		case INTERFACE_GRID:
-			GriddedRuptureSet igrs = (GriddedRuptureSet) ruptureSet;
+			NshmpGriddedRuptureSet igrs = (NshmpGriddedRuptureSet) ruptureSet;
 			return (subInterface && grid)
 					? gridRuptureSetToSources(igrs, weight, duration)
 							: List.of();
 
 		case INTRASLAB_GRID:
-			GriddedRuptureSet isgrs = (GriddedRuptureSet) ruptureSet;
+			NshmpGriddedRuptureSet isgrs = (NshmpGriddedRuptureSet) ruptureSet;
 			return (subSlab && grid)
 					? gridRuptureSetToSources(isgrs, weight, duration)
 							: List.of();
 
 		case SLAB:
-			GriddedRuptureSet slabRuptures = (GriddedRuptureSet) ruptureSet;
+			NshmpGriddedRuptureSet slabRuptures = (NshmpGriddedRuptureSet) ruptureSet;
 			return (subSlab && grid)
 					? gridRuptureSetToSources(slabRuptures, weight, duration)
 							: List.of();
 
 		case FAULT_CLUSTER:
-			ClusterRuptureSet crs = (ClusterRuptureSet) ruptureSet;
+			NshmpClusterRuptureSet crs = (NshmpClusterRuptureSet) ruptureSet;
 			return (faults)
 					? clusterRuptureSetToSources(crs, weight, duration)
 							: List.of();
 
 		case FAULT_SYSTEM:
-			SystemRuptureSet srs = (SystemRuptureSet) ruptureSet;
+			NshmpSystemRuptureSet srs = (NshmpSystemRuptureSet) ruptureSet;
 			return (faults)
 					? systemRuptureSetToSources(srs, weight, duration)
 							: List.of();
 
 		case INTERFACE:
 			return (subInterface && faults)
-					? iterableRuptureSetToSources((IterableRuptureSet) ruptureSet, weight, duration)
+					? iterableRuptureSetToSources((NshmpIterableRuptureSet) ruptureSet, weight, duration)
 							: List.of();
 
 		case INTERFACE_CLUSTER:
-			ClusterRuptureSet icrs = (ClusterRuptureSet) ruptureSet;
+			NshmpClusterRuptureSet icrs = (NshmpClusterRuptureSet) ruptureSet;
 			return (subInterface && faults)
 					? clusterRuptureSetToSources(icrs, weight, duration)
 							: List.of();
 
 		case INTERFACE_SYSTEM:
-			SystemRuptureSet isrs = (SystemRuptureSet) ruptureSet;
+			NshmpSystemRuptureSet isrs = (NshmpSystemRuptureSet) ruptureSet;
 			return (faults)
 					? systemRuptureSetToSources(isrs, weight, duration)
 							: List.of();
 
 		default:
 			return (faults)
-					? iterableRuptureSetToSources((IterableRuptureSet) ruptureSet, weight, duration)
+					? iterableRuptureSetToSources((NshmpIterableRuptureSet) ruptureSet, weight, duration)
 							: List.of();
 		}
 	}
 
 	private static List<NshmSource> gridRuptureSetToSources(
-			GriddedRuptureSet ruptureSet,
+			NshmpGriddedRuptureSet ruptureSet,
 			double weight,
 			double duration) {
 
 		List<NshmSource> sources = new ArrayList<>();
-		for (GridSource gridSource : ruptureSet) {
+		for (NshmpGridSource gridSource : ruptureSet) {
 			sources.add(new NshmSource.Point(gridSource, weight, duration));
 		}
 		return sources;
 	}
 
 	private static List<NshmSource> iterableRuptureSetToSources(
-			IterableRuptureSet ruptureSet,
+			NshmpIterableRuptureSet ruptureSet,
 			double weight,
 			double duration) {
 
@@ -248,7 +248,7 @@ public class NshmErf extends AbstractERF {
 	}
 
 	private static List<NshmSource> systemRuptureSetToSources(
-			SystemRuptureSet srs,
+			NshmpSystemRuptureSet srs,
 			double weight,
 			double duration) {
 
@@ -256,14 +256,14 @@ public class NshmErf extends AbstractERF {
 				.map(section -> new NshmSurface(section))
 				.collect(Collectors.toList());
 
-		// SystemRuptureSet.stream() not supported but should be.
+		// NshmpSystemRuptureSet.stream() not supported but should be.
 		// Iterator should work, even if it isn't used in nshm calc
 		// pathways
 
 		List<NshmSource> sources = new ArrayList<>(srs.size());
 		for (int i = 0; i < srs.size(); i++) {
 			SystemRupture source = (SystemRupture) srs.get(i);
-			int[] sectionIndices = Indexing.bitsToIndices(source.bitset());
+			int[] sectionIndices = NshmpIndexing.bitsToIndices(source.bitset());
 			List<NshmSurface> ruptureSurfaces = IntStream.of(sectionIndices)
 					.mapToObj(surfaces::get)
 					.collect(Collectors.toList());
@@ -273,7 +273,7 @@ public class NshmErf extends AbstractERF {
 	}
 
 	private static List<NshmSource> clusterRuptureSetToSources(
-			ClusterRuptureSet crs,
+			NshmpClusterRuptureSet crs,
 			double weight,
 			double duration) {
 

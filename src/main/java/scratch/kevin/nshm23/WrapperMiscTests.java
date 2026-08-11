@@ -12,10 +12,10 @@ import org.opensha.sha.earthquake.param.IncludeBackgroundOption;
 import org.opensha.sha.faultSurface.RuptureSurface;
 import org.opensha.sha.util.TectonicRegionType;
 
-import gov.usgs.earthquake.nshmp.model.HazardModel;
-import gov.usgs.earthquake.nshmp.model.NshmErf;
-import gov.usgs.earthquake.nshmp.model.SourceTree;
-import gov.usgs.earthquake.nshmp.model.TectonicSetting;
+import org.opensha.nshmp.shaded.model.NshmpHazardModel;
+import org.opensha.nshmp.shaded.model.NshmErf;
+import org.opensha.nshmp.shaded.model.NshmpSourceTree;
+import org.opensha.nshmp.shaded.model.NshmpTectonicSetting;
 
 public class WrapperMiscTests {
 
@@ -24,11 +24,11 @@ public class WrapperMiscTests {
 		
 		File modelDir = new File(modelsDir, "nshm-conus-6.0.0");
 		
-		HazardModel model = HazardModel.load(modelDir.toPath());
-//		TectonicSetting setting = TectonicSetting.ACTIVE_CRUST;
-//		Collection<SourceTree> trees = model.trees().get(setting);
+		NshmpHazardModel model = NshmpHazardModel.load(modelDir.toPath());
+//		NshmpTectonicSetting setting = NshmpTectonicSetting.ACTIVE_CRUST;
+//		Collection<NshmpSourceTree> trees = model.trees().get(setting);
 //		System.out.println("Iterating over "+trees.size()+" trees");
-//		for (SourceTree tree : trees) {
+//		for (NshmpSourceTree tree : trees) {
 //			System.out.println(tree);
 //			tree.
 //		}

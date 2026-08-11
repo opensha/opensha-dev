@@ -45,7 +45,7 @@ import org.opensha.sha.util.TectonicRegionType;
 
 import com.google.common.base.Preconditions;
 
-import gov.usgs.earthquake.nshmp.model.NshmErf;
+import org.opensha.nshmp.shaded.model.NshmErf;
 import scratch.UCERF3.analysis.TablesAndPlotsGen;
 
 public class LengthDistCompPlot {

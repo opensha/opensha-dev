@@ -60,7 +60,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.primitives.Doubles;
 
 import edu.usc.kmilner.mpj.taskDispatch.MPJTaskCalculator;
-import gov.usgs.earthquake.nshmp.model.NshmErf;
+import org.opensha.nshmp.shaded.model.NshmErf;
 import mpi.MPI;
 
 public class MPJ_WrapperHazardCalc extends MPJTaskCalculator {

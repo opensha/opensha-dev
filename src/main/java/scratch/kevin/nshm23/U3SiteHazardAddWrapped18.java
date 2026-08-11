@@ -32,7 +32,7 @@ import org.opensha.sha.imr.param.IntensityMeasureParams.SA_Param;
 import org.opensha.sha.util.NEHRP_TestCity;
 import org.opensha.sha.util.TectonicRegionType;
 
-import gov.usgs.earthquake.nshmp.model.NshmErf;
+import org.opensha.nshmp.shaded.model.NshmErf;
 
 public class U3SiteHazardAddWrapped18 {
 

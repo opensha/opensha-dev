@@ -65,7 +65,7 @@ import com.google.common.collect.HashBiMap;
 import com.google.common.collect.Lists;
 import com.google.common.primitives.Doubles;
 
-import gov.usgs.earthquake.nshmp.gmm.Gmm;
+import org.opensha.nshmp.shaded.gmm.NshmpGmm;
 import scratch.kevin.bbp.BBP_Module.VelocityModel;
 import scratch.kevin.bbp.BBP_Site;
 import scratch.kevin.bbp.BBP_SourceFile;
@@ -616,7 +616,7 @@ class CatalogGMPE_Compare extends MultiRupGMPE_ComparePageGen<RSQSimEvent> {
 //		AttenRelRef rotDGMPE = null;
 		
 //		AttenRelSupplier[] gmpeRefs = {
-//				new NSHMP_AttenRelSupplier(Gmm.AG_20_GLOBAL_INTERFACE, "AG2020_Global", false)
+//				new NSHMP_AttenRelSupplier(NshmpGmm.AG_20_GLOBAL_INTERFACE, "AG2020_Global", false)
 //		};
 //		IMT[] imts = { IMT.SA2P0, IMT.SA3P0, IMT.SA5P0, IMT.SA10P0 };
 //		AttenRelRef rotDGMPE = null;

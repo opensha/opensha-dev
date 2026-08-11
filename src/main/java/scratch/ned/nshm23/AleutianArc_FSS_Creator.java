@@ -15,9 +15,9 @@ import org.opensha.sha.faultSurface.GeoJSONFaultSection;
 import org.opensha.sha.magdist.SummedMagFreqDist;
 import org.opensha.sha.util.TectonicRegionType;
 
-import gov.usgs.earthquake.nshmp.fault.surface.ApproxGriddedSurface;
-import gov.usgs.earthquake.nshmp.model.NshmErf;
-import gov.usgs.earthquake.nshmp.model.NshmSource;
+import org.opensha.nshmp.shaded.fault.surface.NshmpApproxGriddedSurface;
+import org.opensha.nshmp.shaded.model.NshmErf;
+import org.opensha.nshmp.shaded.model.NshmSource;
 import scratch.ned.nshm23.CEUS_FSS_creator.FaultModelEnum;
 
 public class AleutianArc_FSS_Creator {
@@ -511,13 +511,13 @@ public class AleutianArc_FSS_Creator {
 //		getFaultSystemSolution(nshmModelDirPath, FaultModelEnum.GEOLOGIC_WIDE);
 		
 		
-		// THIS IS HOW PETER CREATES THE SURFACE (FROM gov.usgs.earthquake.nshmp.model.InterfaceSource.InterfaceSource(Builder))
+		// THIS IS HOW PETER CREATES THE SURFACE (FROM the shaded NSHMP InterfaceSource builder)
 //	    upperTrace = feature.traces.get(0);
 //	    upperTraceLength = upperTrace.length();
 //	    lowerTrace = feature.traces.get(feature.traces.size() - 1);
 //	    lowerTraceLength = lowerTrace.length();
 //
-//	    surface = new ApproxGriddedSurface(upperTrace, lowerTrace, config.surfaceSpacing);
+//	    surface = new NshmpApproxGriddedSurface(upperTrace, lowerTrace, config.surfaceSpacing);
 		
 //		THIS IS OURS (same constructor arguments):
 //		ApproxEvenlyGriddedSurface surf;
