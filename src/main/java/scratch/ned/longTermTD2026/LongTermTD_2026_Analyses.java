@@ -167,9 +167,10 @@ public class LongTermTD_2026_Analyses {
 			else if (probModelU3 instanceof FSS_ProbabilityModel.Poisson) {
 				// do nothing
 			}
-			else
-				throw new RuntimeException("Unsupported type of FSS_ProbabilityModel: "+probModel.getName());	
-
+			else {
+				// do nothing
+				// throw new RuntimeException("Unsupported type of FSS_ProbabilityModel: "+probModel.getName());	
+			}
 			erfU3.getTimeSpan().setStartTime(startYear);
 			erfU3.getTimeSpan().setDuration(duration);
 			// not sure this is needed here
@@ -318,7 +319,7 @@ public class LongTermTD_2026_Analyses {
 		String outputDir, titleString, infoString;
 
 
-		int startYear = 2026;
+		int startYear = 2027;
 		int duration = 30; 
 		int histOpenIntYear = 1875;
 		FSS_ProbabilityModels probModChoice = FSS_ProbabilityModels.UCERF3_METHOD;
@@ -349,6 +350,17 @@ public class LongTermTD_2026_Analyses {
 //				renewalModelChoice,  averagingChoice, paleoMapping,  paleoDataToInclude,  
 //				referenceDir, titleString, infoString, includeUCERF3_Comp);
 
+//		// NSHM 2026 Branch Averaged test
+		outputDir = rootDir+"NSHM27_PreliminaryBranchAveBPT/";
+		titleString = "NSHM 2027 Branch Averaged Preliminary TD BPT Model ";
+		infoString = "This applies the preliminary branch-averaged model using only BPT and has a comparison to UCERF3 (for same start time but using UCERF3 DOLE). ";
+		probModChoice = FSS_ProbabilityModels.NSHM26_BRANCH_AVE;
+		includeUCERF3_Comp = true;
+		generateReportPage(outputDir,  fss_fileNameWithPath,  startYear,  duration, 
+				 histOpenIntYear,  probModChoice,  aperModelChoice,  
+				renewalModelChoice,  averagingChoice, paleoMapping,  paleoDataToInclude,  
+				referenceDir, titleString, infoString, includeUCERF3_Comp);
+
 		
 //		// UCERF3 results
 //		outputDir = rootDir+"ReferenceUCERF3/";
@@ -359,15 +371,15 @@ public class LongTermTD_2026_Analyses {
 //				renewalModelChoice, averagingChoice, titleString, infoString);	
 		
 		
-		// BPTAveragingTypeOptions.AVE_RI_AVE_TIME_SINCE option
-		outputDir = rootDir+"ReferencelModel_AVE_RI_AVE_TIME_SINCE/";
-		titleString = "Reference, But With BPTAveragingTypeOptions.AVE_RI_AVE_NORM_TIME_SINCE";
-		infoString = "This is the Reference (preferred) model, but with AVE_RI_AVE_NORM_TIME_SINCE chosen for BPTAveragingTypeOptions. ";
-		averagingChoice = BPTAveragingTypeOptions.AVE_RI_AVE_TIME_SINCE;
-		generateReportPage(outputDir,  fss_fileNameWithPath,  startYear,  duration, 
-				 histOpenIntYear,  probModChoice,  aperModelChoice,  
-				renewalModelChoice,  averagingChoice, paleoMapping,  paleoDataToInclude,  
-				referenceDir, titleString, infoString, includeUCERF3_Comp);
+//		// BPTAveragingTypeOptions.AVE_RI_AVE_TIME_SINCE option
+//		outputDir = rootDir+"ReferencelModel_AVE_RI_AVE_TIME_SINCE/";
+//		titleString = "Reference, But With BPTAveragingTypeOptions.AVE_RI_AVE_TIME_SINCE";
+//		infoString = "This is the Reference (preferred) model, but with AVE_RI_AVE_NORM_TIME_SINCE chosen for BPTAveragingTypeOptions. ";
+//		averagingChoice = BPTAveragingTypeOptions.AVE_RI_AVE_TIME_SINCE;
+//		generateReportPage(outputDir,  fss_fileNameWithPath,  startYear,  duration, 
+//				 histOpenIntYear,  probModChoice,  aperModelChoice,  
+//				renewalModelChoice,  averagingChoice, paleoMapping,  paleoDataToInclude,  
+//				referenceDir, titleString, infoString, includeUCERF3_Comp);
 	
 		
 //		outputDir = rootDir+"ReferencelModel_LowCOV/";
