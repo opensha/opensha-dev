@@ -47,7 +47,7 @@ import org.opensha.sha.imr.param.IntensityMeasureParams.PGA_Param;
 import org.opensha.sha.util.FocalMech;
 import org.opensha.sha.util.TectonicRegionType;
 
-import gov.usgs.earthquake.nshmp.gmm.Gmm;
+import org.opensha.nshmp.shaded.gmm.NshmpGmm;
 import net.mahdilamb.colormap.Colors;
 
 public class GriddedHazardSingleSiteComparison {
@@ -96,7 +96,7 @@ public class GriddedHazardSingleSiteComparison {
 			compSettings = settings.forSurfaceType(BackgroundRupType.POINT).forDistanceCorrection(compCorrType.get());
 		compSettings = compSettings.forSupersamplingSettings(compSSSettings);
 		
-//		ScalarIMR gmm = new NSHMP_GMM_Wrapper.Single(Gmm.COMBINED_ACTIVE_CRUST_2023);
+//		ScalarIMR gmm = new NSHMP_GMM_Wrapper.Single(NshmpGmm.COMBINED_ACTIVE_CRUST_2023);
 		ScalarIMR gmm = AttenRelRef.USGS_NSHM23_ACTIVE.get();
 		gmm.setIntensityMeasure(PGA_Param.NAME);
 		

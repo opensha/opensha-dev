@@ -50,8 +50,8 @@ import org.opensha.sha.util.TectonicRegionType;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Range;
 
-import gov.usgs.earthquake.nshmp.model.HazardModel;
-import gov.usgs.earthquake.nshmp.model.NshmErf;
+import org.opensha.nshmp.shaded.model.NshmpHazardModel;
+import org.opensha.nshmp.shaded.model.NshmErf;
 
 import static scratch.kevin.prvi25.figures.PRVI_Paths.*;
 
@@ -89,7 +89,7 @@ class SeismicityPDFFigures {
 		plotPDFs(subOutputDir, "sub_slab_m5", 5, avgDecluster, avgSmooth, fullGrid,
 				"Intraslab", PRVI25_SeismicityRegions.CAR_INTRASLAB, PRVI25_SeismicityRegions.MUE_INTRASLAB);
 		
-		HazardModel prevModel = HazardModel.load(Path.of("/home/kevin/OpenSHA/nshm23/nshmp-haz-models/nshm-prvi-2003-main"));
+		NshmpHazardModel prevModel = NshmpHazardModel.load(Path.of("/home/kevin/OpenSHA/nshm23/nshmp-haz-models/nshm-prvi-2003-main"));
 		// needs to be include for slab and interface
 		NshmErf subERF = new NshmErf(prevModel, Set.of(TectonicRegionType.SUBDUCTION_SLAB, TectonicRegionType.SUBDUCTION_INTERFACE),
 				IncludeBackgroundOption.INCLUDE);

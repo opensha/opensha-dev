@@ -28,7 +28,7 @@ import org.opensha.sha.imr.param.IntensityMeasureParams.PGA_Param;
 
 import com.google.common.base.Stopwatch;
 
-import gov.usgs.earthquake.nshmp.gmm.Gmm;
+import org.opensha.nshmp.shaded.gmm.NshmpGmm;
 
 public class GriddedHazardBenchmark {
 
@@ -60,7 +60,7 @@ public class GriddedHazardBenchmark {
 		
 		int numToCalc = 1000;
 		ScalarIMR gmm = AttenRelRef.NGAWest_2014_AVG_NOIDRISS.get();
-//		ScalarIMR gmm = new NSHMP_GMM_Wrapper.Single(Gmm.COMBINED_ACTIVE_CRUST_2023);
+//		ScalarIMR gmm = new NSHMP_GMM_Wrapper.Single(NshmpGmm.COMBINED_ACTIVE_CRUST_2023);
 //		ScalarIMR gmm = AttenRelRef.USGS_NSHM23_ACTIVE.get();
 		gmm.setIntensityMeasure(PGA_Param.NAME);
 		HazardCurveCalculator calc = new HazardCurveCalculator(new SourceFilterManager(SourceFilters.TRT_DIST_CUTOFFS));

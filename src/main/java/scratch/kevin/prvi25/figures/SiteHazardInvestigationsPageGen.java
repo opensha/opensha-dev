@@ -68,8 +68,8 @@ import org.opensha.sha.util.TectonicRegionType;
 
 import com.google.common.base.Preconditions;
 
-import gov.usgs.earthquake.nshmp.model.HazardModel;
-import gov.usgs.earthquake.nshmp.model.NshmErf;
+import org.opensha.nshmp.shaded.model.NshmpHazardModel;
+import org.opensha.nshmp.shaded.model.NshmErf;
 import net.mahdilamb.colormap.Colors;
 
 public class SiteHazardInvestigationsPageGen {
@@ -94,7 +94,7 @@ public class SiteHazardInvestigationsPageGen {
 		disaggIndvERF.setGriddedSeismicitySettings(erf.getGriddedSeismicitySettings().forSupersamplingSettings(null));
 		disaggIndvERF.updateForecast();
 		
-		HazardModel prevModel = HazardModel.load(Path.of("/home/kevin/OpenSHA/nshm23/nshmp-haz-models/nshm-prvi-2003-main"));
+		NshmpHazardModel prevModel = NshmpHazardModel.load(Path.of("/home/kevin/OpenSHA/nshm23/nshmp-haz-models/nshm-prvi-2003-main"));
 		// needs to be include for slab and interface
 		NshmErf prevERF = new NshmErf(prevModel, EnumSet.allOf(TectonicRegionType.class),
 				IncludeBackgroundOption.INCLUDE);

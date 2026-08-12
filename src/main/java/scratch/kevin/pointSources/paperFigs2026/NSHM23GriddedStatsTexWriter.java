@@ -28,8 +28,8 @@ import org.opensha.sha.util.TectonicRegionType;
 
 import com.google.common.base.Joiner;
 
-import gov.usgs.earthquake.nshmp.model.HazardModel;
-import gov.usgs.earthquake.nshmp.model.NshmErf;
+import org.opensha.nshmp.shaded.model.NshmpHazardModel;
+import org.opensha.nshmp.shaded.model.NshmErf;
 import scratch.kevin.latex.LaTeXUtils;
 
 public class NSHM23GriddedStatsTexWriter {
@@ -99,7 +99,7 @@ public class NSHM23GriddedStatsTexWriter {
 		}
 		texFW.flush();
 		
-		HazardModel model = HazardModel.load(Path.of("/home/kevin/OpenSHA/nshm23/nshmp-haz-models/nshm-conus-6.1.3"));
+		NshmpHazardModel model = NshmpHazardModel.load(Path.of("/home/kevin/OpenSHA/nshm23/nshmp-haz-models/nshm-conus-6.1.3"));
 		Region ceus = NSHM23_RegionLoader.SeismicityRegions.CONUS_EAST.load();
 		
 		for (IncludeBackgroundOption bgOption : IncludeBackgroundOption.values()) {

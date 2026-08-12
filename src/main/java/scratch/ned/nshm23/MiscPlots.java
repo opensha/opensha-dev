@@ -41,8 +41,8 @@ import org.opensha.sha.magdist.GutenbergRichterMagFreqDist;
 import org.opensha.sha.magdist.SummedMagFreqDist;
 import org.opensha.sha.util.TectonicRegionType;
 
-import gov.usgs.earthquake.nshmp.model.NshmErf;
-import gov.usgs.earthquake.nshmp.model.NshmSurface;
+import org.opensha.nshmp.shaded.model.NshmErf;
+import org.opensha.nshmp.shaded.model.NshmSurface;
 import scratch.UCERF3.enumTreeBranches.ScalingRelationships;
 import scratch.ned.FSS_Inversion2019.PlottingUtils;
 

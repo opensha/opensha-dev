@@ -70,8 +70,8 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.HashBasedTable;
 import com.google.common.collect.Table;
 
-import gov.usgs.earthquake.nshmp.model.HazardModel;
-import gov.usgs.earthquake.nshmp.model.NshmErf;
+import org.opensha.nshmp.shaded.model.NshmpHazardModel;
+import org.opensha.nshmp.shaded.model.NshmErf;
 
 class Regional_MFD_Plots {
 	
@@ -106,8 +106,8 @@ class Regional_MFD_Plots {
 				AnalysisRegions.CONUS_EAST
 		};
 		
-		HazardModel nshm23 = HazardModel.load(NSHM23_WRAPPED.toPath());
-		HazardModel nshm18 = HazardModel.load(NSHM18.toPath());
+		NshmpHazardModel nshm23 = NshmpHazardModel.load(NSHM23_WRAPPED.toPath());
+		NshmpHazardModel nshm18 = NshmpHazardModel.load(NSHM18.toPath());
 		boolean subduction = false;
 		
 		Set<TectonicRegionType> trts = EnumSet.of(TectonicRegionType.ACTIVE_SHALLOW,
@@ -148,8 +148,8 @@ class Regional_MFD_Plots {
 				NSHM23_RegionLoader.CATCH_ALL_REGION
 		};
 		
-		HazardModel nshm23 = HazardModel.load(NSHM23_WRAPPED.toPath());
-		HazardModel nshm18 = HazardModel.load(NSHM18.toPath());
+		NshmpHazardModel nshm23 = NshmpHazardModel.load(NSHM23_WRAPPED.toPath());
+		NshmpHazardModel nshm18 = NshmpHazardModel.load(NSHM18.toPath());
 		
 		EvenlyDiscretizedFunc refMFD = FaultSysTools.initEmptyMFD(9.45);
 
@@ -197,7 +197,7 @@ class Regional_MFD_Plots {
 		System.out.println("Calculating Model MFDs");
 		Table<NSHM23_BaseRegion, MFDType, IncrementalMagFreqDist> modelMFDs = calcSolMFDs(modelSol, analysis, refMFD);
 		
-		HazardModel nshm18 = HazardModel.load(NSHM18.toPath());
+		NshmpHazardModel nshm18 = NshmpHazardModel.load(NSHM18.toPath());
 		boolean subduction = false;
 		
 		Set<TectonicRegionType> trts = EnumSet.of(TectonicRegionType.ACTIVE_SHALLOW,
@@ -796,7 +796,7 @@ class Regional_MFD_Plots {
 	}
 	
 	static Table<NSHM23_BaseRegion, MFDType, IncrementalMagFreqDist> calcModelMFDs(
-			HazardModel model, Set<TectonicRegionType> trts, NSHM23_BaseRegion[] regions, EvenlyDiscretizedFunc refMFD) throws IOException {
+			NshmpHazardModel model, Set<TectonicRegionType> trts, NSHM23_BaseRegion[] regions, EvenlyDiscretizedFunc refMFD) throws IOException {
 		ExecutorService exec = Executors.newFixedThreadPool(FaultSysTools.defaultNumThreads());
 		
 		NshmErf faultERF = new NshmErf(model, trts, IncludeBackgroundOption.EXCLUDE);
@@ -824,7 +824,7 @@ class Regional_MFD_Plots {
 	}
 	
 	static Table<NSHM23_BaseRegion, MFDType, IncrementalMagFreqDist> calcCascadiaModelMFDs(
-			HazardModel model, NSHM23_BaseRegion[] regions, EvenlyDiscretizedFunc refMFD) throws IOException {
+			NshmpHazardModel model, NSHM23_BaseRegion[] regions, EvenlyDiscretizedFunc refMFD) throws IOException {
 		ExecutorService exec = Executors.newFixedThreadPool(FaultSysTools.defaultNumThreads());
 		
 		NshmErf faultERF = new NshmErf(model, Set.of(TectonicRegionType.SUBDUCTION_INTERFACE), IncludeBackgroundOption.EXCLUDE);

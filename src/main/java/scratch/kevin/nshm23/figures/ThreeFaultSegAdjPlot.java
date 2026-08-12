@@ -9,7 +9,6 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.apache.commons.math3.stat.StatUtils;
-import org.apache.poi.hssf.util.HSSFColor.BLACK;
 import org.jfree.chart.annotations.XYTextAnnotation;
 import org.jfree.chart.ui.TextAnchor;
 import org.jfree.data.Range;

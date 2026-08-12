@@ -60,10 +60,10 @@ import org.opensha.sha.util.TectonicRegionType;
 
 import com.google.common.base.Preconditions;
 
-import gov.usgs.earthquake.nshmp.gmm.Gmm;
-import gov.usgs.earthquake.nshmp.gmm.GmmInput;
-import gov.usgs.earthquake.nshmp.gmm.GroundMotionModel;
-import gov.usgs.earthquake.nshmp.gmm.Imt;
+import org.opensha.nshmp.shaded.gmm.NshmpGmm;
+import org.opensha.nshmp.shaded.gmm.NshmpGmmInput;
+import org.opensha.nshmp.shaded.gmm.NshmpGroundMotionModel;
+import org.opensha.nshmp.shaded.gmm.NshmpImt;
 import net.mahdilamb.colormap.Colors;
 
 public class DippingFaultTests {
@@ -116,13 +116,13 @@ public class DippingFaultTests {
 //			}
 //		},
 //		SIMPLE_GMPE("Simple GMPE") {
-//			GroundMotionModel gmm;
+//			NshmpGroundMotionModel gmm;
 //			@Override
 //			public double getScalar(double rJB, double rRup) {
 //				if (gmm == null)
-////					gmm = Gmm.BJF_97.instance(Imt.PGA);
-//					gmm = Gmm.ASK_14_BASE.instance(Imt.PGA);
-//				GmmInput input = GmmInput.builder().withDefaults().rX(1d).rJB(rJB).rRup(rRup).build();
+////					gmm = NshmpGmm.BJF_97.instance(NshmpImt.PGA);
+//					gmm = NshmpGmm.ASK_14_BASE.instance(NshmpImt.PGA);
+//				NshmpGmmInput input = NshmpGmmInput.builder().withDefaults().rX(1d).rJB(rJB).rRup(rRup).build();
 //				return -gmm.calc(input).get(0).value().mean();
 //			}
 		};

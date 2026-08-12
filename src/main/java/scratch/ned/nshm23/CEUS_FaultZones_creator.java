@@ -28,8 +28,8 @@ import org.opensha.sha.magdist.GutenbergRichterMagFreqDist;
 import org.opensha.sha.magdist.IncrementalMagFreqDist;
 import org.opensha.sha.util.TectonicRegionType;
 
-import gov.usgs.earthquake.nshmp.model.NshmErf;
-import gov.usgs.earthquake.nshmp.model.NshmSource;
+import org.opensha.nshmp.shaded.model.NshmErf;
+import org.opensha.nshmp.shaded.model.NshmSource;
 
 
 /**
@@ -755,7 +755,7 @@ public class CEUS_FaultZones_creator {
 //////	    	System.out.println(id+"\t"+src.getName());
 ////	    	// -78	38
 ////	    	if(Math.abs(loc.getLatitude()-targetLoc.getLatitude())<0.0001 && Math.abs(loc.getLongitude()-targetLoc.getLongitude())<0.0001) {
-//////	    		gov.usgs.earthquake.nshmp.model.NshmSource.Point
+//////	    		org.opensha.nshmp.shaded.model.NshmSource.Point
 //////	    		double strike = src.getDelegate().get(0).surface().strike();
 ////	    		int numSurfPts = src.getRupture(0).getRuptureSurface().getEvenlyDiscretizedNumLocs();
 ////	    		System.out.println(s+"\t"+id+"\t"+src.getNumRuptures()+"\t"+mMinSrc+"\t"+mMaxSrc+"\t"+
