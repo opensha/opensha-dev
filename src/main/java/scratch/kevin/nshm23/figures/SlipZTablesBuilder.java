@@ -6,13 +6,17 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.opensha.commons.data.CSVFile;
+import org.opensha.commons.geo.Location;
+import org.opensha.commons.geo.Region;
 import org.opensha.commons.util.DataUtils.MinMaxAveTracker;
+import org.opensha.sha.earthquake.faultSysSolution.FaultSystemRupSet;
 import org.opensha.sha.earthquake.faultSysSolution.FaultSystemSolution;
 import org.opensha.sha.earthquake.faultSysSolution.modules.SectSlipRates;
 import org.opensha.sha.earthquake.faultSysSolution.modules.SolutionSlipRates;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_DeformationModels;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_FaultModels;
 import org.opensha.sha.faultSurface.FaultSection;
+import org.opensha.sha.faultSurface.GeoJSONFaultSection;
 
 public class SlipZTablesBuilder {
 
@@ -64,68 +68,15 @@ public class SlipZTablesBuilder {
 			SolutionSlipRates solSlips = sol.requireModule(SolutionSlipRates.class);
 			
 			for (boolean origUncert : new boolean[] {false,true}) {
-				double[] slipSDs;
-				if (origUncert) {
-					NSHM23_DeformationModels.HARDCODED_FRACTIONAL_STD_DEV = Double.NaN;
-					NSHM23_DeformationModels.HARDCODED_FRACTIONAL_STD_DEV_UPPER_BOUND = Double.NaN;
-					List<? extends FaultSection> subSects = dm.build(fm);
-					slipSDs = new double[subSects.size()];
-					for (int s=0; s<slipSDs.length; s++)
-						slipSDs[s] = subSects.get(s).getOrigSlipRateStdDev()*1e-3;
-				} else {
-					slipSDs = sectSlips.getSlipRateStdDevs();
-				}
-				
-				double avgZ = 0d;
-				double moWeightedAvgZ = 0d;
-				double sumMo = 0d;
-				
-				MinMaxAveTracker zTrack = new MinMaxAveTracker();
-				MinMaxAveTracker sdTrack = new MinMaxAveTracker();
-				MinMaxAveTracker covTrack = new MinMaxAveTracker();
 				System.out.println(dm.getShortName()+", orig="+origUncert);
-				
-				double maxZ = 0d;
-				int maxIndex = -1;
-				
-				for (int s=0; s<slipSDs.length; s++) {
-					FaultSection sect = sol.getRupSet().getFaultSectionData(s);
-					double moRate = sect.calcMomentRate(false);
-					
-					double z = (solSlips.get(s) - sectSlips.getSlipRate(s))/slipSDs[s];
-					z = Math.abs(z);
-					
-					zTrack.addValue(z);
-					sdTrack.addValue(slipSDs[s]);
-					covTrack.addValue(slipSDs[s]/sectSlips.getSlipRate(s));
-					
-					avgZ += z;
-					moWeightedAvgZ += moRate*z;
-					sumMo += moRate;
-					
-					if (z > maxZ) {
-						maxIndex = s;
-						maxZ = z;
-					}
-				}
-				
-				avgZ /= slipSDs.length;
-				moWeightedAvgZ /= sumMo;
-				
-				System.out.println("\tabs z-scores: "+zTrack);
-				System.out.println("\tsds: "+sdTrack);
-				System.out.println("\tcovs: "+covTrack);
-				System.out.println("\tmaxZ="+(float)maxZ+" for "+maxIndex+". "
-						+sol.getRupSet().getFaultSectionData(maxIndex).getSectionName());
-				System.out.println("\t\t("+(float)solSlips.get(maxIndex)+" - "
-						+(float)sectSlips.getSlipRate(maxIndex)+") / "+(float)slipSDs[maxIndex]);
+				SlipZRecord result = calcSlipZ(sol, fm, dm, origUncert, null);
 				
 				if (origUncert ) {
-					origUncertZs[d] = avgZ;
-					origUncertMoWeightedZs[d] = moWeightedAvgZ;
+					origUncertZs[d] = result.average;
+					origUncertMoWeightedZs[d] = result.momentWeightedAverage;
 				} else {
-					modUncertZs[d] = avgZ;
-					modUncertMoWeightedZs[d] = moWeightedAvgZ;
+					modUncertZs[d] = result.average;
+					modUncertMoWeightedZs[d] = result.momentWeightedAverage;
 				}
 			}
 		}
@@ -155,6 +106,87 @@ public class SlipZTablesBuilder {
 		}
 		
 		csv.writeToFile(new File(outputDir, prefix+".csv"));
+	}
+	
+	public record SlipZRecord(double average, double momentWeightedAverage) {}
+	
+	public static SlipZRecord calcSlipZ(FaultSystemSolution sol, NSHM23_FaultModels fm, NSHM23_DeformationModels dm,
+			boolean origUncert, Region region) throws IOException {
+		FaultSystemRupSet rupSet = sol.getRupSet();
+		SectSlipRates sectSlips = rupSet.requireModule(SectSlipRates.class);
+		SolutionSlipRates solSlips = sol.requireModule(SolutionSlipRates.class);
+		
+		double[] slipSDs;
+		if (origUncert) {
+			NSHM23_DeformationModels.HARDCODED_FRACTIONAL_STD_DEV = Double.NaN;
+			NSHM23_DeformationModels.HARDCODED_FRACTIONAL_STD_DEV_UPPER_BOUND = Double.NaN;
+			List<? extends FaultSection> subSects = dm.build(fm);
+			slipSDs = new double[subSects.size()];
+			for (int s=0; s<slipSDs.length; s++)
+				slipSDs[s] = subSects.get(s).getOrigSlipRateStdDev()*1e-3;
+		} else {
+			slipSDs = sectSlips.getSlipRateStdDevs();
+		}
+		
+		double avgZ = 0d;
+		double moWeightedAvgZ = 0d;
+		double sumMo = 0d;
+		
+		MinMaxAveTracker zTrack = new MinMaxAveTracker();
+		MinMaxAveTracker sdTrack = new MinMaxAveTracker();
+		MinMaxAveTracker covTrack = new MinMaxAveTracker();
+		
+		double maxZ = 0d;
+		int maxIndex = -1;
+		int numCounted = 0;
+		
+		for (int s=0; s<slipSDs.length; s++) {
+			FaultSection sect = sol.getRupSet().getFaultSectionData(s);
+			
+			if (region != null) {
+				boolean contained = false;
+				for (Location loc : sect.getFaultSurface(1d).getPerimeter()) {
+					if (region.contains(loc)) {
+						contained = true;
+						break;
+					}
+				}
+				if (!contained)
+					continue;
+			}
+			
+			double moRate = sect.calcMomentRate(false);
+			
+			double z = (solSlips.get(s) - sectSlips.getSlipRate(s))/slipSDs[s];
+			z = Math.abs(z);
+			
+			zTrack.addValue(z);
+			sdTrack.addValue(slipSDs[s]);
+			covTrack.addValue(slipSDs[s]/sectSlips.getSlipRate(s));
+			
+			avgZ += z;
+			moWeightedAvgZ += moRate*z;
+			sumMo += moRate;
+			numCounted++;
+			
+			if (z > maxZ) {
+				maxIndex = s;
+				maxZ = z;
+			}
+		}
+		
+		avgZ /= numCounted;
+		moWeightedAvgZ /= sumMo;
+		
+		System.out.println("\tabs z-scores: "+zTrack);
+		System.out.println("\tsds: "+sdTrack);
+		System.out.println("\tcovs: "+covTrack);
+		System.out.println("\tmaxZ="+(float)maxZ+" for "+maxIndex+". "
+				+sol.getRupSet().getFaultSectionData(maxIndex).getSectionName());
+		System.out.println("\t\t("+(float)solSlips.get(maxIndex)+" - "
+				+(float)sectSlips.getSlipRate(maxIndex)+") / "+(float)slipSDs[maxIndex]);
+		
+		return new SlipZRecord(avgZ, moWeightedAvgZ);
 	}
 
 }
