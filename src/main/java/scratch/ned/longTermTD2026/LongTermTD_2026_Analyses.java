@@ -110,6 +110,9 @@ public class LongTermTD_2026_Analyses {
 			DataToInclude paleoDataToInclude, String referenceDir, String titleString, String infoString,
 			boolean includeUCERF3_Comp) {
 		
+		if(referenceDir==null)
+			referenceDir = outputDir; // this will only make ratio plots but not show then in index.html
+		
 		FaultSystemSolution sol = FSS_Fetcher2023.getPreferredFull_FSS(fss_fileNameWithPath);		
 		TimeDepFaultSystemSolutionERF erf = new TimeDepFaultSystemSolutionERF();
 		erf.setSolution(sol);
@@ -350,16 +353,16 @@ public class LongTermTD_2026_Analyses {
 //				renewalModelChoice,  averagingChoice, paleoMapping,  paleoDataToInclude,  
 //				referenceDir, titleString, infoString, includeUCERF3_Comp);
 
-//		// NSHM 2026 Branch Averaged test
+//		// NSHM 2026 Branch Averaged BPT
 		outputDir = rootDir+"NSHM27_PreliminaryBranchAveBPT/";
-		titleString = "NSHM 2027 Branch Averaged Preliminary TD BPT Model ";
-		infoString = "This applies the preliminary branch-averaged model using only BPT and has a comparison to UCERF3 (for same start time but using UCERF3 DOLE). ";
+		titleString = "NSHM 2027 Branch Averaged Preliminary TD BPT Model";
+		infoString = "This applies the preliminary branch-averaged model using only BPT and has a comparison to UCERF3 (for same start time but using UCERF3 DOLE).";
 		probModChoice = FSS_ProbabilityModels.NSHM26_BRANCH_AVE;
 		includeUCERF3_Comp = true;
 		generateReportPage(outputDir,  fss_fileNameWithPath,  startYear,  duration, 
 				 histOpenIntYear,  probModChoice,  aperModelChoice,  
 				renewalModelChoice,  averagingChoice, paleoMapping,  paleoDataToInclude,  
-				referenceDir, titleString, infoString, includeUCERF3_Comp);
+				null, titleString, infoString, includeUCERF3_Comp);
 
 		
 //		// UCERF3 results
