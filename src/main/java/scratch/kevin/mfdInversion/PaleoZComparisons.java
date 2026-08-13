@@ -39,10 +39,10 @@ public class PaleoZComparisons {
 		solFiles.add(new File(invDir, "2024_02_02-nshm23_branches-WUS_FM_v3/results_WUS_FM_v3_branch_averaged.zip"));
 		names.add("NSHM23 Full BA");
 		
-		solFiles.add(new File(invDir, "2024_02_02-nshm23_branches-WUS_FM_v3/node_branch_averaged/PaleoUncert_EvenFitPaleo.zip"));
-		names.add("NSHM23 Even-Fit Paleo");
+//		solFiles.add(new File(invDir, "2024_02_02-nshm23_branches-WUS_FM_v3/node_branch_averaged/PaleoUncert_EvenFitPaleo.zip"));
+//		names.add("NSHM23 Even-Fit Paleo");
 		
-		solFiles.add(new File(invDir, "2026_08_10-nshm23_branches-WUS_FM_v3-bPosterior10x/results_WUS_FM_v3_branch_averaged.zip"));
+		solFiles.add(new File(invDir, "2026_08_12-nshm23_branches-WUS_FM_v3-bPosterior10x-1000samples/results_WUS_FM_v3_branch_averaged.zip"));
 		names.add("Posterior-b Full BA");
 		
 		CSVFile<String> csv = new CSVFile<>(true);
