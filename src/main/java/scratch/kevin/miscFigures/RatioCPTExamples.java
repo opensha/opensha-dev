@@ -38,6 +38,10 @@ public class RatioCPTExamples {
 		cpts.add(GMT_CPT_Files.DIVERGING_VIK_UNIFORM.instance().rescale(0, 1).anchoredRescale(0, 3, 0.5, 1).expandAt(1d, 0.9, 1.1));
 		labels.add("Diverging VIK (expanded)");
 		
+		cpts.add(GMT_CPT_Files.DIVERGING_VIK_UNIFORM.instance().rescale(0, 1).anchoredRescale(0, 3, 0.5, 1)
+				.asDiscrete(0.2, true).mask(cpts.getLast().getColor(1d), 0.8, 1.2));
+		labels.add("Diverging VIK (discrete)");
+		
 		cpts.add(GMT_CPT_Files.DIVERGENT_RYB.instance().reverse().rescale(0, 1).anchoredRescale(0, 3, 0.5, 1));
 		labels.add("Diverging RYB");
 		
