@@ -4,6 +4,7 @@ import java.awt.Color;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 import org.jfree.chart.ui.RectangleEdge;
@@ -31,26 +32,35 @@ public class RatioCPTExamples {
 		List<CPT> cpts = new ArrayList<>();
 		List<String> labels = new ArrayList<>();
 		
+		cpts.add(GMT_CPT_Files.DIVERGING_VIK_UNIFORM.instance().rescale(0, 1).anchoredRescale(0, 3, 0.5, 1));
+		labels.add("Diverging VIK");
+		
+		cpts.add(GMT_CPT_Files.DIVERGING_VIK_UNIFORM.instance().rescale(0, 1).anchoredRescale(0, 3, 0.5, 1).expandAt(1d, 0.9, 1.1));
+		labels.add("Diverging VIK (expanded)");
+		
 		cpts.add(GMT_CPT_Files.DIVERGENT_RYB.instance().reverse().rescale(0, 1).anchoredRescale(0, 3, 0.5, 1));
 		labels.add("Diverging RYB");
 		
-		cpts.add(GMT_CPT_Files.DIVERGING_BAM_UNIFORM.instance().reverse().rescale(0, 1).anchoredRescale(0, 3, 0.5, 1));;
+		cpts.add(GMT_CPT_Files.DIVERGENT_RYB.instance().reverse().rescale(0, 1).anchoredRescale(0, 3, 0.5, 1).expandAt(Color.LIGHT_GRAY, 1, 0.9, 1.1));
+		labels.add("Diverging RYB (expanded)");
+		
+		cpts.add(GMT_CPT_Files.DIVERGING_DARK_BLUE_RED_UNIFORM.instance().rescale(0, 1).anchoredRescale(0, 3, 0.5, 1));
+		labels.add("Diverging Dark Blue-Red");
+		
+		cpts.add(GMT_CPT_Files.DIVERGING_BAM_UNIFORM.instance().reverse().rescale(0, 1).anchoredRescale(0, 3, 0.5, 1));
 		labels.add("Diverging BAM");
 		
-		cpts.add(GMT_CPT_Files.DIVERGING_VIK_UNIFORM.instance().rescale(0, 1).anchoredRescale(0, 3, 0.5, 1));;
-		labels.add("Diverging VIK");
-		
-		cpts.add(GMT_CPT_Files.DIVERGING_BLUE_RED_UNIFORM.instance().rescale(0, 1).anchoredRescale(0, 3, 0.5, 1));;
-		labels.add("Diverging Blue-Red");
-		
-		cpts.add(GMT_CPT_Files.DIVERGING_BROC_UNIFORM.instance().rescale(0, 1).anchoredRescale(0, 3, 0.5, 1));;
+		cpts.add(GMT_CPT_Files.DIVERGING_BROC_UNIFORM.instance().rescale(0, 1).anchoredRescale(0, 3, 0.5, 1));
 		labels.add("Diverging BROC");
 		
-		cpts.add(GMT_CPT_Files.DIVERGING_CORK_UNIFORM.instance().rescale(0, 1).anchoredRescale(0, 3, 0.5, 1));;
+		cpts.add(GMT_CPT_Files.DIVERGING_CORK_UNIFORM.instance().rescale(0, 1).anchoredRescale(0, 3, 0.5, 1));
 		labels.add("Diverging CORK");
 		
-		cpts.add(GMT_CPT_Files.DIVERGING_DARK_BLUE_RED_UNIFORM.instance().rescale(0, 1).anchoredRescale(0, 3, 0.5, 1));;
-		labels.add("Diverging Dark Blue-Red");
+		cpts.add(GMT_CPT_Files.DIVERGING_BLUE_RED_UNIFORM.instance().rescale(0, 1).anchoredRescale(0, 3, 0.5, 1));
+		labels.add("Diverging Blue-Red");
+		
+		Collections.reverse(cpts);
+		Collections.reverse(labels);
 		
 		for (int i=0; i<cpts.size(); i++)
 			plot.addSubtitle(GraphPanel.getLegendForCPT(cpts.get(i), labels.get(i), prefs, 0.2, RectangleEdge.BOTTOM));
