@@ -1,4 +1,4 @@
-package scratch.ned.longTermTD2026;
+package scratch.ned.longTermTD2027;
 
 import java.awt.Color;
 import java.io.BufferedReader;
@@ -1023,7 +1023,7 @@ public class LongTermTD2026_AnalysesOLD {
 		if (probModel instanceof UCERF3_ProbabilityModel) {
 			UCERF3_ProbabilityModel u3ProbModel = (UCERF3_ProbabilityModel)probModel;
 			// setting by enum is prefferred
-			u3ProbModel.setAperiodicityModelChoice(AperiodicityModels.NSHM26_MIDDLE);
+			u3ProbModel.setAperiodicityModelChoice(AperiodicityModels.NSHM27_MIDDLE);
 			
 			if(matchU3_Calcs) {  // diescretizations in old ProbabilityModelCalc to match U3
 				u3ProbModel.setProbDistsDiscretization(9, 18001, false);

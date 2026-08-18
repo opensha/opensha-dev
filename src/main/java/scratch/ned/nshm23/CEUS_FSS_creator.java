@@ -81,7 +81,7 @@ public class CEUS_FSS_creator {
 	 /**
 	  * This map defines the sources unique to the alternative fault model.
 	  * The keys are the NSHM section IDs and the values are the branch wts
-	  * The first part of comment is why it's here and the second part is the source name
+	  * The first part of comment explains why the src is here and the second part is the source name
 
 	  * @return
 	  */

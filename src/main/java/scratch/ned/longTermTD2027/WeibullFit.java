@@ -1,4 +1,4 @@
-package scratch.ned.longTermTD2026;
+package scratch.ned.longTermTD2027;
 
 import org.apache.commons.math3.analysis.UnivariateFunction;
 import org.apache.commons.math3.optim.MaxEval;

@@ -1,4 +1,4 @@
-package scratch.ned.longTermTD2026;
+package scratch.ned.longTermTD2027;
 
 import java.awt.Color;
 import java.io.File;
@@ -13,6 +13,7 @@ import org.apache.commons.math3.analysis.UnivariateFunction;
 import org.apache.commons.math3.analysis.solvers.BisectionSolver;
 import org.apache.commons.math3.stat.descriptive.DescriptiveStatistics;
 import org.jfree.data.Range;
+import org.opensha.commons.data.WeightedList;
 import org.opensha.commons.data.function.ArbDiscrEmpiricalDistFunc;
 import org.opensha.commons.data.function.DiscretizedFunc;
 import org.opensha.commons.data.function.HistogramFunction;
@@ -32,8 +33,10 @@ import org.opensha.sha.earthquake.faultSysSolution.FaultSystemSolution;
 import org.opensha.sha.earthquake.faultSysSolution.erf.td.AperiodicityModel;
 import org.opensha.sha.earthquake.faultSysSolution.erf.td.AperiodicityModels;
 import org.opensha.sha.earthquake.faultSysSolution.erf.td.FSS_ProbabilityModel;
+import org.opensha.sha.earthquake.faultSysSolution.erf.td.FSS_ProbabilityModel.WeightedCombination;
 import org.opensha.sha.earthquake.faultSysSolution.erf.td.FSS_ProbabilityModels;
 import org.opensha.sha.earthquake.faultSysSolution.erf.td.HistoricalOpenInterval;
+import org.opensha.sha.earthquake.faultSysSolution.erf.td.HistoricalOpenIntervals;
 import org.opensha.sha.earthquake.faultSysSolution.erf.td.RenewalModels;
 import org.opensha.sha.earthquake.faultSysSolution.erf.td.TimeDepFaultSystemSolutionERF;
 import org.opensha.sha.earthquake.faultSysSolution.erf.td.TimeDepUtils;
@@ -63,13 +66,13 @@ import com.google.common.base.Preconditions;
 import scratch.UCERF3.erf.FaultSystemSolutionERF;
 import scratch.UCERF3.erf.mean.MeanUCERF3;
 import scratch.UCERF3.erf.utils.ProbModelsPlottingUtils;
-import scratch.ned.longTermTD2026.WeibullFit.WeibullParams;
+import scratch.ned.longTermTD2027.WeibullFit.WeibullParams;
 import scratch.ned.nshm23.FSS_Fetcher2023;
 
-public class LongTermTD_2026_Analyses {
+public class LongTermTD_2027_Analyses {
 	
 	
-	private static TimeDepFaultSystemSolutionERF getFullPrefUS26_ERF() {
+	private static TimeDepFaultSystemSolutionERF getFullPrefUS27_ERF() {
 		String full_FSS_fileName = "/Users/field/nshm-haz_data/fullPrefUS_FSS.zip";
 		FaultSystemSolution sol = FSS_Fetcher2023.getPreferredFull_FSS(full_FSS_fileName);	
 		
@@ -84,7 +87,7 @@ public class LongTermTD_2026_Analyses {
 		if (probModel instanceof UCERF3_ProbabilityModel) {
 			UCERF3_ProbabilityModel u3ProbModel = (UCERF3_ProbabilityModel)probModel;
 			// setting by enum is prefferred
-			u3ProbModel.setAperiodicityModelChoice(AperiodicityModels.NSHM26_MIDDLE);
+			u3ProbModel.setAperiodicityModelChoice(AperiodicityModels.NSHM27_MIDDLE);
 			// this is for simulation mode
 			u3ProbModel.setSaveDebugInfo(true);
 		} 
@@ -139,13 +142,31 @@ public class LongTermTD_2026_Analyses {
 		else if (probModel instanceof FSS_ProbabilityModel.Poisson) {
 			// do nothing
 		}
-		else {
-//			throw new RuntimeException("Unsupported type of FSS_ProbabilityModel: "+probModel.getName());
+		else if(probModel instanceof WeightedCombination) {
+//				System.out.println("BEFORE");
+//				WeightedList<? extends FSS_ProbabilityModel> modList = ((WeightedCombination)probModel).getProbModelList();
+//				for(int i=0;i<modList.size();i++)
+//					System.out.println("\n"+modList.getValue(i).toString()+"\n\t");		
+			
+				if(probModel.getAdjustableParameters().containsParameter(HistoricalOpenIntervals.PARAM_NAME)) {
+					probModel.getAdjustableParameters().getParameter(HistoricalOpenInterval.class, HistoricalOpenIntervals.PARAM_NAME).setValue(new HistoricalOpenInterval.SingleYear(histOpenIntYear, true));
+				}
+//				System.out.println("AFTER");
+//				modList = ((WeightedCombination)probModel).getProbModelList();
+//				for(int i=0;i<modList.size();i++)
+//							System.out.println("\n"+modList.getValue(i).toString()+"\n\t");	
+//			
+//				System.out.println(probModel.getAdjustableParameters().getParameterListMetadataString());
 		}
+		else {
+			throw new RuntimeException("Unsupported type of FSS_ProbabilityModel: "+probModel.getName());
+		}	
+
 		erf.getTimeSpan().setStartTime(startYear);
 		erf.getTimeSpan().setDuration(duration);
 		// not sure this is needed here
 		erf.updateForecast();
+		
 		
 		TimeDepFaultSystemSolutionERF erfU3 = null;
 		if(includeUCERF3_Comp) {
@@ -153,7 +174,7 @@ public class LongTermTD_2026_Analyses {
 			erfU3.setSolution(getUCERF3_BranchAveFaultSysSol());
 			erfU3.getParameter(IncludeBackgroundParam.NAME).setValue(IncludeBackgroundOption.EXCLUDE);		
 			erfU3.setProbabilityModelChoice(probModChoice);
-			
+
 			FSS_ProbabilityModel probModelU3 = erfU3.getProbabilityModel();
 			if (probModelU3 instanceof UCERF3_ProbabilityModel) {
 				UCERF3_ProbabilityModel u3pm = (UCERF3_ProbabilityModel)probModelU3;
@@ -170,10 +191,25 @@ public class LongTermTD_2026_Analyses {
 			else if (probModelU3 instanceof FSS_ProbabilityModel.Poisson) {
 				// do nothing
 			}
-			else {
-				// do nothing
-				// throw new RuntimeException("Unsupported type of FSS_ProbabilityModel: "+probModel.getName());	
+			else if(probModelU3 instanceof WeightedCombination) {
+//								System.out.println("BEFORE");
+//								WeightedList<? extends FSS_ProbabilityModel> modList = ((WeightedCombination)probModelU3).getProbModelList();
+//								for(int i=0;i<modList.size();i++)
+//									System.out.println("\n"+modList.getValue(i).toString()+"\n\t");		
+
+				if(probModelU3.getAdjustableParameters().containsParameter(HistoricalOpenIntervals.PARAM_NAME))
+					probModelU3.getAdjustableParameters().getParameter(HistoricalOpenInterval.class, HistoricalOpenIntervals.PARAM_NAME).setValue(new HistoricalOpenInterval.SingleYear(histOpenIntYear, true));
+
+//								System.out.println("AFTER");
+//								modList = ((WeightedCombination)probModelU3).getProbModelList();
+//								for(int i=0;i<modList.size();i++)
+//											System.out.println("\n"+modList.getValue(i).toString()+"\n\t");	
+//								System.out.println(probModelU3.getAdjustableParameters().getParameterListMetadataString());
 			}
+			else {
+				throw new RuntimeException("Unsupported type of FSS_ProbabilityModel: "+probModelU3.getName());
+			}	
+
 			erfU3.getTimeSpan().setStartTime(startYear);
 			erfU3.getTimeSpan().setDuration(duration);
 			// not sure this is needed here
@@ -316,60 +352,257 @@ public class LongTermTD_2026_Analyses {
 	
 	public static void generatePreliminaryResults() {
 		
-		String rootDir = "/Users/field/Library/CloudStorage/OneDrive-DOI/Field_Other/ERF_Coordination/LongTermTD_2026/Analysis/PreliminaryResults/";
-		String referenceDir = rootDir+"ReferenceModel/";
+		String rootDir = "/Users/field/Library/CloudStorage/OneDrive-DOI/Field_Other/ERF_Coordination/LongTermTD_2027/Analysis/PreliminaryResults/";
 		String fss_fileNameWithPath = rootDir+"fullPrefUS_FSS.zip";
 		String outputDir, titleString, infoString;
 
 
+//		String referenceDir = rootDir+"ReferenceModel/";
+		String referenceName = "NSHM27_BranchAve";
+		String referenceDir = rootDir+referenceName+"/";
 		int startYear = 2027;
 		int duration = 30; 
 		int histOpenIntYear = 1875;
 		FSS_ProbabilityModels probModChoice = FSS_ProbabilityModels.UCERF3_METHOD;
-		AperiodicityModels aperModelChoice = AperiodicityModels.NSHM26_MIDDLE;
+		AperiodicityModels aperModelChoice = AperiodicityModels.NSHM27_MIDDLE;
 		RenewalModels renewalModelChoice = RenewalModels.BPT;
 		BPTAveragingTypeOptions averagingChoice = BPTAveragingTypeOptions.AVE_RI_AVE_NORM_TIME_SINCE;
 		PaleoMappingAlgorithm paleoMapping = PaleoMappingAlgorithm.NEIGHBORING_SECTS;
 		DataToInclude paleoDataToInclude = DataToInclude.HIST_RUPS_ONLY;
 		boolean includeUCERF3_Comp = false;
 				
-//		// Reference calculation
+	
+		// NSHM 2027 Branch Averaged
 //		outputDir = referenceDir;
-//		titleString = "Reference 2026 Time-Dependent Model";
-//		infoString = "This is the Reference (preferred) model. ";
-//		includeUCERF3_Comp=true;
+//		titleString = "NSHM 2027 Branch Averaged TD Model (Preliminary)";
+//		infoString = "This applies the preliminary branch-averaged model (BPT and Weibull coupled with all aperidocity branches) and includes comparisons to UCERF3.";
+//		probModChoice = FSS_ProbabilityModels.NSHM27_BRANCH_AVE;
+//		includeUCERF3_Comp = true;
+//		generateReportPage(outputDir,  fss_fileNameWithPath,  startYear,  duration, 
+//				 histOpenIntYear,  probModChoice,  aperModelChoice,  
+//				renewalModelChoice,  averagingChoice, paleoMapping,  paleoDataToInclude,  
+//				null, titleString, infoString, includeUCERF3_Comp);
+
+		
+		// NSHM 2027 Branch Averaged BPT
+//		outputDir = rootDir+"NSHM27_BranchAveBPT/";
+//		titleString = "NSHM 2027 Branch Averaged TD Model - BPT";
+//		infoString = "This applies the preliminary branch-averaged model using only BPT and includes comparisons to UCERF3.";
+//		probModChoice = FSS_ProbabilityModels.NSHM27_BRANCH_AVE_BPT;
+//		includeUCERF3_Comp = true;
+//		generateReportPage(outputDir,  fss_fileNameWithPath,  startYear,  duration, 
+//				 histOpenIntYear,  probModChoice,  aperModelChoice,  
+//				renewalModelChoice,  averagingChoice, paleoMapping,  paleoDataToInclude,  
+//				referenceDir, titleString, infoString, includeUCERF3_Comp);
+		
+		
+//		// NSHM 2027 Branch Averaged Weibull
+//		outputDir = rootDir+"NSHM27_BranchAveWeibull/";
+//		titleString = "NSHM 2027 Branch Averaged TD Model - Weibull";
+//		infoString = "This applies the preliminary branch-averaged model using only Weibull and includes comparisons to UCERF3.";
+//		probModChoice = FSS_ProbabilityModels.NSHM27_BRANCH_AVE_WEIBULL;
+//		includeUCERF3_Comp = true;
+//		generateReportPage(outputDir,  fss_fileNameWithPath,  startYear,  duration, 
+//				 histOpenIntYear,  probModChoice,  aperModelChoice,  
+//				renewalModelChoice,  averagingChoice, paleoMapping,  paleoDataToInclude,  
+//				referenceDir, titleString, infoString, includeUCERF3_Comp);
+
+		
+//		 NSHM 2027 Branch Averaged w/ No Open Interval
+//		outputDir = rootDir+"NSHM27_BranchAve_NoHistOpenInt/";
+//		titleString = "NSHM 2027 Branch Averaged TD Model with No Open Interval";
+//		infoString = "This applies the preliminary branch-averaged model with no historic open interval.";
+//		probModChoice = FSS_ProbabilityModels.NSHM27_BRANCH_AVE;
+//		histOpenIntYear = startYear;
+//		includeUCERF3_Comp = false;
+//		generateReportPage(outputDir,  fss_fileNameWithPath,  startYear,  duration, 
+//				 histOpenIntYear,  probModChoice,  aperModelChoice,  
+//				renewalModelChoice,  averagingChoice, paleoMapping,  paleoDataToInclude,  
+//				referenceDir, titleString, infoString, includeUCERF3_Comp);
+
+		
+//		// BPT with Low Aperiodicity
+//		outputDir = rootDir+"BPT_LowAperiodicity";
+//		titleString = "BPT and Low Aperiodicity Model";
+//		infoString = "This applies BPT with Low Aperiodicity (default values for other parameters). ";
+//		probModChoice = FSS_ProbabilityModels.UCERF3_METHOD;
+//		renewalModelChoice = RenewalModels.BPT;
+//		aperModelChoice = AperiodicityModels.NSHM27_LOW;
+//		histOpenIntYear = 1875;
+//		includeUCERF3_Comp=false;
+//		generateReportPage(outputDir,  fss_fileNameWithPath,  startYear,  duration, 
+//				 histOpenIntYear,  probModChoice,  aperModelChoice,  
+//				renewalModelChoice,  averagingChoice, paleoMapping,  paleoDataToInclude,  
+//				referenceDir, titleString, infoString, includeUCERF3_Comp);
+
+		
+//		// BPT with Middle Aperiodicity
+//		outputDir = rootDir+"BPT_MiddleAperiodicity";
+//		titleString = "BPT and Middle Aperiodicity Model";
+//		infoString = "This applies BPT with Middle Aperiodicity (default values for other parameters). ";
+//		probModChoice = FSS_ProbabilityModels.UCERF3_METHOD;
+//		renewalModelChoice = RenewalModels.BPT;
+//		aperModelChoice = AperiodicityModels.NSHM27_MIDDLE;
+//		includeUCERF3_Comp=false;
 //		generateReportPage(outputDir,  fss_fileNameWithPath,  startYear,  duration, 
 //				 histOpenIntYear,  probModChoice,  aperModelChoice,  
 //				renewalModelChoice,  averagingChoice, paleoMapping,  paleoDataToInclude,  
 //				referenceDir, titleString, infoString, includeUCERF3_Comp);
 	
-//		// Preferred blend test
-//		outputDir = rootDir+"TESTPreferredBlend/";
-//		titleString = "Reference, But Preferred Blend";
-//		infoString = "This is the Reference (preferred) model, but with UCERF3 logic tree branches applied. ";
-//		probModChoice = FSS_ProbabilityModels.UCERF3_PREF_BLEND;
+		
+//		// BPT with High Aperiodicity
+//		outputDir = rootDir+"BPT_HighAperiodicity";
+//		titleString = "BPT and High Aperiodicity Model";
+//		infoString = "This applies BPT with High Aperiodicity (default values for other parameters). ";
+//		probModChoice = FSS_ProbabilityModels.UCERF3_METHOD;
+//		renewalModelChoice = RenewalModels.BPT;
+//		aperModelChoice = AperiodicityModels.NSHM27_HIGH;
+//		includeUCERF3_Comp=false;
 //		generateReportPage(outputDir,  fss_fileNameWithPath,  startYear,  duration, 
 //				 histOpenIntYear,  probModChoice,  aperModelChoice,  
 //				renewalModelChoice,  averagingChoice, paleoMapping,  paleoDataToInclude,  
 //				referenceDir, titleString, infoString, includeUCERF3_Comp);
 
-//		// NSHM 2026 Branch Averaged BPT
-		outputDir = rootDir+"NSHM27_PreliminaryBranchAveBPT/";
-		titleString = "NSHM 2027 Branch Averaged Preliminary TD BPT Model";
-		infoString = "This applies the preliminary branch-averaged model using only BPT and has a comparison to UCERF3 (for same start time but using UCERF3 DOLE).";
-		probModChoice = FSS_ProbabilityModels.NSHM26_BRANCH_AVE;
-		includeUCERF3_Comp = true;
-		generateReportPage(outputDir,  fss_fileNameWithPath,  startYear,  duration, 
-				 histOpenIntYear,  probModChoice,  aperModelChoice,  
-				renewalModelChoice,  averagingChoice, paleoMapping,  paleoDataToInclude,  
-				null, titleString, infoString, includeUCERF3_Comp);
+		
+//		// Weibull with Low Aperiodicity
+//		outputDir = rootDir+"Weibull_LowAperiodicity";
+//		titleString = "Weibull and Low Aperiodicity Model";
+//		infoString = "This applies Weibull with Low Aperiodicity (default values for other parameters). ";
+//		probModChoice = FSS_ProbabilityModels.UCERF3_METHOD;
+//		aperModelChoice = AperiodicityModels.NSHM27_LOW;
+//		renewalModelChoice = RenewalModels.WEIBULL;
+//		includeUCERF3_Comp=false;
+//		generateReportPage(outputDir,  fss_fileNameWithPath,  startYear,  duration, 
+//				 histOpenIntYear,  probModChoice,  aperModelChoice,  
+//				renewalModelChoice,  averagingChoice, paleoMapping,  paleoDataToInclude,  
+//				referenceDir, titleString, infoString, includeUCERF3_Comp);
 
 		
-//		// UCERF3 results
+//		// Weibull with Middle Aperiodicity
+//		outputDir = rootDir+"Weibull_MiddleAperiodicity";
+//		titleString = "Weibull and Middle Aperiodicity Model";
+//		infoString = "This applies Weibull with Middle Aperiodicity (default values for other parameters). ";
+//		probModChoice = FSS_ProbabilityModels.UCERF3_METHOD;
+//		aperModelChoice = AperiodicityModels.NSHM27_MIDDLE;
+//		renewalModelChoice = RenewalModels.WEIBULL;
+//		includeUCERF3_Comp=false;
+//		generateReportPage(outputDir,  fss_fileNameWithPath,  startYear,  duration, 
+//				 histOpenIntYear,  probModChoice,  aperModelChoice,  
+//				renewalModelChoice,  averagingChoice, paleoMapping,  paleoDataToInclude,  
+//				referenceDir, titleString, infoString, includeUCERF3_Comp);
+	
+		
+//		// Weibull with High Aperiodicity
+//		outputDir = rootDir+"Weibull_HighAperiodicity";
+//		titleString = "Weibull and High Aperiodicity Model";
+//		infoString = "This applies Weibull with High Aperiodicity (default values for other parameters). ";
+//		probModChoice = FSS_ProbabilityModels.UCERF3_METHOD;
+//		aperModelChoice = AperiodicityModels.NSHM27_HIGH;
+//		renewalModelChoice = RenewalModels.WEIBULL;
+//		includeUCERF3_Comp=false;
+//		generateReportPage(outputDir,  fss_fileNameWithPath,  startYear,  duration, 
+//				 histOpenIntYear,  probModChoice,  aperModelChoice,  
+//				renewalModelChoice,  averagingChoice, paleoMapping,  paleoDataToInclude,  
+//				referenceDir, titleString, infoString, includeUCERF3_Comp);
+	
+		// NSHM 2027 Branch Averaged with Paleo DOLE included on neighbors
+//		outputDir = rootDir+"BranchAveAll_DOLE_NeighorsOnly";
+//		titleString = "NSHM 2027 Branch Averaged TD Model With Paleo DOLE Added On Neighbors";
+//		infoString = "This applies the preliminary branch-averaged model with both historic and Paleo DOLE used (with the latter only influencing only neighboring fault sections).";
+//		probModChoice = FSS_ProbabilityModels.NSHM27_BRANCH_AVE;
+//		paleoMapping = PaleoMappingAlgorithm.NEIGHBORING_SECTS;
+//		paleoDataToInclude = DataToInclude.ALL_DATA;
+//		includeUCERF3_Comp = false;
+//		generateReportPage(outputDir,  fss_fileNameWithPath,  startYear,  duration, 
+//				 histOpenIntYear,  probModChoice,  aperModelChoice,  
+//				renewalModelChoice,  averagingChoice, paleoMapping,  paleoDataToInclude,  
+//				referenceDir, titleString, infoString, includeUCERF3_Comp);
+
+		// NSHM 2027 Branch Averaged with Paleo DOLE included on full parent sections
+//		outputDir = rootDir+"BranchAveAll_DOLE_FullParent";
+//		titleString = "NSHM 2027 Branch Averaged TD Model With Paleo DOLE Added On Full Parent";
+//		infoString = "This applies the preliminary branch-averaged model with both historic and Paleo DOLE used (with the latter influencing the full parent fault sections).";
+//		probModChoice = FSS_ProbabilityModels.NSHM27_BRANCH_AVE;
+//		paleoMapping = PaleoMappingAlgorithm.FULL_PARENT;
+//		paleoDataToInclude = DataToInclude.ALL_DATA;
+//		includeUCERF3_Comp = false;
+//		generateReportPage(outputDir,  fss_fileNameWithPath,  startYear,  duration, 
+//				 histOpenIntYear,  probModChoice,  aperModelChoice,  
+//				renewalModelChoice,  averagingChoice, paleoMapping,  paleoDataToInclude,  
+//				referenceDir, titleString, infoString, includeUCERF3_Comp);
+		
+		
+		// NSHM 2027 Branch Averaged with Paleo DOLE only and on neighbors
+//		outputDir = rootDir+"BranchAvePaleoDOLE_Only_Neighors";
+//		titleString = "NSHM 2027 Branch Averaged TD Model With Paleo DOLE Only & On Neighbors";
+//		infoString = "This applies the preliminary branch-averaged model with Paleo DOLE data only (with the latter only influencing only neighboring fault sections).";
+//		probModChoice = FSS_ProbabilityModels.NSHM27_BRANCH_AVE;
+//		paleoMapping = PaleoMappingAlgorithm.NEIGHBORING_SECTS;
+//		paleoDataToInclude = DataToInclude.PALEO_ONLY;
+//		includeUCERF3_Comp = false;
+//		generateReportPage(outputDir,  fss_fileNameWithPath,  startYear,  duration, 
+//				 histOpenIntYear,  probModChoice,  aperModelChoice,  
+//				renewalModelChoice,  averagingChoice, paleoMapping,  paleoDataToInclude,  
+//				referenceDir, titleString, infoString, includeUCERF3_Comp);
+
+		// NSHM 2027 Branch Averaged with Paleo DOLE included on full parent sections
+//		outputDir = rootDir+"BranchAvePaleoDOLE_Only_FullParent";
+//		titleString = "NSHM 2027 Branch Averaged TD Model With Paleo DOLE Only & On Full Parent";
+//		infoString = "This applies the preliminary branch-averaged model with Paleo DOLE data only (with the latter influencing the full parent fault sections).";
+//		probModChoice = FSS_ProbabilityModels.NSHM27_BRANCH_AVE;
+//		paleoMapping = PaleoMappingAlgorithm.FULL_PARENT;
+//		paleoDataToInclude = DataToInclude.PALEO_ONLY;
+//		includeUCERF3_Comp = false;
+//		generateReportPage(outputDir,  fss_fileNameWithPath,  startYear,  duration, 
+//				 histOpenIntYear,  probModChoice,  aperModelChoice,  
+//				renewalModelChoice,  averagingChoice, paleoMapping,  paleoDataToInclude,  
+//				referenceDir, titleString, infoString, includeUCERF3_Comp);
+	
+		// BPT with single Aper = 0.4
+		outputDir = rootDir+"BPT_WithSingleAper0.4/";
+		probModChoice = FSS_ProbabilityModels.UCERF3_METHOD;
+		renewalModelChoice = RenewalModels.BPT;
+		aperModelChoice = AperiodicityModels.SINGLE_VALUED; // this has a default of 0.4; other values will be problematic
+		titleString = "BPT With Aperiodicity = 0.4 For All Sources";
+		infoString = "This is BPT with a constant aperiodicity (COV) of 0.4. ";
+		generateReportPage(outputDir, fss_fileNameWithPath,  startYear,  duration, 
+				 histOpenIntYear,  probModChoice,  aperModelChoice,  
+				renewalModelChoice,  averagingChoice, paleoMapping,  paleoDataToInclude,  
+				rootDir+"BPT_MiddleAperiodicity", titleString, infoString, includeUCERF3_Comp);
+
+		// BPT with slip-rate dependent aperiodicity test
+		outputDir = rootDir+"BPT_WithSlipRateDepAperiodicity/";
+		probModChoice = FSS_ProbabilityModels.UCERF3_METHOD;
+		renewalModelChoice = RenewalModels.BPT;
+		aperModelChoice = AperiodicityModels.NSHM27_SLIPRATE_TEST; // this has a default of 0.4; other values will be problematic
+		titleString = "BPT With Slip-Rate Dependent Aperiodicity Test";
+		infoString = "This is BPT with a slip-rate dependent aperiodicity. ";
+		generateReportPage(outputDir, fss_fileNameWithPath,  startYear,  duration, 
+				 histOpenIntYear,  probModChoice,  aperModelChoice,  
+				renewalModelChoice,  averagingChoice, paleoMapping,  paleoDataToInclude,  
+				rootDir+"BPT_MiddleAperiodicity", titleString, infoString, includeUCERF3_Comp);
+	
+		
+// ---- OLD STUFF BELOW ----------------------------------------------------
+		
+//		// Reference calculation
+//		outputDir = referenceDir;
+//		titleString = "Reference 2027 Time-Dependent Model";
+//		infoString = "This is the Reference (preferred) model. ";
+//		includeUCERF3_Comp=true;
+//		generateReportPage(outputDir,  fss_fileNameWithPath,  startYear,  duration, 
+//				 histOpenIntYear,  probModChoice,  aperModelChoice,  
+//				renewalModelChoice,  averagingChoice, paleoMapping,  paleoDataToInclude,  
+//				rootDir+"NSHM27_BranchAve/", titleString, infoString, includeUCERF3_Comp);
+
+		
+		
+//		// UCERF3 results 
 //		outputDir = rootDir+"ReferenceUCERF3/";
 //		titleString = "Reference UCERF3";
 //		infoString = "Reference parameters applied to UCERF3 branch-average fault system solution, and using UCERF3 DOLE data. ";
-//		generateReportPageUCERF3(outputDir, startYear, duration, 
+//	FOLLOWING METHOD IS OUT OF DATE; RECREATE OR GENERALIZE OTHER ONE
+		//		generateReportPageUCERF3(outputDir, startYear, duration, 
 //				histOpenIntYear, probModChoice, aperModelChoice,  
 //				renewalModelChoice, averagingChoice, titleString, infoString);	
 		
@@ -388,7 +621,7 @@ public class LongTermTD_2026_Analyses {
 //		outputDir = rootDir+"ReferencelModel_LowCOV/";
 //		titleString = "Reference, But With Low COV/Aperiodicity Branch";
 //		infoString = "This is the Reference (preferred) model, but with the low COV/aperiodicity branch. ";
-//		aperModelChoice = AperiodicityModels.NSHM26_LOW;
+//		aperModelChoice = AperiodicityModels.NSHM27_LOW;
 //		generateReportPage(outputDir,  fss_fileNameWithPath,  startYear,  duration, 
 //				 histOpenIntYear,  probModChoice,  aperModelChoice,  
 //				renewalModelChoice,  averagingChoice, paleoMapping,  paleoDataToInclude,  
@@ -398,7 +631,7 @@ public class LongTermTD_2026_Analyses {
 //		outputDir = rootDir+"ReferencelModel_HighCOV/";
 //		titleString = "Reference, But With High COV/Aperiodicity Branch";
 //		infoString = "This is the Reference (preferred) model, but with the high COV/aperiodicity branch. ";
-//		aperModelChoice = AperiodicityModels.NSHM26_HIGH;
+//		aperModelChoice = AperiodicityModels.NSHM27_HIGH;
 //		generateReportPage(outputDir,  fss_fileNameWithPath,  startYear,  duration, 
 //				 histOpenIntYear,  probModChoice,  aperModelChoice,  
 //				renewalModelChoice,  averagingChoice, paleoMapping,  paleoDataToInclude,  
@@ -455,7 +688,7 @@ public class LongTermTD_2026_Analyses {
 		
 
 //		outputDir = rootDir+"BPT_SlipRateDepAperiodicity/";
-//		aperModelChoice = AperiodicityModels.NSHM26_SLIPRATE_TEST;
+//		aperModelChoice = AperiodicityModels.NSHM27_SLIPRATE_TEST;
 //		titleString = "Reference, But With Slip-rate Dependent Aperiodicity";
 //		infoString = "This is the Reference model, but with slip-rate dependent aperiodicity (COV). ";
 //		generateReportPage(outputDir, fss_fileNameWithPath,  startYear,  duration, 
@@ -490,7 +723,7 @@ public class LongTermTD_2026_Analyses {
 	
 	public static void generateRenewalModelPlots(boolean extrapolate) {
 		
-		String rootDir = "/Users/field/Library/CloudStorage/OneDrive-DOI/Field_Other/ERF_Coordination/LongTermTD_2026/Analysis/RenewalModelTestPlots";
+		String rootDir = "/Users/field/Library/CloudStorage/OneDrive-DOI/Field_Other/ERF_Coordination/LongTermTD_2027/Analysis/RenewalModelTestPlots";
 		String dirName = "Precision"+EqkProbDistCalc.getPrecision();  // change the value in this class if desired.
 		if(extrapolate)
 			dirName += "_extrapolated";
@@ -620,7 +853,7 @@ public class LongTermTD_2026_Analyses {
 			}
 		}
 
-//		TimeDepFaultSystemSolutionERF erf = getFullPrefUS26_ERF();
+//		TimeDepFaultSystemSolutionERF erf = getFullPrefUS27_ERF();
 //		FaultSystemSolution fss = erf.getSolution();
 //		FaultSystemRupSet rupSet = fss.getRupSet();
 		
@@ -817,7 +1050,7 @@ public class LongTermTD_2026_Analyses {
 		
 		HashMap<Integer,Integer> wusFromU3_ID_Map = new HashMap<Integer,Integer>();
 
-		TimeDepFaultSystemSolutionERF erf = getFullPrefUS26_ERF();
+		TimeDepFaultSystemSolutionERF erf = getFullPrefUS27_ERF();
 		
 		FaultSystemSolution u3_sol=null;
 		try {
@@ -1031,8 +1264,18 @@ public class LongTermTD_2026_Analyses {
 		
 //		weibullSamplingOskinTests();
 		
-//		listParentSectionsThatContainStringInName("Peninsula",getFullPrefUS26_ERF());
+//		listParentSectionsThatContainStringInName("Peninsula",getFullPrefUS27_ERF());
 		
+		TimeDepFaultSystemSolutionERF erf = getFullPrefUS27_ERF();
+		for(int r=0;r<erf.getTotNumRups();r++) {
+			double mag = erf.getNthRupture(r).getMag();
+			if(mag>9.0) {
+				System.out.println(mag+"\t"+erf.getSource(erf.getSrcIndexForNthRup(r)).getName());
+//				System.out.println(erf.getNthRupture(r).getInfo());
+			}
+		}
+		System.exit(0);
+	
 		generatePreliminaryResults();
 		System.exit(0);
 		
@@ -1082,7 +1325,7 @@ public class LongTermTD_2026_Analyses {
 //		System.exit(0);
 		
 		
-		String rootDir = "/Users/field/Library/CloudStorage/OneDrive-DOI/Field_Other/ERF_Coordination/LongTermTD_2026/Analysis/Simulations/";
+		String rootDir = "/Users/field/Library/CloudStorage/OneDrive-DOI/Field_Other/ERF_Coordination/LongTermTD_2027/Analysis/Simulations/";
 		
 			
 			
@@ -1093,13 +1336,13 @@ public class LongTermTD_2026_Analyses {
 ////		double[] aperArray = {0.1,0.3,0.5,0.7,0.9};
 //		double[] aperArray = {0.2,0.4,0.6,0.8,1.0};
 //		for(double aper:aperArray) {
-//			TimeDepFaultSystemSolutionERF erf = getFullPrefUS26_ERF();
+//			TimeDepFaultSystemSolutionERF erf = getFullPrefUS27_ERF();
 //			UCERF3_ProbabilityModel u3ProbModel = (UCERF3_ProbabilityModel)erf.getProbabilityModel();
 //			u3ProbModel.setRenewalModelChoice(RenewalModels.BPT);
 //			u3ProbModel.setAperiodicityModelChoice(AperiodicityModels.SINGLE_VALUED);
 //			((AperiodicityModel.SingleValued)u3ProbModel.getAperiodicityModel()).setValue(aper);
 //			u3ProbModel.setCustomHistOpenIntervalModel(new HistoricalOpenInterval.SingleYear(erf.getTimeSpan().getStartTimeYear(), true));
-//			File parentDir = new File(rootDir+"bptSimulationsUS26_SingleAper/");
+//			File parentDir = new File(rootDir+"bptSimulationsUS27_SingleAper/");
 //			if(!parentDir.exists()) 
 //				parentDir.mkdir();
 //			int numYrs = 50000;
@@ -1109,9 +1352,9 @@ public class LongTermTD_2026_Analyses {
 //				long seed = 984087634+i*1000;
 //				String inputFile=null;
 //				if(i==1)
-//					inputFile = rootDir+"bptSimulationsUS26/Run1_50000yrs/outputTimesinceLast.txt";
+//					inputFile = rootDir+"bptSimulationsUS27/Run1_50000yrs/outputTimesinceLast.txt";
 //				else
-//					inputFile = rootDir+"bptSimulationsUS26_SingleAper/Run"+(i-1)+"_"+numYrs+"yrs"+aperString+"/outputTimesinceLast.txt"; // make simulations consecutive
+//					inputFile = rootDir+"bptSimulationsUS27_SingleAper/Run"+(i-1)+"_"+numYrs+"yrs"+aperString+"/outputTimesinceLast.txt"; // make simulations consecutive
 //
 //				LongTermTD_Simulator.simulateEvents(erf, inputFile,"outputTimesinceLast.txt", numYrs, outputDir, 
 //						seed, true, true, Double.NaN);
@@ -1121,11 +1364,11 @@ public class LongTermTD_2026_Analyses {
 		
 		
 //		// BPT SIMULTATIONS Slip-rate dependent aperiodicity 
-//		TimeDepFaultSystemSolutionERF erf = getFullPrefUS26_ERF();
+//		TimeDepFaultSystemSolutionERF erf = getFullPrefUS27_ERF();
 //		UCERF3_ProbabilityModel u3ProbModel = (UCERF3_ProbabilityModel)erf.getProbabilityModel();
-//		u3ProbModel.setAperiodicityModelChoice(AperiodicityModels.NSHM26_SLIPRATE_TEST);
+//		u3ProbModel.setAperiodicityModelChoice(AperiodicityModels.NSHM27_SLIPRATE_TEST);
 //		u3ProbModel.setCustomHistOpenIntervalModel(new HistoricalOpenInterval.SingleYear(erf.getTimeSpan().getStartTimeYear(), true));
-//		File parentDir = new File(rootDir+"BPT_SimulationsUS26_SlipRateDepAperTest/");
+//		File parentDir = new File(rootDir+"BPT_SimulationsUS27_SlipRateDepAperTest/");
 //		if(!parentDir.exists()) 
 //			parentDir.mkdir();
 //		int numYrs = 50000;
@@ -1134,9 +1377,9 @@ public class LongTermTD_2026_Analyses {
 //			long seed = 984087634+i*1000;
 //			String inputFile=null;
 //			if(i==1)
-//				inputFile = rootDir+"poissonSimulationsUS26/Run1_1000000yrs/outputTimesinceLast.txt";
+//				inputFile = rootDir+"poissonSimulationsUS27/Run1_1000000yrs/outputTimesinceLast.txt";
 //			else
-//				inputFile = rootDir+"BPT_SimulationsUS26_SlipRateDepAperTest/Run"+(i-1)+"_"+numYrs+"yrs"+"/outputTimesinceLast.txt"; // make simulations consecutive
+//				inputFile = rootDir+"BPT_SimulationsUS27_SlipRateDepAperTest/Run"+(i-1)+"_"+numYrs+"yrs"+"/outputTimesinceLast.txt"; // make simulations consecutive
 //
 //			LongTermTD_Simulator.simulateEvents(erf, inputFile,"outputTimesinceLast.txt", numYrs, outputDir, 
 //					seed, true, true, Double.NaN);
@@ -1145,12 +1388,12 @@ public class LongTermTD_2026_Analyses {
 
 		
 		// Weibull SIMULTATIONS Slip-rate dependent aperiodicity 
-//		TimeDepFaultSystemSolutionERF erf = getFullPrefUS26_ERF();
+//		TimeDepFaultSystemSolutionERF erf = getFullPrefUS27_ERF();
 //		UCERF3_ProbabilityModel u3ProbModel = (UCERF3_ProbabilityModel)erf.getProbabilityModel();
 //		u3ProbModel.setRenewalModelChoice(RenewalModels.WEIBULL);
-//		u3ProbModel.setAperiodicityModelChoice(AperiodicityModels.NSHM26_SLIPRATE_TEST);
+//		u3ProbModel.setAperiodicityModelChoice(AperiodicityModels.NSHM27_SLIPRATE_TEST);
 //		u3ProbModel.setCustomHistOpenIntervalModel(new HistoricalOpenInterval.SingleYear(erf.getTimeSpan().getStartTimeYear(), true));
-//		File parentDir = new File(rootDir+"WeibullSimulationsUS26_SlipRateDepAperTest/");
+//		File parentDir = new File(rootDir+"WeibullSimulationsUS27_SlipRateDepAperTest/");
 //		if(!parentDir.exists()) 
 //			parentDir.mkdir();
 //		int numYrs = 50000;
@@ -1161,7 +1404,7 @@ public class LongTermTD_2026_Analyses {
 //			if(i==1)
 //				setDOLE_asFractionOfRI(erf, 0.75);
 //			else
-//				inputFile = rootDir+"WeibullSimulationsUS26_SlipRateDepAperTest/Run"+(i-1)+"_"+numYrs+"yrs"+"/outputTimesinceLast.txt"; // make simulations consecutive
+//				inputFile = rootDir+"WeibullSimulationsUS27_SlipRateDepAperTest/Run"+(i-1)+"_"+numYrs+"yrs"+"/outputTimesinceLast.txt"; // make simulations consecutive
 //
 //			LongTermTD_Simulator.simulateEvents(erf, inputFile,"outputTimesinceLast.txt", numYrs, outputDir, 
 //					seed, true, true, Double.NaN);
@@ -1172,7 +1415,7 @@ public class LongTermTD_2026_Analyses {
 		
 
 //		// Weibull SIMULTATIONS fixed/single aperiodicity
-//		TimeDepFaultSystemSolutionERF erf = getFullPrefUS26_ERF();
+//		TimeDepFaultSystemSolutionERF erf = getFullPrefUS27_ERF();
 //		UCERF3_ProbabilityModel u3ProbModel = (UCERF3_ProbabilityModel)erf.getProbabilityModel();
 //		u3ProbModel.setRenewalModelChoice(RenewalModels.WEIBULL);
 //		//	double[] aperArray = {0.1,0.3,0.5,0.7,0.9};
@@ -1182,7 +1425,7 @@ public class LongTermTD_2026_Analyses {
 //			u3ProbModel.setAperiodicityModelChoice(AperiodicityModels.SINGLE_VALUED);
 //			((AperiodicityModel.SingleValued)u3ProbModel.getAperiodicityModel()).setValue(aper);
 //			u3ProbModel.setCustomHistOpenIntervalModel(new HistoricalOpenInterval.SingleYear(erf.getTimeSpan().getStartTimeYear(), true));
-//			File parentDir = new File(rootDir+"weibullSimulationsUS26_SingleAper/");
+//			File parentDir = new File(rootDir+"weibullSimulationsUS27_SingleAper/");
 //			if(!parentDir.exists()) 
 //				parentDir.mkdir();
 //			int numYrs = 50000;
@@ -1194,7 +1437,7 @@ public class LongTermTD_2026_Analyses {
 //				if(i==1)
 //					setDOLE_asFractionOfRI(erf, 0.75);
 //				else
-//					inputFile = rootDir+"weibullSimulationsUS26_SingleAper/Run"+(i-1)+"_"+numYrs+"yrs"+aperString+"/outputTimesinceLast.txt"; // make simulations consecutive
+//					inputFile = rootDir+"weibullSimulationsUS27_SingleAper/Run"+(i-1)+"_"+numYrs+"yrs"+aperString+"/outputTimesinceLast.txt"; // make simulations consecutive
 //
 //				LongTermTD_Simulator.simulateEvents(erf, inputFile,"outputTimesinceLast.txt", numYrs, outputDir, 
 //						seed, true, true, Double.NaN);
@@ -1205,17 +1448,17 @@ public class LongTermTD_2026_Analyses {
 //		}
 
 		
-//		// FULL US2026 Weibull SIMULTATIONS
-//		TimeDepFaultSystemSolutionERF erf = getFullPrefUS26_ERF();
+//		// FULL US2027 Weibull SIMULTATIONS
+//		TimeDepFaultSystemSolutionERF erf = getFullPrefUS27_ERF();
 //		UCERF3_ProbabilityModel u3ProbModel = (UCERF3_ProbabilityModel)erf.getProbabilityModel();
 //		String aperSuffix ="";
 //		// Alt Aper?
-////		u3ProbModel.setAperiodicityModelChoice(AperiodicityModels.NSHM26_LOW);
+////		u3ProbModel.setAperiodicityModelChoice(AperiodicityModels.NSHM27_LOW);
 ////		aperSuffix = "_aperLOW";
-////		u3ProbModel.setAperiodicityModelChoice(AperiodicityModels.NSHM26_HIGH);
+////		u3ProbModel.setAperiodicityModelChoice(AperiodicityModels.NSHM27_HIGH);
 ////		aperSuffix = "_aperHIGH";
 //		u3ProbModel.setRenewalModelChoice(RenewalModels.WEIBULL);		
-//		File parentDir = new File(rootDir+"weibullSimulationsUS26"+aperSuffix+"/");
+//		File parentDir = new File(rootDir+"weibullSimulationsUS27"+aperSuffix+"/");
 //		if(!parentDir.exists()) 
 //			parentDir.mkdir();
 //		int numYrs = 50000;
@@ -1225,9 +1468,9 @@ public class LongTermTD_2026_Analyses {
 //			String inputFile=null;
 //			if(i==1)
 //				setDOLE_asFractionOfRI(erf, 0.75);
-////				inputFile = rootDir+"poissonSimulationsUS26/Run1_1000000yrs/outputTimesinceLast.txt";
+////				inputFile = rootDir+"poissonSimulationsUS27/Run1_1000000yrs/outputTimesinceLast.txt";
 //			else
-//				inputFile = rootDir+"weibullSimulationsUS26/Run"+(i-1)+"_"+numYrs+"yrs/outputTimesinceLast.txt"; // make simulations consecutive
+//				inputFile = rootDir+"weibullSimulationsUS27/Run"+(i-1)+"_"+numYrs+"yrs/outputTimesinceLast.txt"; // make simulations consecutive
 ////			LongTermTD_Simulator.simulateEvents(erf, inputFile,"outputTimesinceLast.txt", numYrs, outputDir, 
 ////					seed, true, true, Double.NaN);
 ////
@@ -1236,17 +1479,17 @@ public class LongTermTD_2026_Analyses {
 //		}
 
 		
-		// FULL US2026 Lognormal SIMULTATIONS
-//		TimeDepFaultSystemSolutionERF erf = getFullPrefUS26_ERF();
+		// FULL US2027 Lognormal SIMULTATIONS
+//		TimeDepFaultSystemSolutionERF erf = getFullPrefUS27_ERF();
 //		UCERF3_ProbabilityModel u3ProbModel = (UCERF3_ProbabilityModel)erf.getProbabilityModel();
 //		String aperSuffix ="";
 //		// Alt Aper?
-////		u3ProbModel.setAperiodicityModelChoice(AperiodicityModels.NSHM26_LOW);
+////		u3ProbModel.setAperiodicityModelChoice(AperiodicityModels.NSHM27_LOW);
 ////		aperSuffix = "_aperLOW";
-//		u3ProbModel.setAperiodicityModelChoice(AperiodicityModels.NSHM26_HIGH);
+//		u3ProbModel.setAperiodicityModelChoice(AperiodicityModels.NSHM27_HIGH);
 //		aperSuffix = "_aperHIGH";
 //		u3ProbModel.setRenewalModelChoice(RenewalModels.LOGNORMAL);		
-//		File parentDir = new File(rootDir+"lognormalSimulationsUS26"+aperSuffix+"/");
+//		File parentDir = new File(rootDir+"lognormalSimulationsUS27"+aperSuffix+"/");
 //		if(!parentDir.exists()) 
 //			parentDir.mkdir();
 //		int numYrs = 50000;
@@ -1255,26 +1498,26 @@ public class LongTermTD_2026_Analyses {
 //			long seed = 984087634+i*1000;
 //			String inputFile=null;
 //			if(i==1)
-//				inputFile = rootDir+"poissonSimulationsUS26/Run1_1000000yrs/outputTimesinceLast.txt";
+//				inputFile = rootDir+"poissonSimulationsUS27/Run1_1000000yrs/outputTimesinceLast.txt";
 //			else
-//				inputFile = rootDir+"lognormalSimulationsUS26/Run"+(i-1)+"_"+numYrs+"yrs/outputTimesinceLast.txt"; // make simulations consecutive
+//				inputFile = rootDir+"lognormalSimulationsUS27/Run"+(i-1)+"_"+numYrs+"yrs/outputTimesinceLast.txt"; // make simulations consecutive
 ////			LongTermTD_Simulator.simulateEvents(erf, inputFile,"outputTimesinceLast.txt", numYrs, outputDir, 
 ////					seed, true, true, Double.NaN);
 //			LongTermTD_Simulator.generateSimulationPlots(erf, inputFile, numYrs, outputDir, true);	
 //		}
 
 		
-//		// FULL US2026 BPT SIMULTATIONS
-//		TimeDepFaultSystemSolutionERF erf = getFullPrefUS26_ERF();
+//		// FULL US2027 BPT SIMULTATIONS
+//		TimeDepFaultSystemSolutionERF erf = getFullPrefUS27_ERF();
 //		String aperSuffix ="";
 //		// Alt Aper?
 ////		UCERF3_ProbabilityModel u3ProbModel = (UCERF3_ProbabilityModel)erf.getProbabilityModel();
-////		u3ProbModel.setAperiodicityModelChoice(AperiodicityModels.NSHM26_LOW);
+////		u3ProbModel.setAperiodicityModelChoice(AperiodicityModels.NSHM27_LOW);
 ////		aperSuffix = "_aperLOW";
-////		u3ProbModel.setAperiodicityModelChoice(AperiodicityModels.NSHM26_HIGH);
+////		u3ProbModel.setAperiodicityModelChoice(AperiodicityModels.NSHM27_HIGH);
 ////		aperSuffix = "_aperHIGH";
 //		
-//		File parentDir = new File(rootDir+"bptSimulationsUS26"+aperSuffix+"/");
+//		File parentDir = new File(rootDir+"bptSimulationsUS27"+aperSuffix+"/");
 //		if(!parentDir.exists()) 
 //			parentDir.mkdir();
 //		int numYrs = 50000;
@@ -1283,22 +1526,22 @@ public class LongTermTD_2026_Analyses {
 //			long seed = 984087634+i*1000;
 //			String inputFile=null;
 //			if(i==1)
-//				inputFile = rootDir+"poissonSimulationsUS26/Run1_1000000yrs/outputTimesinceLast.txt";
+//				inputFile = rootDir+"poissonSimulationsUS27/Run1_1000000yrs/outputTimesinceLast.txt";
 //			else
-//				inputFile = rootDir+"bptSimulationsUS26/Run"+(i-1)+"_"+numYrs+"yrs/outputTimesinceLast.txt"; // make simulations consecutive
+//				inputFile = rootDir+"bptSimulationsUS27/Run"+(i-1)+"_"+numYrs+"yrs/outputTimesinceLast.txt"; // make simulations consecutive
 ////			LongTermTD_Simulator.simulateEvents(erf, inputFile,"outputTimesinceLast.txt", numYrs, outputDir, 
 ////					seed, true, true, Double.NaN);
 //			LongTermTD_Simulator.generateSimulationPlots(erf, inputFile, numYrs, outputDir, true);	
 //		}
 //		// do plots for multiple simulations
-////		LongTermTD_Simulator.sectPlotsForMultSimulations(rootDir+"bptSimulationsUS26/", "Run", "_"+numYrs+"yrs", 20, erf.getSolution(), numYrs);
-////		LongTermTD_Simulator.rupPlotsForMultSimulations(rootDir+"bptSimulationsUS26/", "Run", "_"+numYrs+"yrs", 20, erf, numYrs);
+////		LongTermTD_Simulator.sectPlotsForMultSimulations(rootDir+"bptSimulationsUS27/", "Run", "_"+numYrs+"yrs", 20, erf.getSolution(), numYrs);
+////		LongTermTD_Simulator.rupPlotsForMultSimulations(rootDir+"bptSimulationsUS27/", "Run", "_"+numYrs+"yrs", 20, erf, numYrs);
 	
 		
 		// POISSON SIMULATIONS
-//		TimeDepFaultSystemSolutionERF erf = getFullPrefUS26_ERF();
+//		TimeDepFaultSystemSolutionERF erf = getFullPrefUS27_ERF();
 //		erf.setProbabilityModelChoice(FSS_ProbabilityModels.POISSON);
-//		File parentDir = new File(rootDir+"poissonSimulationsUS26/");
+//		File parentDir = new File(rootDir+"poissonSimulationsUS27/");
 //		if(!parentDir.exists()) 
 //			parentDir.mkdir();
 //		int numYrs = 50000;
@@ -1309,22 +1552,22 @@ public class LongTermTD_2026_Analyses {
 //					seed, true, true, Double.NaN);
 //			LongTermTD_Simulator.generateSimulationPlots(erf, null, numYrs, outputDir, true);	
 //		}
-//		LongTermTD_Simulator.sectPlotsForMultSimulations(rootDir+"poissonSimulationsUS26/", "Run", "_"+numYrs+"yrs", 60, erf.getSolution(), numYrs);
-//		LongTermTD_Simulator.rupPlotsForMultSimulations(rootDir+"poissonSimulationsUS26/", "Run", "_"+numYrs+"yrs", 60, erf, (double)numYrs);
+//		LongTermTD_Simulator.sectPlotsForMultSimulations(rootDir+"poissonSimulationsUS27/", "Run", "_"+numYrs+"yrs", 60, erf.getSolution(), numYrs);
+//		LongTermTD_Simulator.rupPlotsForMultSimulations(rootDir+"poissonSimulationsUS27/", "Run", "_"+numYrs+"yrs", 60, erf, (double)numYrs);
 
 
 		
-//		// TEST OF BIAS CORR - FULL US2026 BPT SIMULTATIONS - Implemented at "// HACK RIGHT HERE" in simulator
-//		TimeDepFaultSystemSolutionERF erf = getFullPrefUS26_ERF();
+//		// TEST OF BIAS CORR - FULL US2027 BPT SIMULTATIONS - Implemented at "// HACK RIGHT HERE" in simulator
+//		TimeDepFaultSystemSolutionERF erf = getFullPrefUS27_ERF();
 //		String aperSuffix ="";
 //		// Alt Aper?
 ////		UCERF3_ProbabilityModel u3ProbModel = (UCERF3_ProbabilityModel)erf.getProbabilityModel();
-////		u3ProbModel.setAperiodicityModelChoice(AperiodicityModels.NSHM26_LOW);
+////		u3ProbModel.setAperiodicityModelChoice(AperiodicityModels.NSHM27_LOW);
 ////		aperSuffix = "_aperLOW";
-////		u3ProbModel.setAperiodicityModelChoice(AperiodicityModels.NSHM26_HIGH);
+////		u3ProbModel.setAperiodicityModelChoice(AperiodicityModels.NSHM27_HIGH);
 ////		aperSuffix = "_aperHIGH";
 //		
-//		File parentDir = new File(rootDir+"bptSimulationsUS26_BiasCorrTest"+aperSuffix+"/");
+//		File parentDir = new File(rootDir+"bptSimulationsUS27_BiasCorrTest"+aperSuffix+"/");
 //		if(!parentDir.exists()) 
 //			parentDir.mkdir();
 //		int numYrs = 50000;
@@ -1333,24 +1576,24 @@ public class LongTermTD_2026_Analyses {
 //			long seed = 984087634+i*1000;
 //			String inputFile=null;
 //			if(i==1)
-//				inputFile = rootDir+"poissonSimulationsUS26/Run1_1000000yrs/outputTimesinceLast.txt";
+//				inputFile = rootDir+"poissonSimulationsUS27/Run1_1000000yrs/outputTimesinceLast.txt";
 //			else
-//				inputFile = rootDir+"bptSimulationsUS26_BiasCorrTest/Run"+(i-1)+"_"+numYrs+"yrs/outputTimesinceLast.txt"; // make simulations consecutive
+//				inputFile = rootDir+"bptSimulationsUS27_BiasCorrTest/Run"+(i-1)+"_"+numYrs+"yrs/outputTimesinceLast.txt"; // make simulations consecutive
 //			LongTermTD_Simulator.simulateEvents(erf, inputFile,"outputTimesinceLast.txt", numYrs, outputDir, 
 //					seed, true, true, Double.NaN);
 //			LongTermTD_Simulator.generateSimulationPlots(erf, inputFile, numYrs, outputDir, true);	
 //		}
-//		LongTermTD_Simulator.sectPlotsForMultSimulations(rootDir+"bptSimulationsUS26_BiasCorrTest/", "Run", "_"+numYrs+"yrs", 10, erf.getSolution(), numYrs);
-//		LongTermTD_Simulator.rupPlotsForMultSimulations(rootDir+"bptSimulationsUS26_BiasCorrTest/", "Run", "_"+numYrs+"yrs", 10, erf, numYrs);
+//		LongTermTD_Simulator.sectPlotsForMultSimulations(rootDir+"bptSimulationsUS27_BiasCorrTest/", "Run", "_"+numYrs+"yrs", 10, erf.getSolution(), numYrs);
+//		LongTermTD_Simulator.rupPlotsForMultSimulations(rootDir+"bptSimulationsUS27_BiasCorrTest/", "Run", "_"+numYrs+"yrs", 10, erf, numYrs);
 
 		
-		// FULL US2026 BPT SIMULTATIONS WITH BPTAveragingTypeOptions.AVE_RI_AVE_TIME_SINCE
-//		TimeDepFaultSystemSolutionERF erf = getFullPrefUS26_ERF();
+		// FULL US2027 BPT SIMULTATIONS WITH BPTAveragingTypeOptions.AVE_RI_AVE_TIME_SINCE
+//		TimeDepFaultSystemSolutionERF erf = getFullPrefUS27_ERF();
 //		UCERF3_ProbabilityModel u3ProbModel = (UCERF3_ProbabilityModel)erf.getProbabilityModel();
 //		BPTAveragingTypeOptions choice = BPTAveragingTypeOptions.AVE_RI_AVE_TIME_SINCE;
 //		u3ProbModel.setAveragingTypeChoice(choice);
 //
-//		File parentDir = new File(rootDir+"bptSimulationsUS26_"+choice.getCompactLabel()+"/");
+//		File parentDir = new File(rootDir+"bptSimulationsUS27_"+choice.getCompactLabel()+"/");
 //		if(!parentDir.exists()) 
 //			parentDir.mkdir();
 //		int numYrs = 50000;
@@ -1359,9 +1602,9 @@ public class LongTermTD_2026_Analyses {
 //			long seed = 984087634+i*1000;
 //			String inputFile=null;
 //			if(i==1)
-//				inputFile = rootDir+"poissonSimulationsUS26/Run1_1000000yrs/outputTimesinceLast.txt";
+//				inputFile = rootDir+"poissonSimulationsUS27/Run1_1000000yrs/outputTimesinceLast.txt";
 //			else
-//				inputFile = rootDir+"bptSimulationsUS26/Run"+(i-1)+"_"+numYrs+"yrs/outputTimesinceLast.txt"; // make simulations consecutive
+//				inputFile = rootDir+"bptSimulationsUS27/Run"+(i-1)+"_"+numYrs+"yrs/outputTimesinceLast.txt"; // make simulations consecutive
 ////			LongTermTD_Simulator.simulateEvents(erf, inputFile,"outputTimesinceLast.txt", numYrs, outputDir, 
 ////					seed, true, true, Double.NaN);
 //			LongTermTD_Simulator.generateSimulationPlots(erf, inputFile, numYrs, outputDir, true);	
@@ -1369,8 +1612,8 @@ public class LongTermTD_2026_Analyses {
 
 		
 		
-//		// JAMIE TEST RUN, US2026 BPT SIMULTATIONS
-//		TimeDepFaultSystemSolutionERF erf = getFullPrefUS26_ERF();
+//		// JAMIE TEST RUN, US2027 BPT SIMULTATIONS
+//		TimeDepFaultSystemSolutionERF erf = getFullPrefUS27_ERF();
 //		
 //		// need to change averaging type
 //		UCERF3_ProbabilityModel u3ProbModel = (UCERF3_ProbabilityModel)erf.getProbabilityModel();
@@ -1384,7 +1627,7 @@ public class LongTermTD_2026_Analyses {
 //		((UCERF3_ProbabilityModel)probModel).tempSetAveCondRecurIntervalForFltSysRups(aveCondRecurIntervalForFltSysRupsAlt);
 //
 //		String aperSuffix ="";
-//		File parentDir = new File(rootDir+"Jamie_Test_bptSimulationsUS26"+aperSuffix+"/");
+//		File parentDir = new File(rootDir+"Jamie_Test_bptSimulationsUS27"+aperSuffix+"/");
 //		if(!parentDir.exists()) 
 //			parentDir.mkdir();
 //		int numYrs = 50000;
@@ -1393,9 +1636,9 @@ public class LongTermTD_2026_Analyses {
 //			long seed = 984087634+i*1000;
 //			String inputFile=null;
 //			if(i==1)
-//				inputFile = rootDir+"bptSimulationsUS26/Run1"+"_"+numYrs+"yrs/outputTimesinceLast.txt"; 
+//				inputFile = rootDir+"bptSimulationsUS27/Run1"+"_"+numYrs+"yrs/outputTimesinceLast.txt"; 
 //			else
-//				inputFile = rootDir+"bptSimulationsUS26/Run"+(i-1)+"_"+numYrs+"yrs/outputTimesinceLast.txt"; // make simulations consecutive
+//				inputFile = rootDir+"bptSimulationsUS27/Run"+(i-1)+"_"+numYrs+"yrs/outputTimesinceLast.txt"; // make simulations consecutive
 //			LongTermTD_Simulator.simulateEvents(erf, inputFile,"outputTimesinceLast.txt", numYrs, outputDir, 
 //					seed, true, true, Double.NaN);
 //			LongTermTD_Simulator.generateSimulationPlots(erf, inputFile, numYrs, outputDir, true);	
@@ -1407,7 +1650,7 @@ public class LongTermTD_2026_Analyses {
 //		System.exit(0);
 	
 //		// temp junk
-//		TimeDepFaultSystemSolutionERF erf2 = getFullPrefUS26_ERF();
+//		TimeDepFaultSystemSolutionERF erf2 = getFullPrefUS27_ERF();
 //		HashMap<Integer,String> nameFromID_Map = new HashMap<Integer,String>();
 //		for (FaultSection sect:erf2.getSolution().getRupSet().getFaultSectionDataList()) {
 //			if(!nameFromID_Map.keySet().contains(sect.getParentSectionId())) {

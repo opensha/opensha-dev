@@ -1,0 +1,190 @@
+package scratch.ned.longTermTD2027;
+
+import java.util.EnumSet;
+
+import org.opensha.commons.data.WeightedList;
+import org.opensha.commons.param.ParamLinker;
+import org.opensha.commons.param.Parameter;
+import org.opensha.commons.param.ParameterList;
+import org.opensha.commons.param.impl.EnumParameterizedModelarameter;
+import org.opensha.sha.earthquake.faultSysSolution.FaultSystemSolution;
+import org.opensha.sha.earthquake.faultSysSolution.erf.td.AperiodicityModels;
+import org.opensha.sha.earthquake.faultSysSolution.erf.td.FSS_ProbabilityModel;
+import org.opensha.sha.earthquake.faultSysSolution.erf.td.HistoricalOpenIntervals;
+import org.opensha.sha.earthquake.faultSysSolution.erf.td.RenewalModels;
+import org.opensha.sha.earthquake.faultSysSolution.erf.td.UCERF3_ProbabilityModel;
+import org.opensha.sha.earthquake.faultSysSolution.erf.td.WG02_ProbabilityModel;
+import org.opensha.sha.earthquake.param.BPTAveragingTypeOptions;
+
+import com.google.common.base.Preconditions;
+
+/**
+ * This is a duplicate of the FSS_ProbabilityModels Enum so I can add other test cases.  Move the final
+ * ones we want to keep to FSS_ProbabilityModels when done.
+ */
+public enum TestProbabilityModels {
+
+	POISSON("Poisson") {
+		@Override
+		public FSS_ProbabilityModel.Poisson getProbabilityModel(FaultSystemSolution sol, double[] longTermPartRateForSectArray) {
+			return new FSS_ProbabilityModel.Poisson(sol);
+		}
+	},
+	/**
+	 * Flexible option using the UCERF3 methodology and supporting all sub-model parameters and implementations
+	 */
+	UCERF3_METHOD("UCERF3-TD Methodology") {
+		@Override
+		public UCERF3_ProbabilityModel getProbabilityModel(FaultSystemSolution sol, double[] longTermPartRateForSectArray) {
+			return new UCERF3_ProbabilityModel(
+					sol, longTermPartRateForSectArray,
+					AperiodicityModels.NSHM27_MIDDLE,
+					RenewalModels.BPT,
+					HistoricalOpenIntervals.UCERF3,
+					BPTAveragingTypeOptions.AVE_RI_AVE_NORM_TIME_SINCE);
+		}
+	},
+	/**
+	 * NSHM (2027) TD implementation with options defaulting and restricted to those supported by the (to be) published
+	 * model.
+	 */
+	NSHM27("NSHM (2027)") {
+		@Override
+		public UCERF3_ProbabilityModel getProbabilityModel(FaultSystemSolution sol, double[] longTermPartRateForSectArray) {
+			return new UCERF3_ProbabilityModel(
+					sol, longTermPartRateForSectArray,
+					// initialize with NSHM26 middle aperiodicity and allow only the NSHM26 aperiodicity branches
+					AperiodicityModels.NSHM27_MIDDLE, AperiodicityModels.NSHM26_MODELS,
+					// initialize with BPT but allow any of the renewal model distributions
+					RenewalModels.BPT, EnumSet.allOf(RenewalModels.class),
+					// allow all for now until we create our own
+					HistoricalOpenIntervals.UCERF3, EnumSet.allOf(HistoricalOpenIntervals.class),
+					// U3 default, only bother showing that for now
+					BPTAveragingTypeOptions.AVE_RI_AVE_NORM_TIME_SINCE, EnumSet.of(BPTAveragingTypeOptions.AVE_RI_AVE_NORM_TIME_SINCE));
+		}
+	},
+	/**
+	 * UCERF3-TD (2014) implementation with options defaulting and restricted to those supported by published model
+	 */
+	UCERF3_BPT("UCERF3-TD BPT (2014)") {
+		@Override
+		public UCERF3_ProbabilityModel getProbabilityModel(FaultSystemSolution sol, double[] longTermPartRateForSectArray) {
+			return new UCERF3_ProbabilityModel(
+					sol, longTermPartRateForSectArray,
+					// initialize with U3 middle aperiodicity and allow only the 3 UCERF3 aperiodicity branches
+					AperiodicityModels.UCERF3_MIDDLE, AperiodicityModels.UCERF3_MODELS,
+					// allow only BPT
+					RenewalModels.BPT, EnumSet.of(RenewalModels.BPT),
+					// allow U3 and no hist open interval
+					HistoricalOpenIntervals.UCERF3, HistoricalOpenIntervals.UCERF3_MODELS,
+					// U3 default, allow all
+					BPTAveragingTypeOptions.AVE_RI_AVE_NORM_TIME_SINCE, EnumSet.allOf(BPTAveragingTypeOptions.class));
+		}
+	},
+	/**
+	 * UCERF3-TD (2014) preferred blend, no adjustable parameters
+	 */
+	UCERF3_PREF_BLEND("UCERF3-TD Preferred Blend (2014)") {
+		@Override
+		public FSS_ProbabilityModel getProbabilityModel(FaultSystemSolution sol, double[] longTermPartRateForSectArray) {
+			WeightedList<FSS_ProbabilityModel> models = new WeightedList<>(4);
+			
+			FSS_ProbabilityModel u3Low = UCERF3_BPT.getProbabilityModel(sol, longTermPartRateForSectArray);
+			setAperiodicityModel(u3Low, AperiodicityModels.UCERF3_LOW);
+			// we'll show these parameters in the GUI, and the ParamLinker calls below will make sure any changes are
+			// propagated to each other U3 model. Keep all but the aperiodicity parameter
+			ParameterList params = new ParameterList();
+			for (Parameter<?> param : u3Low.getAdjustableParameters())
+				if (!param.getName().equals(AperiodicityModels.PARAM_NAME))
+					params.addParameter(param);
+			models.add(u3Low, 0.1);
+			
+			FSS_ProbabilityModel u3Middle = UCERF3_BPT.getProbabilityModel(sol, longTermPartRateForSectArray);
+			setAperiodicityModel(u3Middle, AperiodicityModels.UCERF3_MIDDLE);
+			// link parameters in the reference model to this one 
+			for (Parameter<?> param : params)
+				ParamLinker.link(param, u3Middle.getAdjustableParameters().getParameter(param.getName()));
+			models.add(u3Middle, 0.4);
+			
+			FSS_ProbabilityModel u3High = UCERF3_BPT.getProbabilityModel(sol, longTermPartRateForSectArray);
+			setAperiodicityModel(u3High, AperiodicityModels.UCERF3_HIGH);
+			// link parameters in the reference model to this one 
+			for (Parameter<?> param : params)
+				ParamLinker.link(param, u3High.getAdjustableParameters().getParameter(param.getName()));
+			models.add(u3High, 0.3);
+			
+			models.add(new FSS_ProbabilityModel.Poisson(sol), 0.2);
+			
+			return new FSS_ProbabilityModel.WeightedCombination(this.toString(), models, params);
+		}
+		
+		private void setAperiodicityModel(FSS_ProbabilityModel probModel, AperiodicityModels model) {
+			Preconditions.checkState(probModel instanceof UCERF3_ProbabilityModel);
+			((UCERF3_ProbabilityModel)probModel).setAperiodicityModelChoice(model);
+		}
+	},
+	/**
+	 * no adjustable parameters???
+	 */
+	NSHM27_BRANCH_AVE_BPT("NSHM27-TD Branch Average BPT") {
+		@Override
+		public FSS_ProbabilityModel getProbabilityModel(FaultSystemSolution sol, double[] longTermPartRateForSectArray) {
+			WeightedList<FSS_ProbabilityModel> models = new WeightedList<>(4);
+			
+			FSS_ProbabilityModel u3Low = NSHM27.getProbabilityModel(sol, longTermPartRateForSectArray);
+			setAperiodicityModel(u3Low, AperiodicityModels.NSHM27_LOW, RenewalModels.BPT);
+			// we'll show these parameters in the GUI, and the ParamLinker calls below will make sure any changes are
+			// propagated to each other U3 model. Keep all but the aperiodicity parameter
+			ParameterList params = new ParameterList();
+			for (Parameter<?> param : u3Low.getAdjustableParameters())
+				if (!param.getName().equals(AperiodicityModels.PARAM_NAME))
+					params.addParameter(param);
+			models.add(u3Low, 0.1);
+			
+			FSS_ProbabilityModel u3Middle = NSHM27.getProbabilityModel(sol, longTermPartRateForSectArray);
+			setAperiodicityModel(u3Middle, AperiodicityModels.NSHM27_MIDDLE, RenewalModels.BPT);
+			// link parameters in the reference model to this one 
+			for (Parameter<?> param : params)
+				ParamLinker.link(param, u3Middle.getAdjustableParameters().getParameter(param.getName()));
+			models.add(u3Middle, 0.4);
+			
+			FSS_ProbabilityModel u3High = NSHM27.getProbabilityModel(sol, longTermPartRateForSectArray);
+			setAperiodicityModel(u3High, AperiodicityModels.NSHM27_HIGH, RenewalModels.BPT);
+			// link parameters in the reference model to this one 
+			for (Parameter<?> param : params)
+				ParamLinker.link(param, u3High.getAdjustableParameters().getParameter(param.getName()));
+			models.add(u3High, 0.3);
+			
+			models.add(new FSS_ProbabilityModel.Poisson(sol), 0.2);
+			
+			return new FSS_ProbabilityModel.WeightedCombination(this.toString(), models, params);
+		}
+		
+		private void setAperiodicityModel(FSS_ProbabilityModel probModel, AperiodicityModels model, RenewalModels renewalChoice) {
+			Preconditions.checkState(probModel instanceof UCERF3_ProbabilityModel);
+			((UCERF3_ProbabilityModel)probModel).setAperiodicityModelChoice(model);
+			((UCERF3_ProbabilityModel)probModel).setRenewalModelChoice(renewalChoice);
+		}
+	},
+	WG02("WGCEP (2002)") {
+		@Override
+		public WG02_ProbabilityModel getProbabilityModel(FaultSystemSolution sol, double[] longTermPartRateForSectArray) {
+			return new WG02_ProbabilityModel(sol, longTermPartRateForSectArray,
+					// this only supports single-valued models (or section-dependent, but we don't have any of those yet)
+					AperiodicityModels.SINGLE_VALUED, AperiodicityModels.SINGLE_VALUED_MODELS);
+		}
+	};
+	
+	private String name;
+
+	private TestProbabilityModels(String name) {
+		this.name = name;
+	}
+	
+	@Override
+	public String toString() {
+		return name;
+	}
+	
+	public abstract FSS_ProbabilityModel getProbabilityModel(FaultSystemSolution sol, double[] longTermPartRateForSectArray);
+}
