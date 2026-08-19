@@ -140,8 +140,8 @@ public class HardcodedInversionFactoryRunner {
 //		dirName += "-nshm23-full_sys-prev_weights";
 //		NSHM23_PaleoDataLoader.INCLUDE_U3_PALEO_SLIP = false;
 //		dirName += "-no_paleo_slip";
-//		NSHM23_InvConfigFactory factory = new NSHM23_InvConfigFactory();
-//		dirName += "-nshm23";
+		NSHM23_InvConfigFactory factory = new NSHM23_InvConfigFactory();
+		dirName += "-nshm23";
 //		NSHM23_InvConfigFactory factory = new NSHM23_InvConfigFactory.PaleoSlipInequality();
 //		dirName += "-nshm23-paleo_slip_ineq";
 //		NSHM23_InvConfigFactory factory = new NSHM23_InvConfigFactory.ForceNewPaleo();
@@ -159,8 +159,8 @@ public class HardcodedInversionFactoryRunner {
 //		dirName += "-prvi25-limit_below_obs";
 //		PRVI25_InvConfigFactory.SUB_SECT_DDW_FRACT = 0.25; dirName += "-quarter_len_sub_sects";
 		
-		NSHM27_InvConfigFactory factory = new NSHM27_InvConfigFactory();
-		dirName += "-nshm26";
+//		NSHM27_InvConfigFactory factory = new NSHM27_InvConfigFactory();
+//		dirName += "-nshm26";
 		
 		factory.setCacheDir(new File("/home/kevin/OpenSHA/nshm23/rup_sets/cache"));
 		
@@ -171,7 +171,11 @@ public class HardcodedInversionFactoryRunner {
 //		LogicTreeBranch<LogicTreeNode> branch = NSHM23_U3_HybridLogicTreeBranch.DEFAULT; dirName += "-u3";
 //		LogicTreeBranch<LogicTreeNode> branch = NSHM23_LogicTreeBranch.DEFAULT_ON_FAULT;
 //		LogicTreeBranch<LogicTreeNode> branch = PRVI25_LogicTreeBranch.DEFAULT_CRUSTAL_ON_FAULT;
-//		branch = branch.copy();
+		LogicTreeBranch<LogicTreeNode> branch = NSHM23_LogicTreeBranch.AVERAGE_ON_FAULT;
+		branch = branch.copy();
+		
+		NSHM23_InvConfigFactory.SMOOTH_PALEO_VISIBLE = true;
+		dirName += "-paleoVisibleSmooth";
 
 //		LogicTreeBranch<LogicTreeNode> branch = new LogicTreeBranch<>(PRVI25_LogicTree.levelsCrustalCombined);
 //		for (LogicTreeNode node : PRVI25_LogicTree.DEFAULT_CRUSTAL_ON_FAULT)
@@ -187,35 +191,35 @@ public class HardcodedInversionFactoryRunner {
 //			branch.setValue(node);
 //		writeGridProv = true;
 
-//		LogicTreeBranch<LogicTreeNode> branch = NSHM27_LogicTree.buildDefault(
-//				NSHM27_SeismicityRegions.GNMI, TectonicRegionType.SUBDUCTION_INTERFACE, false);
 ////		LogicTreeBranch<LogicTreeNode> branch = NSHM27_LogicTree.buildDefault(
-//// 				NSHM27_SeismicityRegions.GNMI, TectonicRegionType.ACTIVE_SHALLOW, false);
-//		dirName += "-gnmi";
-		NSHM27_LogicTree.INTERFACE_B_HINGED_WEIGHT = 1d;
-		LogicTreeBranch<LogicTreeNode> branch = NSHM27_LogicTree.buildDefault(
-				NSHM27_SeismicityRegions.AMSAM, TectonicRegionType.SUBDUCTION_INTERFACE, false);
-		dirName += "-amsam";
-
-		if (branch.hasValue(NSHM27_InterfaceFaultModels.class) ) {
-			branch.setValue(NSHM27_InterfaceObsSeisDMAdjustment.NONE);
-//			branch.setValue(NSHM27_InterfaceObsSeisDMAdjustment.AVERAGE);
-//			branch.setValue(NSHM27_InterfaceObsSeisDMAdjustment.SECTION_SPECIFIC);
-//			branch.setValue(NSHM27_InterfaceObsSeisDMAdjustment.EXTRAPOLATE);
-			branch.setValue(NSHM27_InterfaceMinSubSects.TWO);
-//			branch.setValue(NSHM27_InterfaceDeformationModels.Aggregated.LOW_COUPLING);
-			branch.setValue(NSHM27_InterfaceDeformationModels.Aggregated.PREF_COUPLING);
-//			branch.setValue(NSHM27_InterfaceDeformationModels.Aggregated.HIGH_COUPLING);
-//			branch.setValue(NSHM27_InterfaceCouplingDepthModels.DOUBLE_TAPER);
-			branch.setValue(NSHM27_InterfaceCouplingDepthModels.AVERAGE);
-		} else {
-			branch.setValue(NSHM27_CrustalDeformationModels.Aggregated.AVERAGE);
-		}
-//		branch.setValue(NSHM27_SeisRateModelBranch.AVERAGE);
-		branch.setValue(NSHM27_SeisRateModelBranch.PREFFERRED);
-		
-//		writeGridProv = false;
-		writeGridProv = true;
+////				NSHM27_SeismicityRegions.GNMI, TectonicRegionType.SUBDUCTION_INTERFACE, false);
+//////		LogicTreeBranch<LogicTreeNode> branch = NSHM27_LogicTree.buildDefault(
+////// 				NSHM27_SeismicityRegions.GNMI, TectonicRegionType.ACTIVE_SHALLOW, false);
+////		dirName += "-gnmi";
+//		NSHM27_LogicTree.INTERFACE_B_HINGED_WEIGHT = 1d;
+//		LogicTreeBranch<LogicTreeNode> branch = NSHM27_LogicTree.buildDefault(
+//				NSHM27_SeismicityRegions.AMSAM, TectonicRegionType.SUBDUCTION_INTERFACE, false);
+//		dirName += "-amsam";
+//
+//		if (branch.hasValue(NSHM27_InterfaceFaultModels.class) ) {
+//			branch.setValue(NSHM27_InterfaceObsSeisDMAdjustment.NONE);
+////			branch.setValue(NSHM27_InterfaceObsSeisDMAdjustment.AVERAGE);
+////			branch.setValue(NSHM27_InterfaceObsSeisDMAdjustment.SECTION_SPECIFIC);
+////			branch.setValue(NSHM27_InterfaceObsSeisDMAdjustment.EXTRAPOLATE);
+//			branch.setValue(NSHM27_InterfaceMinSubSects.TWO);
+////			branch.setValue(NSHM27_InterfaceDeformationModels.Aggregated.LOW_COUPLING);
+//			branch.setValue(NSHM27_InterfaceDeformationModels.Aggregated.PREF_COUPLING);
+////			branch.setValue(NSHM27_InterfaceDeformationModels.Aggregated.HIGH_COUPLING);
+////			branch.setValue(NSHM27_InterfaceCouplingDepthModels.DOUBLE_TAPER);
+//			branch.setValue(NSHM27_InterfaceCouplingDepthModels.AVERAGE);
+//		} else {
+//			branch.setValue(NSHM27_CrustalDeformationModels.Aggregated.AVERAGE);
+//		}
+////		branch.setValue(NSHM27_SeisRateModelBranch.AVERAGE);
+//		branch.setValue(NSHM27_SeisRateModelBranch.PREFFERRED);
+//		
+////		writeGridProv = false;
+//		writeGridProv = true;
 		
 //		double b = 1d;
 ////		double b = 0.5d;

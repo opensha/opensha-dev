@@ -8,8 +8,10 @@ import org.apache.commons.statistics.distribution.UniformContinuousDistribution;
 import org.opensha.commons.data.function.EvenlyDiscretizedFunc;
 import org.opensha.commons.logicTree.LogicTreeBranch;
 import org.opensha.commons.logicTree.LogicTreeNode;
+import org.opensha.commons.util.modules.AverageableModule.AveragingAccumulator;
 import org.opensha.sha.earthquake.faultSysSolution.FaultSystemRupSet;
 import org.opensha.sha.earthquake.faultSysSolution.inversion.constraints.impl.UncertainDataConstraint.SectMappedUncertainDataConstraint;
+import org.opensha.sha.earthquake.faultSysSolution.modules.InversionTargetMFDs;
 import org.opensha.sha.earthquake.faultSysSolution.modules.NamedFaults;
 import org.opensha.sha.earthquake.faultSysSolution.modules.PaleoseismicConstraintData;
 import org.opensha.sha.earthquake.faultSysSolution.modules.PosteriorSectionBValueDistributions;
@@ -24,6 +26,7 @@ import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_LogicT
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_PaleoUncertainties;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_ScalingRelationships;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_SegmentationModels;
+import org.opensha.sha.earthquake.rupForecastImpl.nshm23.targetMFDs.SupraSeisBValInversionTargetMFDs;
 import org.opensha.sha.faultSurface.FaultSection;
 
 import com.google.common.base.Preconditions;
@@ -35,7 +38,8 @@ public class PaleoBValueEstimatorRunner {
 		Preconditions.checkState(mainDir.exists() || mainDir.mkdir());
 		LogicTreeBranch<LogicTreeNode> branch = NSHM23_LogicTreeBranch.DEFAULT_ON_FAULT.copy();
 		branch.setValue(NSHM23_DeformationModels.AVERAGE);
-//		branch.setValue(NSHM23_SegmentationModels.CLASSIC);
+		branch.setValue(NSHM23_ScalingRelationships.AVERAGE);
+		branch.setValue(NSHM23_SegmentationModels.AVERAGE);
 		System.out.println(branch);
 		
 		NSHM23_InvConfigFactory factory = new NSHM23_InvConfigFactory();
@@ -68,10 +72,10 @@ public class PaleoBValueEstimatorRunner {
 //		estimator.setLikelihoodInRecurrence(true);
 //		String dirName = "students_t_5_ri";
 		
-//		estimator.setStudentsTLogLikelihood(5);
-//		estimator.setLikelihoodInRecurrence(true);
-//		estimator.setPosteriorCombination(PosteriorCombination.WEIGHTED_SITE_DISTRIBUTIONS);
-//		String dirName = "students_t_5_ri_dist_avg";
+		estimator.setStudentsTLogLikelihood(5);
+		estimator.setLikelihoodInRecurrence(true);
+		estimator.setPosteriorCombination(PosteriorCombination.WEIGHTED_SITE_DISTRIBUTIONS);
+		String dirName = "students_t_5_ri_dist_avg";
 		
 //		estimator.setStudentsTLogLikelihood(4);
 //		estimator.setLikelihoodInRecurrence(false);
@@ -92,20 +96,18 @@ public class PaleoBValueEstimatorRunner {
 //		estimator.setPosteriorCombination(PosteriorCombination.WEIGHTED_SITE_DISTRIBUTIONS);
 //		String dirName = "gaussian_ri_dist_avg";
 		
-		estimator.setStudentsTLogLikelihood(5);
-		estimator.setLikelihoodInRecurrence(true);
-		branch.setValue(NSHM23_DeformationModels.EVANS);
-		branch.setValue(NSHM23_PaleoUncertainties.UNDER_FIT);
-		branch.setValue(NSHM23_ScalingRelationships.WIDTH_LIMITED_CSD);
-		branch.setValue(NSHM23_SegmentationModels.CLASSIC);
-		String dirName = "quick_test";
+//		estimator.setStudentsTLogLikelihood(5);
+//		estimator.setLikelihoodInRecurrence(true);
+//		branch.setValue(NSHM23_DeformationModels.EVANS);
+//		branch.setValue(NSHM23_PaleoUncertainties.UNDER_FIT);
+//		branch.setValue(NSHM23_ScalingRelationships.WIDTH_LIMITED_CSD);
+//		branch.setValue(NSHM23_SegmentationModels.CLASSIC);
+//		String dirName = "quick_test";
 		
 		File outputDir = new File(mainDir, dirName+distAdd);
 		Preconditions.checkState(outputDir.exists() || outputDir.mkdir());
 		
-		estimator.setTargetMFDCalc((I)->{
-			return NSHM23_InvConfigFactory.getConstraintBuilder(I.rupSet(), I.branch()).getRateOnlyTargetMFDs();
-		});
+		estimator.setTargetMFDCalc(NSHM23_InvConfigFactory.getMFDCalcFunc());
 		
 		FaultSystemRupSet rs = factory.buildRuptureSet(branch, FaultSysTools.defaultNumThreads());
 		
