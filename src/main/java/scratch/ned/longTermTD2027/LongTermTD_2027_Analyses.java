@@ -1262,19 +1262,13 @@ public class LongTermTD_2027_Analyses {
 
 	public static void main(String[] args) {
 		
+		FaultSystemSolution test = FSS_Fetcher2023.getBranchAverageFull_FSS("/Users/field/Desktop/testFSS");
+		System.exit(0);
+
 //		weibullSamplingOskinTests();
 		
 //		listParentSectionsThatContainStringInName("Peninsula",getFullPrefUS27_ERF());
 		
-		TimeDepFaultSystemSolutionERF erf = getFullPrefUS27_ERF();
-		for(int r=0;r<erf.getTotNumRups();r++) {
-			double mag = erf.getNthRupture(r).getMag();
-			if(mag>9.0) {
-				System.out.println(mag+"\t"+erf.getSource(erf.getSrcIndexForNthRup(r)).getName());
-//				System.out.println(erf.getNthRupture(r).getInfo());
-			}
-		}
-		System.exit(0);
 	
 		generatePreliminaryResults();
 		System.exit(0);

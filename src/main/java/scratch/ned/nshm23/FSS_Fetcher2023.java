@@ -311,6 +311,19 @@ public class FSS_Fetcher2023 {
 		}
 		return wusSol;
 	}
+	
+	/**
+	 * Don't use this for time-dependent calculations (alternative fault representations included 
+	 * screw up recurrence intervals).
+	 * @param fullBranchAve_FSS_fileName
+	 * @return
+	 */
+	public static FaultSystemSolution getBranchAverageFull_FSS(String fullBranchAve_FSS_fileName) {
+		return getFull_FSS(fullBranchAve_FSS_fileName, Cascadia_FSS_creator.FaultModelEnum.ALL,
+				CEUS_FSS_creator.FaultModelEnum.BOTH, AK_FSS_creator.DeformationModelEnum.BOTH,
+				AleutianArc_FSS_Creator.FaultModelEnum.ALL);
+	}
+
 
 	
 	public static FaultSystemSolution getPreferredFull_FSS(String fullPref_FSS_fileName) {
