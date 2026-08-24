@@ -27,6 +27,7 @@ import org.opensha.sha.earthquake.faultSysSolution.inversion.constraints.impl.Se
 import org.opensha.sha.earthquake.faultSysSolution.inversion.constraints.impl.SlipRateInversionConstraint;
 import org.opensha.sha.earthquake.faultSysSolution.modules.GridSourceProvider;
 import org.opensha.sha.earthquake.faultSysSolution.modules.InversionTargetMFDs;
+import org.opensha.sha.earthquake.faultSysSolution.modules.PosteriorSectionBValueDistributions;
 import org.opensha.sha.earthquake.faultSysSolution.reports.ReportPageGen;
 import org.opensha.sha.earthquake.faultSysSolution.reports.ReportPageGen.PlotLevel;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.NSHM23_ConstraintBuilder;
@@ -43,6 +44,7 @@ import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_Single
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_U3_HybridLogicTreeBranch;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.RupturePlausibilityModels;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.SectionSupraSeisBValues;
+import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.SectionSupraSeisBValues.DistributionAverageLevel;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.SegmentationModelBranchNode;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.SupraSeisBValues;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.U3_UncertAddDeformationModels;
@@ -174,7 +176,29 @@ public class HardcodedInversionFactoryRunner {
 		LogicTreeBranch<LogicTreeNode> branch = NSHM23_LogicTreeBranch.AVERAGE_ON_FAULT;
 		branch = branch.copy();
 		
-		NSHM23_InvConfigFactory.SMOOTH_PALEO_VISIBLE = true;
+		List<LogicTreeLevel<? extends LogicTreeNode>> levels = new ArrayList<>(branch.size());
+		List<LogicTreeNode> values = new ArrayList<>(branch.size());
+		for (int l=0; l<branch.size(); l++) {
+			LogicTreeLevel<? extends LogicTreeNode> level = branch.getLevel(l);
+			if (!SectionSupraSeisBValues.class.isAssignableFrom(level.getType())) {
+				levels.add(level);
+				values.add(branch.getValue(l));
+			}
+		}
+		
+//		dirName += "-bPosterior";
+//		levels.add(new PosteriorSectionBValueDistributions.AverageLevel(
+//				"Section posterior average b-value", "Posterior-b"));
+//		values.add(levels.getLast().getNodes().getFirst());
+		
+		dirName += "-bUniform";
+		levels.add(new SectionSupraSeisBValues.DistributionAverageLevel(
+				"Section average b-value", "Avg. b-value", NSHM23_InvConfigFactory.SUPRA_B_PRIOR_DIST));
+		values.add(levels.getLast().getNodes().getFirst());
+		
+		branch = new LogicTreeBranch<>(levels, values);
+		
+		factory.setSmoothPaleoVisible(true);
 		dirName += "-paleoVisibleSmooth";
 
 //		LogicTreeBranch<LogicTreeNode> branch = new LogicTreeBranch<>(PRVI25_LogicTree.levelsCrustalCombined);

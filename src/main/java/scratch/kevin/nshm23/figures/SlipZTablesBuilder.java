@@ -64,9 +64,6 @@ public class SlipZTablesBuilder {
 				sol = FaultSystemSolution.load(nodeFile);
 			}
 			
-			SectSlipRates sectSlips = sol.getRupSet().requireModule(SectSlipRates.class);
-			SolutionSlipRates solSlips = sol.requireModule(SolutionSlipRates.class);
-			
 			for (boolean origUncert : new boolean[] {false,true}) {
 				System.out.println(dm.getShortName()+", orig="+origUncert);
 				SlipZRecord result = calcSlipZ(sol, fm, dm, origUncert, null);
@@ -111,7 +108,7 @@ public class SlipZTablesBuilder {
 	public record SlipZRecord(double average, double momentWeightedAverage) {}
 	
 	public static SlipZRecord calcSlipZ(FaultSystemSolution sol, NSHM23_FaultModels fm, NSHM23_DeformationModels dm,
-			boolean origUncert, Region region) throws IOException {
+			boolean origUncert, boolean[] sectIncludes) throws IOException {
 		FaultSystemRupSet rupSet = sol.getRupSet();
 		SectSlipRates sectSlips = rupSet.requireModule(SectSlipRates.class);
 		SolutionSlipRates solSlips = sol.requireModule(SolutionSlipRates.class);
@@ -143,17 +140,8 @@ public class SlipZTablesBuilder {
 		for (int s=0; s<slipSDs.length; s++) {
 			FaultSection sect = sol.getRupSet().getFaultSectionData(s);
 			
-			if (region != null) {
-				boolean contained = false;
-				for (Location loc : sect.getFaultSurface(1d).getPerimeter()) {
-					if (region.contains(loc)) {
-						contained = true;
-						break;
-					}
-				}
-				if (!contained)
-					continue;
-			}
+			if (sectIncludes != null && !sectIncludes[s])
+				continue;
 			
 			double moRate = sect.calcMomentRate(false);
 			
