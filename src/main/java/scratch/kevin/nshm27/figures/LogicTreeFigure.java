@@ -5,6 +5,7 @@ import static scratch.kevin.nshm27.figures.NSHM27_PaperPaths.*;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 import org.opensha.commons.logicTree.LogicTree;
@@ -16,6 +17,7 @@ import org.opensha.commons.logicTree.LogicTreeNode;
 import org.opensha.sha.earthquake.faultSysSolution.RupSetFaultModel;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm27.logicTree.NSHM27_InterfaceFaultModels;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm27.logicTree.NSHM27_LogicTree;
+import org.opensha.sha.earthquake.rupForecastImpl.nshm27.logicTree.NSHM27_ModelRegimeNode;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm27.util.NSHM27_RegionLoader.NSHM27_SeismicityRegions;
 import org.opensha.sha.util.TectonicRegionType;
 
@@ -81,16 +83,48 @@ public class LogicTreeFigure {
 		return ret;
 	}
 	
-	private static LogicTree<LogicTreeNode> stripFaultModels(LogicTree<LogicTreeNode> tree) {
+	public static LogicTree<LogicTreeNode> stripFaultModels(LogicTree<LogicTreeNode> tree) {
 		List<LogicTreeLevel<? extends LogicTreeNode>> levels = stripFaultModels(tree.getLevels());
+		return buildStrippedTree(tree, levels);
+	}
+	
+	private static List<LogicTreeLevel<? extends LogicTreeNode>> stripModelLevel(List<LogicTreeLevel<? extends LogicTreeNode>> levels) {
+		List<LogicTreeLevel<? extends LogicTreeNode>> ret = new ArrayList<>();
+		
+		for (LogicTreeLevel<? extends LogicTreeNode> level : levels) {
+			if (NSHM27_ModelRegimeNode.class.isAssignableFrom(level.getType()))
+				continue;
+			ret.add(level);
+		}
+		
+		return ret;
+	}
+	
+	public static LogicTree<LogicTreeNode> stripModelLevel(LogicTree<LogicTreeNode> tree) {
+		List<LogicTreeLevel<? extends LogicTreeNode>> levels = stripModelLevel(tree.getLevels());
+		return buildStrippedTree(tree, levels);
+	}
+	
+	private static LogicTree<LogicTreeNode> buildStrippedTree(LogicTree<LogicTreeNode> tree, List<LogicTreeLevel<? extends LogicTreeNode>> levels) {
 		List<LogicTreeBranch<LogicTreeNode>> branches = new ArrayList<>(tree.size());
+		int[] levelIndexes = new int[levels.size()];
+		Arrays.fill(levelIndexes, -1);
+		List<LogicTreeLevel<? extends LogicTreeNode>> origLevels = tree.getLevels();
+		for (int i=0; i<levelIndexes.length; i++) {
+			LogicTreeLevel<? extends LogicTreeNode> level = levels.get(i);
+			for (int l=0; l<origLevels.size(); l++) {
+				LogicTreeLevel<? extends LogicTreeNode> origLevel = origLevels.get(l);
+				if (level == origLevel) {
+					Preconditions.checkState(levelIndexes[i] == -1);
+					levelIndexes[i] = l;
+				}
+			}
+			Preconditions.checkState(levelIndexes[i] >= 0);
+		}
 		for (LogicTreeBranch<LogicTreeNode> branch : tree) {
 			List<LogicTreeNode> values = new ArrayList<>(levels.size());
-			for (LogicTreeNode value : branch) {
-				if (value instanceof RupSetFaultModel)
-					continue;
-				values.add(value);
-			}
+			for (int i=0; i<levels.size(); i++)
+				values.add(branch.getValue(levelIndexes[i]));
 			Preconditions.checkState(values.size() == levels.size());
 			LogicTreeBranch<LogicTreeNode> modBranch = new LogicTreeBranch<>(levels, values);
 			modBranch.setOrigBranchWeight(branch.getOrigBranchWeight());
