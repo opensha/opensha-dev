@@ -14,6 +14,7 @@ import org.opensha.commons.geo.Region;
 import org.opensha.commons.gui.plot.GeographicMapMaker;
 import org.opensha.commons.gui.plot.PlotCurveCharacterstics;
 import org.opensha.commons.gui.plot.PlotLineType;
+import org.opensha.commons.gui.plot.PlotPreferences;
 import org.opensha.commons.gui.plot.PlotSymbol;
 import org.opensha.commons.mapping.gmt.elements.GMT_CPT_Files;
 import org.opensha.commons.util.cpt.CPT;
@@ -195,8 +196,11 @@ public class PaleoZComparisons {
 //				mapMaker.setScatterSymbol(PlotSymbol.TRIANGLE, 4f);
 				mapMaker.plotScatters(scatterLocs, Color.DARK_GRAY);
 //				mapMaker.setScatterSymbol(PlotSymbol.FILLED_CIRCLE, 2f);
-				mapMaker.setScatterSymbol(PlotSymbol.FILLED_CIRCLE, 5f, PlotSymbol.CIRCLE, Color.WHITE);
+				mapMaker.setScatterSymbol(PlotSymbol.FILLED_CIRCLE, 6f, PlotSymbol.CIRCLE, Color.WHITE);
 				mapMaker.setAbsoluteSort(true);
+				PlotPreferences prefs = PlotPreferences.getDefaultPrintFigurePrefs();
+				prefs.scaleFontSizes(1.5);
+				mapMaker.setPrintPlotPrefs(prefs);
 				
 				String modelsPrefix = prefixes.get(s)+"_vs_"+prefixes.get(s-1);
 				
@@ -229,14 +233,14 @@ public class PaleoZComparisons {
 			
 			prevRates = magRates;
 			
-			if (rupSet.hasModule(PosteriorSectionBValueDistributions.class)) {
-				PosteriorSectionBValueDistributions posteriors = rupSet.requireModule(PosteriorSectionBValueDistributions.class);
-				File solDir = new File(outputDir, prefixes.get(s)+"_posteriors");
-				Preconditions.checkState(solDir.exists() || solDir.mkdir());
-				PaleoBValueEstimator.plotSectDistributions(solDir, rupSet, posteriors);
-				PaleoBValueEstimator.plotFaultSiteAverages(solDir, "fault_avg", rupSet, posteriors, namedFaults, false);
-				PaleoBValueEstimator.plotSolAlongStrike(solDir, "along_strike", sol, posteriors);
-			}
+//			if (rupSet.hasModule(PosteriorSectionBValueDistributions.class)) {
+//				PosteriorSectionBValueDistributions posteriors = rupSet.requireModule(PosteriorSectionBValueDistributions.class);
+//				File solDir = new File(outputDir, prefixes.get(s)+"_posteriors");
+//				Preconditions.checkState(solDir.exists() || solDir.mkdir());
+//				PaleoBValueEstimator.plotSectDistributions(solDir, rupSet, posteriors);
+//				PaleoBValueEstimator.plotFaultSiteAverages(solDir, "fault_avg", rupSet, posteriors, namedFaults, false);
+//				PaleoBValueEstimator.plotSolAlongStrike(solDir, "along_strike", sol, posteriors);
+//			}
 		}
 		for (int r=0; r<regions.length; r++)
 			csvs.get(r).writeToFile(new File(outputDir, "z_scores_"+regionNames[r]+".csv"));

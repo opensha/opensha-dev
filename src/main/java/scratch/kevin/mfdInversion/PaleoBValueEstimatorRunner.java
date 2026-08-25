@@ -68,14 +68,14 @@ public class PaleoBValueEstimatorRunner {
 //		estimator.setLikelihoodInRecurrence(true);
 //		String dirName ="students_t_4_ri";
 		
-//		estimator.setStudentsTLogLikelihood(5);
-//		estimator.setLikelihoodInRecurrence(true);
-//		String dirName = "students_t_5_ri";
-		
 		estimator.setStudentsTLogLikelihood(5);
 		estimator.setLikelihoodInRecurrence(true);
-		estimator.setPosteriorCombination(PosteriorCombination.WEIGHTED_SITE_DISTRIBUTIONS);
-		String dirName = "students_t_5_ri_dist_avg";
+		String dirName = "students_t_5_ri";
+		
+//		estimator.setStudentsTLogLikelihood(5);
+//		estimator.setLikelihoodInRecurrence(true);
+//		estimator.setPosteriorCombination(PosteriorCombination.WEIGHTED_SITE_DISTRIBUTIONS);
+//		String dirName = "students_t_5_ri_dist_avg";
 		
 //		estimator.setStudentsTLogLikelihood(4);
 //		estimator.setLikelihoodInRecurrence(false);
@@ -120,9 +120,22 @@ public class PaleoBValueEstimatorRunner {
 		PosteriorSectionBValueDistributions result = estimator.calculate(rs, branch, true);
 		
 		NamedFaults named = rs.requireModule(NamedFaults.class);
-		PaleoBValueEstimator.plotSectDistributions(outputDir, rs, result);
-		PaleoBValueEstimator.plotFaultSiteAverages(outputDir, "combined", rs, result, named);
-		estimator.plotAlongStrike(outputDir, "along_strike", rs, result, named);
+		
+		File sectsDir = new File(outputDir, "sect_distributions");
+		Preconditions.checkState(sectsDir.exists() || sectsDir.mkdir());
+		PaleoBValueEstimator.plotSectDistributions(sectsDir, rs, result);
+		
+		File faultsDir = new File(outputDir, "fault_avg_distributions");
+		Preconditions.checkState(faultsDir.exists() || faultsDir.mkdir());
+		PaleoBValueEstimator.plotFaultSiteAverages(faultsDir, "combined", rs, result, named);
+
+		File alongStrikeDir = new File(outputDir, "fault_along_strike");
+		Preconditions.checkState(alongStrikeDir.exists() || alongStrikeDir.mkdir());
+		estimator.plotAlongStrike(alongStrikeDir, "along_strike", rs, result, named);
+		
+		File siteDir = new File(outputDir, "site_distributions");
+		Preconditions.checkState(siteDir.exists() || siteDir.mkdir());
+		PaleoBValueEstimator.plotSiteDistributions(siteDir, rs, result);
 		
 		result.writeToFile(new File(outputDir, "posteriors.json"));
 	}
