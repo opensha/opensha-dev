@@ -19,6 +19,7 @@ import org.opensha.commons.gui.plot.PlotCurveCharacterstics;
 import org.opensha.commons.gui.plot.PlotLineType;
 import org.opensha.commons.gui.plot.PlotSpec;
 import org.opensha.commons.gui.plot.PlotUtils;
+import org.opensha.commons.logicTree.LogicTree;
 import org.opensha.sha.earthquake.ProbEqkRupture;
 import org.opensha.sha.earthquake.ProbEqkSource;
 import org.opensha.sha.earthquake.faultSysSolution.FaultSystemRupSet;
@@ -192,13 +193,18 @@ public class BranchScratch {
 		}
 	}
 	
+	private static void test5() throws IOException {
+		File treeFile = new File("/home/kevin/OpenSHA/fss_inversions/2026_07_17-nshm27-AMSAM-20000samples-mcs/logic_tree_analysis.json");
+		LogicTree.read(treeFile);
+	}
+	
 	/**
 	 * @param args
 	 * @throws Exception 
 	 */
 	public static void main(String[] args) throws Exception {
 		try {
-			test4();
+			test5();
 		} catch (Throwable t) {
 			t.printStackTrace();
 			System.exit(1);

@@ -9,7 +9,7 @@ import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.opensha.commons.logicTree.LogicTree;
 import org.opensha.commons.logicTree.LogicTreeBranch;
 import org.opensha.commons.logicTree.LogicTreeNode;
-import org.opensha.commons.logicTree.LogicTreeLevel.SamplingMethod;
+import org.opensha.commons.logicTree.sampling.SamplingMethod;
 import org.opensha.commons.util.DataUtils.MinMaxAveTracker;
 import org.opensha.commons.util.modules.ModuleContainer;
 import org.opensha.sha.earthquake.faultSysSolution.FaultSystemRupSet;

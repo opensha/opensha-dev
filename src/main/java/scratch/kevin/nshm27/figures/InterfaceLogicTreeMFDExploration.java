@@ -20,6 +20,7 @@ import org.opensha.commons.data.function.ArbitrarilyDiscretizedFunc;
 import org.opensha.commons.data.function.DiscretizedFunc;
 import org.opensha.commons.data.function.EvenlyDiscretizedFunc;
 import org.opensha.commons.data.function.LightFixedXFunc;
+import org.opensha.commons.data.sampling.generator.LatinHypercubePointSetGenerator;
 import org.opensha.commons.data.uncertainty.UncertainArbDiscFunc;
 import org.opensha.commons.data.uncertainty.UncertainBoundedIncrMagFreqDist;
 import org.opensha.commons.gui.plot.HeadlessGraphPanel;
@@ -30,8 +31,8 @@ import org.opensha.commons.gui.plot.PlotUtils;
 import org.opensha.commons.logicTree.LogicTreeBranch;
 import org.opensha.commons.logicTree.LogicTreeLevel;
 import org.opensha.commons.logicTree.LogicTreeLevel.RandomLevel;
-import org.opensha.commons.logicTree.LogicTreeLevel.SamplingMethod;
 import org.opensha.commons.logicTree.LogicTreeNode;
+import org.opensha.commons.logicTree.sampling.SamplingMethod;
 import org.opensha.commons.mapping.gmt.elements.GMT_CPT_Files;
 import org.opensha.commons.util.DataUtils.MinMaxAveTracker;
 import org.opensha.commons.util.cpt.CPT;
@@ -117,13 +118,15 @@ public class InterfaceLogicTreeMFDExploration {
 				branch.getLevelTypeIndex(MaxRuptureLengthBranchNode.class),
 		};
 		
+		double[] lhSamples = new LatinHypercubePointSetGenerator(new Random(12345l)).generate(1000, 1).getDimensionValues(0);
+		
 		WeightedList<NSHM27_SeisClassificationMethod> classificationChoices = new WeightedList<>();
 		for (NSHM27_SeisClassificationMethod classification : NSHM27_SeisClassificationMethod.values())
 			if (classification.getNodeWeight() > 0d)
 				classificationChoices.add(classification, classification.getNodeWeight());
 		List<NSHM27_SeisClassificationMethod> classificationSamples = classificationChoices.sampleEvenly(samples, new Random(12345l));
 		LogicTreeLevel<?> rateLevel = sampledBranch.getLevel(sampledBranch.getLevelTypeIndex(NSHM27_SeisRateModel.class));
-		((RandomLevel<?, ?>)rateLevel).build(12345l, samples, SamplingMethod.LATIN_HYPERCUBE);
+		((RandomLevel<?, ?>)rateLevel).build(lhSamples);
 		List<? extends LogicTreeNode> rateModelSamples = rateLevel.getNodes();
 		
 		NSHM27_InvConfigFactory factory = new NSHM27_InvConfigFactory();
@@ -255,7 +258,7 @@ public class InterfaceLogicTreeMFDExploration {
 				}
 				Preconditions.checkNotNull(rateLevel);
 				LogicTreeBranch<LogicTreeNode> myBranch = new LogicTreeBranch<>(levels, values);
-				((RandomLevel<?, ?>)sampledLevel).build(12345l, samples, SamplingMethod.LATIN_HYPERCUBE);
+				((RandomLevel<?, ?>)sampledLevel).build(lhSamples);
 				Preconditions.checkState(sampledLevel.getNodes().size() == samples);
 				double weightEach = 1d/samples;
 				SummedMagFreqDist avgMFD = new SummedMagFreqDist(refMFD.getMinX(), refMFD.getMaxX(), refMFD.size());

@@ -36,11 +36,11 @@ import org.opensha.commons.logicTree.LogicTreeBranch;
 import org.opensha.commons.logicTree.LogicTreeFigureWriter;
 import org.opensha.commons.logicTree.LogicTreeLevel;
 import org.opensha.commons.logicTree.LogicTreeLevel.ContinuousDistributionSampledLevel;
-import org.opensha.commons.logicTree.LogicTreeLevel.SamplingMethod;
 import org.opensha.commons.logicTree.LogicTreeNode;
 import org.opensha.commons.logicTree.LogicTreeNode.SimpleValuedNode;
 import org.opensha.commons.logicTree.LogicTreeNode.ValuedLogicTreeNode;
 import org.opensha.commons.logicTree.lhs.PairwiseLogicTreeNodeSwapIteration;
+import org.opensha.commons.logicTree.sampling.SamplingMethod;
 import org.opensha.commons.mapping.gmt.elements.GMT_CPT_Files;
 import org.opensha.commons.util.cpt.CPT;
 
@@ -136,7 +136,7 @@ public class LHSExampleFigures {
 						funcs.add(densityFunc);
 						chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 0.5f, Color.GRAY));
 						
-						if (sm.isLHS()) {
+						if (sm == SamplingMethod.LATIN_HYPERCUBE || sm == SamplingMethod.PAIRWISE_OPTIMIZED_LATIN_HYPERCUBE) {
 							// draw ticks
 							double tickDelta = maxY*0.05;
 							EvenlyDiscretizedFunc binEdges = new EvenlyDiscretizedFunc(

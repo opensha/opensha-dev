@@ -17,7 +17,11 @@ public class RandomDefModSampleLevel extends RandomlyGeneratedLevel<RandomDefMod
 	public RandomDefModSampleLevel(int numSamples, long seed) {
 		super("Random Deformation Model Sample", "DMSample",
 				"Deformation Model Sample ", "DMSample", "DMSample");
-		build(seed, numSamples);
+		double[] samples = new double[numSamples];
+		Random r = new Random(seed);
+		for (int i=0; i<numSamples; i++)
+			samples[i] = r.nextDouble();
+		build(samples);
 	}
 
 	@Override
