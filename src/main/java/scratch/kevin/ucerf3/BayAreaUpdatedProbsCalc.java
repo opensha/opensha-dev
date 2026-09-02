@@ -40,24 +40,24 @@ public class BayAreaUpdatedProbsCalc {
 	static Map<String, List<Integer>> loadFaultParentSectMappings() {
 		Map<String, List<Integer>> map = new HashMap<>();
 		
-//		map.put("San Andreas", List.of(654, 655, 657, 658));
-//		map.put("Hayward-Rodgers Creek", List.of(637, 638, 639, 651));
-//		map.put("Calaveras", List.of(601, 602, 603, 621));
-//		map.put("Concord", List.of(635, 636, 711, 713, 2, 622, 623, 640, 677));
-//		map.put("San Gregorio", List.of(660, 661));
-//		map.put("Maacama", List.of(644));
+		map.put("San Andreas", List.of(654, 655, 657, 658));
+		map.put("Hayward-Rodgers Creek", List.of(637, 638, 639, 651));
+		map.put("Calaveras", List.of(601, 602, 603, 621));
+		map.put("Concord", List.of(635, 636, 711, 713, 2, 622, 623, 640, 677));
+		map.put("San Gregorio", List.of(660, 661));
+		map.put("Maacama", List.of(644));
 		// these aren't bay area, but from Ruth's 8/15/24 e-mail
-		map.put("SAF Creeping", List.of(658));
-		map.put("SAF Parkfield", List.of(32));
-		map.put("Imperial", List.of(97));
-		map.put("Superstition Hills", List.of(98));
-		map.put("S. SAF", List.of(285, 300, 287, 286, 301, 282, 283, 284, 295));
+//		map.put("SAF Creeping", List.of(658));
+//		map.put("SAF Parkfield", List.of(32));
+//		map.put("Imperial", List.of(97));
+//		map.put("Superstition Hills", List.of(98));
+//		map.put("S. SAF", List.of(285, 300, 287, 286, 301, 282, 283, 284, 295));
 		
 		return map;
 	}
 
 	public static void main(String[] args) throws IOException {
-		int year = 2024;
+		int year = 2026;
 //		int year = 2014;
 		int duration = 30;
 		
@@ -74,10 +74,12 @@ public class BayAreaUpdatedProbsCalc {
 		MeanUCERF3 erf = new MeanUCERF3();
 		erf.setPreset(presets[0]);
 		
-//		String regName = "Bay Area Region";
-//		Region reg = new CaliforniaRegions.SF_BOX();
-		String regName = null;
-		Region reg = null;
+		String regName = "Bay Area Region";
+		Region reg = new CaliforniaRegions.SF_BOX();
+		boolean clipFaultsToReg = true;
+//		String regName = null;
+//		Region reg = null;
+//		boolean clipFaultsToReg = false;
 		Map<String, List<Integer>> faultIDs = loadFaultParentSectMappings();
 		
 		List<String> faultsSorted = new ArrayList<>();
@@ -87,7 +89,7 @@ public class BayAreaUpdatedProbsCalc {
 		Map<String, double[]> faultProbs = new HashMap<>();
 		for (String faultName : faultsSorted)
 			faultProbs.put(faultName, new double[minMags.length]);
-		double[] regProbs = reg == null ? new double[minMags.length] : null;
+		double[] regProbs = reg == null ? null : new double[minMags.length];
 		
 		DecimalFormat pDF = new DecimalFormat("0.00%");
 		
@@ -120,8 +122,15 @@ public class BayAreaUpdatedProbsCalc {
 				
 				// make sure all faults exist
 				HashSet<Integer> parentIDs = new HashSet<>();
-				for (FaultSection sect : rupSet.getFaultSectionDataList())
-					parentIDs.add(sect.getParentSectionId());
+				Map<Integer, List<Integer>> parentSubSectIDs = new HashMap<>();
+				// Match the legacy fact sheet: keep ruptures that touch a subsection with a trace point in the region.
+				for (FaultSection sect : rupSet.getFaultSectionDataList()) {
+					if (!clipFaultsToReg || reg == null || sect.getFaultTrace().stream().anyMatch(reg::contains)) {
+						parentIDs.add(sect.getParentSectionId());
+						parentSubSectIDs.computeIfAbsent(sect.getParentSectionId(), k -> new ArrayList<>())
+								.add(sect.getSectionId());
+					}
+				}
 				
 				List<BitSet> faultRupMappings = new ArrayList<>();
 				
@@ -142,10 +151,12 @@ public class BayAreaUpdatedProbsCalc {
 					faultRupProbs.add(myFaultProbs);
 					for (int parentID : faultIDs.get(faultName)) {
 						if (parentIDs.contains(parentID)) {
-							for (int rupIndex : rupSet.getRupturesForParentSection(parentID))
+							for (int subSectID : parentSubSectIDs.get(parentID))
+								for (int rupIndex : rupSet.getRupturesForSection(subSectID))
 								rupMappings.set(rupIndex);
 						} else {
-							System.err.println("WARNING: "+faultName+" parent "+parentID+" doesn't exist for "+presets[p]);
+							System.err.println("WARNING: "+faultName+" parent "+parentID
+									+" doesn't exist or has no subsections in the region for "+presets[p]);
 						}
 					}
 				}
