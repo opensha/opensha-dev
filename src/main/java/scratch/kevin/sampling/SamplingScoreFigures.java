@@ -100,7 +100,8 @@ public class SamplingScoreFigures {
 		File mainDir = new File(PaperPaths.FIGURES_DIR, "scores");
 		Preconditions.checkState(mainDir.exists() || mainDir.mkdir());
 		int scoreOrders = 4;
-		int[] sampleCounts = {256, 512, 1024, 2048, 4096, 8192};
+		int[] sampleCounts = {256, 512, 1024, 2048, 4096, 8192, 16384};
+//		int[] sampleCounts = {256, 512, 1024, 2048, 4096, 8192};
 //		int[] sampleCounts = {256, 512, 1024, 2048, 4096};
 //		int[] sampleCounts = {256, 512, 1024};
 //		int[] sampleCounts = {256, 512};
@@ -127,19 +128,22 @@ public class SamplingScoreFigures {
 		int numAvgTrials = 100;
 //		int numAvgTrials = 500;
 		
-		String treeName = null;
-		List<SamplingDimension> samplingDimensions = new ArrayList<>();
-		for (int i=0; i<10; i++)
-			samplingDimensions.add(ContinuousSamplingDimension.INSTANCE);
-		String samplingPrefix = "continuous_"+samplingDimensions.size()+"d";
+		boolean replotIndvSamples = false;
+		boolean replotCombOnly = true;
+		
+//		String treeName = null;
+//		List<SamplingDimension> samplingDimensions = new ArrayList<>();
+//		for (int i=0; i<10; i++)
+//			samplingDimensions.add(ContinuousSamplingDimension.INSTANCE);
+//		String samplingPrefix = "continuous_"+samplingDimensions.size()+"d";
 		
 //		String treeName = "NSHM23-WUS";
 //		List<SamplingDimension> samplingDimensions = getDimsNSHM23();
 //		String samplingPrefix = "nshm23_"+samplingDimensions.size()+"d";
 		
-//		String treeName = "NSHM27-AmSam";
-//		List<SamplingDimension> samplingDimensions = getDimsNSHM27_AmSam();
-//		String samplingPrefix = "nshm27_amsam_"+samplingDimensions.size()+"d";
+		String treeName = "NSHM27-AmSam";
+		List<SamplingDimension> samplingDimensions = getDimsNSHM27_AmSam();
+		String samplingPrefix = "nshm27_amsam_"+samplingDimensions.size()+"d";
 		
 		final int dimensions = samplingDimensions.size();
 		int numContinuous = 0;
@@ -155,16 +159,12 @@ public class SamplingScoreFigures {
 			treeName = "";
 		else
 			treeName += ": ";
-		treeName += dimensions+"D, ";
-		
-		if (numContinuous > 0) {
-			if (numCategorical > 0)
-				treeName += numContinuous+" continuous, ";
-			else
-				treeName += "all continuous";
-		}
-		if (numCategorical > 0)
-			treeName += numCategorical+" categorical";
+		if (dimensions == numContinuous)
+			treeName += dimensions+"D, all continuous";
+		else if (dimensions == numCategorical)
+			treeName += dimensions+"D, all categorical";
+		else
+			treeName += numContinuous+" continuous, "+numCategorical+" categorical";
 		
 		System.out.println(treeName);
 		System.out.println();
@@ -207,312 +207,333 @@ public class SamplingScoreFigures {
 		for (int m=0; m<methods.length; m++)
 			methodScores.add(new ArrayList<>());
 		
-		Stopwatch totalWatch = Stopwatch.createStarted();
-		for (int sampleCount : sampleCounts) {
-			Stopwatch sampleWatch = Stopwatch.createStarted();
-			System.out.println("Doing "+sampleCount+" samples");
-			File subDir = new File(outputDir, sampleCount+"_samples");
-			Preconditions.checkState(subDir.exists() || subDir.mkdir());
-			PointSet[] firstPointSets = new PointSet[methods.length];
-			for (int m=0; m<methods.length; m++) {
-				Stopwatch methodWatch = Stopwatch.createStarted();				
-				SamplingMethod method = methods[m];
-				String prefix = method.name();
-				
-				// use the same seed for pairwise and regular LHS
-				String seedName = method == SamplingMethod.PAIRWISE_OPTIMIZED_LATIN_HYPERCUBE ? SamplingMethod.LATIN_HYPERCUBE.name() : method.name();
-				Random baseRand = new Random(RandomSeedUtils.seedForStrings(seedName));
-				
-				int myTrials = method == SamplingMethod.SOBOL ? 1 : numAvgTrials;
-				System.out.println("Doing "+method+", "+sampleCount+" samples x "+myTrials+" trials");
-				
-				LinkedList<CompletableFuture<PointSet>> sampleFutures = new LinkedList<>();
-				
-				for (int i=0; i<myTrials; i++) {
-					long seed = baseRand.nextLong();
-					sampleFutures.add(CompletableFuture.supplyAsync(()->method.prepare(sampleCount, samplingDimensions, seed)));
-				}
-				
-				// if we only have 1 trial, do that one in parallel
-				// if we have many, rely on across-trial parallelism instead
-				PointSetScorer scorer = myTrials == 1 ? parallelScorer : serialScorer;
-				
-				List<CompletableFuture<PointSetScore>> scoreFutures = new ArrayList<>();
-				while (!sampleFutures.isEmpty()) {
-					CompletableFuture<PointSet> sampleFuture = sampleFutures.removeFirst();
-					PointSet sample = sampleFuture.join();
-					if (firstPointSets[m] == null)
-						firstPointSets[m] = sample;
-					scoreFutures.add(CompletableFuture.supplyAsync(()->scorer.score(sample, scoreOrders)));
-				}
-				
-				List<PointSetScore> scores = scoreFutures.stream().map(F->F.join()).toList();
-				
-				methodScores.get(m).add(scores);
-				
-				if (method == SamplingMethod.OWEN_SCRAMBLED_SOBOL) {
-					// rebuild it to remove the row scrambling
-					firstPointSets[m] = method.createGenerator(baseRand.nextLong()).generate(sampleCount, dimensions);
-				}
-				
-				List<XY_DataSet> funcs = new ArrayList<>();
-				List<PlotCurveCharacterstics> chars = new ArrayList<>();
+		if (replotCombOnly) {
+			System.out.println("Replotting combined results only");
+		} else {
+			Stopwatch totalWatch = Stopwatch.createStarted();
+			for (int sampleCount : sampleCounts) {
+				Stopwatch sampleWatch = Stopwatch.createStarted();
+				System.out.println("Doing "+sampleCount+" samples");
+				File subDir = new File(outputDir, sampleCount+"_samples");
+				Preconditions.checkState(subDir.exists() || subDir.mkdir());
+				PointSet[] firstPointSets = new PointSet[methods.length];
+				for (int m=0; m<methods.length; m++) {
+					Stopwatch methodWatch = Stopwatch.createStarted();				
+					SamplingMethod method = methods[m];
+					String prefix = method.name();
+					
+					// use the same seed for pairwise and regular LHS
+					String seedName = method == SamplingMethod.PAIRWISE_OPTIMIZED_LATIN_HYPERCUBE ? SamplingMethod.LATIN_HYPERCUBE.name() : method.name();
+					Random baseRand = new Random(RandomSeedUtils.seedForStrings(seedName));
+					
+					int myTrials = method == SamplingMethod.SOBOL ? 1 : numAvgTrials;
+					System.out.println("Doing "+method+", "+sampleCount+" samples x "+myTrials+" trials");
+					
+					LinkedList<CompletableFuture<PointSet>> sampleFutures = new LinkedList<>();
+					
+					for (int i=0; i<myTrials; i++) {
+						long seed = baseRand.nextLong();
+						sampleFutures.add(CompletableFuture.supplyAsync(()->method.prepare(sampleCount, samplingDimensions, seed)));
+					}
+					
+					// if we only have 1 trial, do that one in parallel
+					// if we have many, rely on across-trial parallelism instead
+					PointSetScorer scorer = myTrials == 1 ? parallelScorer : serialScorer;
+					
+					List<CompletableFuture<PointSetScore>> scoreFutures = new ArrayList<>();
+					while (!sampleFutures.isEmpty()) {
+						CompletableFuture<PointSet> sampleFuture = sampleFutures.removeFirst();
+						PointSet sample = sampleFuture.join();
+						if (firstPointSets[m] == null)
+							firstPointSets[m] = sample;
+						scoreFutures.add(CompletableFuture.supplyAsync(()->scorer.score(sample, scoreOrders)));
+					}
+					
+					List<PointSetScore> scores = scoreFutures.stream().map(F->F.join()).toList();
+					
+					methodScores.get(m).add(scores);
+					
+					if (method == SamplingMethod.OWEN_SCRAMBLED_SOBOL) {
+						// rebuild it to remove the row scrambling
+						firstPointSets[m] = method.createGenerator(baseRand.nextLong()).generate(sampleCount, dimensions);
+					}
+					
+					List<XY_DataSet> funcs = new ArrayList<>();
+					List<PlotCurveCharacterstics> chars = new ArrayList<>();
 
-				double[][][] scores2D = new double[dimensions][dimensions][myTrials];
-				for (int i=0; i<dimensions; i++)
-					for (int j=0; j<dimensions; j++)
-						Arrays.fill(scores2D[i][j], Double.NaN);
-				double avgScore2D = Double.NaN;
-				
-				List<UncertainArbDiscFunc> shadedFuncs = new ArrayList<>();
-				List<PlotCurveCharacterstics> shadedChars = new ArrayList<>();
-				
-				for (int order=1; order<=scoreOrders; order++) {
-					double overallAverage = 0d;
-					double[][] dimScores = new double[dimensions][scores.size()];
-					double[] dimAverages = new double[dimensions];
+					double[][][] scores2D = new double[dimensions][dimensions][myTrials];
+					for (int i=0; i<dimensions; i++)
+						for (int j=0; j<dimensions; j++)
+							Arrays.fill(scores2D[i][j], Double.NaN);
+					double avgScore2D = Double.NaN;
 					
-					for (int s=0; s<scores.size(); s++) {
-						PointSetScore score = scores.get(s);
-						overallAverage += score.getOrderMeanScore(order);
-						int[] dimCounts = new int[dimensions];
-						for (ProjectionScore proj : score.getProjectionScores()) {
-							if (proj.getProjection().order() != order)
-								continue;
-							double dimScore = proj.getNormalizedScore();
-							int[] dims = proj.getProjection().getDimensions();
-							Preconditions.checkState(dims.length == order);
-							for (int d : dims) {
-								dimScores[d][s] += dimScore;
-								dimCounts[d]++;
-							}
-							
-							if (order == 2) {
-								Preconditions.checkState(Double.isNaN(scores2D[dims[0]][dims[1]][s]));
-								Preconditions.checkState(Double.isNaN(scores2D[dims[1]][dims[0]][s]));
-								scores2D[dims[0]][dims[1]][s] = dimScore;
-								scores2D[dims[1]][dims[0]][s] = dimScore;
-							}
-						}
-						for (int d=0; d<dimensions; d++) {
-							Preconditions.checkState(dimCounts[d] >= 1);
-							dimScores[d][s] /= dimCounts[d];
-							dimAverages[d] += dimScores[d][s];
-						}
-						if (s < numPlotTrials) {
-							// plot it
-							EvenlyDiscretizedFunc dimFunc = new EvenlyDiscretizedFunc(1d, dimensions, 1d);
-							for (int d=0; d<dimensions; d++)
-								dimFunc.set(d, dimScores[d][s]);
-//							if (s == 0)
-//								dimFunc.setName("Individual samples");
-							funcs.add(dimFunc);
-							chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, oderLightColors[order-1]));
-						}
-					}
-					if (scores.size() > 1) {
-						EvenlyDiscretizedFunc upperDimFunc = new EvenlyDiscretizedFunc(1d, dimensions, 1d);
-						EvenlyDiscretizedFunc middleDimFunc = new EvenlyDiscretizedFunc(1d, dimensions, 1d);
-						EvenlyDiscretizedFunc lowerDimFunc = new EvenlyDiscretizedFunc(1d, dimensions, 1d);
-						for (int d=0; d<dimensions; d++) {
-							double lower = StatUtils.percentile(dimScores[d], 2.5d);
-							lowerDimFunc.set(d, lower);
-							double upper = StatUtils.percentile(dimScores[d], 97.5d);
-							upperDimFunc.set(d, upper);
-							middleDimFunc.set(d, 0.5*(upper+lower));
-						}
-						shadedFuncs.add(new UncertainArbDiscFunc(middleDimFunc, lowerDimFunc, upperDimFunc));
-						shadedChars.add(new PlotCurveCharacterstics(PlotLineType.SHADED_UNCERTAIN_TRANS, 1f, oderLightColors[order-1]));
-					}
+					List<UncertainArbDiscFunc> shadedFuncs = new ArrayList<>();
+					List<PlotCurveCharacterstics> shadedChars = new ArrayList<>();
 					
-					overallAverage /= scores.size();
-					DefaultXY_DataSet overallFunc = new DefaultXY_DataSet(1d, overallAverage, dimensions, overallAverage);
-//					overallFunc.setName("Overall average");
-					overallFunc.setName(order+"D");
-					funcs.add(overallFunc);
-					chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 3f, orderColors[order-1]));
-					
-					for (int d=0; d<dimensions; d++)
-						dimAverages[d] /= scores.size();
-					EvenlyDiscretizedFunc dimFunc = new EvenlyDiscretizedFunc(1d, dimensions, 1d);
-					for (int d=0; d<dimensions; d++)
-						dimFunc.set(d, dimAverages[d]);
-//					dimFunc.setName("Single-dimension averages");
-					funcs.add(dimFunc);
-					chars.add(new PlotCurveCharacterstics(PlotLineType.DASHED, 2f, oderLightColors[order-1]));
-					
-					if (order == 2)
-						avgScore2D = overallAverage;
-				}
-				
-				funcs.addAll(shadedFuncs);
-				chars.addAll(shadedChars);
-				
-				PlotSpec plot = new PlotSpec(funcs, chars, method.getShortName()+" (N="+sampleCount+")", "Dimension #", "Normalized score");
-				plot.setLegendVisible(true);
-				double xTick = dimensions > 20 ? 2d : 1d;
-				
-				HeadlessGraphPanel gp = PlotUtils.initPrintHeadless();
-				
-				gp.setRenderingOrder(DatasetRenderingOrder.REVERSE);
-				
-				gp.drawGraphPanel(plot, false, true, dimXRange, logYRange);
-				PlotUtils.setXTick(gp, xTick);
-				
-				PlotUtils.writePrintPlots(subDir, "scores_"+prefix, gp,
-						PlotUtils.DEFAULT_USABLE_PAGE_WIDTH/2d, 3d, 300, true, true, false);
-				
-				EvenlyDiscrXYZ_DataSet avgXYZ = new EvenlyDiscrXYZ_DataSet(dimensions, dimensions, 1d, 1d, 1d);
-				EvenlyDiscrXYZ_DataSet avgAbsXYZ = new EvenlyDiscrXYZ_DataSet(dimensions, dimensions, 1d, 1d, 1d);
-				CPT logRatioCPT = GMT_CPT_Files.DIVERGING_VIK_UNIFORM.instance().rescale(-1d, 1d);
-				logRatioCPT.setLog10(true);
-				CPT logAbsCPT = GMT_CPT_Files.DIVERGING_VIK_UNIFORM.instance().rescale(-1d, 1d).trim(0d, 1d);
-//				CPT logAbsCPT = logRatioCPT.trim(0d, 1d);
-				logAbsCPT.setLog10(true);
-				for (int i=0; i<dimensions; i++) {
-					for (int j=0; j<dimensions; j++) {
-						if (i == j) {
-							avgXYZ.set(i, j, Double.NaN);
-							avgAbsXYZ.set(i, j, Double.NaN);
-							continue;
-						}
-						double[] myScores = scores2D[i][j];
-						double sum = 0d;
-						double absSum = 0d;
-						for (double score : myScores) {
-							double ratio = score / avgScore2D;
-							sum += ratio;
-							absSum += Math.max(ratio, 1/ratio);
-						}
-						avgXYZ.set(i, j, sum/scores.size());
-						avgAbsXYZ.set(i, j, absSum/scores.size());
-					}
-				}
-				
-				XYZPlotSpec xyzPlot = new XYZPlotSpec(avgXYZ, logRatioCPT, plot.getTitle(),
-						"Dimension #", "Dimension #", "Average pair score / overall 2D score");
-				
-				Range xyzRange = new Range(0.5, dimensions+0.5);
-				gp.drawGraphPanel(xyzPlot, false, false, xyzRange, xyzRange);
-				
-				PlotUtils.writePrintPlots(subDir, "scores_2D_"+prefix, gp,
-						PlotUtils.DEFAULT_USABLE_PAGE_WIDTH/2d, false, 300, true, true, false);
-				
-				xyzPlot = new XYZPlotSpec(avgAbsXYZ, logAbsCPT, plot.getTitle(),
-						"Dimension #", "Dimension #", "Average realization pair score factor");
-				
-				gp.drawGraphPanel(xyzPlot, false, false, xyzRange, xyzRange);
-				
-				PlotUtils.writePrintPlots(subDir, "scores_2D_"+prefix+"_deviation", gp,
-						PlotUtils.DEFAULT_USABLE_PAGE_WIDTH/2d, false, 300, true, true, false);
-				methodWatch.stop();
-				System.out.println("\tDONE in "+timeStr(methodWatch));
-			}
-			
-			if (sampleCount <= 1024) {
-				// now plot 2D scatters
-				int[][] plotDims = {
-						{0, 1},
-						{2, 3},
-						{4, 5}
-				};
-				for (int p=0; p<plotDims.length; p++) {
-					int dim1 = plotDims[p][0];
-					int dim2 = plotDims[p][1];
-					
-					List<PlotSpec> plots = new ArrayList<>();
-					Range range = new Range(0d, 1d);
-					List<Range> xRanges = new ArrayList<>();
-					List<Range> yRanges = List.of(range);
-					List<String> subtitles = new ArrayList<>();
-					for (int m=0; m<methods.length; m++) {
-						List<XY_DataSet> funcs = new ArrayList<>();
-						List<PlotCurveCharacterstics> chars = new ArrayList<>();
-						PointSet sample = firstPointSets[m];
-						DefaultXY_DataSet xy = new DefaultXY_DataSet();
-						for (int i=0; i<sampleCount; i++)
-							xy.set(sample.get(i, dim1), sample.get(i, dim2));
-						funcs.add(xy);
-						chars.add(new PlotCurveCharacterstics(PlotSymbol.FILLED_CIRCLE, 1f, Color.BLACK));
+					for (int order=1; order<=scoreOrders; order++) {
+						double overallAverage = 0d;
+						double[][] dimScores = new double[dimensions][scores.size()];
+						double[] dimAverages = new double[dimensions];
 						
-						PlotSpec plot = new PlotSpec(funcs, chars, null, null, null);
-						plots.add(plot);
-						xRanges.add(range);
-						subtitles.add(methods[m].getShortName());
+						for (int s=0; s<scores.size(); s++) {
+							PointSetScore score = scores.get(s);
+							overallAverage += score.getOrderMeanScore(order);
+							int[] dimCounts = new int[dimensions];
+							for (ProjectionScore proj : score.getProjectionScores()) {
+								if (proj.getProjection().order() != order)
+									continue;
+								double dimScore = proj.getNormalizedScore();
+								int[] dims = proj.getProjection().getDimensions();
+								Preconditions.checkState(dims.length == order);
+								for (int d : dims) {
+									dimScores[d][s] += dimScore;
+									dimCounts[d]++;
+								}
+								
+								if (order == 2) {
+									Preconditions.checkState(Double.isNaN(scores2D[dims[0]][dims[1]][s]));
+									Preconditions.checkState(Double.isNaN(scores2D[dims[1]][dims[0]][s]));
+									scores2D[dims[0]][dims[1]][s] = dimScore;
+									scores2D[dims[1]][dims[0]][s] = dimScore;
+								}
+							}
+							for (int d=0; d<dimensions; d++) {
+								Preconditions.checkState(dimCounts[d] >= 1);
+								dimScores[d][s] /= dimCounts[d];
+								dimAverages[d] += dimScores[d][s];
+							}
+							if (s < numPlotTrials) {
+								// plot it
+								EvenlyDiscretizedFunc dimFunc = new EvenlyDiscretizedFunc(1d, dimensions, 1d);
+								for (int d=0; d<dimensions; d++)
+									dimFunc.set(d, dimScores[d][s]);
+//								if (s == 0)
+//									dimFunc.setName("Individual samples");
+								funcs.add(dimFunc);
+								chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, oderLightColors[order-1]));
+							}
+						}
+						if (scores.size() > 1) {
+							EvenlyDiscretizedFunc upperDimFunc = new EvenlyDiscretizedFunc(1d, dimensions, 1d);
+							EvenlyDiscretizedFunc middleDimFunc = new EvenlyDiscretizedFunc(1d, dimensions, 1d);
+							EvenlyDiscretizedFunc lowerDimFunc = new EvenlyDiscretizedFunc(1d, dimensions, 1d);
+							for (int d=0; d<dimensions; d++) {
+								double lower = StatUtils.percentile(dimScores[d], 2.5d);
+								lowerDimFunc.set(d, lower);
+								double upper = StatUtils.percentile(dimScores[d], 97.5d);
+								upperDimFunc.set(d, upper);
+								middleDimFunc.set(d, 0.5*(upper+lower));
+							}
+							shadedFuncs.add(new UncertainArbDiscFunc(middleDimFunc, lowerDimFunc, upperDimFunc));
+							shadedChars.add(new PlotCurveCharacterstics(PlotLineType.SHADED_UNCERTAIN_TRANS, 1f, oderLightColors[order-1]));
+						}
+						
+						overallAverage /= scores.size();
+						DefaultXY_DataSet overallFunc = new DefaultXY_DataSet(1d, overallAverage, dimensions, overallAverage);
+//						overallFunc.setName("Overall average");
+						overallFunc.setName(order+"D");
+						funcs.add(overallFunc);
+						chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 3f, orderColors[order-1]));
+						
+						for (int d=0; d<dimensions; d++)
+							dimAverages[d] /= scores.size();
+						EvenlyDiscretizedFunc dimFunc = new EvenlyDiscretizedFunc(1d, dimensions, 1d);
+						for (int d=0; d<dimensions; d++)
+							dimFunc.set(d, dimAverages[d]);
+//						dimFunc.setName("Single-dimension averages");
+						funcs.add(dimFunc);
+						chars.add(new PlotCurveCharacterstics(PlotLineType.DASHED, 2f, oderLightColors[order-1]));
+						
+						if (order == 2)
+							avgScore2D = overallAverage;
 					}
-
+					
+					funcs.addAll(shadedFuncs);
+					chars.addAll(shadedChars);
+					
+					PlotSpec plot = new PlotSpec(funcs, chars, method.getShortName()+" (N="+sampleCount+")", "Dimension #", "Normalized score");
+					plot.setLegendVisible(true);
+					double xTick = dimensions > 20 ? 2d : 1d;
 					
 					HeadlessGraphPanel gp = PlotUtils.initPrintHeadless();
-					PlotPreferences prefs = gp.getPlotPrefs();
-					prefs.setPlotPadding(new RectangleInsets(0, 5, 5, 5));
 					
-					gp.drawGraphPanel(plots, false, false, xRanges, yRanges);
-					PlotUtils.setAxisVisible(gp, false, false);
+					gp.setRenderingOrder(DatasetRenderingOrder.REVERSE);
 					
-					Font subtitleFont = new Font(Font.SANS_SERIF, Font.BOLD, 10);
+					gp.drawGraphPanel(plot, false, true, dimXRange, logYRange);
+					PlotUtils.setXTick(gp, xTick);
 					
-					PlotUtils.addSubplotTitles(gp, subtitles, subtitleFont);
+					if (replotIndvSamples || !new File(subDir, "scores_"+prefix+".png").exists())
+						PlotUtils.writePrintPlots(subDir, "scores_"+prefix, gp,
+								PlotUtils.DEFAULT_USABLE_PAGE_WIDTH/2d, 3d, 300, true, true, false);
 					
-					String prefix = "scatters_2D";
-					if (p > 0)
-						prefix += "_"+dim1+"_"+dim2;
+					EvenlyDiscrXYZ_DataSet avgXYZ = new EvenlyDiscrXYZ_DataSet(dimensions, dimensions, 1d, 1d, 1d);
+					EvenlyDiscrXYZ_DataSet avgAbsXYZ = new EvenlyDiscrXYZ_DataSet(dimensions, dimensions, 1d, 1d, 1d);
+					CPT logRatioCPT = GMT_CPT_Files.DIVERGING_VIK_UNIFORM.instance().rescale(-1d, 1d);
+					logRatioCPT.setLog10(true);
+					CPT logAbsCPT = GMT_CPT_Files.DIVERGING_VIK_UNIFORM.instance().rescale(-1d, 1d).trim(0d, 1d);
+//					CPT logAbsCPT = logRatioCPT.trim(0d, 1d);
+					logAbsCPT.setLog10(true);
+					for (int i=0; i<dimensions; i++) {
+						for (int j=0; j<dimensions; j++) {
+							if (i == j) {
+								avgXYZ.set(i, j, Double.NaN);
+								avgAbsXYZ.set(i, j, Double.NaN);
+								continue;
+							}
+							double[] myScores = scores2D[i][j];
+							double sum = 0d;
+							double absSum = 0d;
+							for (double score : myScores) {
+								double ratio = score / avgScore2D;
+								sum += ratio;
+								absSum += Math.max(ratio, 1/ratio);
+							}
+							avgXYZ.set(i, j, sum/scores.size());
+							avgAbsXYZ.set(i, j, absSum/scores.size());
+						}
+					}
 					
-					PlotUtils.writePrintPlots(subDir, prefix, gp, PlotUtils.DEFAULT_USABLE_PAGE_WIDTH, false, 300, true, true, false);
+					XYZPlotSpec xyzPlot = new XYZPlotSpec(avgXYZ, logRatioCPT, plot.getTitle(),
+							"Dimension #", "Dimension #", "Average pair score / overall 2D score");
+					
+					Range xyzRange = new Range(0.5, dimensions+0.5);
+					gp.drawGraphPanel(xyzPlot, false, false, xyzRange, xyzRange);
+					
+					if (replotIndvSamples || !new File(subDir, "scores_2D_"+prefix+".png").exists())
+						PlotUtils.writePrintPlots(subDir, "scores_2D_"+prefix, gp,
+							PlotUtils.DEFAULT_USABLE_PAGE_WIDTH/2d, false, 300, true, true, false);
+					
+					xyzPlot = new XYZPlotSpec(avgAbsXYZ, logAbsCPT, plot.getTitle(),
+							"Dimension #", "Dimension #", "Average realization pair score factor");
+					
+					gp.drawGraphPanel(xyzPlot, false, false, xyzRange, xyzRange);
+					
+					if (replotIndvSamples || !new File(subDir, "scores_2D_"+prefix+"_deviation.png").exists())
+						PlotUtils.writePrintPlots(subDir, "scores_2D_"+prefix+"_deviation", gp,
+							PlotUtils.DEFAULT_USABLE_PAGE_WIDTH/2d, false, 300, true, true, false);
+					methodWatch.stop();
+					System.out.println("\tDONE in "+timeStr(methodWatch));
 				}
+				
+				if (sampleCount <= 1024) {
+					// now plot 2D scatters
+					int[][] plotDims = {
+							{0, 1},
+							{2, 3},
+							{4, 5}
+					};
+					for (int p=0; p<plotDims.length; p++) {
+						int dim1 = plotDims[p][0];
+						int dim2 = plotDims[p][1];
+						
+						List<PlotSpec> plots = new ArrayList<>();
+						Range range = new Range(0d, 1d);
+						List<Range> xRanges = new ArrayList<>();
+						List<Range> yRanges = List.of(range);
+						List<String> subtitles = new ArrayList<>();
+						for (int m=0; m<methods.length; m++) {
+							List<XY_DataSet> funcs = new ArrayList<>();
+							List<PlotCurveCharacterstics> chars = new ArrayList<>();
+							PointSet sample = firstPointSets[m];
+							DefaultXY_DataSet xy = new DefaultXY_DataSet();
+							for (int i=0; i<sampleCount; i++)
+								xy.set(sample.get(i, dim1), sample.get(i, dim2));
+							funcs.add(xy);
+							chars.add(new PlotCurveCharacterstics(PlotSymbol.FILLED_CIRCLE, 1f, Color.BLACK));
+							
+							PlotSpec plot = new PlotSpec(funcs, chars, null, null, null);
+							plots.add(plot);
+							xRanges.add(range);
+							subtitles.add(methods[m].getShortName());
+						}
+
+						
+						HeadlessGraphPanel gp = PlotUtils.initPrintHeadless();
+						PlotPreferences prefs = gp.getPlotPrefs();
+						prefs.setPlotPadding(new RectangleInsets(0, 5, 5, 5));
+						
+						gp.drawGraphPanel(plots, false, false, xRanges, yRanges);
+						PlotUtils.setAxisVisible(gp, false, false);
+						
+						Font subtitleFont = new Font(Font.SANS_SERIF, Font.BOLD, 10);
+						
+						PlotUtils.addSubplotTitles(gp, subtitles, subtitleFont);
+						
+						String prefix = "scatters_2D";
+						if (p > 0)
+							prefix += "_"+dim1+"_"+dim2;
+						
+						if (replotIndvSamples || !new File(subDir, prefix+".png").exists())
+							PlotUtils.writePrintPlots(subDir, prefix, gp, PlotUtils.DEFAULT_USABLE_PAGE_WIDTH, false, 300, true, true, false);
+					}
+				}
+				sampleWatch.stop();
+				System.out.println("DONE with "+sampleCount+" in "+timeStr(sampleWatch)+"\n");
 			}
-			sampleWatch.stop();
-			System.out.println("DONE with "+sampleCount+" in "+timeStr(sampleWatch)+"\n");
+			
+			totalWatch.stop();
+			System.out.println("DONE with all calculations in "+timeStr(totalWatch));
 		}
 		
-		totalWatch.stop();
-		System.out.println("DONE with all calculations in "+timeStr(totalWatch));
-		
 		// now combined plots
+		String prefix = "combined_scores";
+		File scoresCSVFile = new File(outputDir, prefix+".csv");
+		
 		List<XY_DataSet> scoreFuncs = new ArrayList<>();
 		List<PlotCurveCharacterstics> scoreChars = new ArrayList<>();
 		List<XY_DataSet> equivCountFuncs = new ArrayList<>();
 		List<PlotCurveCharacterstics> equivCountChars = new ArrayList<>();
-		CSVFile<String> scoresCSV = new CSVFile<>(true);
-		List<String> header = new ArrayList<>();
-		header.add("");
-		for (int order=1; order<=scoreOrders; order++)
-			for (int s=0; s<sampleCounts.length; s++)
-				header.add(order+"D "+sampleCounts[s]);
-		scoresCSV.addLine(header);
+		CSVFile<String> scoresCSV = replotCombOnly ? CSVFile.readFile(scoresCSVFile, true) : new CSVFile<>(true);
+		if (!replotCombOnly) {
+			List<String> header = new ArrayList<>();
+			header.add("");
+			for (int order=1; order<=scoreOrders; order++)
+				for (int s=0; s<sampleCounts.length; s++)
+					header.add(order+"D "+sampleCounts[s]);
+			scoresCSV.addLine(header);
+		}
+		int rowIndex = 1;
 		for (int m=0; m<methods.length; m++) {
 			SamplingMethod method = methods[m];
 			PlotCurveCharacterstics methodChar = combPlotChars.get(method);
 			if (methodChar == null)
 				continue;
 			
-			List<String> scoreLine = new ArrayList<>(header.size());
+			List<String> scoreLine = new ArrayList<>();
 			scoreLine.add(method.getShortName());
+			
+			int colIndex = 1;
 			
 			for (int order=1; order<=scoreOrders; order++) {
 				EvenlyDiscretizedFunc scoreFunc = new EvenlyDiscretizedFunc(0d, sampleCounts.length, 1d);
-				EvenlyDiscretizedFunc scoreLowerFunc = new EvenlyDiscretizedFunc(0d, sampleCounts.length, 1d);
-				EvenlyDiscretizedFunc scoreUpperFunc = new EvenlyDiscretizedFunc(0d, sampleCounts.length, 1d);
+//				EvenlyDiscretizedFunc scoreLowerFunc = new EvenlyDiscretizedFunc(0d, sampleCounts.length, 1d);
+//				EvenlyDiscretizedFunc scoreUpperFunc = new EvenlyDiscretizedFunc(0d, sampleCounts.length, 1d);
 				EvenlyDiscretizedFunc equivFunc = new EvenlyDiscretizedFunc(0d, sampleCounts.length, 1d);
 				
 				for (int s=0; s<sampleCounts.length; s++) {
 					int sampleCount = sampleCounts[s];
-					List<PointSetScore> scores = methodScores.get(m).get(s);
-						
-					double sum = 0d;
-					double min = Double.POSITIVE_INFINITY;
-					double max = 0d;
-					for (PointSetScore score : scores) {
-						double orderScore = score.getOrderMeanScore(order);
-						sum += orderScore;
-						min = Math.min(min, orderScore);
-						max = Math.max(max, orderScore);
+					
+					double avg;
+					if (replotCombOnly) {
+						avg = scoresCSV.getDouble(rowIndex, colIndex++);
+					} else {
+						List<PointSetScore> scores = methodScores.get(m).get(s);
+						double sum = 0d;
+//						double min = Double.POSITIVE_INFINITY;
+//						double max = 0d;
+						for (PointSetScore score : scores) {
+							double orderScore = score.getOrderMeanScore(order);
+							sum += orderScore;
+//							min = Math.min(min, orderScore);
+//							max = Math.max(max, orderScore);
+						}
+						avg = sum / scores.size();
 					}
-					double avg = sum / scores.size();
 					scoreLine.add((float)avg+"");
 
 					scoreFunc.set(s, avg);
-					scoreLowerFunc.set(s, min);
-					scoreUpperFunc.set(s, max);
+//					scoreLowerFunc.set(s, min);
+//					scoreUpperFunc.set(s, max);
 					double equivCount = (double)sampleCount / avg;
 					equivFunc.set(s, equivCount);
 				}
@@ -537,7 +558,10 @@ public class SamplingScoreFigures {
 				equivCountFuncs.add(equivFunc);
 				equivCountChars.add(getForThickness(methodChar, thickness));
 			}
-			scoresCSV.addLine(scoreLine);
+			if (replotCombOnly)
+				rowIndex++;
+			else
+				scoresCSV.addLine(scoreLine);
 		}
 		List<XY_DataSet> orderTicknessFuncs = new ArrayList<>();
 		List<PlotCurveCharacterstics> orderThicknessChars = new ArrayList<>();
@@ -607,9 +631,9 @@ public class SamplingScoreFigures {
 		PlotUtils.setXTick(gp, 1);
 		((NumberAxis)gp.getXAxis()).setNumberFormatOverride(categoryFormat);
 		
-		String prefix = "combined_scores";
 		PlotUtils.writePrintPlots(outputDir, prefix, gp, PlotUtils.DEFAULT_USABLE_PAGE_WIDTH/2d, 4, 300, true, true, false);
-		scoresCSV.writeToFile(new File(outputDir, prefix+".csv"));
+		if (!replotCombOnly)
+			scoresCSV.writeToFile(scoresCSVFile);
 		
 		plot = new PlotSpec(equivCountFuncs, equivCountChars, treeName, "Sample count", "Equivalent MCS count");
 //		plot.setLegendInset(true);
