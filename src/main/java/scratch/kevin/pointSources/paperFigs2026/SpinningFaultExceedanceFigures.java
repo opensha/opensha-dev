@@ -105,8 +105,8 @@ public class SpinningFaultExceedanceFigures {
 		double fullW = PlotUtils.DEFAULT_USABLE_PAGE_WIDTH;
 		double fullH = PlotUtils.DEFAULT_USABLE_PAGE_HEIGHT;
 		
-		FocalMech mech = FocalMech.STRIKE_SLIP;
-//		FocalMech mech = FocalMech.REVERSE;
+//		FocalMech mech = FocalMech.STRIKE_SLIP;
+		FocalMech mech = FocalMech.REVERSE;
 		
 		float symbolWidth = 10f;
 		
@@ -347,7 +347,8 @@ public class SpinningFaultExceedanceFigures {
 					if (i == 0)
 						func.setName("Centered individual");
 					funcs.add(func);
-					chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, Colors.tab_lightblue));
+//					chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, Colors.tab_lightblue));
+					chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1.5f, blend(Colors.tab_blue, 0.4, Colors.tab_lightblue, 0.6)));
 				}
 //			} else {
 //				for (boolean hw : new boolean[] {true,false}) {
@@ -2099,6 +2100,18 @@ public class SpinningFaultExceedanceFigures {
 	
 	private static String percentileStr(double fractile) {
 		return LaTeXUtils.numberAsOrdinal((int)Math.round(fractile*100d));
+	}
+	
+	private static Color blend(Color c1, Color c2) {
+		return blend(c1, 0.5, c2, 0.5);
+	}
+	
+	private static Color blend(Color c1, double w1, Color c2, double w2) {
+		Preconditions.checkState((float)(w1+w2) == 1f);
+		double r = w1*c1.getRed() + w2*c2.getRed();
+		double g = w1*c1.getGreen() + w2*c2.getGreen();
+		double b = w1*c1.getBlue() + w2*c2.getBlue();
+		return new Color((int)(r+0.5), (int)(g+0.5), (int)(b+0.5));
 	}
 
 }
