@@ -68,6 +68,9 @@ public class HazardConvergenceCalcs {
 
 		Table<SamplingMethod, Integer, List<File>> runDirs = HashBasedTable.create();
 
+		/*
+		 * Sobol runs
+		 */
 		runDirs.put(SamplingMethod.OWEN_SCRAMBLED_SOBOL, 512, List.of(
 				new File(PaperPaths.INVS_DIR, "2026_08_25-nshm27-AMSAM-512samples-sobol_scrambled"),
 				new File(PaperPaths.INVS_DIR, "2026_08_25-nshm27-AMSAM-512samples-sobol_scrambled-unique_seed")
@@ -92,9 +95,15 @@ public class HazardConvergenceCalcs {
 				new File(PaperPaths.INVS_DIR, "2026_08_29-nshm27-AMSAM-8192samples-sobol_scrambled-unique_seed-2"),
 				new File(PaperPaths.INVS_DIR, "2026_08_29-nshm27-AMSAM-8192samples-sobol_scrambled-unique_seed-3")
 				));
+		
+		/*
+		 * Pairwise-LHS runs
+		 */
 		runDirs.put(SamplingMethod.PAIRWISE_OPTIMIZED_LATIN_HYPERCUBE, 4096, List.of(
 				new File(PaperPaths.INVS_DIR, "2026_08_28-nshm27-AMSAM-4096samples-lhs_pairwise"),
-				new File(PaperPaths.INVS_DIR, "2026_08_28-nshm27-AMSAM-4096samples-lhs_pairwise-unique_seed")
+				new File(PaperPaths.INVS_DIR, "2026_08_28-nshm27-AMSAM-4096samples-lhs_pairwise-unique_seed"),
+				new File(PaperPaths.INVS_DIR, "2026_08_29-nshm27-AMSAM-4096samples-lhs_pairwise-unique_seed-2"),
+				new File(PaperPaths.INVS_DIR, "2026_08_29-nshm27-AMSAM-4096samples-lhs_pairwise-unique_seed-3")
 				));
 
 		List<RunSpec> sobolRuns = loadRunSpecs(SamplingMethod.OWEN_SCRAMBLED_SOBOL,
