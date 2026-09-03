@@ -6,6 +6,7 @@ import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.BitSet;
 import java.util.Collections;
+import java.util.GregorianCalendar;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -30,10 +31,12 @@ import org.opensha.sha.faultSurface.FaultSection;
 
 import com.google.common.base.Preconditions;
 
+import cern.colt.Arrays;
 import scratch.UCERF3.analysis.FaultSysSolutionERF_Calc;
 import scratch.UCERF3.erf.FaultSystemSolutionERF;
 import scratch.UCERF3.erf.mean.MeanUCERF3;
 import scratch.UCERF3.erf.mean.MeanUCERF3.Presets;
+import scratch.UCERF3.erf.utils.ProbabilityModelsCalc;
 
 public class BayAreaUpdatedProbsCalc {
 	
@@ -96,6 +99,12 @@ public class BayAreaUpdatedProbsCalc {
 		MagDependentAperiodicityOptions[] covs = {MagDependentAperiodicityOptions.HIGH_VALUES,
 				MagDependentAperiodicityOptions.MID_VALUES, MagDependentAperiodicityOptions.LOW_VALUES, null};
 		
+		Map<String, double[]> faultRIs = new HashMap<>();
+		Map<String, Map<Long, Integer>> faultDateLasts = new HashMap<>();
+		Map<String, int[]> faultYears = new HashMap<>();
+		for (String faultName : faultsSorted)
+			faultRIs.put(faultName, new double[presets.length]);
+		
 		for (int p=0; p<presets.length; p++) {
 			erf.setPreset(presets[p]);
 			
@@ -119,6 +128,34 @@ public class BayAreaUpdatedProbsCalc {
 				
 				FaultSystemSolution sol = erf.getSolution();
 				FaultSystemRupSet rupSet = sol.getRupSet();
+				
+				if (c == 0) {
+					for (String faultName : faultsSorted) {
+						HashSet<Integer> parents = new HashSet<>(faultIDs.get(faultName));
+						double sumRIs = 0d;
+						int numSects = 0;
+						Map<Long, Integer> dateLasts = new HashMap<>();
+						for (int s=0; s<rupSet.getNumSections(); s++) {
+							FaultSection sect = rupSet.getFaultSectionData(s);
+							if (parents.contains(sect.getParentSectionId())) {
+								double ri = 1d / sol.calcTotParticRateForSect(s);
+								sumRIs += ri;
+								numSects++;
+								long dateLast = sect.getDateOfLastEvent();
+								if (dateLast > Long.MIN_VALUE) {
+									if (dateLasts.containsKey(dateLast))
+										dateLasts.put(dateLast, dateLasts.get(dateLast)+1);
+									else
+										dateLasts.put(dateLast, 1);
+								}
+							}
+						}
+						double avgRI = sumRIs/numSects;
+						faultRIs.get(faultName)[p] = avgRI;
+						if (!dateLasts.isEmpty())
+							faultDateLasts.put(faultName, dateLasts);
+					}
+				}
 				
 				// make sure all faults exist
 				HashSet<Integer> parentIDs = new HashSet<>();
@@ -252,6 +289,74 @@ public class BayAreaUpdatedProbsCalc {
 		}
 		
 		csv.writeToFile(new File(outputDir, "probs_"+year+"_"+duration+"yr.csv"));
+		
+		csv = new CSVFile<>(false);
+		
+		header = new ArrayList<>();
+		header.add("");
+		header.add("Avg. RI (yrs)");
+		header.add("Avg. Time-Since-Last (yrs)");
+		header.add("Avg. Date of Last (yr)");
+		header.add("DOLE 1");
+		header.add("DOLE 1 Count");
+		header.add("...");
+		header.add("...");
+		header.add("DOLE N");
+		header.add("DOLE N Count");
+		csv.addLine(header);
+		
+		DecimalFormat yearDF = new DecimalFormat("0.0");
+		
+		// fault RIs and NTs
+		GregorianCalendar cal = new GregorianCalendar();
+		cal.clear();
+		cal.set(GregorianCalendar.YEAR, year);
+		long startMillis = cal.getTimeInMillis();
+		System.out.println("Start millis: "+startMillis);
+		
+		for (String faultName : faultsSorted) {
+			List<String> line = new ArrayList<>();
+			line.add(faultName);
+			double[] ris = faultRIs.get(faultName);
+			double avgRI = StatUtils.mean(ris);
+			System.out.println(faultName+" RIs:\t"+Arrays.toString(ris)+" = "+(float)avgRI);
+			line.add(yearDF.format(avgRI));
+			
+			Map<Long, Integer> dateLasts = faultDateLasts.get(faultName);
+			if (dateLasts == null) {
+				line.add("N/A");
+				line.add("N/A");
+			} else {
+				double sumTS = 0d;
+				double sumYRs = 0d;
+				int count = 0;
+				List<Integer> years = new ArrayList<>();
+				List<Integer> yearCounts = new ArrayList<>();
+				for (long dateLast : dateLasts.keySet()) {
+					long millisSince = startMillis - dateLast;
+					double timeSince = (double)millisSince / ProbabilityModelsCalc.MILLISEC_PER_YEAR;
+					int myCount = dateLasts.get(dateLast);
+					sumTS += timeSince*myCount;
+					count += myCount;
+					GregorianCalendar cal2 = new GregorianCalendar();
+					cal2.clear();
+					cal2.setTimeInMillis(dateLast);
+					int myYear = cal2.get(GregorianCalendar.YEAR)+1;
+					years.add(myYear);
+					yearCounts.add(myCount);
+					sumYRs += myYear*myCount;
+				}
+				line.add(yearDF.format(sumTS/count));
+				line.add(yearDF.format(sumYRs/count));
+				for (int y=0; y<years.size(); y++) {
+					line.add(years.get(y)+"");
+					line.add(yearCounts.get(y)+"");
+				}
+			}
+			csv.addLine(line);
+		}
+		
+		csv.writeToFile(new File(outputDir, "ris_"+year+".csv"));
 	}
 
 }
