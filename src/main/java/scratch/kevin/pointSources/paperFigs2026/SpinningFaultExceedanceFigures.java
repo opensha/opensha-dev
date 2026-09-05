@@ -335,7 +335,7 @@ public class SpinningFaultExceedanceFigures {
 			XY_DataSet fakeMinMax = new DefaultXY_DataSet();
 			fakeMinMax.set(1e-10, 2000);
 			fakeMinMax.setName("Uncentered range");
-			Color polyColor = new Color(0, 0, 0, 40);
+			Color polyColor = new Color(0, 0, 0, 30);
 			funcs.add(fakeMinMax);
 			chars.add(new PlotCurveCharacterstics(PlotSymbol.FILLED_POLYGON, symbolWidth*1.5f, polyColor));
 			funcs.add(minMax);
@@ -583,16 +583,24 @@ public class SpinningFaultExceedanceFigures {
 				nshm23RupVsJB.setName(nshm23Name+", FW");
 				funcs.add(nshm23RupVsJB);
 				chars.add(nshm23FWSymbol);
-//				rupVsJBXYs.add(funcs.get(funcs.size()-1));
-//				rupVsJBChars.add(chars.get(chars.size()-1));
+//				rupVsJBXYs.add(funcs.getLast());
+//				rupVsJBChars.add(chars.getLast());
+				funcs.add(copyWithoutName(nshm23RupVsJB));
+				chars.add(getSymbolOutlineChar(nshm23FWSymbol));
+//				rupVsJBXYs.add(funcs.getLast());
+//				rupVsJBChars.add(chars.getLast());
 				
 				nshm23RupVsJB = new DefaultXY_DataSet();
 				nshm23RupVsJB.set(nshmDistsHW.getDistanceJB(), nshmDistsHW.getDistanceRup());
 				nshm23RupVsJB.setName(nshm23Name+", HW");
 				funcs.add(nshm23RupVsJB);
 				chars.add(nshm23HWSymbol);
-				rupVsJBXYs.add(funcs.get(funcs.size()-1));
-				rupVsJBChars.add(chars.get(chars.size()-1));
+				rupVsJBXYs.add(funcs.getLast());
+				rupVsJBChars.add(chars.getLast());
+				funcs.add(copyWithoutName(nshm23RupVsJB));
+				chars.add(getSymbolOutlineChar(nshm23HWSymbol));
+				rupVsJBXYs.add(funcs.getLast());
+				rupVsJBChars.add(chars.getLast());
 			} else {
 				centeredRupVsJB.setName("Centered");
 				funcs.add(centeredRupVsJB);
@@ -603,8 +611,12 @@ public class SpinningFaultExceedanceFigures {
 				nshm23RupVsJB.setName(nshm23Name);
 				funcs.add(nshm23RupVsJB);
 				chars.add(nshm23HWSymbol);
-				rupVsJBXYs.add(funcs.get(funcs.size()-1));
-				rupVsJBChars.add(chars.get(chars.size()-1));
+				rupVsJBXYs.add(funcs.getLast());
+				rupVsJBChars.add(chars.getLast());
+				funcs.add(copyWithoutName(nshm23RupVsJB));
+				chars.add(getSymbolOutlineChar(nshm23HWSymbol));
+				rupVsJBXYs.add(funcs.getLast());
+				rupVsJBChars.add(chars.getLast());
 			}
 			
 			PlotCurveCharacterstics averageDistHWSymbol = new PlotCurveCharacterstics(PlotSymbol.FILLED_DIAMOND, symbolWidth, Colors.tab_orange);
@@ -625,8 +637,12 @@ public class SpinningFaultExceedanceFigures {
 				}
 				funcs.add(avgRupVsJB);
 				chars.add(pChar);
-				rupVsJBXYs.add(funcs.get(funcs.size()-1));
-				rupVsJBChars.add(chars.get(chars.size()-1));
+				rupVsJBXYs.add(funcs.getLast());
+				rupVsJBChars.add(chars.getLast());
+				funcs.add(copyWithoutName(avgRupVsJB));
+				chars.add(getSymbolOutlineChar(pChar));
+				rupVsJBXYs.add(funcs.getLast());
+				rupVsJBChars.add(chars.getLast());
 			}
 			DefaultXY_DataSet proposedRupVsJB_hw = new DefaultXY_DataSet();
 			DefaultXY_DataSet proposedRupVsJB = new DefaultXY_DataSet();
@@ -639,24 +655,29 @@ public class SpinningFaultExceedanceFigures {
 				proposedRupVsJB.set(dist.value.getDistanceJB(), dist.value.getDistanceRup());
 			}
 			PlotCurveCharacterstics proposedDistHWSymbol = new PlotCurveCharacterstics(PlotSymbol.FILLED_CIRCLE, symbolWidth, Color.BLACK);
-			PlotCurveCharacterstics proposedDistFWSymbol = new PlotCurveCharacterstics(PlotSymbol.FILLED_CIRCLE, symbolWidth, new Color(80, 80, 80));
+//			PlotCurveCharacterstics proposedDistFWSymbol = new PlotCurveCharacterstics(PlotSymbol.FILLED_CIRCLE, symbolWidth, new Color(80, 80, 80));
+			PlotCurveCharacterstics proposedDistFWSymbol = new PlotCurveCharacterstics(PlotSymbol.FILLED_CIRCLE, symbolWidth, Color.GRAY);
 			if (proposedRupVsJB_hw.size() > 0 && proposedRupVsJB_fw.size() > 0) {
 				proposedRupVsJB_fw.setName("Proposed, FW");
 				funcs.add(proposedRupVsJB_fw);
 				chars.add(proposedDistFWSymbol);
-				rupVsJBXYs.add(funcs.get(funcs.size()-1));
-				rupVsJBChars.add(chars.get(chars.size()-1));
+				rupVsJBXYs.add(funcs.getLast());
+				rupVsJBChars.add(chars.getLast());
+				funcs.add(copyWithoutName(proposedRupVsJB_fw));
+				chars.add(getSymbolOutlineChar(proposedDistFWSymbol));
+				rupVsJBXYs.add(funcs.getLast());
+				rupVsJBChars.add(chars.getLast());
 				proposedRupVsJB_hw.setName("Proposed, HW");
 				funcs.add(proposedRupVsJB_hw);
 				chars.add(proposedDistHWSymbol);
-				rupVsJBXYs.add(funcs.get(funcs.size()-1));
-				rupVsJBChars.add(chars.get(chars.size()-1));
+				rupVsJBXYs.add(funcs.getLast());
+				rupVsJBChars.add(chars.getLast());
 			} else {
 				proposedRupVsJB.setName("Proposed");
 				funcs.add(proposedRupVsJB);
 				chars.add(proposedDistHWSymbol);
-				rupVsJBXYs.add(funcs.get(funcs.size()-1));
-				rupVsJBChars.add(chars.get(chars.size()-1));
+				rupVsJBXYs.add(funcs.getLast());
+				rupVsJBChars.add(chars.getLast());
 			}
 			
 			plot = new PlotSpec(funcs, chars, geomLabel+", "+oDF.format(distance)+" km", "Rjb (km)", "Rrup (km)");
@@ -828,6 +849,19 @@ public class SpinningFaultExceedanceFigures {
 			for (int i=0; i<rupVsJBXYs.size(); i++) {
 				XY_DataSet xy = rupVsJBXYs.get(i);
 				PlotCurveCharacterstics pChar = rupVsJBChars.get(i);
+				
+				// skip if we're an outline overlay
+				switch (pChar.getSymbol()) {
+				case PlotSymbol.CIRCLE:
+				case PlotSymbol.SQUARE:
+				case PlotSymbol.INV_TRIANGLE:
+				case PlotSymbol.TRIANGLE:
+				case PlotSymbol.DIAMOND:
+					continue;
+
+				default:
+					break;
+				}
 				
 				float thickness = pChar.getSymbol() == PlotSymbol.FILLED_CIRCLE ? 2f : avgThickness;
 				
@@ -1017,7 +1051,7 @@ public class SpinningFaultExceedanceFigures {
 					funcs.add(scatter);
 					chars.add(new PlotCurveCharacterstics(PlotSymbol.FILLED_CIRCLE, symbolWidth, sortable.color));
 					funcs.add(scatter);
-					chars.add(new PlotCurveCharacterstics(PlotSymbol.CIRCLE, symbolWidth, sortable.color.darker().darker()));
+					chars.add(getSymbolOutlineChar(chars.getLast()));
 //					funcs.add(trueAvgScatter);
 //					chars.add(new PlotCurveCharacterstics(PlotSymbol.FILLED_CIRCLE, 2f, Color.BLACK));
 					for (int f=0; f<fractiles.size(); f++) {
@@ -2112,6 +2146,27 @@ public class SpinningFaultExceedanceFigures {
 		double g = w1*c1.getGreen() + w2*c2.getGreen();
 		double b = w1*c1.getBlue() + w2*c2.getBlue();
 		return new Color((int)(r+0.5), (int)(g+0.5), (int)(b+0.5));
+	}
+	
+	private static PlotCurveCharacterstics getSymbolOutlineChar(PlotCurveCharacterstics pChar) {
+		Preconditions.checkState(pChar.getLineType() == null);
+		PlotSymbol outlineSym = switch (pChar.getSymbol()) {
+		case PlotSymbol.FILLED_CIRCLE -> PlotSymbol.CIRCLE;
+		case PlotSymbol.FILLED_SQUARE -> PlotSymbol.SQUARE;
+		case PlotSymbol.FILLED_DIAMOND -> PlotSymbol.DIAMOND;
+		case PlotSymbol.FILLED_TRIANGLE -> PlotSymbol.TRIANGLE;
+		case PlotSymbol.FILLED_INV_TRIANGLE -> PlotSymbol.FILLED_INV_TRIANGLE;
+		default ->
+		throw new IllegalArgumentException("Unexpected value: " + pChar.getSymbol());
+		};
+		Color color = pChar.getColor().darker().darker();
+		return new PlotCurveCharacterstics(outlineSym, pChar.getSymbolWidth(), color);
+	}
+	
+	private static XY_DataSet copyWithoutName(XY_DataSet xy) {
+		xy = xy.deepClone();
+		xy.setName("");
+		return xy;
 	}
 
 }
