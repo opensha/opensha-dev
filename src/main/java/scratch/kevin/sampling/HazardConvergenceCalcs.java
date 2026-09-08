@@ -44,7 +44,8 @@ import com.google.common.collect.HashBasedTable;
 import com.google.common.collect.Table;
 
 public class HazardConvergenceCalcs {
-	static final String MCS_REFERENCE_NAME = "20k MCS";
+	static final String MCS_REFERENCE_NAME = "Pooled MCS";
+	static final String LOO_MCS_REFERENCE_NAME = "Pooled MCS, leave span out";
 	static final String POOLED_SOBOL_REFERENCE_NAME = "Pooled Sobol";
 	static final String LOO_SOBOL_REFERENCE_NAME = "Pooled Sobol, leave one out";
 	private static final int MAX_RUN_LOAD_THREADS = 4;
@@ -53,20 +54,19 @@ public class HazardConvergenceCalcs {
 		File outputDir = new File(PaperPaths.FIGURES_DIR, "hazard_convergence");
 		Preconditions.checkState(outputDir.exists() || outputDir.mkdir(),
 				"Couldn't create output directory: %s", outputDir.getAbsolutePath());
-		String treeFileName = "logic_tree_analysis.json";
-		String hazardFileName = "results_hazard.zip";
-
-		File refMCSDir = new File(PaperPaths.INVS_DIR, "2026_07_17-nshm27-AMSAM-20000samples-mcs");
-		LogicTree<?> refMCSTree = LogicTree.read(new File(refMCSDir, treeFileName));
-		File refMCSHazardZip = new File(refMCSDir, hazardFileName);
-
-		GriddedRegion gridReg = GriddedRegion.fromFeature(Feature.read(new File(refMCSDir, "gridded_region.geojson")));
 
 		ReturnPeriods rp = ReturnPeriods.TWO_IN_50;
 
-		System.out.println("Ref has "+refMCSTree.size()+" branches");
-
 		Table<SamplingMethod, Integer, List<File>> runDirs = HashBasedTable.create();
+
+		/*
+		 * MCS runs
+		 */
+		runDirs.put(SamplingMethod.MONTE_CARLO, 20000, List.of(
+				new File(PaperPaths.INVS_DIR, "2026_07_17-nshm27-AMSAM-20000samples-mcs"),
+				new File(PaperPaths.INVS_DIR, "2026_09_03-nshm27-AMSAM-20000samples-mcs-unique_seed"),
+				new File(PaperPaths.INVS_DIR, "2026_09_05-nshm27-AMSAM-20000samples-mcs-unique_seed-2")
+				));
 
 		/*
 		 * Sobol runs
@@ -108,22 +108,27 @@ public class HazardConvergenceCalcs {
 
 		List<RunSpec> sobolRuns = loadRunSpecs(SamplingMethod.OWEN_SCRAMBLED_SOBOL,
 				runDirs.row(SamplingMethod.OWEN_SCRAMBLED_SOBOL));
-		List<RunSpec> pairwiseLHSRuns = loadRunSpecs(SamplingMethod.PAIRWISE_OPTIMIZED_LATIN_HYPERCUBE,
-				runDirs.row(SamplingMethod.PAIRWISE_OPTIMIZED_LATIN_HYPERCUBE));
-		File convergenceDir = new File(outputDir, "sobol_convergence");
-		Preconditions.checkState(convergenceDir.exists() || convergenceDir.mkdir(),
-				"Couldn't create output directory: %s", convergenceDir.getAbsolutePath());
+		List<RunSpec> fullDesignRuns = new ArrayList<>();
+		for (SamplingMethod method : runDirs.rowKeySet().stream().sorted().toList())
+			if (method != SamplingMethod.MONTE_CARLO && method != SamplingMethod.OWEN_SCRAMBLED_SOBOL)
+				fullDesignRuns.addAll(loadRunSpecs(method, runDirs.row(method)));
+		List<RunSpec> mcsRuns = loadRunSpecs(SamplingMethod.MONTE_CARLO,
+				runDirs.row(SamplingMethod.MONTE_CARLO));
+		System.out.println("MCS reference has "+mcsRuns.stream().mapToInt(RunSpec::maxSamples).sum()
+				+" branches across "+mcsRuns.size()+" runs");
+
+		GriddedRegion gridReg = GriddedRegion.fromFeature(
+				Feature.read(new File(mcsRuns.get(0).directory, "gridded_region.geojson")));
 
 		double[] periods = { 0d, 1d };
 		String[] periodNames = { "PGA", "1 s SA" };
 		String[] periodPrefixes = { "pga", "1s_sa" };
 		for (int p=0; p<periods.length; p++) {
-			File periodDir = new File(convergenceDir, periodPrefixes[p]+"_"+rp.name().toLowerCase());
+			File periodDir = new File(outputDir, periodPrefixes[p]+"_"+rp.name().toLowerCase());
 			Preconditions.checkState(periodDir.exists() || periodDir.mkdir(),
 					"Couldn't create output directory: %s", periodDir.getAbsolutePath());
 			System.out.println("\n========== "+periodNames[p]+", "+rp+" ==========");
-			ModelHazardMaps refMCSMaps = loadMaps(refMCSHazardZip, refMCSTree, gridReg, periods[p], rp);
-			runSamplingConvergence(sobolRuns, pairwiseLHSRuns, refMCSMaps,
+			runSamplingConvergence(sobolRuns, fullDesignRuns, mcsRuns,
 					gridReg, periods[p], periodNames[p], rp, periodDir);
 		}
 	}
@@ -146,20 +151,36 @@ public class HazardConvergenceCalcs {
 		return runs;
 	}
 
-	private static void runSamplingConvergence(List<RunSpec> sobolRuns, List<RunSpec> pairwiseLHSRuns,
-			ModelHazardMaps mcsMaps,
+	private static List<RunSpec> loadRunSpecs(SamplingMethod method, List<File> runDirs) throws IOException {
+		List<RunSpec> runs = new ArrayList<>();
+		for (File dir : runDirs) {
+			Preconditions.checkState(dir.isDirectory(), "Run directory doesn't exist: %s", dir.getAbsolutePath());
+			LogicTree<?> tree = LogicTree.read(new File(dir, "logic_tree_analysis.json"));
+			Preconditions.checkState(tree.getSamplingMethod() == method,
+					"Expected %s tree, have %s: %s", method, tree.getSamplingMethod(), dir.getName());
+			runs.add(new RunSpec(dir.getName(), dir, tree, method,
+					tree.getSamplingRandomSeed(), tree.size()));
+		}
+		return runs;
+	}
+
+	private static void runSamplingConvergence(List<RunSpec> sobolRuns, List<RunSpec> fullDesignRuns,
+			List<RunSpec> mcsRuns,
 			GriddedRegion gridReg, double period, String periodName, ReturnPeriods rp, File outputDir) throws IOException {
 		List<RunPeriodData> sobolData = loadRunPeriodData(sobolRuns, gridReg, period, rp);
-		List<RunPeriodData> pairwiseLHSData = loadRunPeriodData(pairwiseLHSRuns, gridReg, period, rp);
+		List<RunPeriodData> fullDesignData = loadRunPeriodData(fullDesignRuns, gridReg, period, rp);
+		int[] sampleCounts = sobolData.stream().flatMap(data -> data.checkpoints().keySet().stream())
+				.mapToInt(Integer::intValue).distinct().sorted().toArray();
+		List<RunPeriodData> mcsData = loadRunPeriodData(mcsRuns, gridReg, period, rp, sampleCounts);
 
-		HazardStatistics mcsStatistics = calcHazardStatistics(copyValues(mcsMaps.individual()),
-				mcsMaps.individual().length, copyValues(mcsMaps.mean()));
-		ReferenceStatistics mcsReference = new ReferenceStatistics(MCS_REFERENCE_NAME, null,
-				mcsMaps.individual().length, mcsStatistics);
+		ReferenceStatistics mcsReference = buildPooledReference(mcsData, null, gridReg, rp,
+				MCS_REFERENCE_NAME, MCS_REFERENCE_NAME);
 		Map<RunSpec, ReferenceStatistics> leaveOneOut = new LinkedHashMap<>();
 		for (RunPeriodData data : sobolData)
-			leaveOneOut.put(data.run(), buildPooledSobolReference(sobolData, data.run(), gridReg, rp));
-		ReferenceStatistics pooledSobol = buildPooledSobolReference(sobolData, null, gridReg, rp);
+			leaveOneOut.put(data.run(), buildPooledReference(sobolData, data.run(), gridReg, rp,
+					POOLED_SOBOL_REFERENCE_NAME, LOO_SOBOL_REFERENCE_NAME));
+		ReferenceStatistics pooledSobol = buildPooledReference(sobolData, null, gridReg, rp,
+				POOLED_SOBOL_REFERENCE_NAME, LOO_SOBOL_REFERENCE_NAME);
 
 		List<ReferenceComparison> comparisons = new ArrayList<>();
 		for (RunPeriodData data : sobolData) {
@@ -169,14 +190,16 @@ public class HazardConvergenceCalcs {
 				appendComparisons(comparisons, data.run(), entry.getKey(), entry.getValue(), mcsReference, gridReg);
 			}
 		}
-		// Pairwise LHS is optimized as a complete design; its prefixes are not valid smaller LHS designs.
-		for (RunPeriodData data : pairwiseLHSData) {
+		// LHS and other full designs are evaluated at their generated sizes, without taking prefixes.
+		for (RunPeriodData data : fullDesignData) {
 			HazardStatistics statistics = data.checkpoints().get(data.run().maxSamples());
 			appendComparisons(comparisons, data.run(), data.run().maxSamples(),
 					statistics, pooledSobol, gridReg);
 			appendComparisons(comparisons, data.run(), data.run().maxSamples(),
 					statistics, mcsReference, gridReg);
 		}
+		List<Realization> mcsSpans = appendMCSSpanComparisons(comparisons, mcsData, sampleCounts,
+				pooledSobol, gridReg, rp);
 		writeReferenceComparisons(new File(outputDir, "reference_comparisons.csv"), comparisons);
 		writeReferenceComparisonSummary(new File(outputDir, "reference_comparison_summary.csv"), comparisons);
 
@@ -198,8 +221,12 @@ public class HazardConvergenceCalcs {
 		writeDoublingComparisonSummary(new File(outputDir, "paired_doubling_summary.csv"), doublings);
 
 		List<RunPeriodData> allData = new ArrayList<>(sobolData);
-		allData.addAll(pairwiseLHSData);
-		List<RealizationPairComparison> realizationPairs = buildRealizationPairComparisons(allData, gridReg);
+		allData.addAll(fullDesignData);
+		allData.addAll(mcsData);
+		List<Realization> realizations = new ArrayList<>(mcsSpans);
+		for (RunPeriodData data : allData)
+			data.checkpoints().forEach((count, statistics) -> realizations.add(new Realization(data.run(), count, statistics)));
+		List<RealizationPairComparison> realizationPairs = buildRealizationPairComparisons(realizations, gridReg);
 		writeRealizationPairComparisons(new File(outputDir, "realization_pair_comparisons.csv"), realizationPairs);
 		writeRealizationPairComparisonSummary(
 				new File(outputDir, "realization_pair_summary.csv"), realizationPairs);
@@ -208,18 +235,18 @@ public class HazardConvergenceCalcs {
 	}
 
 	private static List<RunPeriodData> loadRunPeriodData(List<RunSpec> runs,
-			GriddedRegion gridReg, double period, ReturnPeriods rp) throws IOException {
+			GriddedRegion gridReg, double period, ReturnPeriods rp, int... spanCounts) throws IOException {
 		if (runs.isEmpty())
 			return List.of();
 		int threads = Math.min(MAX_RUN_LOAD_THREADS, runs.size());
 		if (threads == 1)
-			return List.of(loadRunPeriodData(runs.get(0), gridReg, period, rp));
+			return List.of(loadRunPeriodData(runs.get(0), gridReg, period, rp, spanCounts));
 
 		ExecutorService executor = Executors.newFixedThreadPool(threads);
 		try {
 			List<Future<RunPeriodData>> futures = new ArrayList<>(runs.size());
 			for (RunSpec run : runs)
-				futures.add(executor.submit(() -> loadRunPeriodData(run, gridReg, period, rp)));
+				futures.add(executor.submit(() -> loadRunPeriodData(run, gridReg, period, rp, spanCounts)));
 			List<RunPeriodData> data = new ArrayList<>(runs.size());
 			// Retrieve in input order so downstream CSV and plot ordering remains stable.
 			for (Future<RunPeriodData> future : futures) {
@@ -246,7 +273,7 @@ public class HazardConvergenceCalcs {
 	}
 
 	private static RunPeriodData loadRunPeriodData(RunSpec run, GriddedRegion gridReg,
-			double period, ReturnPeriods rp) throws IOException {
+			double period, ReturnPeriods rp, int[] spanCounts) throws IOException {
 		System.out.println("\nLoading "+run.method().getShortName()+" run: "+run.id());
 		ModelHazardMaps maps = loadMaps(new File(run.directory(), "results_hazard.zip"),
 				run.tree(), gridReg, period, rp);
@@ -256,6 +283,7 @@ public class HazardConvergenceCalcs {
 		double[] curveX = null;
 		double[][] curveSums = null;
 		Map<Integer, HazardStatistics> checkpoints = new TreeMap<>();
+		Map<Integer, double[][]> curveBoundaries = new TreeMap<>();
 		for (int b=0; b<run.maxSamples(); b++) {
 			DiscretizedFunc[] curves = loadBranchCurves(hazardResultsDir, run.tree().getBranch(b), gridReg, period);
 			if (curveSums == null) {
@@ -277,6 +305,8 @@ public class HazardConvergenceCalcs {
 			boolean fullRun = count == run.maxSamples();
 			boolean sobolCheckpoint = run.method() == SamplingMethod.OWEN_SCRAMBLED_SOBOL
 					&& count >= 512 && Integer.bitCount(count) == 1;
+			if (Arrays.stream(spanCounts).anyMatch(size -> count % size == 0))
+				curveBoundaries.put(count, Arrays.stream(curveSums).map(double[]::clone).toArray(double[][]::new));
 			if (fullRun || sobolCheckpoint) {
 				double[] curveMean = buildCurveMeanMap(curveSums, curveX, count, rp);
 				checkpoints.put(count, calcHazardStatistics(branchMaps, count, curveMean));
@@ -287,11 +317,12 @@ public class HazardConvergenceCalcs {
 		MapComparison archivedComparison = compare(
 				checkpoints.get(run.maxSamples()).values(ConvergenceMetric.MEAN_HAZARD), copyValues(maps.mean()));
 		System.out.println("\tCurve mean versus archived mean: "+archivedComparison);
-		return new RunPeriodData(run, branchMaps, curveX, curveSums, checkpoints);
+		return new RunPeriodData(run, branchMaps, curveX, curveSums, checkpoints, curveBoundaries);
 	}
 
-	private static ReferenceStatistics buildPooledSobolReference(List<RunPeriodData> allRuns,
-			RunSpec excluded, GriddedRegion gridReg, ReturnPeriods rp) {
+	private static ReferenceStatistics buildPooledReference(List<RunPeriodData> allRuns,
+			RunSpec excluded, GriddedRegion gridReg, ReturnPeriods rp,
+			String pooledName, String leaveOneOutName) {
 		int sampleCount = 0;
 		int curveSize = -1;
 		double[] curveX = null;
@@ -323,12 +354,74 @@ public class HazardConvergenceCalcs {
 		}
 		Preconditions.checkState(destBranch == sampleCount);
 		double[] curveMean = buildCurveMeanMap(curveSums, curveX, sampleCount, rp);
-		String name = excluded == null ? POOLED_SOBOL_REFERENCE_NAME : LOO_SOBOL_REFERENCE_NAME;
+		String name = excluded == null ? pooledName : leaveOneOutName;
 		return new ReferenceStatistics(name, excluded == null ? null : excluded.id(), sampleCount,
 				calcHazardStatistics(branchMaps, sampleCount, curveMean));
 	}
 
-	private static double[] buildCurveMeanMap(double[][] curveSums, double[] curveX,
+	/** Uses disjoint full spans within each run; leftover branches still contribute to every reference. */
+	static List<Realization> appendMCSSpanComparisons(List<ReferenceComparison> comparisons,
+			List<RunPeriodData> runs, int[] sampleCounts, ReferenceStatistics sobolReference,
+			GriddedRegion gridReg, ReturnPeriods rp) {
+		List<Realization> spans = new ArrayList<>();
+		double[][] allMaps = runs.stream().flatMap(data -> Arrays.stream(data.branchMaps()))
+				.toArray(double[][]::new);
+		double[] curveX = runs.get(0).curveX();
+		double[][] totalCurves = new double[gridReg.getNodeCount()][curveX.length];
+		for (RunPeriodData data : runs) {
+			Preconditions.checkState(Arrays.equals(curveX, data.curveX()), "MCS curve grids differ");
+			for (int n=0; n<totalCurves.length; n++)
+				for (int i=0; i<curveX.length; i++)
+					totalCurves[n][i] += data.curveSums()[n][i];
+		}
+		int runOffset = 0;
+		for (RunPeriodData data : runs) {
+			for (int count : sampleCounts) {
+				for (int start=0; start <= data.branchMaps().length-count; start+=count) {
+					int end = start+count;
+					Preconditions.checkState(allMaps.length-count > 1, "Too few MCS reference samples after exclusion");
+					double[][] spanCurves = new double[totalCurves.length][curveX.length];
+					double[][] remainingCurves = new double[totalCurves.length][curveX.length];
+					double[][] before = start == 0 ? null : data.curveBoundaries().get(start);
+					double[][] after = data.curveBoundaries().get(end);
+					for (int n=0; n<totalCurves.length; n++) {
+						for (int i=0; i<curveX.length; i++) {
+							spanCurves[n][i] = after[n][i] - (before == null ? 0d : before[n][i]);
+							remainingCurves[n][i] = totalCurves[n][i]-spanCurves[n][i];
+						}
+					}
+					// Only copy row references; the maps themselves remain shared and read-only.
+					double[][] spanMaps = Arrays.copyOfRange(data.branchMaps(), start, end);
+					double[][] remainingMaps = excludeSpan(allMaps, runOffset+start, runOffset+end);
+					HazardStatistics statistics = calcHazardStatistics(spanMaps, count,
+							buildCurveMeanMap(spanCurves, curveX, count, rp));
+					// Retain the small statistics arrays for pair comparisons; curve and map arrays are unnecessary there.
+					RunSpec spanRun = new RunSpec(data.run().id()+"["+start+","+end+")",
+							data.run().directory(), data.run().tree(), data.run().method(), data.run().seed(), count);
+					spans.add(new Realization(spanRun, count, statistics));
+					ReferenceStatistics reference = new ReferenceStatistics(LOO_MCS_REFERENCE_NAME,
+							data.run().id()+"["+start+","+end+")", remainingMaps.length,
+							calcHazardStatistics(remainingMaps, remainingMaps.length,
+									buildCurveMeanMap(remainingCurves, curveX, remainingMaps.length, rp)));
+					appendComparisons(comparisons, data.run(), count, statistics, reference, gridReg, start);
+					appendComparisons(comparisons, data.run(), count, statistics, sobolReference, gridReg, start);
+				}
+				System.out.println("Compared "+data.run().id()+": "+count+"-sample MCS spans");
+			}
+			runOffset += data.branchMaps().length;
+		}
+		return spans;
+	}
+
+	static double[][] excludeSpan(double[][] rows, int start, int end) {
+		Preconditions.checkArgument(start >= 0 && start < end && end <= rows.length);
+		double[][] remaining = new double[rows.length-(end-start)][];
+		System.arraycopy(rows, 0, remaining, 0, start);
+		System.arraycopy(rows, end, remaining, start, rows.length-end);
+		return remaining;
+	}
+
+	static double[] buildCurveMeanMap(double[][] curveSums, double[] curveX,
 			int sampleCount, ReturnPeriods rp) {
 		double[] map = new double[curveSums.length];
 		double[] meanY = new double[curveX.length];
@@ -346,7 +439,7 @@ public class HazardConvergenceCalcs {
 		return map;
 	}
 
-	private static HazardStatistics calcHazardStatistics(double[][] branchMaps, int sampleCount,
+	static HazardStatistics calcHazardStatistics(double[][] branchMaps, int sampleCount,
 			double[] curveMean) {
 		Preconditions.checkArgument(sampleCount > 1 && sampleCount <= branchMaps.length);
 		Preconditions.checkArgument(curveMean.length == branchMaps[0].length);
@@ -418,10 +511,16 @@ public class HazardConvergenceCalcs {
 
 	private static void appendComparisons(List<ReferenceComparison> comparisons, RunSpec run,
 			int sampleCount, HazardStatistics statistics, ReferenceStatistics reference, GriddedRegion gridReg) {
+		appendComparisons(comparisons, run, sampleCount, statistics, reference, gridReg, 0);
+	}
+
+	private static void appendComparisons(List<ReferenceComparison> comparisons, RunSpec run,
+			int sampleCount, HazardStatistics statistics, ReferenceStatistics reference, GriddedRegion gridReg,
+			int startIndex) {
 		for (ConvergenceMetric metric : ConvergenceMetric.values()) {
 			MapComparison comparison = compare(statistics.values(metric), reference.statistics().values(metric));
 			comparisons.add(new ReferenceComparison(run, sampleCount, reference.name(), reference.sampleCount(),
-					metric, comparison, gridReg.getLocation(comparison.maximumAbsoluteIndex())));
+					metric, comparison, gridReg.getLocation(comparison.maximumAbsoluteIndex()), startIndex));
 		}
 	}
 
@@ -432,7 +531,7 @@ public class HazardConvergenceCalcs {
 				"Reference", "Reference sample count",
 				"Metric", "Spatial mean % change", "Spatial mean absolute % change",
 				"Spatial P95 absolute % change", "Maximum absolute % change", "Minimum % change",
-				"Maximum % change", "Worst longitude", "Worst latitude");
+				"Maximum % change", "Worst longitude", "Worst latitude", "Start index", "End index (exclusive)");
 		for (ReferenceComparison row : comparisons) {
 			MapComparison comparison = row.comparison();
 			csv.addLine(row.run().id(), row.run().method().name(), row.run().seed()+"",
@@ -441,7 +540,8 @@ public class HazardConvergenceCalcs {
 					comparison.meanPercentChange()+"", comparison.meanAbsolutePercentChange()+"",
 					comparison.p95AbsolutePercentChange()+"", comparison.maximumAbsolutePercentChange()+"",
 					comparison.minimumPercentChange()+"", comparison.maximumPercentChange()+"",
-					row.worstLocation().lon+"", row.worstLocation().lat+"");
+					row.worstLocation().lon+"", row.worstLocation().lat+"",
+					row.startIndex()+"", (row.startIndex()+row.sampleCount())+"");
 		}
 		csv.writeToFile(file);
 	}
@@ -518,21 +618,20 @@ public class HazardConvergenceCalcs {
 		csv.writeToFile(file);
 	}
 
-	private static List<RealizationPairComparison> buildRealizationPairComparisons(
-			List<RunPeriodData> allData, GriddedRegion gridReg) {
-		Map<MethodCount, List<RunPeriodData>> groups = new LinkedHashMap<>();
-		for (RunPeriodData data : allData)
-			for (int sampleCount : data.checkpoints().keySet()) {
-				MethodCount group = new MethodCount(data.run().method(), sampleCount);
-				groups.computeIfAbsent(group, unused -> new ArrayList<>()).add(data);
-			}
+	static List<RealizationPairComparison> buildRealizationPairComparisons(
+			List<Realization> allData, GriddedRegion gridReg) {
+		Map<MethodCount, List<Realization>> groups = new LinkedHashMap<>();
+		for (Realization data : allData) {
+			MethodCount group = new MethodCount(data.run().method(), data.sampleCount());
+			groups.computeIfAbsent(group, unused -> new ArrayList<>()).add(data);
+		}
 		List<RealizationPairComparison> comparisons = new ArrayList<>();
-		for (Map.Entry<MethodCount, List<RunPeriodData>> entry : groups.entrySet()) {
-			List<RunPeriodData> data = entry.getValue();
+		for (Map.Entry<MethodCount, List<Realization>> entry : groups.entrySet()) {
+			List<Realization> data = entry.getValue();
 			for (int i=0; i<data.size(); i++) {
-				HazardStatistics first = data.get(i).checkpoints().get(entry.getKey().sampleCount());
+				HazardStatistics first = data.get(i).statistics();
 				for (int j=i+1; j<data.size(); j++) {
-					HazardStatistics second = data.get(j).checkpoints().get(entry.getKey().sampleCount());
+					HazardStatistics second = data.get(j).statistics();
 					for (ConvergenceMetric metric : ConvergenceMetric.values()) {
 						MapComparison comparison = compare(first.values(metric), second.values(metric));
 						comparisons.add(new RealizationPairComparison(entry.getKey().method(),
@@ -966,7 +1065,7 @@ public class HazardConvergenceCalcs {
 
 	private record StatisticMaps(double[] mean, double[] standardDeviation, double[] coefficientOfVariation) {}
 
-	private record MapComparison(double meanPercentChange, double meanAbsolutePercentChange,
+	record MapComparison(double meanPercentChange, double meanAbsolutePercentChange,
 			double p95AbsolutePercentChange, double maximumAbsolutePercentChange, int maximumAbsoluteIndex,
 			double minimumPercentChange, double maximumPercentChange) {
 		@Override
@@ -980,24 +1079,25 @@ public class HazardConvergenceCalcs {
 
 	private record BootstrapReplicate(StatisticMaps statistics, Map<HazardMetric, MapComparison> comparisons) {}
 
-	private record RunSpec(String id, File directory, LogicTree<?> tree, SamplingMethod method,
+	record RunSpec(String id, File directory, LogicTree<?> tree, SamplingMethod method,
 			long seed, int maxSamples) {}
 
-	private record RunPeriodData(RunSpec run, double[][] branchMaps, double[] curveX,
-			double[][] curveSums, Map<Integer, HazardStatistics> checkpoints) {}
+	record RunPeriodData(RunSpec run, double[][] branchMaps, double[] curveX,
+			double[][] curveSums, Map<Integer, HazardStatistics> checkpoints,
+			Map<Integer, double[][]> curveBoundaries) {}
 
-	private record HazardStatistics(Map<ConvergenceMetric, double[]> metricValues) {
+	record HazardStatistics(Map<ConvergenceMetric, double[]> metricValues) {
 		double[] values(ConvergenceMetric metric) {
 			return Preconditions.checkNotNull(metricValues.get(metric));
 		}
 	}
 
-	private record ReferenceStatistics(String name, String excludedRun, int sampleCount,
+	record ReferenceStatistics(String name, String excludedRun, int sampleCount,
 			HazardStatistics statistics) {}
 
-	private record ReferenceComparison(RunSpec run, int sampleCount, String referenceName,
+	record ReferenceComparison(RunSpec run, int sampleCount, String referenceName,
 			int referenceSampleCount, ConvergenceMetric metric, MapComparison comparison,
-			Location worstLocation) {}
+			Location worstLocation, int startIndex) {}
 
 	private record ReferenceComparisonGroup(SamplingMethod method, int sampleCount, String referenceName,
 			ConvergenceMetric metric) {}
@@ -1010,7 +1110,9 @@ public class HazardConvergenceCalcs {
 
 	private record MethodCount(SamplingMethod method, int sampleCount) {}
 
-	private record RealizationPairComparison(SamplingMethod method, int sampleCount,
+	record Realization(RunSpec run, int sampleCount, HazardStatistics statistics) {}
+
+	record RealizationPairComparison(SamplingMethod method, int sampleCount,
 			RunSpec first, RunSpec second, ConvergenceMetric metric, MapComparison comparison,
 			Location worstLocation) {}
 
