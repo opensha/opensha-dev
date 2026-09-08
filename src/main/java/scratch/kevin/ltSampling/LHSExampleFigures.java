@@ -25,6 +25,10 @@ import org.jfree.data.Range;
 import org.opensha.commons.data.function.DefaultXY_DataSet;
 import org.opensha.commons.data.function.EvenlyDiscretizedFunc;
 import org.opensha.commons.data.function.XY_DataSet;
+import org.opensha.commons.data.sampling.PermutedPointSet;
+import org.opensha.commons.data.sampling.PointSet;
+import org.opensha.commons.data.sampling.optimization.PointSetHillClimber;
+import org.opensha.commons.data.sampling.optimization.QuantizedIncrementalPointSetScorer;
 import org.opensha.commons.gui.plot.HeadlessGraphPanel;
 import org.opensha.commons.gui.plot.PlotCurveCharacterstics;
 import org.opensha.commons.gui.plot.PlotLineType;
@@ -39,7 +43,7 @@ import org.opensha.commons.logicTree.LogicTreeLevel.ContinuousDistributionSample
 import org.opensha.commons.logicTree.LogicTreeNode;
 import org.opensha.commons.logicTree.LogicTreeNode.SimpleValuedNode;
 import org.opensha.commons.logicTree.LogicTreeNode.ValuedLogicTreeNode;
-import org.opensha.commons.logicTree.lhs.PairwiseLogicTreeNodeSwapIteration;
+import org.opensha.commons.logicTree.sampling.LogicTreePointSetMapper;
 import org.opensha.commons.logicTree.sampling.SamplingMethod;
 import org.opensha.commons.mapping.gmt.elements.GMT_CPT_Files;
 import org.opensha.commons.util.cpt.CPT;
@@ -51,10 +55,11 @@ import net.mahdilamb.colormap.Colors;
 public class LHSExampleFigures {
 
 	public static void main(String[] args) throws IOException {
-		int samples = 30;
-//		int samples = 100;
-//		int samples = 1000;
-//		int samples = 2000;
+//		int samples = 32;
+//		int samples = 128;
+//		int samples = 256;
+//		int samples = 512;
+		int samples = 1024;
 
 		int dpi = 300;
 		
@@ -72,12 +77,33 @@ public class LHSExampleFigures {
 		levels.add(new ContinuousDistributionSampledLevel(
 				"Off-fault Mmax", "Off-fault Mmax", TruncatedNormalDistribution.of(7.6, 0.2, 7.15, 8.05), -1, "Sample ", "Sample", "Sample"));
 		
-		long seed = 123456789l;
+		SamplingMethod[] sms = {
+				SamplingMethod.MONTE_CARLO,
+				SamplingMethod.LATIN_HYPERCUBE,
+				SamplingMethod.PAIRWISE_OPTIMIZED_LATIN_HYPERCUBE,
+				SamplingMethod.SOBOL,
+				SamplingMethod.OWEN_SCRAMBLED_SOBOL,
+		};
 		
-		CPT tab10cpt = GMT_CPT_Files.CATEGORICAL_TAB10.instance();
-		Color[] tab10 = new Color[tab10cpt.size()];
-		for (int i=0; i<tab10.length; i++)
-			tab10[i] = tab10cpt.get(i).minColor;
+//		long seed = 123456789l;
+		long seed = 12345678l;
+		
+		// put olive last (yuck)
+		Color[] tab10 = {
+				Colors.tab_blue,
+				Colors.tab_orange,
+				Colors.tab_green,
+				Colors.tab_red,
+				Colors.tab_purple,
+				Colors.tab_brown,
+				Colors.tab_pink,
+				Colors.tab_aqua,
+				Colors.tab_olive,
+		};
+//		CPT tab10cpt = GMT_CPT_Files.CATEGORICAL_TAB10_NOGRAY.instance();
+//		Color[] tab10 = new Color[tab10cpt.size()];
+//		for (int i=0; i<tab10.length; i++)
+//			tab10[i] = tab10cpt.get(i).minColor;
 		
 		Map<LogicTreeNode, Color> nodeColors = new HashMap<>();
 		int colorI = 0;
@@ -99,7 +125,7 @@ public class LHSExampleFigures {
 			}
 		}
 		
-		for (SamplingMethod sm : SamplingMethod.values()) {
+		for (SamplingMethod sm : sms) {
 			LogicTree<LogicTreeNode> tree = LogicTree.buildSampled(levels, samples, seed, sm);
 			if (sm == SamplingMethod.MONTE_CARLO) {
 				// write tree plot
@@ -202,10 +228,10 @@ public class LHSExampleFigures {
 					
 					int maxCount = 0;
 
-					Font nameFont = new Font(Font.SANS_SERIF, Font.BOLD, 12);
-					Font countFont = new Font(Font.SANS_SERIF, Font.BOLD, 12);
-					Font subNameFont = new Font(Font.SANS_SERIF, Font.BOLD, 10);
-					Font subCountFont = new Font(Font.SANS_SERIF, Font.BOLD, 10);
+					Font nameFont = new Font(Font.SANS_SERIF, Font.BOLD, 10);
+					Font countFont = new Font(Font.SANS_SERIF, Font.BOLD, 10);
+					Font subNameFont = new Font(Font.SANS_SERIF, Font.BOLD, 8);
+					Font subCountFont = new Font(Font.SANS_SERIF, Font.BOLD, 8);
 					
 					double offset = samples*0.01;
 					
@@ -315,7 +341,7 @@ public class LHSExampleFigures {
 				}
 			}
 			
-			if (samples <= 30) {
+			if (samples <= 32) {
 				// build branch vector plot
 				List<XY_DataSet> funcs = new ArrayList<>();
 				List<PlotCurveCharacterstics> chars = new ArrayList<>();
@@ -331,28 +357,31 @@ public class LHSExampleFigures {
 				
 				List<int[]> origBranchIndexes = null;
 				if (sm ==SamplingMethod.PAIRWISE_OPTIMIZED_LATIN_HYPERCUBE) {
+					// do the optimization manually
+					LogicTreePointSetMapper<LogicTreeNode> mapper = new LogicTreePointSetMapper<>(levels);
+					PointSet pointSet = SamplingMethod.LATIN_HYPERCUBE.prepare(samples, mapper.getSamplingDimensions(), seed);
+					
 					LogicTree<LogicTreeNode> tree2 = LogicTree.buildSampled(levels, samples, seed, SamplingMethod.LATIN_HYPERCUBE);
-					List<double[]> levelFixedWeights = new ArrayList<>();
-					for (int l=0; l<levels.size(); l++) {
-						LogicTreeLevel<? extends LogicTreeNode> level = levels.get(l);
-						if (level instanceof ContinuousDistributionSampledLevel) {
-							levelFixedWeights.add(null);
-						} else {
-							List<? extends LogicTreeNode> nodes = level.getNodes();
-							double[] weights = new double[nodes.size()];
-							for (int n=0; n<nodes.size(); n++)
-								weights[n] = nodes.get(n).getNodeWeight(null);
-							levelFixedWeights.add(weights);
-						}
+					
+					PermutedPointSet permuted = PermutedPointSet.independentDimensions(pointSet);
+					long iterations = Integer.max(100000, samples*100);
+					QuantizedIncrementalPointSetScorer scorer =
+							new QuantizedIncrementalPointSetScorer(permuted, SamplingMethod.PAIRWISE_CONTINUOUS_BINS);
+					System.out.println("Pairwise-optimizing sample of size "+pointSet.size()+" with "+iterations+" iterations");
+					System.out.println("\tInitial 2D score:\t"+(float)scorer.getCurrentScore().getOrderMeanScore(2));
+					PointSetHillClimber.optimize(scorer, iterations, new Random(new Random(seed).nextLong()));
+					System.out.println("\tDONE; final 2D score:\t"+(float)scorer.getCurrentScore().getOrderMeanScore(2));
+					
+//					permuted.get(dpi, colorI)
+					
+//					origBranchIndexes = iter.getOriginalBranchIndexes();
+					origBranchIndexes = new ArrayList<>(samples);
+					for (int n=0; n<samples; n++) {
+						int[] origIndexes = new int[levels.size()];
+						for (int l=0; l<levels.size(); l++)
+							origIndexes[l] = permuted.getSourcePointIndex(n, l);
+						origBranchIndexes.add(origIndexes);
 					}
-					PairwiseLogicTreeNodeSwapIteration<LogicTreeNode> iter = new PairwiseLogicTreeNodeSwapIteration<>(
-							levels, tree2.getBranches(), levelFixedWeights);
-					
-					iter.setTrackSwaps(true);
-					
-					iter.iterate(Integer.max(10000, samples*100), new Random(seed), false);
-					
-					origBranchIndexes = iter.getOriginalBranchIndexes();
 					tree = tree2;
 				}
 				
@@ -455,9 +484,10 @@ public class LHSExampleFigures {
 	}
 	
 	private enum ScaleEnum implements LogicTreeNode.FixedWeightNode {
-		LOGA_4p1("LogA+4.1", 1d/3d),
-		LOGA_4p2("LogA+4.2", 1d/3d),
-		LOGA_4p3("LogA+4.3", 1d/3d);
+		LOGA_4p1("LogA+4.1", 1d/4d),
+		LOGA_4p2("LogA+4.2", 1d/4d),
+		LOGA_4p3("LogA+4.3", 1d/4d),
+		WIDTH_LIMITED("Wdth-Lmtd", 1d/4d);
 		
 		private String name;
 		private double weight;
