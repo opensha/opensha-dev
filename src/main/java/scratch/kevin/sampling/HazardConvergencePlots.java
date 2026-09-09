@@ -39,6 +39,7 @@ import scratch.kevin.sampling.HazardConvergenceCalcs.ConvergenceSummary;
 public class HazardConvergencePlots {
 
 	private static final Range Y_RANGE = new Range(1e-2, 2e1);
+	private static final Range SIGNED_Y_RANGE = new Range(-1d, 1d);
 	private static final String SOBOL_REFERENCE = HazardConvergenceCalcs.LOO_SOBOL_REFERENCE_NAME;
 	private static final String POOLED_SOBOL_REFERENCE = HazardConvergenceCalcs.POOLED_SOBOL_REFERENCE_NAME;
 	private static final String MCS_REFERENCE = HazardConvergenceCalcs.MCS_REFERENCE_NAME;
@@ -60,11 +61,17 @@ public class HazardConvergencePlots {
 			ConvergenceMetric.CENTRAL_68_RANGE, PlotSymbol.FILLED_SQUARE,
 			ConvergenceMetric.CENTRAL_95_RANGE, PlotSymbol.FILLED_DIAMOND);
 	
+	private static String getMethodName(SamplingMethod method) {
+		if (method == SamplingMethod.OWEN_SCRAMBLED_SOBOL)
+			return SamplingMethod.SOBOL.getShortName();
+		return method.getShortName();
+	}
+	
 	private static final Map<SamplingMethod, String> METHOD_FILE_PREFIXES;
 	static {
 		Map<SamplingMethod, String> prefixes = new HashMap<>();
 		for (SamplingMethod method : SamplingMethod.values())
-			prefixes.put(method, method.getShortName().toLowerCase().replaceAll("-", "_"));
+			prefixes.put(method, getMethodName(method).toLowerCase().replaceAll("-", "_"));
 		METHOD_FILE_PREFIXES = prefixes;
 	}
 
@@ -83,6 +90,7 @@ public class HazardConvergencePlots {
 		for (SamplingMethod method : references.stream().map(ReferenceSummary::method).distinct().sorted().toList()) {
 			for (boolean sobolPool : new boolean[] {true, false}) {
 				plotReference(outputDir, references, method, sobolPool, ConvergenceSummary.MEAN_ABSOLUTE);
+				plotReference(outputDir, references, method, sobolPool, ConvergenceSummary.MEAN_SIGNED);
 //				// Retain the original Sobol convergence maximum plots as standalone figures.
 //				if (method == SOBOL)
 //					plotReference(outputDir, references, method, sobolPool, ConvergenceSummary.MAXIMUM_ABSOLUTE);
@@ -113,13 +121,15 @@ public class HazardConvergencePlots {
 		int[] counts = matching.stream().mapToInt(ReferenceSummary::sampleCount).distinct().sorted().toArray();
 		if (counts.length < 2)
 			return;
-		String pool = sobolPool ? "sobol_consensus" : "mcs_reference";
+		String pool = sobolPool ? "pooled_sobol" : "pooled_mcs";
 		String prefix = "convergence_"+METHOD_FILE_PREFIXES.get(method)+"_vs_"
 				+pool+"_"+summaryPrefix(summary);
-		writePlot(outputDir, prefix, method.getShortName()+" versus "+(sobolPool ? "Sobol pool" : "MCS pool"),
-				"Sample count", summary == ConvergenceSummary.MEAN_ABSOLUTE ? "Absolute difference (%)"
-						: "Maximum absolute difference (%)", counts,
-				Arrays.stream(counts).mapToObj(Integer::toString).toArray(String[]::new), matching);
+		String yLabel = summary == ConvergenceSummary.MEAN_SIGNED ? "Signed bias (%)"
+				: summary == ConvergenceSummary.MEAN_ABSOLUTE ? "Absolute difference (%)"
+						: "Maximum absolute difference (%)";
+		writePlot(outputDir, prefix, getMethodName(method)+" versus "+(sobolPool ? "Sobol pool" : "MCS pool"),
+				"Sample count", yLabel, counts,
+				Arrays.stream(counts).mapToObj(Integer::toString).toArray(String[]::new), matching, summary);
 	}
 
 	static void plotMethodReference(File outputDir, List<ReferenceSummary> rows,
@@ -145,16 +155,16 @@ public class HazardConvergencePlots {
 				}
 			}
 			if (matching.stream().anyMatch(row -> row.count() == index))
-				labels.add(method.getShortName());
+				labels.add(getMethodName(method));
 		}
 		if (matching.isEmpty())
 			return;
-		String referencePrefix = sobolConsensus ? "sobol_consensus" : "mcs_reference";
+		String referencePrefix = sobolConsensus ? "pooled_sobol" : "pooled_mcs";
 		String title = sampleCount+" samples versus "
-				+(sobolConsensus ? "pooled Sobol consensus" : MCS_REFERENCE);
+				+(sobolConsensus ? POOLED_SOBOL_REFERENCE : MCS_REFERENCE);
 		writePlot(outputDir, "method_comparison_"+sampleCount+"_"+referencePrefix+"_"+summaryPrefix(spatialSummary),
 				title, "Sampling method", yLabel,
-				IntStream.range(0, labels.size()).toArray(), labels.toArray(String[]::new), matching);
+				IntStream.range(0, labels.size()).toArray(), labels.toArray(String[]::new), matching, spatialSummary);
 	}
 
 	private static void plotRealizationPairs(File outputDir, List<RealizationPairSummary> rows,
@@ -178,19 +188,19 @@ public class HazardConvergencePlots {
 				}
 			}
 			if (matching.stream().anyMatch(row -> row.count() == index))
-				labels.add(method.getShortName());
+				labels.add(getMethodName(method));
 		}
 		if (matching.isEmpty())
 			return;
 		writePlot(outputDir, "method_comparison_"+sampleCount+"_realization_pairs_"+summaryPrefix(spatialSummary),
 				"Differences between "+sampleCount+"-sample realizations", "Sampling method", yLabel,
-				IntStream.range(0, labels.size()).toArray(), labels.toArray(String[]::new), matching);
+				IntStream.range(0, labels.size()).toArray(), labels.toArray(String[]::new), matching, spatialSummary);
 	}
 
 	private static void writePlot(File outputDir, String prefix, String title, String xLabel, String yLabel,
-			int[] counts, String[] countLabels, List<? extends SummaryRow> rows) throws IOException {
-		ConvergenceSummary primary = prefix.endsWith("_max_abs") ? ConvergenceSummary.MAXIMUM_ABSOLUTE
-				: ConvergenceSummary.MEAN_ABSOLUTE;
+			int[] counts, String[] countLabels, List<? extends SummaryRow> rows,
+			ConvergenceSummary primary) throws IOException {
+		boolean signed = primary == ConvergenceSummary.MEAN_SIGNED;
 		Map<ConvergenceMetric, List<? extends SummaryRow>> byMetric = new LinkedHashMap<>();
 		for (ConvergenceMetric metric : ConvergenceMetric.values()) {
 			List<? extends SummaryRow> metricRows = rows.stream().filter(row -> row.metric().equals(metric)
@@ -205,6 +215,13 @@ public class HazardConvergencePlots {
 		List<PlotCurveCharacterstics> maxChars = new ArrayList<>();
 		List<XY_DataSet> medianFuncs = new ArrayList<>();
 		List<PlotCurveCharacterstics> medianChars = new ArrayList<>();
+		if (signed) {
+			ArbitrarilyDiscretizedFunc zero = new ArbitrarilyDiscretizedFunc();
+			zero.set(-0.3d, 0d);
+			zero.set(counts.length-0.7d, 0d);
+			funcs.add(zero);
+			chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 0.5f, Color.GRAY));
+		}
 		for (Map.Entry<ConvergenceMetric, List<? extends SummaryRow>> entry : byMetric.entrySet()) {
 			ArbitrarilyDiscretizedFunc median = new ArbitrarilyDiscretizedFunc();
 			ArbitrarilyDiscretizedFunc lower = new ArbitrarilyDiscretizedFunc();
@@ -218,10 +235,13 @@ public class HazardConvergencePlots {
 				upper.set((double)i, row.maximum());
 			}
 			Color color = METRIC_COLORS.get(entry.getKey());
-			UncertainArbDiscFunc uncertainty = new UncertainArbDiscFunc(median, lower, upper);
-			funcs.add(uncertainty);
-			chars.add(new PlotCurveCharacterstics(PlotLineType.SHADED_UNCERTAIN, 1f,
-					new Color(color.getRed(), color.getGreen(), color.getBlue(), 70)));
+			// Signed ranges overlap heavily, so only show the realization envelope for mean hazard.
+			if (!signed || entry.getKey() == ConvergenceMetric.MEAN_HAZARD) {
+				UncertainArbDiscFunc uncertainty = new UncertainArbDiscFunc(median, lower, upper);
+				funcs.add(uncertainty);
+				chars.add(new PlotCurveCharacterstics(PlotLineType.SHADED_UNCERTAIN, 1f,
+						new Color(color.getRed(), color.getGreen(), color.getBlue(), 70)));
+			}
 			median.setName(entry.getKey().shortLabel);
 			medianFuncs.add(median);
 			PlotSymbol sym = METRIC_SYMBOLS.get(entry.getKey());
@@ -240,6 +260,14 @@ public class HazardConvergencePlots {
 				}
 			}
 			medianChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 2f, sym, 5f, color));
+			PlotSymbol outlineSym = PlotSymbol.getOutlineSymbol(sym);
+			if (outlineSym != null) {
+				// add slightly darker outline overlay
+				median = median.deepClone();
+				median.setName(null);
+				medianFuncs.add(median);
+				medianChars.add(new PlotCurveCharacterstics(outlineSym, 5f, color.darker().darker()));
+			}
 		}
 		// Put every envelope in the dataset first so all median lines render above all shading.
 		funcs.addAll(maxFuncs);
@@ -259,9 +287,9 @@ public class HazardConvergencePlots {
 		gp.getPlotPrefs().setLegendLineLength(6d);
 		gp.getPlotPrefs().setTickLabelFontSize(8);
 //		gp.getPlotPrefs().setPlotPadding(new RectangleInsets(5, 0, 0, 12));
-//		Range xRange = counts.length == 1 ? new Range(-0.5, 0.5) : new Range(-0.2d, counts.length-0.8d);
-		Range xRange = counts.length == 1 ? new Range(-0.5, 0.5) : new Range(-0.3d, counts.length-0.7d);
-		gp.drawGraphPanel(plot, false, true, xRange, Y_RANGE);
+		Range xRange = counts.length == 1 ? new Range(-0.5, 0.5) : new Range(-0.2d, counts.length-0.8d);
+//		Range xRange = counts.length == 1 ? new Range(-0.5, 0.5) : new Range(-0.3d, counts.length-0.7d);
+		gp.drawGraphPanel(plot, false, !signed, xRange, signed ? SIGNED_Y_RANGE : Y_RANGE);
 		PlotUtils.setXTick(gp, 1d);
 		((NumberAxis)gp.getXAxis()).setNumberFormatOverride(categoryFormat(countLabels));
 		PlotUtils.writePrintPlots(outputDir, prefix, gp, PlotUtils.DEFAULT_USABLE_PAGE_WIDTH/2d,
@@ -294,6 +322,8 @@ public class HazardConvergencePlots {
 			int sampleCount = Integer.parseInt(csv.get(row, 4));
 			String reference = csv.get(row, 5);
 			ConvergenceMetric metric = ConvergenceMetric.fromLabel(csv.get(row, 7));
+			addValue(groups, new ReferenceGroup(method, sampleCount, reference, metric,
+					ConvergenceSummary.MEAN_SIGNED), Double.parseDouble(csv.get(row, 8)));
 			addValue(groups, new ReferenceGroup(method, sampleCount, reference, metric,
 					ConvergenceSummary.MEAN_ABSOLUTE), Double.parseDouble(csv.get(row, 9)));
 			addValue(groups, new ReferenceGroup(method, sampleCount, reference, metric,
@@ -338,7 +368,12 @@ public class HazardConvergencePlots {
 	}
 
 	private static String summaryPrefix(ConvergenceSummary summary) {
-		return summary == ConvergenceSummary.MEAN_ABSOLUTE ? "mean_abs" : "max_abs";
+		return switch (summary) {
+		case MEAN_SIGNED -> "signed_bias";
+		case MEAN_ABSOLUTE -> "mean_abs";
+		case P95_ABSOLUTE -> "p95_abs";
+		case MAXIMUM_ABSOLUTE -> "max_abs";
+		};
 	}
 
 	interface SummaryRow {

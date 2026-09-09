@@ -21,10 +21,8 @@ import org.opensha.commons.data.sampling.optimization.IncrementalPointSetScorer;
 import org.opensha.commons.data.sampling.optimization.PointSetHillClimber;
 import org.opensha.commons.data.sampling.optimization.PointSetOptimizationResult;
 import org.opensha.commons.data.sampling.optimization.QuantizedIncrementalPointSetScorer;
-import org.opensha.commons.data.sampling.scoring.ExactPointSetScorer;
-import org.opensha.commons.data.sampling.scoring.PointSetScore;
-import org.opensha.commons.data.sampling.scoring.PointSetScorer;
-import org.opensha.commons.data.sampling.scoring.QuantizedPointSetScorer;
+import org.opensha.commons.data.sampling.scoring.ProjectionDiscrepancyScore;
+import org.opensha.commons.data.sampling.scoring.ProjectionDiscrepancyScorer;
 
 import com.google.common.base.Preconditions;
 import com.google.common.base.Stopwatch;
@@ -69,20 +67,20 @@ public class InitialSamplingTests {
 			System.out.println("]");
 		}
 
-		PointSetScorer exactScorer = new ExactPointSetScorer(16);
+		ProjectionDiscrepancyScorer exactScorer = ProjectionDiscrepancyScorer.exact(16);
 		
 		System.out.println("\nScoring continuous case to order "+numScoringDimensions);
 		watch.reset().start();
-		PointSetScore score = exactScorer.score(samples, numScoringDimensions);
+		ProjectionDiscrepancyScore score = exactScorer.score(samples, numScoringDimensions);
 		watch.stop();
 		System.out.println("Done in "+timeStr(watch));
 		System.out.println("Continuous score:\t"+score);
 //		System.exit(0);
 
 //		System.out.println("\nRe-scoring continuous case using quantized scorer");
-//		PointSetScorer quantizedScorer = new QuantizedPointSetScorer(100);
+//		ProjectionDiscrepancyScorer quantizedScorer = ProjectionDiscrepancyScorer.quantized(100);
 //		watch.reset().start();
-//		PointSetScore quantizedScore = quantizedScorer.score(samples, numScoringDimensions);
+//		ProjectionDiscrepancyScore quantizedScore = quantizedScorer.score(samples, numScoringDimensions);
 //		watch.stop();
 //		System.out.println("Done in "+timeStr(watch));
 //		System.out.println("Continuous score:\t"+quantizedScore);
@@ -91,7 +89,7 @@ public class InitialSamplingTests {
 		DimensionedPointSet dimensioned = new DimensionedPointSet(samples, dimensions);
 		System.out.println("\nScoring dimensioned set");
 		watch.reset().start();
-		PointSetScore dimensionedScore = exactScorer.score(dimensioned, numScoringDimensions);
+		ProjectionDiscrepancyScore dimensionedScore = exactScorer.score(dimensioned, numScoringDimensions);
 		watch.stop();
 		System.out.println("Done in "+timeStr(watch));
 		System.out.println("Dimensioned score:\t"+dimensionedScore);
@@ -107,7 +105,7 @@ public class InitialSamplingTests {
 		
 		System.out.println("\nScoring optimized version");
 		watch.reset().start();
-		PointSetScore optimizedScore = exactScorer.score(permuted, numScoringDimensions);
+		ProjectionDiscrepancyScore optimizedScore = exactScorer.score(permuted, numScoringDimensions);
 		watch.stop();
 		System.out.println("Done in "+timeStr(watch));
 		System.out.println("Optimized score:\t"+optimizedScore);
@@ -122,14 +120,14 @@ public class InitialSamplingTests {
 //		
 //		System.out.println("\nRe-scoring ArrayPointSet view of optimized version");
 //		watch.reset().start();
-//		PointSetScore materializedScore = scorer.score(materialized, numScoringDimensions);
+//		ProjectionDiscrepancyScore materializedScore = scorer.score(materialized, numScoringDimensions);
 //		watch.stop();
 //		System.out.println("Done in "+timeStr(watch));
 //		System.out.println("Optimized score:\t"+materializedScore);
 //		
 //		System.out.println("\nRe-scoring the initial continuos case (JVM test)");
 //		watch.reset().start();
-//		PointSetScore score2 = scorer.score(samples, numScoringDimensions);
+//		ProjectionDiscrepancyScore score2 = scorer.score(samples, numScoringDimensions);
 //		watch.stop();
 //		System.out.println("Done in "+timeStr(watch));
 //		System.out.println("Continuous re-score:\t"+score2);

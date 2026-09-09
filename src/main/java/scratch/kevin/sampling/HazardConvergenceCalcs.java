@@ -27,6 +27,7 @@ import org.apache.commons.math3.stat.StatUtils;
 import org.opensha.commons.data.CSVFile;
 import org.opensha.commons.data.function.DiscretizedFunc;
 import org.opensha.commons.data.function.LightFixedXFunc;
+import org.opensha.commons.data.xyz.AbstractXYZ_DataSet;
 import org.opensha.commons.data.xyz.GriddedGeoDataSet;
 import org.opensha.commons.geo.GriddedRegion;
 import org.opensha.commons.geo.Location;
@@ -36,6 +37,7 @@ import org.opensha.commons.logicTree.LogicTree;
 import org.opensha.commons.logicTree.LogicTreeBranch;
 import org.opensha.commons.logicTree.sampling.SamplingMethod;
 import org.opensha.commons.util.RandomSeedUtils;
+import org.opensha.sha.earthquake.faultSysSolution.hazard.mpj.MPJ_LogicTreeHazardCalc;
 import org.opensha.sha.earthquake.faultSysSolution.util.SolHazardMapCalc;
 import org.opensha.sha.earthquake.faultSysSolution.util.SolHazardMapCalc.ReturnPeriods;
 
@@ -94,6 +96,16 @@ public class HazardConvergenceCalcs {
 				new File(PaperPaths.INVS_DIR, "2026_08_28-nshm27-AMSAM-8192samples-sobol_scrambled-unique_seed"),
 				new File(PaperPaths.INVS_DIR, "2026_08_29-nshm27-AMSAM-8192samples-sobol_scrambled-unique_seed-2"),
 				new File(PaperPaths.INVS_DIR, "2026_08_29-nshm27-AMSAM-8192samples-sobol_scrambled-unique_seed-3")
+				));
+		
+		/*
+		 * LHS runs
+		 */
+		runDirs.put(SamplingMethod.LATIN_HYPERCUBE, 4096, List.of(
+				new File(PaperPaths.INVS_DIR, "2026_09_08-nshm27-AMSAM-4096samples-lhs"),
+				new File(PaperPaths.INVS_DIR, "2026_09_08-nshm27-AMSAM-4096samples-lhs-unique_seed")
+//				new File(PaperPaths.INVS_DIR, "2026_09_08-nshm27-AMSAM-4096samples-lhs-unique_seed-2"),
+//				new File(PaperPaths.INVS_DIR, "2026_09_08-nshm27-AMSAM-4096samples-lhs-unique_seed-3")
 				));
 		
 		/*
@@ -173,14 +185,19 @@ public class HazardConvergenceCalcs {
 				.mapToInt(Integer::intValue).distinct().sorted().toArray();
 		List<RunPeriodData> mcsData = loadRunPeriodData(mcsRuns, gridReg, period, rp, sampleCounts);
 
-		ReferenceStatistics mcsReference = buildPooledReference(mcsData, null, gridReg, rp,
+		PooledHazardData pooledMCSData = buildPooledHazardData(mcsData, null, gridReg, rp,
 				MCS_REFERENCE_NAME, MCS_REFERENCE_NAME);
+		ReferenceStatistics mcsReference = pooledMCSData.reference();
 		Map<RunSpec, ReferenceStatistics> leaveOneOut = new LinkedHashMap<>();
 		for (RunPeriodData data : sobolData)
-			leaveOneOut.put(data.run(), buildPooledReference(sobolData, data.run(), gridReg, rp,
-					POOLED_SOBOL_REFERENCE_NAME, LOO_SOBOL_REFERENCE_NAME));
-		ReferenceStatistics pooledSobol = buildPooledReference(sobolData, null, gridReg, rp,
+			leaveOneOut.put(data.run(), buildPooledHazardData(sobolData, data.run(), gridReg, rp,
+					POOLED_SOBOL_REFERENCE_NAME, LOO_SOBOL_REFERENCE_NAME).reference());
+		PooledHazardData pooledSobolData = buildPooledHazardData(sobolData, null, gridReg, rp,
 				POOLED_SOBOL_REFERENCE_NAME, LOO_SOBOL_REFERENCE_NAME);
+		ReferenceStatistics pooledSobol = pooledSobolData.reference();
+
+		writePooledHazardFiles(new File(outputDir, "pooled_mcs"), pooledMCSData, gridReg, period, rp);
+		writePooledHazardFiles(new File(outputDir, "pooled_sobol"), pooledSobolData, gridReg, period, rp);
 
 		List<ReferenceComparison> comparisons = new ArrayList<>();
 		for (RunPeriodData data : sobolData) {
@@ -320,7 +337,7 @@ public class HazardConvergenceCalcs {
 		return new RunPeriodData(run, branchMaps, curveX, curveSums, checkpoints, curveBoundaries);
 	}
 
-	private static ReferenceStatistics buildPooledReference(List<RunPeriodData> allRuns,
+	private static PooledHazardData buildPooledHazardData(List<RunPeriodData> allRuns,
 			RunSpec excluded, GriddedRegion gridReg, ReturnPeriods rp,
 			String pooledName, String leaveOneOutName) {
 		int sampleCount = 0;
@@ -355,8 +372,35 @@ public class HazardConvergenceCalcs {
 		Preconditions.checkState(destBranch == sampleCount);
 		double[] curveMean = buildCurveMeanMap(curveSums, curveX, sampleCount, rp);
 		String name = excluded == null ? pooledName : leaveOneOutName;
-		return new ReferenceStatistics(name, excluded == null ? null : excluded.id(), sampleCount,
+		ReferenceStatistics reference = new ReferenceStatistics(name,
+				excluded == null ? null : excluded.id(), sampleCount,
 				calcHazardStatistics(branchMaps, sampleCount, curveMean));
+		return new PooledHazardData(reference, curveX, curveSums, curveMean);
+	}
+
+	private static void writePooledHazardFiles(File outputDir, PooledHazardData pooled,
+			GriddedRegion gridReg, double period, ReturnPeriods rp) throws IOException {
+		Preconditions.checkState(outputDir.exists() || outputDir.mkdir(),
+				"Couldn't create pooled hazard directory: %s", outputDir.getAbsolutePath());
+		int sampleCount = pooled.reference().sampleCount();
+		double[] curveX = pooled.curveX();
+		double[][] curveSums = pooled.curveSums();
+		DiscretizedFunc[] meanCurves = new DiscretizedFunc[gridReg.getNodeCount()];
+		for (int n=0; n<meanCurves.length; n++) {
+			double[] meanY = new double[curveX.length];
+			for (int i=0; i<meanY.length; i++)
+				meanY[i] = curveSums[n][i]/sampleCount;
+			meanCurves[n] = new LightFixedXFunc(curveX, meanY);
+		}
+
+		String curvesName = SolHazardMapCalc.getCSV_FileName("mean_curves", period)+".gz";
+		SolHazardMapCalc.writeCurvesCSV(new File(outputDir, curvesName),
+				meanCurves, gridReg.getNodeList());
+		String mapName = "mean_"+MPJ_LogicTreeHazardCalc.mapPrefix(period, rp)+".txt";
+		AbstractXYZ_DataSet.writeXYZFile(
+				new GriddedGeoDataSet(gridReg, pooled.meanMap()), new File(outputDir, mapName));
+		System.out.println("Wrote "+pooled.reference().name()+" hazard curves and map to "
+				+outputDir.getAbsolutePath());
 	}
 
 	/** Uses disjoint full spans within each run; leftover branches still contribute to every reference. */
@@ -557,7 +601,7 @@ public class HazardConvergenceCalcs {
 		}
 		CSVFile<String> csv = new CSVFile<>(true);
 		csv.addLine("Sampling method", "Sample count", "Reference", "Metric", "Spatial summary", "Realizations",
-				"Mean", "P2.5", "P16", "P50", "P84", "P97.5");
+				"Mean", "Minimum", "P2.5", "P16", "P50", "P84", "P97.5", "Maximum");
 		for (Map.Entry<ReferenceComparisonGroup, List<ReferenceComparison>> entry : groups.entrySet()) {
 			ReferenceComparisonGroup group = entry.getKey();
 			for (ConvergenceSummary summary : ConvergenceSummary.values()) {
@@ -603,7 +647,7 @@ public class HazardConvergenceCalcs {
 		CSVFile<String> csv = new CSVFile<>(true);
 		csv.addLine("Sampling method", "Lower sample count", "Upper sample count", "Metric",
 				"Spatial summary", "Realizations",
-				"Mean", "P2.5", "P16", "P50", "P84", "P97.5");
+				"Mean", "Minimum", "P2.5", "P16", "P50", "P84", "P97.5", "Maximum");
 		for (Map.Entry<DoublingComparisonGroup, List<DoublingComparison>> entry : groups.entrySet()) {
 			DoublingComparisonGroup group = entry.getKey();
 			for (ConvergenceSummary summary : ConvergenceSummary.values()) {
@@ -673,7 +717,7 @@ public class HazardConvergenceCalcs {
 		}
 		CSVFile<String> csv = new CSVFile<>(true);
 		csv.addLine("Sampling method", "Sample count", "Metric", "Spatial summary", "Realization pairs",
-				"Mean", "P2.5", "P16", "P50", "P84", "P97.5");
+				"Mean", "Minimum", "P2.5", "P16", "P50", "P84", "P97.5", "Maximum");
 		for (Map.Entry<RealizationPairComparisonGroup, List<RealizationPairComparison>> entry : groups.entrySet()) {
 			RealizationPairComparisonGroup group = entry.getKey();
 			for (ConvergenceSummary summary : ConvergenceSummary.values()) {
@@ -690,11 +734,13 @@ public class HazardConvergenceCalcs {
 	private static void addSummaryLine(CSVFile<String> csv, List<String> prefix, double[] values) {
 		List<String> line = new ArrayList<>(prefix);
 		line.add(StatUtils.mean(values)+"");
+		line.add(StatUtils.min(values)+"");
 		line.add(percentile(values, 2.5)+"");
 		line.add(percentile(values, 16d)+"");
 		line.add(percentile(values, 50d)+"");
 		line.add(percentile(values, 84d)+"");
 		line.add(percentile(values, 97.5)+"");
+		line.add(StatUtils.max(values)+"");
 		csv.addLine(line);
 	}
 
@@ -718,8 +764,8 @@ public class HazardConvergenceCalcs {
 		replicateCSV.addLine("Sample count", "Replicate", "Metric", "Spatial mean % change",
 				"Spatial mean absolute % change", "Minimum % change", "Maximum % change");
 		CSVFile<String> summaryCSV = new CSVFile<>(true);
-		summaryCSV.addLine("Sample count", "Metric", "Spatial summary", "Mean", "P2.5", "P16", "P50",
-				"P84", "P97.5");
+		summaryCSV.addLine("Sample count", "Metric", "Spatial summary", "Mean", "Minimum", "P2.5", "P16", "P50",
+				"P84", "P97.5", "Maximum");
 		CSVFile<String> siteCSV = new CSVFile<>(true);
 		siteCSV.addLine("Sample count", "Metric", "Longitude", "Latitude", "Reference value",
 				"Mean % change", "Std. dev. % change", "P2.5", "P16", "P50", "P84", "P97.5");
@@ -793,9 +839,10 @@ public class HazardConvergenceCalcs {
 
 	private static void appendDistribution(CSVFile<String> csv, int sampleCount, String metric,
 			String quantity, double[] values) {
-		csv.addLine(sampleCount+"", metric, quantity, StatUtils.mean(values)+"", percentile(values, 2.5)+"",
+		csv.addLine(sampleCount+"", metric, quantity, StatUtils.mean(values)+"", StatUtils.min(values)+"",
+				percentile(values, 2.5)+"",
 				percentile(values, 16d)+"", percentile(values, 50d)+"", percentile(values, 84d)+"",
-				percentile(values, 97.5)+"");
+				percentile(values, 97.5)+"", StatUtils.max(values)+"");
 	}
 
 	private static String formatDistribution(double[] values) {
@@ -1094,6 +1141,9 @@ public class HazardConvergenceCalcs {
 
 	record ReferenceStatistics(String name, String excludedRun, int sampleCount,
 			HazardStatistics statistics) {}
+
+	private record PooledHazardData(ReferenceStatistics reference, double[] curveX,
+			double[][] curveSums, double[] meanMap) {}
 
 	record ReferenceComparison(RunSpec run, int sampleCount, String referenceName,
 			int referenceSampleCount, ConvergenceMetric metric, MapComparison comparison,
