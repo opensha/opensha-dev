@@ -17,10 +17,9 @@ import org.opensha.commons.data.sampling.PermutedPointSet;
 import org.opensha.commons.data.sampling.PointSet;
 import org.opensha.commons.data.sampling.SamplingDimension;
 import org.opensha.commons.data.sampling.generator.*;
-import org.opensha.commons.data.sampling.optimization.IncrementalPointSetScorer;
 import org.opensha.commons.data.sampling.optimization.PointSetHillClimber;
-import org.opensha.commons.data.sampling.optimization.PointSetOptimizationResult;
-import org.opensha.commons.data.sampling.optimization.QuantizedIncrementalPointSetScorer;
+import org.opensha.commons.data.sampling.optimization.PointSetHillClimber.Result;
+import org.opensha.commons.data.sampling.optimization.PointSetObjective;
 import org.opensha.commons.data.sampling.scoring.ProjectionDiscrepancyScore;
 import org.opensha.commons.data.sampling.scoring.ProjectionDiscrepancyScorer;
 
@@ -97,8 +96,8 @@ public class InitialSamplingTests {
 		System.out.println("\nImproving pairwise with "+numIterations+" hill-climbing iterations");
 		watch.reset().start();
 		PermutedPointSet permuted = PermutedPointSet.independentDimensions(dimensioned);
-		IncrementalPointSetScorer incrementalScorer = new QuantizedIncrementalPointSetScorer(permuted, 100);
-		PointSetOptimizationResult result = PointSetHillClimber.optimize(incrementalScorer, numIterations, r);
+		PointSetObjective objective = ProjectionDiscrepancyScorer.quantized(100).objective();
+		Result result = PointSetHillClimber.optimize(permuted, objective, numIterations, r);
 		watch.stop();
 		System.out.println("Done in "+timeStr(watch));
 		System.out.println("Optimization result:\t"+result);

@@ -28,7 +28,9 @@ import org.opensha.commons.data.function.XY_DataSet;
 import org.opensha.commons.data.sampling.PermutedPointSet;
 import org.opensha.commons.data.sampling.PointSet;
 import org.opensha.commons.data.sampling.optimization.PointSetHillClimber;
-import org.opensha.commons.data.sampling.optimization.QuantizedIncrementalPointSetScorer;
+import org.opensha.commons.data.sampling.optimization.PointSetObjective;
+import org.opensha.commons.data.sampling.optimization.PointSetObjective.SwapSession;
+import org.opensha.commons.data.sampling.scoring.ProjectionDiscrepancyScorer;
 import org.opensha.commons.gui.plot.HeadlessGraphPanel;
 import org.opensha.commons.gui.plot.PlotCurveCharacterstics;
 import org.opensha.commons.gui.plot.PlotLineType;
@@ -365,12 +367,13 @@ public class LHSExampleFigures {
 					
 					PermutedPointSet permuted = PermutedPointSet.independentDimensions(pointSet);
 					long iterations = Integer.max(100000, samples*100);
-					QuantizedIncrementalPointSetScorer scorer =
-							new QuantizedIncrementalPointSetScorer(permuted, SamplingMethod.PAIRWISE_CONTINUOUS_BINS);
+					PointSetObjective objective = ProjectionDiscrepancyScorer
+							.quantized(SamplingMethod.PAIRWISE_CONTINUOUS_BINS).objective();
+					SwapSession session = objective.prepare(permuted);
 					System.out.println("Pairwise-optimizing sample of size "+pointSet.size()+" with "+iterations+" iterations");
-					System.out.println("\tInitial 2D score:\t"+(float)scorer.getCurrentScore().getOrderMeanScore(2));
-					PointSetHillClimber.optimize(scorer, iterations, new Random(new Random(seed).nextLong()));
-					System.out.println("\tDONE; final 2D score:\t"+(float)scorer.getCurrentScore().getOrderMeanScore(2));
+					System.out.println("\tInitial objective:\t"+(float)session.getCurrentValue());
+					PointSetHillClimber.optimize(session, iterations, new Random(new Random(seed).nextLong()));
+					System.out.println("\tDONE; final objective:\t"+(float)session.getCurrentValue());
 					
 //					permuted.get(dpi, colorI)
 					
