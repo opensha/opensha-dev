@@ -109,6 +109,7 @@ public class SamplingScoreFigures {
 				SamplingMethod.MONTE_CARLO,
 				SamplingMethod.LATIN_HYPERCUBE,
 				SamplingMethod.PAIRWISE_OPTIMIZED_LATIN_HYPERCUBE,
+				SamplingMethod.CENTERED_DISCREPANCY_OPTIMIZED_LATIN_HYPERCUBE,
 				SamplingMethod.SOBOL,
 				SamplingMethod.OWEN_SCRAMBLED_SOBOL
 		};
@@ -119,6 +120,8 @@ public class SamplingScoreFigures {
 						new PlotCurveCharacterstics(PlotLineType.DASHED, 1f, Colors.tab_green),
 				SamplingMethod.PAIRWISE_OPTIMIZED_LATIN_HYPERCUBE,
 						new PlotCurveCharacterstics(PlotLineType.SHORT_DASHED, 1f, Colors.tab_orange),
+				SamplingMethod.CENTERED_DISCREPANCY_OPTIMIZED_LATIN_HYPERCUBE,
+						new PlotCurveCharacterstics(PlotLineType.DOTTED_AND_DASHED, 1f, Colors.tab_purple),
 				SamplingMethod.OWEN_SCRAMBLED_SOBOL,
 						new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, Colors.tab_blue));
 //		int numPlotTrials = 10;
@@ -128,19 +131,21 @@ public class SamplingScoreFigures {
 		int numAvgTrials = 100;
 //		int numAvgTrials = 500;
 		
-		boolean redoNormScores = false;
-		boolean redoCenteredDiscrepancies = false;
+		boolean redoNormScores = true;
+		boolean redoCenteredDiscrepancies = true;
 		boolean replotIndvSamples = false;
 		
-		String treeName = null;
-		List<SamplingDimension> samplingDimensions = new ArrayList<>();
-		for (int i=0; i<10; i++)
-			samplingDimensions.add(ContinuousSamplingDimension.INSTANCE);
-		String samplingPrefix = "continuous_"+samplingDimensions.size()+"d";
+//		String treeName = null;
+////		int numD = 10;
+//		int numD = 5;
+//		List<SamplingDimension> samplingDimensions = new ArrayList<>();
+//		for (int i=0; i<numD; i++)
+//			samplingDimensions.add(ContinuousSamplingDimension.INSTANCE);
+//		String samplingPrefix = "continuous_"+samplingDimensions.size()+"d";
 		
-//		String treeName = "NSHM23-WUS";
-//		List<SamplingDimension> samplingDimensions = getDimsNSHM23();
-//		String samplingPrefix = "nshm23_"+samplingDimensions.size()+"d";
+		String treeName = "NSHM23-WUS";
+		List<SamplingDimension> samplingDimensions = getDimsNSHM23();
+		String samplingPrefix = "nshm23_"+samplingDimensions.size()+"d";
 		
 //		String treeName = "NSHM27-AmSam";
 //		List<SamplingDimension> samplingDimensions = getDimsNSHM27_AmSam();
@@ -458,6 +463,8 @@ public class SamplingScoreFigures {
 					for (int p=0; p<plotDims.length; p++) {
 						int dim1 = plotDims[p][0];
 						int dim2 = plotDims[p][1];
+						if (dim1 >= dimensions || dim2 >= dimensions)
+							continue;
 						
 						List<PlotSpec> plots = new ArrayList<>();
 						Range range = new Range(0d, 1d);
@@ -640,8 +647,8 @@ public class SamplingScoreFigures {
 		HeadlessGraphPanel gp = PlotUtils.initPrintHeadless();
 		PlotPreferences prefs = gp.getPlotPrefs();
 		prefs.setPlotLabelFontSize(10);
-		prefs.setLegendFontSize(8);
-		prefs.setLegendLineLength(8d);
+		prefs.setLegendFontSize(7);
+		prefs.setLegendLineLength(6d);
 		prefs.getPlotPadding();
 		prefs.setPlotPadding(new RectangleInsets(4, 0, 0, 12));
 		

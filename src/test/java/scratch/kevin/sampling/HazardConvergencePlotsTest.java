@@ -21,22 +21,23 @@ public class HazardConvergencePlotsTest {
 			for (int count : new int[] {512, 1024})
 				rows.add(new ReferenceSummary(SamplingMethod.OWEN_SCRAMBLED_SOBOL, count,
 						HazardConvergenceCalcs.MCS_REFERENCE_NAME, metric, ConvergenceSummary.MEAN_ABSOLUTE,
-						2, 0.1, 0.2, 0.3));
+						2, 0.2, 0.05, 0.1, 0.2, 0.3, 0.25, new double[] {0.15, 0.25}));
 			rows.add(new ReferenceSummary(SamplingMethod.MONTE_CARLO, 512,
 					HazardConvergenceCalcs.LOO_MCS_REFERENCE_NAME, metric, ConvergenceSummary.MEAN_ABSOLUTE,
-					4, 0.2, 0.3, 0.4));
+					4, 0.3, 0.05, 0.2, 0.3, 0.4, 0.2, new double[] {0.2, 0.25, 0.35, 0.4}));
 			rows.add(new ReferenceSummary(SamplingMethod.LATIN_HYPERCUBE, 512,
 					HazardConvergenceCalcs.MCS_REFERENCE_NAME, metric, ConvergenceSummary.MEAN_ABSOLUTE,
-					4, 0.1, 0.2, 0.3));
+					4, 0.2, 0.05, 0.1, 0.2, 0.3, 0.25, new double[] {0.1, 0.15, 0.25, 0.3}));
 		}
 		for (ReferenceSummary row : new ArrayList<>(rows))
 			rows.add(new ReferenceSummary(row.method(), row.sampleCount(), row.reference(), row.metric(),
-					ConvergenceSummary.MAXIMUM_ABSOLUTE, row.realizations(), 0.5, 1, 5));
+					ConvergenceSummary.MAXIMUM_ABSOLUTE, row.realizations(), 1d, 0.25, 0.5, 1d, 5d, 0.2,
+					row.individualValues()));
 		HazardConvergencePlots.plotMethodReference(output.getRoot(), rows, false,
 				ConvergenceSummary.MEAN_ABSOLUTE, "Spatial mean absolute difference (%)");
 		for (int count : new int[] {512, 1024}) {
 			assertTrue(new java.io.File(output.getRoot(),
-					"method_comparison_"+count+"_mcs_reference_mean_abs.png").isFile());
+					"method_comparison_"+count+"_pooled_mcs_mean_abs.png").isFile());
 		}
 	}
 }

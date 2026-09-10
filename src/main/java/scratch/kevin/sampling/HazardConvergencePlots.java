@@ -8,6 +8,7 @@ import java.text.NumberFormat;
 import java.text.ParsePosition;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -21,6 +22,7 @@ import org.jfree.chart.ui.RectangleInsets;
 import org.jfree.data.Range;
 import org.opensha.commons.data.CSVFile;
 import org.opensha.commons.data.function.ArbitrarilyDiscretizedFunc;
+import org.opensha.commons.data.function.DefaultXY_DataSet;
 import org.opensha.commons.data.function.XY_DataSet;
 import org.opensha.commons.data.uncertainty.UncertainArbDiscFunc;
 import org.opensha.commons.gui.plot.HeadlessGraphPanel;
@@ -38,7 +40,7 @@ import scratch.kevin.sampling.HazardConvergenceCalcs.ConvergenceSummary;
 /** Builds paper-oriented plots from the compact convergence summary CSV files. */
 public class HazardConvergencePlots {
 
-	private static final Range Y_RANGE = new Range(1e-2, 2e1);
+	private static final Range Y_RANGE = new Range(5e-3, 2e1);
 	private static final Range SIGNED_Y_RANGE = new Range(-1d, 1d);
 	private static final String SOBOL_REFERENCE = HazardConvergenceCalcs.LOO_SOBOL_REFERENCE_NAME;
 	private static final String POOLED_SOBOL_REFERENCE = HazardConvergenceCalcs.POOLED_SOBOL_REFERENCE_NAME;
@@ -47,26 +49,34 @@ public class HazardConvergencePlots {
 	private static final SamplingMethod SOBOL = SamplingMethod.OWEN_SCRAMBLED_SOBOL;
 
 
+//	private static final ConvergenceMetric[] PLOT_METRICS = ConvergenceMetric.values();
+	static final ConvergenceMetric[] PLOT_METRICS = {
+			ConvergenceMetric.MEAN_HAZARD,
+			ConvergenceMetric.STANDARD_DEVIATION,
+			ConvergenceMetric.CENTRAL_68_RANGE,
+			ConvergenceMetric.CENTRAL_95_RANGE
+	};
+
 	private static final Map<ConvergenceMetric, Color> METRIC_COLORS = Map.of(
 			ConvergenceMetric.MEAN_HAZARD, Colors.tab_blue,
 			ConvergenceMetric.STANDARD_DEVIATION, Colors.tab_orange,
-			ConvergenceMetric.IQR, Colors.tab_green,
-			ConvergenceMetric.CENTRAL_68_RANGE, Colors.tab_red,
-			ConvergenceMetric.CENTRAL_95_RANGE, Colors.tab_purple);
+			ConvergenceMetric.CENTRAL_68_RANGE, Colors.tab_green,
+			ConvergenceMetric.CENTRAL_95_RANGE, Colors.tab_red,
+			ConvergenceMetric.IQR, Colors.tab_purple);
 
 	private static final Map<ConvergenceMetric, PlotSymbol> METRIC_SYMBOLS = Map.of(
 			ConvergenceMetric.MEAN_HAZARD, PlotSymbol.FILLED_CIRCLE,
 			ConvergenceMetric.STANDARD_DEVIATION, PlotSymbol.FILLED_INV_TRIANGLE,
-			ConvergenceMetric.IQR, PlotSymbol.FILLED_TRIANGLE,
 			ConvergenceMetric.CENTRAL_68_RANGE, PlotSymbol.FILLED_SQUARE,
-			ConvergenceMetric.CENTRAL_95_RANGE, PlotSymbol.FILLED_DIAMOND);
-	
-	private static String getMethodName(SamplingMethod method) {
+			ConvergenceMetric.CENTRAL_95_RANGE, PlotSymbol.FILLED_DIAMOND,
+			ConvergenceMetric.IQR, PlotSymbol.FILLED_TRIANGLE);
+
+	static String getMethodName(SamplingMethod method) {
 		if (method == SamplingMethod.OWEN_SCRAMBLED_SOBOL)
 			return SamplingMethod.SOBOL.getShortName();
 		return method.getShortName();
 	}
-	
+
 	private static final Map<SamplingMethod, String> METHOD_FILE_PREFIXES;
 	static {
 		Map<SamplingMethod, String> prefixes = new HashMap<>();
@@ -75,10 +85,12 @@ public class HazardConvergencePlots {
 		METHOD_FILE_PREFIXES = prefixes;
 	}
 
+	private static final boolean PLOT_INDV_MEANS = true;
+
 	public static void main(String[] args) throws IOException {
 		File convergenceDir = new File(PaperPaths.FIGURES_DIR, "hazard_convergence");
 		plotPeriod(new File(convergenceDir, "pga_two_in_50"), "PGA");
-		plotPeriod(new File(convergenceDir, "1s_sa_two_in_50"), "1 s SA");
+		plotPeriod(new File(convergenceDir, "1s_sa_two_in_50"), "1s SA");
 	}
 
 	static void plotPeriod(File outputDir, String periodName) throws IOException {
@@ -108,6 +120,13 @@ public class HazardConvergencePlots {
 				: (method == MCS ? HazardConvergenceCalcs.LOO_MCS_REFERENCE_NAME : MCS_REFERENCE);
 	}
 
+	private static boolean matchesReference(ReferenceSummary row, SamplingMethod method, boolean sobolPool) {
+		if (sobolPool && method == SOBOL)
+			// A fixed-size consensus only leaves out Sobol runs of that size; other sizes use the full pool.
+			return row.reference().equals(SOBOL_REFERENCE) || row.reference().equals(POOLED_SOBOL_REFERENCE);
+		return row.reference().equals(referenceFor(method, sobolPool));
+	}
+
 	private static boolean includeSummary(ConvergenceSummary actual, ConvergenceSummary requested) {
 		return actual == requested || requested == ConvergenceSummary.MEAN_ABSOLUTE
 				&& actual == ConvergenceSummary.MAXIMUM_ABSOLUTE;
@@ -116,7 +135,7 @@ public class HazardConvergencePlots {
 	private static void plotReference(File outputDir, List<ReferenceSummary> rows,
 			SamplingMethod method, boolean sobolPool, ConvergenceSummary summary) throws IOException {
 		List<ReferenceSummary> matching = rows.stream().filter(row -> row.method() == method
-				&& row.reference().equals(referenceFor(method, sobolPool))
+				&& matchesReference(row, method, sobolPool)
 				&& includeSummary(row.spatialSummary(), summary)).toList();
 		int[] counts = matching.stream().mapToInt(ReferenceSummary::sampleCount).distinct().sorted().toArray();
 		if (counts.length < 2)
@@ -144,14 +163,14 @@ public class HazardConvergencePlots {
 		List<MethodSummary> matching = new ArrayList<>();
 		List<String> labels = new ArrayList<>();
 		for (SamplingMethod method : rows.stream().map(row -> row.method()).distinct().sorted().toList()) {
-			String reference = referenceFor(method, sobolConsensus);
 			int index = labels.size();
 			for (ReferenceSummary row : rows) {
 				if (row.method() == method && row.sampleCount() == sampleCount
-						&& row.reference().equals(reference)
+						&& matchesReference(row, method, sobolConsensus)
 						&& includeSummary(row.spatialSummary(), spatialSummary)) {
 					matching.add(new MethodSummary(index, row.metric(), row.spatialSummary(), row.realizations(),
-							row.minimum(), row.median(), row.maximum()));
+							row.mean(), row.standardDeviation(), row.minimum(), row.median(), row.maximum(),
+							row.logStandardDeviation(), row.individualValues()));
 				}
 			}
 			if (matching.stream().anyMatch(row -> row.count() == index))
@@ -184,7 +203,8 @@ public class HazardConvergencePlots {
 				if (row.method() == method && row.sampleCount() == sampleCount
 						&& includeSummary(row.spatialSummary(), spatialSummary)) {
 					matching.add(new MethodSummary(index, row.metric(), row.spatialSummary(), row.realizationPairs(),
-							row.minimum(), row.median(), row.maximum()));
+							row.mean(), row.standardDeviation(), row.minimum(), row.median(), row.maximum(),
+							row.logStandardDeviation(), row.individualValues()));
 				}
 			}
 			if (matching.stream().anyMatch(row -> row.count() == index))
@@ -202,7 +222,7 @@ public class HazardConvergencePlots {
 			ConvergenceSummary primary) throws IOException {
 		boolean signed = primary == ConvergenceSummary.MEAN_SIGNED;
 		Map<ConvergenceMetric, List<? extends SummaryRow>> byMetric = new LinkedHashMap<>();
-		for (ConvergenceMetric metric : ConvergenceMetric.values()) {
+		for (ConvergenceMetric metric : PLOT_METRICS) {
 			List<? extends SummaryRow> metricRows = rows.stream().filter(row -> row.metric().equals(metric)
 					&& row.spatialSummary() == primary).toList();
 			if (!metricRows.isEmpty())
@@ -226,25 +246,57 @@ public class HazardConvergencePlots {
 			ArbitrarilyDiscretizedFunc median = new ArbitrarilyDiscretizedFunc();
 			ArbitrarilyDiscretizedFunc lower = new ArbitrarilyDiscretizedFunc();
 			ArbitrarilyDiscretizedFunc upper = new ArbitrarilyDiscretizedFunc();
+			DefaultXY_DataSet indvMeans = entry.getKey() == ConvergenceMetric.MEAN_HAZARD && PLOT_INDV_MEANS ? new DefaultXY_DataSet() : null;
 			for (int i=0; i<counts.length; i++) {
 				int count = counts[i];
 				SummaryRow row = entry.getValue().stream().filter(candidate -> candidate.count() == count)
 						.findFirst().orElseThrow();
-				median.set((double)i, row.median());
-				lower.set((double)i, row.minimum());
-				upper.set((double)i, row.maximum());
+				if (indvMeans != null) {
+					double[] values = row.individualValues();
+					for (double value : values)
+						indvMeans.set((double)i, value);
+
+					System.out.println("Plotting "+values.length+" mean values for "+title+", count="+count);
+				}
+				double center = signed ? row.mean() : row.median();
+				median.set((double)i, center);
+				if (signed) {
+					double standardDeviation = row.standardDeviation();
+					if (!Double.isFinite(standardDeviation))
+						standardDeviation = 0d;
+					lower.set((double)i, center-standardDeviation);
+					upper.set((double)i, center+standardDeviation);
+				} else {
+					double logSD = row.logStandardDeviation();
+					double factor = Double.isFinite(logSD) ? Math.exp(logSD) : 1d;
+					lower.set((double)i, row.median()/factor);
+					upper.set((double)i, row.median()*factor);
+				}
 			}
 			Color color = METRIC_COLORS.get(entry.getKey());
-			// Signed ranges overlap heavily, so only show the realization envelope for mean hazard.
+			PlotSymbol sym = METRIC_SYMBOLS.get(entry.getKey());
+			PlotSymbol outlineSym = PlotSymbol.getOutlineSymbol(sym);
+			// Signed ranges overlap heavily, so only show mean +/- one standard deviation for mean hazard. Positive quantities use the
+			// median-centered multiplicative range defined by one standard deviation of the log-transformed values.
 			if (!signed || entry.getKey() == ConvergenceMetric.MEAN_HAZARD) {
 				UncertainArbDiscFunc uncertainty = new UncertainArbDiscFunc(median, lower, upper);
 				funcs.add(uncertainty);
 				chars.add(new PlotCurveCharacterstics(PlotLineType.SHADED_UNCERTAIN, 1f,
 						new Color(color.getRed(), color.getGreen(), color.getBlue(), 70)));
 			}
+			if (indvMeans != null) {
+				medianFuncs.add(indvMeans);
+				medianChars.add(new PlotCurveCharacterstics(sym, 1.5f, color.darker().darker()));
+			}
+			if (outlineSym != null) {
+				// add slightly darker outline overlay
+				ArbitrarilyDiscretizedFunc clone = median.deepClone();
+				clone.setName(null);
+				medianFuncs.add(clone);
+				medianChars.add(new PlotCurveCharacterstics(outlineSym, 5f, color.darker().darker()));
+			}
 			median.setName(entry.getKey().shortLabel);
 			medianFuncs.add(median);
-			PlotSymbol sym = METRIC_SYMBOLS.get(entry.getKey());
 			if (primary == ConvergenceSummary.MEAN_ABSOLUTE) {
 				ArbitrarilyDiscretizedFunc worst = new ArbitrarilyDiscretizedFunc();
 				for (int i=0; i<counts.length; i++) {
@@ -260,18 +312,24 @@ public class HazardConvergencePlots {
 				}
 			}
 			medianChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 2f, sym, 5f, color));
-			PlotSymbol outlineSym = PlotSymbol.getOutlineSymbol(sym);
-			if (outlineSym != null) {
-				// add slightly darker outline overlay
-				median = median.deepClone();
-				median.setName(null);
-				medianFuncs.add(median);
-				medianChars.add(new PlotCurveCharacterstics(outlineSym, 5f, color.darker().darker()));
-			}
 		}
 		// Put every envelope in the dataset first so all median lines render above all shading.
 		funcs.addAll(maxFuncs);
 		chars.addAll(maxChars);
+		// add copies for names (then clear the names)
+		for (int i=0; i<medianFuncs.size(); i++) {
+			XY_DataSet func = medianFuncs.get(i);
+			if (func.getName() != null && !func.getName().isBlank()) {
+				XY_DataSet legendFunc = new DefaultXY_DataSet(-1000, -1000);
+				legendFunc.setName(func.getName());
+				funcs.add(legendFunc);
+				chars.add(medianChars.get(i));
+				func.setName(null);
+			}
+		}
+		// reverse them so that mean is on top
+		Collections.reverse(medianFuncs);
+		Collections.reverse(medianChars);
 		funcs.addAll(medianFuncs);
 		chars.addAll(medianChars);
 
@@ -334,8 +392,10 @@ public class HazardConvergencePlots {
 			ReferenceGroup group = entry.getKey();
 			double[] values = entry.getValue().stream().mapToDouble(Double::doubleValue).toArray();
 			rows.add(new ReferenceSummary(group.method(), group.sampleCount(), group.reference(), group.metric(),
-					group.spatialSummary(), values.length, StatUtils.min(values),
-					StatUtils.percentile(values, 50d), StatUtils.max(values)));
+					group.spatialSummary(), values.length, StatUtils.mean(values),
+					HazardConvergenceCalcs.standardDeviation(values), StatUtils.min(values),
+					StatUtils.percentile(values, 50d), StatUtils.max(values),
+					HazardConvergenceCalcs.logStandardDeviation(values), values));
 		}
 		return rows;
 	}
@@ -357,8 +417,10 @@ public class HazardConvergencePlots {
 			RealizationPairGroup group = entry.getKey();
 			double[] values = entry.getValue().stream().mapToDouble(Double::doubleValue).toArray();
 			rows.add(new RealizationPairSummary(group.method(), group.sampleCount(), group.metric(),
-					group.spatialSummary(), values.length, StatUtils.min(values),
-					StatUtils.percentile(values, 50d), StatUtils.max(values)));
+					group.spatialSummary(), values.length, StatUtils.mean(values),
+					HazardConvergenceCalcs.standardDeviation(values), StatUtils.min(values),
+					StatUtils.percentile(values, 50d), StatUtils.max(values),
+					HazardConvergenceCalcs.logStandardDeviation(values), values));
 		}
 		return rows;
 	}
@@ -380,27 +442,34 @@ public class HazardConvergencePlots {
 		int count();
 		ConvergenceSummary spatialSummary();
 		ConvergenceMetric metric();
+		double mean();
+		double standardDeviation();
 		double minimum();
 		double median();
 		double maximum();
+		double logStandardDeviation();
+		double[] individualValues();
 	}
 
 	record ReferenceSummary(SamplingMethod method, int sampleCount, String reference, ConvergenceMetric metric,
 			ConvergenceSummary spatialSummary,
-			int realizations, double minimum, double median, double maximum) implements SummaryRow {
+			int realizations, double mean, double standardDeviation, double minimum, double median, double maximum,
+			double logStandardDeviation, double[] individualValues) implements SummaryRow {
 		@Override public int count() { return sampleCount; }
 	}
 
 	private record MethodSummary(int methodIndex, ConvergenceMetric metric,
 			ConvergenceSummary spatialSummary, int realizations,
-			double minimum, double median, double maximum) implements SummaryRow {
+			double mean, double standardDeviation, double minimum, double median, double maximum,
+			double logStandardDeviation, double[] individualValues) implements SummaryRow {
 		@Override public int count() { return methodIndex; }
 	}
 
 
 	private record RealizationPairSummary(SamplingMethod method, int sampleCount, ConvergenceMetric metric,
 			ConvergenceSummary spatialSummary, int realizationPairs,
-			double minimum, double median, double maximum) {}
+			double mean, double standardDeviation, double minimum, double median, double maximum,
+			double logStandardDeviation, double[] individualValues) {}
 
 	private record ReferenceGroup(SamplingMethod method, int sampleCount, String reference,
 			ConvergenceMetric metric,

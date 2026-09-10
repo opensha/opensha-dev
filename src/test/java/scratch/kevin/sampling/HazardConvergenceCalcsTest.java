@@ -28,18 +28,18 @@ public class HazardConvergenceCalcsTest {
 		List<ReferenceComparison> rows = new ArrayList<>();
 		List<Realization> spans = HazardConvergenceCalcs.appendMCSSpanComparisons(rows, List.of(first, second), new int[] {2, 4},
 				sobol, grid, ReturnPeriods.TWO_IN_50);
-		assertEquals(7, spans.size());
-		// C(5,2) at size 2 plus C(2,2) at size 4, each with five metrics.
-		assertEquals(55, HazardConvergenceCalcs.buildRealizationPairComparisons(spans, grid).size());
-		// Five two-sample spans and two four-sample spans, each with two references and five metrics.
-		assertEquals(70, rows.size());
+		assertEquals(9, spans.size());
+		// C(6,2) at size 2 plus C(3,2) at size 4, each with five metrics.
+		assertEquals(90, HazardConvergenceCalcs.buildRealizationPairComparisons(spans, grid).size());
+		// Six two-sample spans and three four-sample spans, each with two references and five metrics.
+		assertEquals(90, rows.size());
 		for (ReferenceComparison row : rows) {
 			assertEquals(0, row.startIndex() % row.sampleCount());
 			assertTrue(row.startIndex()+row.sampleCount() <= row.run().maxSamples());
 			if (!row.referenceName().equals(HazardConvergenceCalcs.LOO_MCS_REFERENCE_NAME))
 				continue;
 			assertEquals(12-row.sampleCount(), row.referenceSampleCount());
-			int from = (row.run().id().equals("first") ? 0 : 7)+row.startIndex();
+			int from = row.startIndex();
 			int to = from+row.sampleCount();
 			if (row.metric() == ConvergenceMetric.STANDARD_DEVIATION) {
 				double[] included = java.util.stream.IntStream.range(0, 12)
