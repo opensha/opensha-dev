@@ -1066,7 +1066,7 @@ public class BayAreaRegionalGroundMotionCalc {
 	private static class CalcCallable implements Callable<List<SiteResult>> {
 		private NGAW2_WrapperFullParam gmm;
 		private List<Site> sites;
-		private Map<RuptureSurface, CustomCacheWrappedSurface> wrappedMap;
+		private Map<RuptureSurface, RuptureSurface> wrappedMap;
 		
 		// inputs for each batch
 		private List<ProbEqkRupture> events;
@@ -1146,7 +1146,7 @@ public class BayAreaRegionalGroundMotionCalc {
 		private ScalarIMR gmm;
 		private double[] xValsArray;
 		private DiscretizedFunc logExceedFunc;
-		private Map<RuptureSurface, CustomCacheWrappedSurface> wrappedMap;
+		private Map<RuptureSurface, RuptureSurface> wrappedMap;
 		
 		// inputs for each batch
 		private ProbEqkRupture event;
