@@ -1024,8 +1024,9 @@ public class LaTeXUtils {
 		File parentDir = new File("/home/kevin/Documents/papers/2026_nshm_grid_seis_dist_corr");
 		File mainBranch = new File(parentDir, "papers-2026-nshm-grid-seis-dist-corrs");
 		
-//		File submitDir = new File(mainBranch, "submission/internal_review");
-		File submitDir = new File(mainBranch, "submission/srl_initial");
+//		File submitDir = new File(mainBranch, "submission/v1_internal_review");
+//		File submitDir = new File(mainBranch, "submission/v2_srl_initial");
+		File submitDir = new File(mainBranch, "submission/v3_usgs_approval");
 		
 //		File initialBranch = new File(prviDir, "initial-bssa-submission");
 //		File refDir = initialBranch;
