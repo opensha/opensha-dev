@@ -49,7 +49,7 @@ public class GridPropInvestigation {
 		GridSourceList gridList = sol.requireModule(GridSourceList.class);
 		
 		TectonicRegionType trt = TectonicRegionType.STABLE_SHALLOW;
-		ScalarIMR gmm = AttenRelRef.USGS_NSHM23_STABLE.get();
+		ScalarIMR gmm = AttenRelRef.USGS_NSHM23_STABLE_R2.get();
 		
 //		TectonicRegionType trt = TectonicRegionType.ACTIVE_SHALLOW;
 //		ScalarIMR gmm = AttenRelRef.USGS_NSHM23_ACTIVE.get();

@@ -191,7 +191,7 @@ public class ComparisonPageGen {
 		
 		Map<TectonicRegionType, AttenRelRef> gmmRefs = Map.of(
 				TectonicRegionType.ACTIVE_SHALLOW, AttenRelRef.USGS_NSHM23_ACTIVE,
-				TectonicRegionType.STABLE_SHALLOW, AttenRelRef.USGS_NSHM23_STABLE);
+				TectonicRegionType.STABLE_SHALLOW, AttenRelRef.USGS_NSHM23_STABLE_R2);
 //				TectonicRegionType.ACTIVE_SHALLOW, AttenRelRef.NGAWest_2014_AVG_NOIDRISS);
 		Map<TectonicRegionType, ScalarIMR> gmms = new HashMap<>();
 		Map<TectonicRegionType, ScalarIMR> wrapperGMMs = gmms;
