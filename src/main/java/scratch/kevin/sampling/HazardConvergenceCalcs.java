@@ -51,6 +51,8 @@ public class HazardConvergenceCalcs {
 	static final String POOLED_SOBOL_REFERENCE_NAME = "Pooled Sobol";
 	static final String LOO_SOBOL_REFERENCE_NAME = "Pooled Sobol, leave one out";
 	private static final int MAX_RUN_LOAD_THREADS = 4;
+	private static final int MCS_POOL_BOOTSTRAP_REPLICATES = 200;
+	private static final long MCS_POOL_BOOTSTRAP_SEED = 0x5eed5eedL;
 	/** Set to {@code null} to build the Sobol consensus from every available run size. */
 	static final Integer FIXED_SOBOL_CONSENSUS_SIZE = 8192;
 
@@ -92,7 +94,9 @@ public class HazardConvergenceCalcs {
 				new File(PaperPaths.INVS_DIR, "2026_08_28-nshm27-AMSAM-8192samples-sobol_scrambled"),
 				new File(PaperPaths.INVS_DIR, "2026_08_28-nshm27-AMSAM-8192samples-sobol_scrambled-unique_seed"),
 				new File(PaperPaths.INVS_DIR, "2026_08_29-nshm27-AMSAM-8192samples-sobol_scrambled-unique_seed-2"),
-				new File(PaperPaths.INVS_DIR, "2026_08_29-nshm27-AMSAM-8192samples-sobol_scrambled-unique_seed-3")
+				new File(PaperPaths.INVS_DIR, "2026_08_29-nshm27-AMSAM-8192samples-sobol_scrambled-unique_seed-3"),
+				new File(PaperPaths.INVS_DIR, "2026_09_09-nshm27-AMSAM-8192samples-sobol_scrambled-unique_seed-4"),
+				new File(PaperPaths.INVS_DIR, "2026_09_09-nshm27-AMSAM-8192samples-sobol_scrambled-unique_seed-5")
 				));
 		
 		/*
@@ -112,7 +116,9 @@ public class HazardConvergenceCalcs {
 				new File(PaperPaths.INVS_DIR, "2026_08_28-nshm27-AMSAM-4096samples-lhs_pairwise"),
 				new File(PaperPaths.INVS_DIR, "2026_08_28-nshm27-AMSAM-4096samples-lhs_pairwise-unique_seed"),
 				new File(PaperPaths.INVS_DIR, "2026_08_29-nshm27-AMSAM-4096samples-lhs_pairwise-unique_seed-2"),
-				new File(PaperPaths.INVS_DIR, "2026_08_29-nshm27-AMSAM-4096samples-lhs_pairwise-unique_seed-3")
+				new File(PaperPaths.INVS_DIR, "2026_08_29-nshm27-AMSAM-4096samples-lhs_pairwise-unique_seed-3"),
+				new File(PaperPaths.INVS_DIR, "2026_09_10-nshm27-AMSAM-4096samples-lhs_pairwise-unique_seed-4"),
+				new File(PaperPaths.INVS_DIR, "2026_09_10-nshm27-AMSAM-4096samples-lhs_pairwise-unique_seed-5")
 				));
 	}
 
@@ -138,7 +144,7 @@ public class HazardConvergenceCalcs {
 				Feature.read(new File(mcsRuns.get(0).directory, "gridded_region.geojson")));
 
 		double[] periods = { 0d, 1d };
-		String[] periodNames = { "PGA", "1 s SA" };
+		String[] periodNames = { "PGA", "1s SA" };
 		String[] periodPrefixes = { "pga", "1s_sa" };
 		for (int p=0; p<periods.length; p++) {
 			File periodDir = new File(outputDir, periodPrefixes[p]+"_"+rp.name().toLowerCase());
@@ -216,6 +222,8 @@ public class HazardConvergenceCalcs {
 		PooledHazardData pooledSobolData = buildPooledHazardData(sobolConsensusData, null, gridReg, rp,
 				POOLED_SOBOL_REFERENCE_NAME, LOO_SOBOL_REFERENCE_NAME);
 		ReferenceStatistics pooledSobol = pooledSobolData.reference();
+		runMCSPoolBootstrap(mcsData, mcsReference, pooledSobol, MCS_POOL_BOOTSTRAP_REPLICATES,
+				MCS_POOL_BOOTSTRAP_SEED, outputDir);
 
 		writePooledHazardFiles(new File(outputDir, "pooled_mcs"), pooledMCSData, gridReg, period, rp);
 		writePooledHazardFiles(new File(outputDir, "pooled_sobol"), pooledSobolData, gridReg, period, rp);
@@ -802,6 +810,125 @@ public class HazardConvergenceCalcs {
 		line.add(percentile(values, 97.5)+"");
 		line.add(StatUtils.max(values)+"");
 		csv.addLine(line);
+	}
+
+	/**
+	 * Bootstraps the complete IID MCS pool and compares each resampled pool with the fixed Sobol consensus. Branch
+	 * indexes are sampled once per replicate and shared across sites, preserving the spatial dependence present in
+	 * each branch. Mean hazard is omitted because its production value is derived from mean hazard curves rather than
+	 * the arithmetic mean of branch maps.
+	 */
+	static void runMCSPoolBootstrap(List<RunPeriodData> mcsData, ReferenceStatistics mcsReference,
+			ReferenceStatistics sobolReference, int numReplicates, long seed, File outputDir) throws IOException {
+		Preconditions.checkArgument(!mcsData.isEmpty());
+		Preconditions.checkArgument(numReplicates > 1);
+		double[][] branchMaps = mcsData.stream().flatMap(data -> Arrays.stream(data.branchMaps()))
+				.toArray(double[][]::new);
+		Preconditions.checkState(branchMaps.length == mcsReference.sampleCount());
+		System.out.println("\nBootstrapping pooled MCS uncertainty: "+branchMaps.length+" branches x "
+				+numReplicates+" replicates");
+
+		List<ConvergenceMetric> metrics = Arrays.stream(ConvergenceMetric.values())
+				.filter(metric -> metric != ConvergenceMetric.MEAN_HAZARD).toList();
+		@SuppressWarnings("unchecked")
+		Map<ConvergenceMetric, MapComparison>[] comparisons = new Map[numReplicates];
+		IntStream.range(0, numReplicates).parallel().forEach(r -> {
+			long replicateSeed = RandomSeedUtils.uniqueSeedCombination(seed, branchMaps.length, r);
+			int[] counts = bootstrapCounts(branchMaps.length, branchMaps.length, replicateSeed);
+			HazardStatistics statistics = calcBootstrapHazardStatistics(branchMaps, counts, branchMaps.length);
+			Map<ConvergenceMetric, MapComparison> replicateComparisons = new EnumMap<>(ConvergenceMetric.class);
+			for (ConvergenceMetric metric : metrics)
+				replicateComparisons.put(metric,
+						compare(statistics.values(metric), sobolReference.statistics().values(metric)));
+			comparisons[r] = replicateComparisons;
+		});
+
+		CSVFile<String> replicateCSV = new CSVFile<>(true);
+		replicateCSV.addLine("Replicate", "MCS sample count", "Reference", "Reference sample count", "Metric",
+				"Spatial mean % change",
+				"Spatial mean absolute % change", "Spatial P95 absolute % change", "Maximum absolute % change",
+				"Minimum % change", "Maximum % change");
+		CSVFile<String> summaryCSV = new CSVFile<>(true);
+		summaryCSV.addLine("MCS sample count", "Reference", "Reference sample count", "Metric", "Spatial summary",
+				"Original pooled MCS comparison",
+				"Replicates", "Mean", "Standard deviation", "Log standard deviation", "Minimum", "P2.5",
+				"P16", "P50", "P84", "P97.5", "Maximum");
+		for (ConvergenceMetric metric : metrics) {
+			MapComparison original = compare(mcsReference.statistics().values(metric),
+					sobolReference.statistics().values(metric));
+			for (int r=0; r<numReplicates; r++) {
+				MapComparison comparison = comparisons[r].get(metric);
+				replicateCSV.addLine(r+"", branchMaps.length+"", sobolReference.name(),
+						sobolReference.sampleCount()+"", metric.label,
+						comparison.meanPercentChange()+"", comparison.meanAbsolutePercentChange()+"",
+						comparison.p95AbsolutePercentChange()+"", comparison.maximumAbsolutePercentChange()+"",
+						comparison.minimumPercentChange()+"", comparison.maximumPercentChange()+"");
+			}
+			for (ConvergenceSummary summary : ConvergenceSummary.values()) {
+				double[] values = new double[numReplicates];
+				for (int r=0; r<numReplicates; r++)
+					values[r] = summary.value(comparisons[r].get(metric));
+				addSummaryLine(summaryCSV, List.of(branchMaps.length+"", sobolReference.name(),
+						sobolReference.sampleCount()+"", metric.label, summary.label,
+						summary.value(original)+"", numReplicates+""), values);
+			}
+		}
+
+		File replicateFile = new File(outputDir, "mcs_pool_bootstrap_vs_sobol_comparisons.csv");
+		File summaryFile = new File(outputDir, "mcs_pool_bootstrap_vs_sobol_summary.csv");
+		replicateCSV.writeToFile(replicateFile);
+		summaryCSV.writeToFile(summaryFile);
+		System.out.println("Wrote pooled MCS bootstrap results:");
+		System.out.println("\t"+replicateFile.getAbsolutePath());
+		System.out.println("\t"+summaryFile.getAbsolutePath());
+	}
+
+	static HazardStatistics calcBootstrapHazardStatistics(
+			double[][] branchMaps, int[] counts, int sampleCount) {
+		Preconditions.checkArgument(branchMaps.length > 0 && counts.length == branchMaps.length);
+		Preconditions.checkArgument(sampleCount > 1);
+		int countSum = Arrays.stream(counts).sum();
+		Preconditions.checkArgument(countSum == sampleCount,
+				"Bootstrap counts sum to %s, expected %s", countSum, sampleCount);
+		int numSites = branchMaps[0].length;
+		double[] standardDeviation = new double[numSites];
+		double[] iqr = new double[numSites];
+		double[] central68 = new double[numSites];
+		double[] central95 = new double[numSites];
+		double[] values = new double[sampleCount];
+		for (int n=0; n<numSites; n++) {
+			double sum = 0d;
+			double sumSquares = 0d;
+			int index = 0;
+			for (int b=0; b<branchMaps.length; b++) {
+				int count = counts[b];
+				if (count == 0)
+					continue;
+				double value = branchMaps[b][n];
+				Arrays.fill(values, index, index+count, value);
+				index += count;
+				sum += count*value;
+				sumSquares += count*value*value;
+			}
+			Preconditions.checkState(index == sampleCount);
+			double mean = sum/sampleCount;
+			double varianceNumerator = sumSquares-sum*mean;
+			if (varianceNumerator < 0d && varianceNumerator > -1e-12*sumSquares)
+				varianceNumerator = 0d;
+			Preconditions.checkState(varianceNumerator >= 0d,
+					"Negative bootstrap variance numerator at site "+n+": "+varianceNumerator);
+			standardDeviation[n] = Math.sqrt(varianceNumerator/sampleCount);
+			Arrays.sort(values);
+			iqr[n] = empiricalFractile(values, 0.75)-empiricalFractile(values, 0.25);
+			central68[n] = empiricalFractile(values, 0.84)-empiricalFractile(values, 0.16);
+			central95[n] = empiricalFractile(values, 0.975)-empiricalFractile(values, 0.025);
+		}
+		Map<ConvergenceMetric, double[]> metricValues = new EnumMap<>(ConvergenceMetric.class);
+		metricValues.put(ConvergenceMetric.STANDARD_DEVIATION, standardDeviation);
+		metricValues.put(ConvergenceMetric.IQR, iqr);
+		metricValues.put(ConvergenceMetric.CENTRAL_68_RANGE, central68);
+		metricValues.put(ConvergenceMetric.CENTRAL_95_RANGE, central95);
+		return new HazardStatistics(metricValues);
 	}
 
 	/**

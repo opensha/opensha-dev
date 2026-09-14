@@ -220,6 +220,7 @@ public class HazardConvergencePlots {
 	private static void writePlot(File outputDir, String prefix, String title, String xLabel, String yLabel,
 			int[] counts, String[] countLabels, List<? extends SummaryRow> rows,
 			ConvergenceSummary primary) throws IOException {
+		System.out.println("Building plot: "+title);
 		boolean signed = primary == ConvergenceSummary.MEAN_SIGNED;
 		Map<ConvergenceMetric, List<? extends SummaryRow>> byMetric = new LinkedHashMap<>();
 		for (ConvergenceMetric metric : PLOT_METRICS) {
@@ -249,14 +250,17 @@ public class HazardConvergencePlots {
 			DefaultXY_DataSet indvMeans = entry.getKey() == ConvergenceMetric.MEAN_HAZARD && PLOT_INDV_MEANS ? new DefaultXY_DataSet() : null;
 			for (int i=0; i<counts.length; i++) {
 				int count = counts[i];
-				SummaryRow row = entry.getValue().stream().filter(candidate -> candidate.count() == count)
-						.findFirst().orElseThrow();
+				// More than one accepted reference label can represent the same plotted point. In particular,
+				// native Sobol runs use the full fixed-size Sobol pool while prefixes of runs in that pool use
+				// leave-one-out references. Combine their realization values before calculating plot statistics.
+				SummaryRow row = combineRows(entry.getValue().stream()
+						.filter(candidate -> candidate.count() == count).toList());
 				if (indvMeans != null) {
 					double[] values = row.individualValues();
 					for (double value : values)
 						indvMeans.set((double)i, value);
 
-					System.out.println("Plotting "+values.length+" mean values for "+title+", count="+count);
+					System.out.println("\t"+values.length+" mean values for "+title+", count="+count);
 				}
 				double center = signed ? row.mean() : row.median();
 				median.set((double)i, center);
@@ -303,7 +307,8 @@ public class HazardConvergencePlots {
 					int count = counts[i];
 					rows.stream().filter(row -> row.metric() == entry.getKey() && row.count() == count
 							&& row.spatialSummary() == ConvergenceSummary.MAXIMUM_ABSOLUTE)
-							.findFirst().ifPresent(row -> worst.set((double)Arrays.binarySearch(counts, count), row.maximum()));
+							.mapToDouble(SummaryRow::maximum).max()
+							.ifPresent(maximum -> worst.set((double)Arrays.binarySearch(counts, count), maximum));
 				}
 				if (worst.size() > 0) {
 					maxFuncs.add(worst); // Unnamed, so it adds no legend entry.
@@ -429,6 +434,26 @@ public class HazardConvergencePlots {
 		groups.computeIfAbsent(key, unused -> new ArrayList<>()).add(value);
 	}
 
+	static SummaryRow combineRows(List<? extends SummaryRow> rows) {
+		if (rows.isEmpty())
+			throw new IllegalArgumentException("Cannot combine an empty set of summary rows");
+		SummaryRow first = rows.get(0);
+		int size = rows.stream().mapToInt(row -> row.individualValues().length).sum();
+		double[] values = new double[size];
+		int offset = 0;
+		for (SummaryRow row : rows) {
+			if (row.count() != first.count() || row.metric() != first.metric()
+					|| row.spatialSummary() != first.spatialSummary())
+				throw new IllegalArgumentException("Cannot combine summary rows for different plotted quantities");
+			System.arraycopy(row.individualValues(), 0, values, offset, row.individualValues().length);
+			offset += row.individualValues().length;
+		}
+		return new CombinedSummary(first.count(), first.metric(), first.spatialSummary(),
+				StatUtils.mean(values), HazardConvergenceCalcs.standardDeviation(values), StatUtils.min(values),
+				StatUtils.percentile(values, 50d), StatUtils.max(values),
+				HazardConvergenceCalcs.logStandardDeviation(values), values);
+	}
+
 	private static String summaryPrefix(ConvergenceSummary summary) {
 		return switch (summary) {
 		case MEAN_SIGNED -> "signed_bias";
@@ -464,6 +489,11 @@ public class HazardConvergencePlots {
 			double logStandardDeviation, double[] individualValues) implements SummaryRow {
 		@Override public int count() { return methodIndex; }
 	}
+
+	private record CombinedSummary(int count, ConvergenceMetric metric,
+			ConvergenceSummary spatialSummary, double mean, double standardDeviation,
+			double minimum, double median, double maximum, double logStandardDeviation,
+			double[] individualValues) implements SummaryRow {}
 
 
 	private record RealizationPairSummary(SamplingMethod method, int sampleCount, ConvergenceMetric metric,

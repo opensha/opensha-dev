@@ -126,30 +126,33 @@ public class SamplingScoreFigures {
 						new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, Colors.tab_blue));
 //		int numPlotTrials = 10;
 		int numPlotTrials = 0;
-//		int numAvgTrials = 20;
+//		int numAvgTrials = 10;
 //		int numAvgTrials = 50;
-		int numAvgTrials = 100;
+//		int numAvgTrials = 100;
+		int numAvgTrials = 200;
 //		int numAvgTrials = 500;
 		
-		boolean redoNormScores = true;
-		boolean redoCenteredDiscrepancies = true;
+		System.setProperty("java.util.concurrent.ForkJoinPool.common.parallelism", "16");
+
+		boolean redoNormScores = false;
+		boolean redoCenteredDiscrepancies = false;
 		boolean replotIndvSamples = false;
-		
+
 //		String treeName = null;
-////		int numD = 10;
-//		int numD = 5;
+//		int numD = 10;
+////		int numD = 5;
 //		List<SamplingDimension> samplingDimensions = new ArrayList<>();
 //		for (int i=0; i<numD; i++)
 //			samplingDimensions.add(ContinuousSamplingDimension.INSTANCE);
 //		String samplingPrefix = "continuous_"+samplingDimensions.size()+"d";
+
+//		String treeName = "NSHM23-WUS";
+//		List<SamplingDimension> samplingDimensions = getDimsNSHM23();
+//		String samplingPrefix = "nshm23_"+samplingDimensions.size()+"d";
 		
-		String treeName = "NSHM23-WUS";
-		List<SamplingDimension> samplingDimensions = getDimsNSHM23();
-		String samplingPrefix = "nshm23_"+samplingDimensions.size()+"d";
-		
-//		String treeName = "NSHM27-AmSam";
-//		List<SamplingDimension> samplingDimensions = getDimsNSHM27_AmSam();
-//		String samplingPrefix = "nshm27_amsam_"+samplingDimensions.size()+"d";
+		String treeName = "NSHM27-AmSam";
+		List<SamplingDimension> samplingDimensions = getDimsNSHM27_AmSam();
+		String samplingPrefix = "nshm27_amsam_"+samplingDimensions.size()+"d";
 		
 		final int dimensions = samplingDimensions.size();
 		int numContinuous = 0;

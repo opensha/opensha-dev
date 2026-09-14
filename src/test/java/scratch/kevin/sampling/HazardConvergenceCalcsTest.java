@@ -88,4 +88,16 @@ public class HazardConvergenceCalcsTest {
 		assertSame(rows[2], HazardConvergenceCalcs.excludeSpan(rows, 0, 2)[0]);
 		assertEquals(3, HazardConvergenceCalcs.excludeSpan(rows, 3, 5).length);
 	}
+
+	@Test public void weightedBootstrapStatisticsMatchExpandedSample() {
+		double[][] source = {{1}, {2}, {3}, {4}};
+		HazardStatistics weighted = HazardConvergenceCalcs.calcBootstrapHazardStatistics(
+				source, new int[] {2, 0, 1, 1}, 4);
+		double[][] expanded = {{1}, {1}, {3}, {4}};
+		HazardStatistics direct = HazardConvergenceCalcs.calcHazardStatistics(expanded, 4, new double[] {0});
+		for (ConvergenceMetric metric : ConvergenceMetric.values()) {
+			if (metric != ConvergenceMetric.MEAN_HAZARD)
+				assertArrayEquals(direct.values(metric), weighted.values(metric), 0d);
+		}
+	}
 }
