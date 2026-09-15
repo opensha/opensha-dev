@@ -46,7 +46,8 @@ public class FSS_Fetcher2023 {
 	
 //	String nshmAK_ModelDirPath = "/Users/field/nshm-haz_data/nshm-alaska-3.0.1/";
 	public static String nshmAK_ModelDirPath = "/Users/field/nshm-haz_data/nshm-alaska-3.1-maint/";
-	public static String nshmCONUS_ModelDirPath = "/Users/field/nshm-haz_data/nshm-conus-6.1.2/";
+//	public static String nshmCONUS_ModelDirPath = "/Users/field/nshm-haz_data/nshm-conus-6.1.2/";
+	public static String nshmCONUS_ModelDirPath = "/Users/field/nshm-haz_data/nshm-conus-6.2.0/";
 
 	
 	/**
@@ -328,7 +329,7 @@ public class FSS_Fetcher2023 {
 	
 	public static FaultSystemSolution getPreferredFull_FSS(String fullPref_FSS_fileName) {
 		return getFull_FSS(fullPref_FSS_fileName, Cascadia_FSS_creator.FaultModelEnum.MIDDLE,
-				CEUS_FSS_creator.FaultModelEnum.PREFERRED, AK_FSS_creator.DeformationModelEnum.GEO,
+				CEUS_FSS_creator.FaultModelEnum.PREFERRED, AK_FSS_creator.DeformationModelEnum.BOTH,
 				AleutianArc_FSS_Creator.FaultModelEnum.GEOLOGIC_WIDE);
 	}
 	

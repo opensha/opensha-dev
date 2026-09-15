@@ -2,7 +2,9 @@ package scratch.ned.longTermTD2027;
 
 import java.awt.Color;
 import java.io.File;
+import java.io.FileWriter;
 import java.io.IOException;
+import java.nio.charset.Charset;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -24,6 +26,7 @@ import org.opensha.commons.gui.plot.PlotCurveCharacterstics;
 import org.opensha.commons.gui.plot.PlotLineType;
 import org.opensha.commons.gui.plot.PlotSpec;
 import org.opensha.commons.param.ParameterList;
+import org.opensha.commons.util.ExceptionUtils;
 import org.opensha.sha.earthquake.calc.recurInterval.BPT_DistCalc;
 import org.opensha.sha.earthquake.calc.recurInterval.EqkProbDistCalc;
 import org.opensha.sha.earthquake.calc.recurInterval.LognormalDistCalc;
@@ -62,6 +65,7 @@ import org.opensha.sha.faultSurface.GeoJSONFaultSection;
 import org.opensha.sha.magdist.IncrementalMagFreqDist;
 
 import com.google.common.base.Preconditions;
+import com.google.common.io.Files;
 
 import scratch.UCERF3.erf.FaultSystemSolutionERF;
 import scratch.UCERF3.erf.mean.MeanUCERF3;
@@ -114,7 +118,7 @@ public class LongTermTD_2027_Analyses {
 			boolean includeUCERF3_Comp) {
 		
 		if(referenceDir==null)
-			referenceDir = outputDir; // this will only make ratio plots but not show then in index.html
+			referenceDir = outputDir; // this will only make ratio plots but not show them in index.html
 		
 		FaultSystemSolution sol = FSS_Fetcher2023.getPreferredFull_FSS(fss_fileNameWithPath);		
 		TimeDepFaultSystemSolutionERF erf = new TimeDepFaultSystemSolutionERF();
@@ -350,6 +354,48 @@ public class LongTermTD_2027_Analyses {
 
 	}
 	
+	private static void addParentMinMaxGainToFile(File file, List<File> fileList, int gainColumn) {
+		
+		try {
+			List<String> prevFileLines = Files.readLines(file, Charset.defaultCharset());
+			double[] minGain = new double[prevFileLines.size()-1];
+			double[] maxGain = new double[prevFileLines.size()-1];
+			for(int i=0;i<minGain.length;i++) {
+				minGain[i] = Double.MAX_VALUE;
+				maxGain[i] = 0.0;
+			}
+			for(File tempFile:fileList) {
+				List<String> tempFileLines = Files.readLines(tempFile, Charset.defaultCharset());
+				for(int i=0;i<minGain.length;i++) {
+					String[] st = StringUtils.split(tempFileLines.get(i+1),",");
+					String[] stTest = StringUtils.split(prevFileLines.get(i+1),",");
+					int parID = Integer.valueOf(st[0]);
+					int parID_Test = Integer.valueOf(stTest[0]);
+					if(parID != parID_Test)
+						throw new RuntimeException("Parent index problem)");
+					double gain = Double.valueOf(st[gainColumn]);
+					if(minGain[i] > gain)
+						minGain[i] = gain;
+					if(maxGain[i] < gain)
+						maxGain[i] = gain;
+				}
+			}
+			String newFileLines;
+			String oldHeaderMod = prevFileLines.get(0).replace("\n", "");
+			newFileLines = oldHeaderMod+",minBranchGainMge5.0,maxBranchGainMge5.0"+"\n";
+			for(int i=0;i<minGain.length;i++) {
+				String oldLineMod = prevFileLines.get(i+1).replace("\n", "");
+				newFileLines+= oldLineMod+","+minGain[i]+","+maxGain[i]+"\n";
+			}
+			FileWriter fw = new FileWriter(file);
+			fw.write(newFileLines); 
+			fw.close();
+		} catch (Exception e) {
+			ExceptionUtils.throwAsRuntimeException(e);
+		}
+	}
+
+	
 	public static void generatePreliminaryResults() {
 		
 		String rootDir = "/Users/field/Library/CloudStorage/OneDrive-DOI/Field_Other/ERF_Coordination/LongTermTD_2027/Analysis/PreliminaryResults/";
@@ -382,18 +428,27 @@ public class LongTermTD_2027_Analyses {
 //				 histOpenIntYear,  probModChoice,  aperModelChoice,  
 //				renewalModelChoice,  averagingChoice, paleoMapping,  paleoDataToInclude,  
 //				null, titleString, infoString, includeUCERF3_Comp);
+//		// add min/max M≥5 gains to parent file
+//		ArrayList<File> fileList = new ArrayList<File>();
+//		fileList.add(new File(rootDir+"BPT_LowAperiodicity/parentSectionData.csv"));
+//		fileList.add(new File(rootDir+"BPT_MiddleAperiodicity/parentSectionData.csv"));
+//		fileList.add(new File(rootDir+"BPT_HighAperiodicity/parentSectionData.csv"));
+//		fileList.add(new File(rootDir+"Weibull_LowAperiodicity/parentSectionData.csv"));
+//		fileList.add(new File(rootDir+"Weibull_MiddleAperiodicity/parentSectionData.csv"));
+//		fileList.add(new File(rootDir+"Weibull_HighAperiodicity/parentSectionData.csv"));
+//		addParentMinMaxGainToFile(new File(outputDir+"parentSectionData.csv"), fileList, 8);
 
 		
 		// NSHM 2027 Branch Averaged BPT
-//		outputDir = rootDir+"NSHM27_BranchAveBPT/";
-//		titleString = "NSHM 2027 Branch Averaged TD Model - BPT";
-//		infoString = "This applies the preliminary branch-averaged model using only BPT and includes comparisons to UCERF3.";
-//		probModChoice = FSS_ProbabilityModels.NSHM27_BRANCH_AVE_BPT;
-//		includeUCERF3_Comp = true;
-//		generateReportPage(outputDir,  fss_fileNameWithPath,  startYear,  duration, 
-//				 histOpenIntYear,  probModChoice,  aperModelChoice,  
-//				renewalModelChoice,  averagingChoice, paleoMapping,  paleoDataToInclude,  
-//				referenceDir, titleString, infoString, includeUCERF3_Comp);
+		outputDir = rootDir+"NSHM27_BranchAveBPT/";
+		titleString = "NSHM 2027 Branch Averaged TD Model - BPT";
+		infoString = "This applies the preliminary branch-averaged model using only BPT and includes comparisons to UCERF3.";
+		probModChoice = FSS_ProbabilityModels.NSHM27_BRANCH_AVE_BPT;
+		includeUCERF3_Comp = true;
+		generateReportPage(outputDir,  fss_fileNameWithPath,  startYear,  duration, 
+				 histOpenIntYear,  probModChoice,  aperModelChoice,  
+				renewalModelChoice,  averagingChoice, paleoMapping,  paleoDataToInclude,  
+				referenceDir, titleString, infoString, includeUCERF3_Comp);
 		
 		
 //		// NSHM 2027 Branch Averaged Weibull
@@ -559,28 +614,30 @@ public class LongTermTD_2027_Analyses {
 //				referenceDir, titleString, infoString, includeUCERF3_Comp);
 	
 		// BPT with single Aper = 0.4
-		outputDir = rootDir+"BPT_WithSingleAper0.4/";
-		probModChoice = FSS_ProbabilityModels.UCERF3_METHOD;
-		renewalModelChoice = RenewalModels.BPT;
-		aperModelChoice = AperiodicityModels.SINGLE_VALUED; // this has a default of 0.4; other values will be problematic
-		titleString = "BPT With Aperiodicity = 0.4 For All Sources";
-		infoString = "This is BPT with a constant aperiodicity (COV) of 0.4. ";
-		generateReportPage(outputDir, fss_fileNameWithPath,  startYear,  duration, 
-				 histOpenIntYear,  probModChoice,  aperModelChoice,  
-				renewalModelChoice,  averagingChoice, paleoMapping,  paleoDataToInclude,  
-				rootDir+"BPT_MiddleAperiodicity", titleString, infoString, includeUCERF3_Comp);
+//		outputDir = rootDir+"BPT_WithSingleAper0.4/";
+//		probModChoice = FSS_ProbabilityModels.UCERF3_METHOD;
+//		renewalModelChoice = RenewalModels.BPT;
+//		aperModelChoice = AperiodicityModels.SINGLE_VALUED; // this has a default of 0.4; other values will be problematic
+//		titleString = "BPT With Aperiodicity = 0.4 For All Sources";
+//		infoString = "This is BPT with a constant aperiodicity (COV) of 0.4. ";
+//		includeUCERF3_Comp = false;
+//		generateReportPage(outputDir, fss_fileNameWithPath,  startYear,  duration, 
+//				 histOpenIntYear,  probModChoice,  aperModelChoice,  
+//				renewalModelChoice,  averagingChoice, paleoMapping,  paleoDataToInclude,  
+//				rootDir+"BPT_MiddleAperiodicity", titleString, infoString, includeUCERF3_Comp);
 
 		// BPT with slip-rate dependent aperiodicity test
-		outputDir = rootDir+"BPT_WithSlipRateDepAperiodicity/";
-		probModChoice = FSS_ProbabilityModels.UCERF3_METHOD;
-		renewalModelChoice = RenewalModels.BPT;
-		aperModelChoice = AperiodicityModels.NSHM27_SLIPRATE_TEST; // this has a default of 0.4; other values will be problematic
-		titleString = "BPT With Slip-Rate Dependent Aperiodicity Test";
-		infoString = "This is BPT with a slip-rate dependent aperiodicity. ";
-		generateReportPage(outputDir, fss_fileNameWithPath,  startYear,  duration, 
-				 histOpenIntYear,  probModChoice,  aperModelChoice,  
-				renewalModelChoice,  averagingChoice, paleoMapping,  paleoDataToInclude,  
-				rootDir+"BPT_MiddleAperiodicity", titleString, infoString, includeUCERF3_Comp);
+//		outputDir = rootDir+"BPT_WithSlipRateDepAperiodicity/";
+//		probModChoice = FSS_ProbabilityModels.UCERF3_METHOD;
+//		renewalModelChoice = RenewalModels.BPT;
+//		aperModelChoice = AperiodicityModels.NSHM27_SLIPRATE_TEST; // this has a default of 0.4; other values will be problematic
+//		titleString = "BPT With Slip-Rate Dependent Aperiodicity Test";
+//		infoString = "This is BPT with a slip-rate dependent aperiodicity. ";
+//		includeUCERF3_Comp = false;
+//		generateReportPage(outputDir, fss_fileNameWithPath,  startYear,  duration, 
+//				 histOpenIntYear,  probModChoice,  aperModelChoice,  
+//				renewalModelChoice,  averagingChoice, paleoMapping,  paleoDataToInclude,  
+//				rootDir+"BPT_MiddleAperiodicity", titleString, infoString, includeUCERF3_Comp);
 	
 		
 // ---- OLD STUFF BELOW ----------------------------------------------------
@@ -1262,8 +1319,8 @@ public class LongTermTD_2027_Analyses {
 
 	public static void main(String[] args) {
 		
-		FaultSystemSolution test = FSS_Fetcher2023.getBranchAverageFull_FSS("/Users/field/Desktop/testFSS");
-		System.exit(0);
+//		FaultSystemSolution test = FSS_Fetcher2023.getBranchAverageFull_FSS("/Users/field/Desktop/testFSS");
+//		System.exit(0);
 
 //		weibullSamplingOskinTests();
 		
