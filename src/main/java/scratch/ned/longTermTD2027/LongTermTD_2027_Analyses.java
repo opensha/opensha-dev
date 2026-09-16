@@ -419,36 +419,36 @@ public class LongTermTD_2027_Analyses {
 				
 	
 		// NSHM 2027 Branch Averaged
-//		outputDir = referenceDir;
-//		titleString = "NSHM 2027 Branch Averaged TD Model (Preliminary)";
-//		infoString = "This applies the preliminary branch-averaged model (BPT and Weibull coupled with all aperidocity branches) and includes comparisons to UCERF3.";
-//		probModChoice = FSS_ProbabilityModels.NSHM27_BRANCH_AVE;
-//		includeUCERF3_Comp = true;
-//		generateReportPage(outputDir,  fss_fileNameWithPath,  startYear,  duration, 
-//				 histOpenIntYear,  probModChoice,  aperModelChoice,  
-//				renewalModelChoice,  averagingChoice, paleoMapping,  paleoDataToInclude,  
-//				null, titleString, infoString, includeUCERF3_Comp);
-//		// add min/max M≥5 gains to parent file
-//		ArrayList<File> fileList = new ArrayList<File>();
-//		fileList.add(new File(rootDir+"BPT_LowAperiodicity/parentSectionData.csv"));
-//		fileList.add(new File(rootDir+"BPT_MiddleAperiodicity/parentSectionData.csv"));
-//		fileList.add(new File(rootDir+"BPT_HighAperiodicity/parentSectionData.csv"));
-//		fileList.add(new File(rootDir+"Weibull_LowAperiodicity/parentSectionData.csv"));
-//		fileList.add(new File(rootDir+"Weibull_MiddleAperiodicity/parentSectionData.csv"));
-//		fileList.add(new File(rootDir+"Weibull_HighAperiodicity/parentSectionData.csv"));
-//		addParentMinMaxGainToFile(new File(outputDir+"parentSectionData.csv"), fileList, 8);
-
-		
-		// NSHM 2027 Branch Averaged BPT
-		outputDir = rootDir+"NSHM27_BranchAveBPT/";
-		titleString = "NSHM 2027 Branch Averaged TD Model - BPT";
-		infoString = "This applies the preliminary branch-averaged model using only BPT and includes comparisons to UCERF3.";
-		probModChoice = FSS_ProbabilityModels.NSHM27_BRANCH_AVE_BPT;
+		outputDir = referenceDir;
+		titleString = "NSHM 2027 Branch Averaged TD Model (Preliminary)";
+		infoString = "This applies the preliminary branch-averaged model (BPT and Weibull coupled with all aperidocity branches) and includes comparisons to UCERF3.";
+		probModChoice = FSS_ProbabilityModels.NSHM27_BRANCH_AVE;
 		includeUCERF3_Comp = true;
 		generateReportPage(outputDir,  fss_fileNameWithPath,  startYear,  duration, 
 				 histOpenIntYear,  probModChoice,  aperModelChoice,  
 				renewalModelChoice,  averagingChoice, paleoMapping,  paleoDataToInclude,  
-				referenceDir, titleString, infoString, includeUCERF3_Comp);
+				null, titleString, infoString, includeUCERF3_Comp);
+		// add min/max M≥5 gains to parent file
+		ArrayList<File> fileList = new ArrayList<File>();
+		fileList.add(new File(rootDir+"BPT_LowAperiodicity/parentSectionData.csv"));
+		fileList.add(new File(rootDir+"BPT_MiddleAperiodicity/parentSectionData.csv"));
+		fileList.add(new File(rootDir+"BPT_HighAperiodicity/parentSectionData.csv"));
+		fileList.add(new File(rootDir+"Weibull_LowAperiodicity/parentSectionData.csv"));
+		fileList.add(new File(rootDir+"Weibull_MiddleAperiodicity/parentSectionData.csv"));
+		fileList.add(new File(rootDir+"Weibull_HighAperiodicity/parentSectionData.csv"));
+		addParentMinMaxGainToFile(new File(outputDir+"parentSectionData.csv"), fileList, 8);
+
+		
+		// NSHM 2027 Branch Averaged BPT
+//		outputDir = rootDir+"NSHM27_BranchAveBPT/";
+//		titleString = "NSHM 2027 Branch Averaged TD Model - BPT";
+//		infoString = "This applies the preliminary branch-averaged model using only BPT and includes comparisons to UCERF3.";
+//		probModChoice = FSS_ProbabilityModels.NSHM27_BRANCH_AVE_BPT;
+//		includeUCERF3_Comp = true;
+//		generateReportPage(outputDir,  fss_fileNameWithPath,  startYear,  duration, 
+//				 histOpenIntYear,  probModChoice,  aperModelChoice,  
+//				renewalModelChoice,  averagingChoice, paleoMapping,  paleoDataToInclude,  
+//				referenceDir, titleString, infoString, includeUCERF3_Comp);
 		
 		
 //		// NSHM 2027 Branch Averaged Weibull
