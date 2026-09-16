@@ -47,7 +47,7 @@ public class HazardMapPlots {
 		File convergenceDir = new File(PaperPaths.FIGURES_DIR, "hazard_convergence");
 		int[] sizes = { 512, 1024, 2048, 4096, 8192 };
 		plotPeriod(new File(convergenceDir, "pga_two_in_50"), 0d, "PGA, "+RP.label, sizes);
-//		plotPeriod(new File(convergenceDir, "1s_sa_two_in_50"), 1d, "1s SA, "+RP.label, sizes);
+		plotPeriod(new File(convergenceDir, "1s_sa_two_in_50"), 1d, "1s SA, "+RP.label, sizes);
 	}
 
 	private static void plotPeriod(File periodDir, double period, String perLabel, int... indvSizes)
@@ -76,11 +76,24 @@ public class HazardMapPlots {
 
 		PooledHazardData mcsPool = loadPool(periodDir, "pooled_mcs", mcsPoolDirs, gridReg, period);
 		PooledHazardData sobolPool = loadPool(periodDir, "pooled_sobol", sobolPoolDirs, gridReg, period);
+		List<File> poLHSPoolDirs = largestRuns(HazardConvergenceCalcs.runDirs.row(
+				SamplingMethod.PAIRWISE_OPTIMIZED_LATIN_HYPERCUBE));
+		PooledHazardData poLHSPool = poLHSPoolDirs.isEmpty() ? null
+				: loadPool(periodDir, "pooled_po_lhs", poLHSPoolDirs, gridReg, period);
 
 		plotMeanHazard(gridReg, sobolPool.data(), perLabel, mapDir, "pooled_sobol");
 		plotMeanHazard(gridReg, mcsPool.data(), perLabel, mapDir, "pooled_mcs");
 		plotComparisons(gridReg, sobolPool.data(), mcsPool.data(), perLabel, mapDir, "pooled_sobol_vs_mcs",
-				"Pooled Sobol ("+nStr(sobolPool.data)+") vs MCS ("+nStr(mcsPool.data)+")");
+				"Pooled Sobol' ("+nStr(sobolPool.data)+") vs MCS ("+nStr(mcsPool.data)+")");
+		if (poLHSPool != null) {
+			plotMeanHazard(gridReg, poLHSPool.data(), perLabel, mapDir, "pooled_po_lhs");
+			plotComparisons(gridReg, poLHSPool.data(), mcsPool.data(), perLabel, mapDir,
+					"pooled_po_lhs_vs_mcs", "Pooled Pairwise-Optimized LHS ("+nStr(poLHSPool.data)
+					+") vs MCS ("+nStr(mcsPool.data)+")");
+			plotComparisons(gridReg, poLHSPool.data(), sobolPool.data(), perLabel, mapDir,
+					"pooled_po_lhs_vs_sobol", "Pooled Pairwise-Optimized LHS ("+nStr(poLHSPool.data)
+					+") vs Sobol' ("+nStr(sobolPool.data)+")");
+		}
 
 		// Plot the first realization available for each method and requested sample count.
 		for (int size : indvSizes) {
@@ -114,7 +127,7 @@ public class HazardMapPlots {
 				plotComparisons(gridReg, data, refMCS, perLabel, sizeDir,
 						method.name().toLowerCase()+"_vs_pooled_mcs", name+" vs pooled MCS ("+nStr(refMCS)+")");
 				plotComparisons(gridReg, data, refSobol, perLabel, sizeDir,
-						method.name().toLowerCase()+"_vs_pooled_sobol", name+" vs pooled Sobol ("+nStr(refSobol)+")");
+						method.name().toLowerCase()+"_vs_pooled_sobol", name+" vs pooled Sobol' ("+nStr(refSobol)+")");
 			}
 		}
 	}
@@ -138,6 +151,11 @@ public class HazardMapPlots {
 		dirsBySize.entrySet().stream().sorted(Map.Entry.comparingByKey())
 				.forEach(entry -> dirs.addAll(entry.getValue()));
 		return dirs;
+	}
+
+	private static List<File> largestRuns(Map<Integer, List<File>> dirsBySize) {
+		return dirsBySize.entrySet().stream().max(Map.Entry.comparingByKey())
+				.map(Map.Entry::getValue).orElse(List.of());
 	}
 
 	private static PooledHazardData loadPool(File periodDir, String poolName, List<File> runDirs,
@@ -176,22 +194,23 @@ public class HazardMapPlots {
 			GriddedRegion gridReg, double period) throws IOException {
 		double[] xValues = null;
 		double[][] sums = null;
-		File hazardResultsDir = new File(runDir, "results");
-		for (int b=0; b<sampleCount; b++) {
-			DiscretizedFunc[] curves = HazardConvergenceCalcs.loadBranchCurves(
-					hazardResultsDir, tree.getBranch(b), gridReg, period);
-			if (sums == null) {
-				xValues = new double[curves[0].size()];
-				for (int i=0; i<xValues.length; i++)
-					xValues[i] = curves[0].getX(i);
-				sums = new double[curves.length][xValues.length];
-			}
-			Preconditions.checkState(curves.length == sums.length);
-			for (int n=0; n<curves.length; n++) {
-				Preconditions.checkState(curves[n].size() == xValues.length);
-				for (int i=0; i<xValues.length; i++) {
-					Preconditions.checkState((float)curves[n].getX(i) == (float)xValues[i]);
-					sums[n][i] += curves[n].getY(i);
+		try (HazardConvergenceCalcs.BranchCurveLoader curveLoader =
+				new HazardConvergenceCalcs.BranchCurveLoader(runDir)) {
+			for (int b=0; b<sampleCount; b++) {
+				DiscretizedFunc[] curves = curveLoader.load(tree.getBranch(b), gridReg, period);
+				if (sums == null) {
+					xValues = new double[curves[0].size()];
+					for (int i=0; i<xValues.length; i++)
+						xValues[i] = curves[0].getX(i);
+					sums = new double[curves.length][xValues.length];
+				}
+				Preconditions.checkState(curves.length == sums.length);
+				for (int n=0; n<curves.length; n++) {
+					Preconditions.checkState(curves[n].size() == xValues.length);
+					for (int i=0; i<xValues.length; i++) {
+						Preconditions.checkState((float)curves[n].getX(i) == (float)xValues[i]);
+						sums[n][i] += curves[n].getY(i);
+					}
 				}
 			}
 		}

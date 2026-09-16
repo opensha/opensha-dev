@@ -19,6 +19,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.stream.IntStream;
+import java.util.zip.GZIPInputStream;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipException;
 import java.util.zip.ZipFile;
@@ -50,6 +51,7 @@ public class HazardConvergenceCalcs {
 	static final String LOO_MCS_REFERENCE_NAME = "Pooled MCS, leave span out";
 	static final String POOLED_SOBOL_REFERENCE_NAME = "Pooled Sobol";
 	static final String LOO_SOBOL_REFERENCE_NAME = "Pooled Sobol, leave one out";
+	static final String POOLED_PO_LHS_REFERENCE_NAME = "Pooled Pairwise-Optimized LHS";
 	private static final int MAX_RUN_LOAD_THREADS = 4;
 	private static final int MCS_POOL_BOOTSTRAP_REPLICATES = 200;
 	private static final long MCS_POOL_BOOTSTRAP_SEED = 0x5eed5eedL;
@@ -66,7 +68,14 @@ public class HazardConvergenceCalcs {
 		runDirs.put(SamplingMethod.MONTE_CARLO, 20000, List.of(
 				new File(PaperPaths.INVS_DIR, "2026_07_17-nshm27-AMSAM-20000samples-mcs"),
 				new File(PaperPaths.INVS_DIR, "2026_09_03-nshm27-AMSAM-20000samples-mcs-unique_seed"),
-				new File(PaperPaths.INVS_DIR, "2026_09_05-nshm27-AMSAM-20000samples-mcs-unique_seed-2")
+				new File(PaperPaths.INVS_DIR, "2026_09_05-nshm27-AMSAM-20000samples-mcs-unique_seed-2"),
+				new File(PaperPaths.INVS_DIR, "2026_09_10-nshm27-AMSAM-20000samples-mcs-unique_seed-3")
+//				new File(PaperPaths.INVS_DIR, "2026_09_10-nshm27-AMSAM-20000samples-mcs-unique_seed-4"),
+//				new File(PaperPaths.INVS_DIR, "2026_09_15-nshm27-AMSAM-20000samples-mcs-unique_seed-5"),
+//				new File(PaperPaths.INVS_DIR, "2026_09_15-nshm27-AMSAM-20000samples-mcs-unique_seed-6"),
+//				new File(PaperPaths.INVS_DIR, "2026_09_16-nshm27-AMSAM-20000samples-mcs-unique_seed-7"),
+//				new File(PaperPaths.INVS_DIR, "2026_09_16-nshm27-AMSAM-20000samples-mcs-unique_seed-8"),
+//				new File(PaperPaths.INVS_DIR, "2026_09_16-nshm27-AMSAM-20000samples-mcs-unique_seed-9")
 				));
 
 		/*
@@ -97,6 +106,8 @@ public class HazardConvergenceCalcs {
 				new File(PaperPaths.INVS_DIR, "2026_08_29-nshm27-AMSAM-8192samples-sobol_scrambled-unique_seed-3"),
 				new File(PaperPaths.INVS_DIR, "2026_09_09-nshm27-AMSAM-8192samples-sobol_scrambled-unique_seed-4"),
 				new File(PaperPaths.INVS_DIR, "2026_09_09-nshm27-AMSAM-8192samples-sobol_scrambled-unique_seed-5")
+//				new File(PaperPaths.INVS_DIR, "2026_09_16-nshm27-AMSAM-8192samples-sobol_scrambled-unique_seed-6"),
+//				new File(PaperPaths.INVS_DIR, "2026_09_16-nshm27-AMSAM-8192samples-sobol_scrambled-unique_seed-7")
 				));
 		
 		/*
@@ -119,7 +130,19 @@ public class HazardConvergenceCalcs {
 				new File(PaperPaths.INVS_DIR, "2026_08_29-nshm27-AMSAM-4096samples-lhs_pairwise-unique_seed-3"),
 				new File(PaperPaths.INVS_DIR, "2026_09_10-nshm27-AMSAM-4096samples-lhs_pairwise-unique_seed-4"),
 				new File(PaperPaths.INVS_DIR, "2026_09_10-nshm27-AMSAM-4096samples-lhs_pairwise-unique_seed-5")
+//				new File(PaperPaths.INVS_DIR, "2026_09_16-nshm27-AMSAM-4096samples-lhs_pairwise-unique_seed-6"),
+//				new File(PaperPaths.INVS_DIR, "2026_09_16-nshm27-AMSAM-4096samples-lhs_pairwise-unique_seed-7")
 				));
+//		runDirs.put(SamplingMethod.PAIRWISE_OPTIMIZED_LATIN_HYPERCUBE, 8192, List.of(
+//				new File(PaperPaths.INVS_DIR, "2026_09_16-nshm27-AMSAM-8192samples-lhs_pairwise"),
+//				new File(PaperPaths.INVS_DIR, "2026_09_16-nshm27-AMSAM-8192samples-lhs_pairwise-unique_seed"),
+//				new File(PaperPaths.INVS_DIR, "2026_09_16-nshm27-AMSAM-8192samples-lhs_pairwise-unique_seed-2"),
+//				new File(PaperPaths.INVS_DIR, "2026_09_16-nshm27-AMSAM-8192samples-lhs_pairwise-unique_seed-3"),
+//				new File(PaperPaths.INVS_DIR, "2026_09_16-nshm27-AMSAM-8192samples-lhs_pairwise-unique_seed-4"),
+//				new File(PaperPaths.INVS_DIR, "2026_09_16-nshm27-AMSAM-8192samples-lhs_pairwise-unique_seed-5"),
+//				new File(PaperPaths.INVS_DIR, "2026_09_16-nshm27-AMSAM-8192samples-lhs_pairwise-unique_seed-6"),
+//				new File(PaperPaths.INVS_DIR, "2026_09_16-nshm27-AMSAM-8192samples-lhs_pairwise-unique_seed-7")
+//				));
 	}
 
 	public static void main(String[] args) throws IOException {
@@ -227,6 +250,14 @@ public class HazardConvergenceCalcs {
 
 		writePooledHazardFiles(new File(outputDir, "pooled_mcs"), pooledMCSData, gridReg, period, rp);
 		writePooledHazardFiles(new File(outputDir, "pooled_sobol"), pooledSobolData, gridReg, period, rp);
+		List<RunPeriodData> poLHSPoolData = largestMethodRuns(fullDesignData,
+				SamplingMethod.PAIRWISE_OPTIMIZED_LATIN_HYPERCUBE);
+		if (!poLHSPoolData.isEmpty()) {
+			PooledHazardData pooledPOLHSData = buildPooledHazardData(poLHSPoolData, null, gridReg, rp,
+					POOLED_PO_LHS_REFERENCE_NAME, POOLED_PO_LHS_REFERENCE_NAME);
+			writePooledHazardFiles(new File(outputDir, "pooled_po_lhs"),
+					pooledPOLHSData, gridReg, period, rp);
+		}
 
 		List<ReferenceComparison> comparisons = new ArrayList<>();
 		for (RunPeriodData data : sobolData) {
@@ -280,6 +311,20 @@ public class HazardConvergenceCalcs {
 		HazardConvergencePlots.plotPeriod(outputDir, periodName);
 	}
 
+	private static List<RunPeriodData> largestMethodRuns(List<RunPeriodData> allData,
+			SamplingMethod method) {
+		int largestSize = allData.stream()
+				.filter(data -> data.run().method() == method)
+				.mapToInt(data -> data.run().maxSamples())
+				.max().orElse(-1);
+		if (largestSize < 0)
+			return List.of();
+		return allData.stream()
+				.filter(data -> data.run().method() == method
+						&& data.run().maxSamples() == largestSize)
+				.toList();
+	}
+
 	private static List<RunPeriodData> loadRunPeriodData(List<RunSpec> runs,
 			GriddedRegion gridReg, double period, ReturnPeriods rp, int... spanCounts) throws IOException {
 		if (runs.isEmpty())
@@ -331,39 +376,40 @@ public class HazardConvergenceCalcs {
 		ModelHazardMaps maps = loadMaps(new File(run.directory(), "results_hazard.zip"),
 				run.tree(), gridReg, period, rp);
 		double[][] branchMaps = copyValues(maps.individual());
-		File hazardResultsDir = new File(run.directory(), "results");
 
 		double[] curveX = null;
 		double[][] curveSums = null;
 		Map<Integer, HazardStatistics> checkpoints = new TreeMap<>();
 		Map<Integer, double[][]> curveBoundaries = new TreeMap<>();
-		for (int b=0; b<run.maxSamples(); b++) {
-			DiscretizedFunc[] curves = loadBranchCurves(hazardResultsDir, run.tree().getBranch(b), gridReg, period);
-			if (curveSums == null) {
-				Preconditions.checkState(curves.length == gridReg.getNodeCount());
-				curveX = new double[curves[0].size()];
-				for (int i=0; i<curveX.length; i++)
-					curveX[i] = curves[0].getX(i);
-				curveSums = new double[curves.length][curveX.length];
-			}
-			for (int n=0; n<curves.length; n++) {
-				DiscretizedFunc curve = curves[n];
-				Preconditions.checkState(curve.size() == curveX.length);
-				for (int i=0; i<curveX.length; i++) {
-					Preconditions.checkState((float)curve.getX(i) == (float)curveX[i]);
-					curveSums[n][i] += curve.getY(i);
+		try (BranchCurveLoader curveLoader = new BranchCurveLoader(run.directory())) {
+			for (int b=0; b<run.maxSamples(); b++) {
+				DiscretizedFunc[] curves = curveLoader.load(run.tree().getBranch(b), gridReg, period);
+				if (curveSums == null) {
+					Preconditions.checkState(curves.length == gridReg.getNodeCount());
+					curveX = new double[curves[0].size()];
+					for (int i=0; i<curveX.length; i++)
+						curveX[i] = curves[0].getX(i);
+					curveSums = new double[curves.length][curveX.length];
 				}
-			}
-			int count = b+1;
-			boolean fullRun = count == run.maxSamples();
-			boolean sobolCheckpoint = run.method() == SamplingMethod.OWEN_SCRAMBLED_SOBOL
-					&& count >= 512 && Integer.bitCount(count) == 1;
-			if (Arrays.stream(spanCounts).anyMatch(size -> (globalOffset+count) % size == 0))
-				curveBoundaries.put(count, Arrays.stream(curveSums).map(double[]::clone).toArray(double[][]::new));
-			if (fullRun || sobolCheckpoint) {
-				double[] curveMean = buildCurveMeanMap(curveSums, curveX, count, rp);
-				checkpoints.put(count, calcHazardStatistics(branchMaps, count, curveMean));
-				System.out.println("\tBuilt "+count+"-sample checkpoint");
+				for (int n=0; n<curves.length; n++) {
+					DiscretizedFunc curve = curves[n];
+					Preconditions.checkState(curve.size() == curveX.length);
+					for (int i=0; i<curveX.length; i++) {
+						Preconditions.checkState((float)curve.getX(i) == (float)curveX[i]);
+						curveSums[n][i] += curve.getY(i);
+					}
+				}
+				int count = b+1;
+				boolean fullRun = count == run.maxSamples();
+				boolean sobolCheckpoint = run.method() == SamplingMethod.OWEN_SCRAMBLED_SOBOL
+						&& count >= 512 && Integer.bitCount(count) == 1;
+				if (Arrays.stream(spanCounts).anyMatch(size -> (globalOffset+count) % size == 0))
+					curveBoundaries.put(count, Arrays.stream(curveSums).map(double[]::clone).toArray(double[][]::new));
+				if (fullRun || sobolCheckpoint) {
+					double[] curveMean = buildCurveMeanMap(curveSums, curveX, count, rp);
+					checkpoints.put(count, calcHazardStatistics(branchMaps, count, curveMean));
+					System.out.println("\tBuilt "+count+"-sample checkpoint");
+				}
 			}
 		}
 		Preconditions.checkState(checkpoints.containsKey(run.maxSamples()));
@@ -1222,6 +1268,45 @@ public class HazardConvergenceCalcs {
 		// this will detect that it's gzipped
 		CSVFile<String> csv = CSVFile.readFile(hazardFile, true);
 		return SolHazardMapCalc.loadCurvesCSV(csv, gridReg);
+	}
+
+	static final class BranchCurveLoader implements AutoCloseable {
+		private final File hazardResultsDir;
+		private final File archiveFile;
+		private final ZipFile archive;
+
+		BranchCurveLoader(File runDir) throws IOException {
+			hazardResultsDir = new File(runDir, "results");
+			archiveFile = new File(runDir, "results_hazard_curves.zip");
+			archive = archiveFile.isFile() ? new ZipFile(archiveFile) : null;
+			if (archive != null)
+				System.out.println("\tLoading branch curves from "+archiveFile.getAbsolutePath());
+		}
+
+		DiscretizedFunc[] load(LogicTreeBranch<?> branch, GriddedRegion gridReg,
+				double period) throws IOException {
+			if (archive == null)
+				return loadBranchCurves(hazardResultsDir, branch, gridReg, period);
+
+			String entryPrefix = branch.buildFileName()+"/"
+					+SolHazardMapCalc.getCSV_FileName("curves", period);
+			ZipEntry entry = archive.getEntry(entryPrefix+".gz");
+			if (entry == null)
+				entry = archive.getEntry(entryPrefix);
+			Preconditions.checkNotNull(entry, "Hazard curves entry doesn't exist in %s: %s[.gz]",
+					archiveFile.getAbsolutePath(), entryPrefix);
+			InputStream raw = archive.getInputStream(entry);
+			try (InputStream in = entry.getName().endsWith(".gz") ? new GZIPInputStream(raw) : raw) {
+				CSVFile<String> csv = CSVFile.readStream(in, true);
+				return SolHazardMapCalc.loadCurvesCSV(csv, gridReg);
+			}
+		}
+
+		@Override
+		public void close() throws IOException {
+			if (archive != null)
+				archive.close();
+		}
 	}
 
 	private enum HazardMetric {

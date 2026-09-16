@@ -138,21 +138,21 @@ public class SamplingScoreFigures {
 		boolean redoCenteredDiscrepancies = false;
 		boolean replotIndvSamples = false;
 
-//		String treeName = null;
-//		int numD = 10;
-////		int numD = 5;
-//		List<SamplingDimension> samplingDimensions = new ArrayList<>();
-//		for (int i=0; i<numD; i++)
-//			samplingDimensions.add(ContinuousSamplingDimension.INSTANCE);
-//		String samplingPrefix = "continuous_"+samplingDimensions.size()+"d";
+		String treeName = null;
+		int numD = 10;
+//		int numD = 5;
+		List<SamplingDimension> samplingDimensions = new ArrayList<>();
+		for (int i=0; i<numD; i++)
+			samplingDimensions.add(ContinuousSamplingDimension.INSTANCE);
+		String samplingPrefix = "continuous_"+samplingDimensions.size()+"d";
 
 //		String treeName = "NSHM23-WUS";
 //		List<SamplingDimension> samplingDimensions = getDimsNSHM23();
 //		String samplingPrefix = "nshm23_"+samplingDimensions.size()+"d";
 		
-		String treeName = "NSHM27-AmSam";
-		List<SamplingDimension> samplingDimensions = getDimsNSHM27_AmSam();
-		String samplingPrefix = "nshm27_amsam_"+samplingDimensions.size()+"d";
+//		String treeName = "NSHM27-AmSam";
+//		List<SamplingDimension> samplingDimensions = getDimsNSHM27_AmSam();
+//		String samplingPrefix = "nshm27_amsam_"+samplingDimensions.size()+"d";
 		
 		final int dimensions = samplingDimensions.size();
 		int numContinuous = 0;

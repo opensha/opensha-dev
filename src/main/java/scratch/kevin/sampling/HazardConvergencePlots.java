@@ -81,7 +81,7 @@ public class HazardConvergencePlots {
 	static {
 		Map<SamplingMethod, String> prefixes = new HashMap<>();
 		for (SamplingMethod method : SamplingMethod.values())
-			prefixes.put(method, getMethodName(method).toLowerCase().replaceAll("-", "_"));
+			prefixes.put(method, getMethodName(method).toLowerCase().replaceAll("-", "_").replace("'", ""));
 		METHOD_FILE_PREFIXES = prefixes;
 	}
 
@@ -108,9 +108,12 @@ public class HazardConvergencePlots {
 //					plotReference(outputDir, references, method, sobolPool, ConvergenceSummary.MAXIMUM_ABSOLUTE);
 			}
 		}
-		for (boolean sobolPool : new boolean[] {true, false})
+		for (boolean sobolPool : new boolean[] {true, false}) {
 			plotMethodReference(outputDir, references, sobolPool, ConvergenceSummary.MEAN_ABSOLUTE,
 					"Absolute difference (%)");
+			plotMethodReference(outputDir, references, sobolPool, ConvergenceSummary.MEAN_SIGNED,
+					"Signed bias (%)");
+		}
 		plotRealizationPairs(outputDir, realizationPairs, ConvergenceSummary.MEAN_ABSOLUTE,
 				"Absolute difference (%)");
 	}
@@ -146,7 +149,7 @@ public class HazardConvergencePlots {
 		String yLabel = summary == ConvergenceSummary.MEAN_SIGNED ? "Signed bias (%)"
 				: summary == ConvergenceSummary.MEAN_ABSOLUTE ? "Absolute difference (%)"
 						: "Maximum absolute difference (%)";
-		writePlot(outputDir, prefix, getMethodName(method)+" versus "+(sobolPool ? "Sobol pool" : "MCS pool"),
+		writePlot(outputDir, prefix, getMethodName(method)+" vs "+(sobolPool ? "Sobol' pool" : "MCS pool"),
 				"Sample count", yLabel, counts,
 				Arrays.stream(counts).mapToObj(Integer::toString).toArray(String[]::new), matching, summary);
 	}
@@ -179,8 +182,10 @@ public class HazardConvergencePlots {
 		if (matching.isEmpty())
 			return;
 		String referencePrefix = sobolConsensus ? "pooled_sobol" : "pooled_mcs";
-		String title = sampleCount+" samples versus "
-				+(sobolConsensus ? POOLED_SOBOL_REFERENCE : MCS_REFERENCE);
+//		String title = sampleCount+" samples versus "
+//				+(sobolConsensus ? POOLED_SOBOL_REFERENCE : MCS_REFERENCE);
+		String title = sampleCount+" samples vs "
+				+(sobolConsensus ? "Sobol' pool" : "MCS pool");
 		writePlot(outputDir, "method_comparison_"+sampleCount+"_"+referencePrefix+"_"+summaryPrefix(spatialSummary),
 				title, "Sampling method", yLabel,
 				IntStream.range(0, labels.size()).toArray(), labels.toArray(String[]::new), matching, spatialSummary);

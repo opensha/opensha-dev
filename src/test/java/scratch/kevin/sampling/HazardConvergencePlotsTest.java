@@ -34,11 +34,20 @@ public class HazardConvergencePlotsTest {
 			rows.add(new ReferenceSummary(row.method(), row.sampleCount(), row.reference(), row.metric(),
 					ConvergenceSummary.MAXIMUM_ABSOLUTE, row.realizations(), 1d, 0.25, 0.5, 1d, 5d, 0.2,
 					row.individualValues()));
+		for (ReferenceSummary row : new ArrayList<>(rows))
+			if (row.spatialSummary() == ConvergenceSummary.MEAN_ABSOLUTE)
+				rows.add(new ReferenceSummary(row.method(), row.sampleCount(), row.reference(), row.metric(),
+						ConvergenceSummary.MEAN_SIGNED, row.realizations(), -0.1, 0.05, -0.2, -0.1, 0d,
+						Double.NaN, new double[] {-0.15, -0.05}));
 		HazardConvergencePlots.plotMethodReference(output.getRoot(), rows, false,
 				ConvergenceSummary.MEAN_ABSOLUTE, "Spatial mean absolute difference (%)");
+		HazardConvergencePlots.plotMethodReference(output.getRoot(), rows, false,
+				ConvergenceSummary.MEAN_SIGNED, "Signed bias (%)");
 		for (int count : new int[] {512, 1024}) {
 			assertTrue(new java.io.File(output.getRoot(),
 					"method_comparison_"+count+"_pooled_mcs_mean_abs.png").isFile());
+			assertTrue(new java.io.File(output.getRoot(),
+					"method_comparison_"+count+"_pooled_mcs_signed_bias.png").isFile());
 		}
 	}
 
