@@ -53,14 +53,15 @@ public class GriddedMFDWriter {
 		Region reg = NSHM23_RegionLoader.loadFullConterminousWUS();
 		GriddedRegion gridReg = new GriddedRegion(reg, 0.1, GriddedRegion.ANCHOR_0_0);
 		
-		EvenlyDiscretizedFunc refMFD = FaultSysTools.initEmptyMFD(5.01, 8.55);
+//		EvenlyDiscretizedFunc refMFD = FaultSysTools.initEmptyMFD(5.01, 8.55);
+		EvenlyDiscretizedFunc refMFD = FaultSysTools.initEmptyMFD(4.01, 8.55);
 		
 		File assocFile = null;
 		
 		FaultSystemSolution refSol = FaultSystemSolution.load(new File(solDir, "results_WUS_FM_v3_branch_averaged_gridded.zip"));
 		
-//		File outputFile = new File("/tmp/nshm23_wus_gridded_mfds.csv");
-//		FaultSystemSolution sol = refSol;
+		File outputFile = new File("/tmp/nshm23_wus_gridded_mfds.csv");
+		FaultSystemSolution sol = refSol;
 		
 //		File outputFile = new File("/tmp/nshm23_wus_gridded_mfds_b0.csv");
 //		FaultSystemSolution sol = FaultSystemSolution.load(new File(baSolDir, "SupraB_SupraB0.0.zip"));
@@ -116,12 +117,12 @@ public class GriddedMFDWriter {
 //		File outputFile = new File("/tmp/nshm23_wus_gridded_mfds_smooth_fixed.csv");
 //		sol.setGridSourceProvider(getAverageGridProv(gridSLT, NSHM23_SeisSmoothingAlgorithms.FIXED));
 		
-		File outputFile = new File("/tmp/ucerf3_gridded_mfds.csv");
-		refSol = null;
-		reg = new CaliforniaRegions.RELM_TESTING();
-		gridReg = new CaliforniaRegions.RELM_TESTING_GRIDDED();
-		FaultSystemSolution sol = FaultSystemSolution.load(new File("/home/kevin/OpenSHA/nshm23/batch_inversions/2021_11_30-u3_branches-orig_calcs-5h/results_FM3_1_branch_averaged.zip"));
-		assocFile = new File("/tmp/ucerf3_gridded_fault_associations.csv");
+//		File outputFile = new File("/tmp/ucerf3_gridded_mfds.csv");
+//		refSol = null;
+//		reg = new CaliforniaRegions.RELM_TESTING();
+//		gridReg = new CaliforniaRegions.RELM_TESTING_GRIDDED();
+//		FaultSystemSolution sol = FaultSystemSolution.load(new File("/home/kevin/OpenSHA/nshm23/batch_inversions/2021_11_30-u3_branches-orig_calcs-5h/results_FM3_1_branch_averaged.zip"));
+//		assocFile = new File("/tmp/ucerf3_gridded_fault_associations.csv");
 		
 		FaultGridAssociations assoc = sol.getRupSet().getModule(FaultGridAssociations.class);
 		if (assoc == null) {
@@ -294,7 +295,7 @@ public class GriddedMFDWriter {
 		// do gridded
 		for (int s=0; s<gridReg.getNodeCount(); s++) {
 			int gridLocIndex = gridSources.getLocationIndex(gridReg.getLocation(s));
-			IncrementalMagFreqDist gridMFD = gridSources.getMFD(gridLocIndex, 5.05);
+			IncrementalMagFreqDist gridMFD = gridSources.getMFD(gridLocIndex, refMFD.getMinX());
 			mfds[s] = new IncrementalMagFreqDist(refMFD.getMinX(), refMFD.size(), refMFD.getDelta());
 			Preconditions.checkState((float)mfds[s].getMinX() == (float)gridMFD.getMinX(), "%s != %s", (float)mfds[s].getMinX(), (float)gridMFD.getMinX());
 			for (int i=0; i<gridMFD.size(); i++)

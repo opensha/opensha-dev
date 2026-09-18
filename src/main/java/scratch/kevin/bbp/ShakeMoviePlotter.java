@@ -342,10 +342,6 @@ public class ShakeMoviePlotter {
 		
 	}
 	
-	private static Color getWithAlpha(Color c, int alpha) {
-		return new Color(c.getRed(), c.getGreen(), c.getBlue(), alpha);
-	}
-	
 	private static DecimalFormat timeDF = new DecimalFormat("0.0#");
 
 	public static void main(String[] args) throws ZipException, IOException, DocumentException {

@@ -17,6 +17,7 @@ import org.apache.commons.math3.stat.StatUtils;
 import org.apache.commons.math3.stat.correlation.Covariance;
 import org.jfree.chart.ui.RectangleAnchor;
 import org.jfree.data.Range;
+import org.opensha.commons.util.ColorUtils;
 import org.opensha.commons.data.CSVFile;
 import org.opensha.commons.data.function.ArbitrarilyDiscretizedFunc;
 import org.opensha.commons.data.function.DefaultXY_DataSet;
@@ -428,7 +429,7 @@ public class SlipRateScattersPaleoSects {
 			
 			funcs.add(0, fit);
 			chars.add(0, new PlotCurveCharacterstics(PlotLineType.DASHED, 3f,
-					new Color(color.getRed(), color.getGreen(), color.getBlue(), 120)));
+					ColorUtils.transparent(color, 120)));
 		}
 		
 		PlotSpec spec = new PlotSpec(funcs, chars, " ", "Slip Rate Fit z-score", "Paleoseismic Rate Fit z-score");

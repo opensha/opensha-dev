@@ -15,7 +15,7 @@ import org.opensha.commons.geo.GriddedRegion;
 import org.opensha.commons.geo.Region;
 import org.opensha.commons.hpc.JavaShellScriptWriter;
 import org.opensha.commons.hpc.mpj.MPJExpressShellScriptWriter;
-import org.opensha.commons.hpc.pbs.USC_HPCC_ScriptWriter;
+import org.opensha.commons.hpc.pbs.USC_CARC_ScriptWriter;
 import org.opensha.commons.util.XMLUtils;
 import org.opensha.sha.calc.hazardMap.components.BinaryCurveArchiver;
 import org.opensha.sha.calc.hazardMap.components.CalculationInputsXMLFile;
@@ -157,14 +157,14 @@ public class GriddedSeisImportanceHazardMapCalc {
 		xValsMap.put("curves", xValues);
 		CalculationSettings calcSettings = new CalculationSettings(xValues, maxSourceDistance);
 		
-		File javaBin = USC_HPCC_ScriptWriter.JAVA_BIN;
+		File javaBin = USC_CARC_ScriptWriter.JAVA_BIN;
 		File jarFile = new File(remoteBaseDir, "opensha-dev-all.jar");
 		
 		List<File> classpath = Lists.newArrayList();
 		classpath.add(jarFile);
 		
 		MPJExpressShellScriptWriter mpj = new MPJExpressShellScriptWriter(javaBin, 60000, classpath,
-				USC_HPCC_ScriptWriter.MPJ_HOME);
+				USC_CARC_ScriptWriter.MPJ_HOME);
 		mpj.setUseLaunchWrapper(true);
 		
 		List<Map<TectonicRegionType, ScalarIMR>> imrMaps = Lists.newArrayList();
@@ -224,9 +224,9 @@ public class GriddedSeisImportanceHazardMapCalc {
 			String cliArgs = "--max-dispatch 1000 "+remoteInputsFile.getAbsolutePath();
 			
 			List<String> script = mpj.buildScript(MPJHazardCurveDriver.class.getName(), cliArgs);
-			USC_HPCC_ScriptWriter writer = new USC_HPCC_ScriptWriter();
+			USC_CARC_ScriptWriter writer = new USC_CARC_ScriptWriter();
 			
-			script = writer.buildScript(script, mins, nodes, ppn, queue);
+			script = writer.buildScript(script, mins, nodes, ppn, -1, queue);
 			
 			File pbsFile = new File(localSubDir, subDirName+".slurm");
 			JavaShellScriptWriter.writeScript(pbsFile, script);

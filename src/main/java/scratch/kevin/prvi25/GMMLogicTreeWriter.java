@@ -300,7 +300,7 @@ public class GMMLogicTreeWriter {
 		}
 		argz += " "+MPJTaskCalculator.argumentBuilder().maxDispatch(100).threads(remoteTotalThreads).build();
 		List<String> script = mpjWrite.buildScript(MPJ_LogicTreeHazardCalc.class.getName(), argz);
-		pbsWrite.writeScript(new File(localDir, mapScriptName), script, mins, nodes, remoteTotalThreads, queue);
+		pbsWrite.writeScript(new File(localDir, mapScriptName), script, mins, nodes, remoteTotalThreads, -1, queue);
 		
 		// now write hazard curve script
 		CSVFile<String> csv = CSVFile.readStream(PRVI25_CrustalFaultModels.class.getResourceAsStream("/data/erf/prvi25/sites/prvi_sites.csv"), true);
@@ -338,7 +338,7 @@ public class GMMLogicTreeWriter {
 		}
 		argz += " "+MPJTaskCalculator.argumentBuilder().minDispatch(1).maxDispatch(10).threads(remoteTotalThreads).build();
 		script = mpjWrite.buildScript(MPJ_SiteLogicTreeHazardCurveCalc.class.getName(), argz);
-		pbsWrite.writeScript(new File(localDir, siteScriptName), script, mins, nodes, remoteTotalThreads, queue);
+		pbsWrite.writeScript(new File(localDir, siteScriptName), script, mins, nodes, remoteTotalThreads, -1, queue);
 		
 //		combTree = LogicTree.read(new File(outputDir, "logic_tree.json"));
 //		

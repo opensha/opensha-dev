@@ -14,6 +14,7 @@ import java.util.Set;
 
 import org.jfree.chart.ui.RectangleAnchor;
 import org.jfree.data.Range;
+import org.opensha.commons.util.ColorUtils;
 import org.opensha.commons.data.function.ArbitrarilyDiscretizedFunc;
 import org.opensha.commons.data.function.DiscretizedFunc;
 import org.opensha.commons.data.function.EvenlyDiscretizedFunc;
@@ -185,7 +186,7 @@ public class ObservedUncertainMFDComparisons {
 		PlotCurveCharacterstics estBoundsChar = new PlotCurveCharacterstics(PlotLineType.DASHED, 1f, Color.GRAY);
 		
 		Color obsColor = new Color(125, 80, 145); // "indigo"
-		Color obsTransColor = new Color(obsColor.getRed(), obsColor.getGreen(), obsColor.getBlue(), 60);
+		Color obsTransColor = ColorUtils.transparent(obsColor, 60);
 		
 		List<LogicTreeLevel<?>> levels = new ArrayList<>();
 		levels.add(null);
@@ -402,7 +403,7 @@ public class ObservedUncertainMFDComparisons {
 					chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 3f, color));
 					
 					if (modelTotBounds != null) {
-						Color transColor = new Color(color.getRed(), color.getGreen(), color.getBlue(), 80);
+						Color transColor = ColorUtils.transparent(color, 80);
 						modelTotBounds.setName("Model Total "+((UncertainBoundedDiscretizedFunc)modelTotBounds).getBoundName());
 						funcs.add(modelTotBounds);
 						chars.add(new PlotCurveCharacterstics(PlotLineType.SHADED_UNCERTAIN, 3f, transColor));

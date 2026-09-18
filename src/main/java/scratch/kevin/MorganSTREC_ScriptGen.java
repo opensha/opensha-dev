@@ -69,7 +69,7 @@ public class MorganSTREC_ScriptGen {
 				runNum = "0"+runNum;
 			
 			File opbsFile = new File(writeDir, "job"+runNum+".pbs");
-			pbsWrite.writeScript(opbsFile, script, mins, nodes, ppn, queue);
+			pbsWrite.writeScript(opbsFile, script, mins, nodes, ppn, -1, queue);
 		}
 		for (int i=0; i<num; i++) {
 			

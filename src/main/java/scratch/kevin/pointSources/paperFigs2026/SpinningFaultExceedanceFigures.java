@@ -49,6 +49,7 @@ import org.opensha.commons.gui.plot.PlotPreferences;
 import org.opensha.commons.gui.plot.PlotSpec;
 import org.opensha.commons.gui.plot.PlotSymbol;
 import org.opensha.commons.gui.plot.PlotUtils;
+import org.opensha.commons.util.ColorUtils;
 import org.opensha.commons.util.DataUtils.MinMaxAveTracker;
 import org.opensha.commons.util.cpt.CPT;
 import org.opensha.sha.calc.RuptureExceedProbCalculator;
@@ -94,7 +95,7 @@ public class SpinningFaultExceedanceFigures {
 			label = Label;
 			this.function = function;
 			this.color = color;
-			this.transColor = new Color(color.getRed(), color.getGreen(), color.getBlue(), 80);
+			this.transColor = ColorUtils.transparent(color, 80);
 		}
 	};
 
@@ -348,7 +349,7 @@ public class SpinningFaultExceedanceFigures {
 						func.setName("Centered individual");
 					funcs.add(func);
 //					chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, Colors.tab_lightblue));
-					chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1.5f, blend(Colors.tab_blue, 0.4, Colors.tab_lightblue, 0.6)));
+					chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1.5f, ColorUtils.blend(Colors.tab_blue, Colors.tab_lightblue, 0.6)));
 				}
 //			} else {
 //				for (boolean hw : new boolean[] {true,false}) {
@@ -1614,8 +1615,8 @@ public class SpinningFaultExceedanceFigures {
 			}
 			
 			// spin the centered surfaces
-			Color centeredHWColor = overWhite(transColor(Colors.tab_blue, 80));
-			Color centeredFWColor = overWhite(transColor(Colors.tab_lightblue, 80));
+			Color centeredHWColor = ColorUtils.compositeOver(ColorUtils.transparent(Colors.tab_blue, 80), Color.WHITE);
+			Color centeredFWColor = ColorUtils.compositeOver(ColorUtils.transparent(Colors.tab_lightblue, 80), Color.WHITE);
 			if (mech == FocalMech.STRIKE_SLIP) {
 				// simple, no hw/fw
 				DefaultXY_DataSet xyCircle = new DefaultXY_DataSet();
@@ -2043,7 +2044,7 @@ public class SpinningFaultExceedanceFigures {
 			Location refLoc, RectangularSurface surf, Color surfaceColor, float thickness, int minAlpha) {
 		// draw forward and reverse edges
 		int steps = 20;
-		Color transColor = new Color(surfaceColor.getRed(), surfaceColor.getGreen(), surfaceColor.getBlue(), minAlpha);
+		Color transColor = ColorUtils.transparent(surfaceColor, minAlpha);
 		CPT transCPT = new CPT(0d,  (double)steps-1d, surfaceColor, transColor);
 		
 		double horzWidth = surf.getAveHorizontalWidth();
@@ -2072,20 +2073,6 @@ public class SpinningFaultExceedanceFigures {
 		
 		funcs.add(xy);
 		chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, thickness, transColor));
-	}
-	
-	private static Color transColor(Color color, int alpha) {
-		return new Color(color.getRed(), color.getGreen(), color.getBlue(), alpha);
-	}
-	
-	public static Color overWhite(Color rgba) {
-		float a = rgba.getAlpha() / 255f;
-
-		int r = Math.round(rgba.getRed()   * a + 255f * (1f - a));
-		int g = Math.round(rgba.getGreen() * a + 255f * (1f - a));
-		int b = Math.round(rgba.getBlue()  * a + 255f * (1f - a));
-
-		return new Color(r, g, b);
 	}
 	
 	private static void rangeTexDefine(FileWriter texFW, String prefix, MinMaxAveTracker track) throws IOException {
@@ -2134,18 +2121,6 @@ public class SpinningFaultExceedanceFigures {
 	
 	private static String percentileStr(double fractile) {
 		return LaTeXUtils.numberAsOrdinal((int)Math.round(fractile*100d));
-	}
-	
-	private static Color blend(Color c1, Color c2) {
-		return blend(c1, 0.5, c2, 0.5);
-	}
-	
-	private static Color blend(Color c1, double w1, Color c2, double w2) {
-		Preconditions.checkState((float)(w1+w2) == 1f);
-		double r = w1*c1.getRed() + w2*c2.getRed();
-		double g = w1*c1.getGreen() + w2*c2.getGreen();
-		double b = w1*c1.getBlue() + w2*c2.getBlue();
-		return new Color((int)(r+0.5), (int)(g+0.5), (int)(b+0.5));
 	}
 	
 	private static PlotCurveCharacterstics getSymbolOutlineChar(PlotCurveCharacterstics pChar) {

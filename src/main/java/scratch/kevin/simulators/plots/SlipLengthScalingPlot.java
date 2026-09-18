@@ -21,6 +21,7 @@ import org.jfree.chart.annotations.XYPolygonAnnotation;
 import org.jfree.chart.annotations.XYTextAnnotation;
 import org.jfree.data.Range;
 import org.jfree.chart.ui.TextAnchor;
+import org.opensha.commons.util.ColorUtils;
 import org.opensha.commons.data.function.ArbitrarilyDiscretizedFunc;
 import org.opensha.commons.data.function.DefaultXY_DataSet;
 import org.opensha.commons.data.function.DiscretizedFunc;
@@ -503,12 +504,12 @@ public class SlipLengthScalingPlot extends AbstractPlot {
 				
 				if (midSeis) {
 					// make it a little transparent
-					fillColor = new Color(fillColor.getRed(), fillColor.getGreen(), fillColor.getBlue(), 160);
+					fillColor = ColorUtils.transparent(fillColor, 160);
 				} else {
 					// make it very transparent
-					fillColor = new Color(fillColor.getRed(), fillColor.getGreen(), fillColor.getBlue(), 80);
+					fillColor = ColorUtils.transparent(fillColor, 80);
 					if (!slipped)
-						paint = new Color(paint.getRed(), paint.getGreen(), paint.getBlue(), 127);
+						paint = ColorUtils.transparent(paint, 127);
 				}
 				
 				double[] polyElems = new double[verts.length*2];

@@ -56,7 +56,7 @@ public class MPJ_GK_DesclusteringHazardCalcScriptGen {
 		
 		List<String> script = mpjWrite.buildScript(MPJ_GK_DesclusteringHazardCalc.class.getName(), argz);
 		
-		script = pbsWrite.buildScript(script, mins, nodes, threads, queue);
+		script = pbsWrite.buildScript(script, mins, nodes, threads, -1, queue);
 		pbsWrite.writeScript(pbsFile, script);
 	}
 

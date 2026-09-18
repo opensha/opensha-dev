@@ -18,6 +18,7 @@ import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.apache.commons.math3.util.Precision;
 import org.jfree.chart.ui.RectangleAnchor;
 import org.jfree.data.Range;
+import org.opensha.commons.util.ColorUtils;
 import org.opensha.commons.data.WeightedList;
 import org.opensha.commons.data.function.ArbitrarilyDiscretizedFunc;
 import org.opensha.commons.data.function.DiscretizedFunc;
@@ -45,11 +46,11 @@ import org.opensha.sha.earthquake.faultSysSolution.modules.GridSourceList;
 import org.opensha.sha.earthquake.faultSysSolution.modules.RegionsOfInterest;
 import org.opensha.sha.earthquake.faultSysSolution.util.FaultSectionUtils;
 import org.opensha.sha.earthquake.faultSysSolution.util.FaultSysTools;
+import org.opensha.sha.earthquake.nshmp.seismicity.SeismicityRateModel;
+import org.opensha.sha.earthquake.nshmp.seismicity.SeismicityRateFileLoader.RateType;
 import org.opensha.sha.earthquake.param.IncludeBackgroundOption;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_SegmentationModels;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.gridded.PRVI25_GridSourceBuilder;
-import org.opensha.sha.earthquake.rupForecastImpl.prvi25.gridded.SeismicityRateFileLoader.RateType;
-import org.opensha.sha.earthquake.rupForecastImpl.prvi25.gridded.SeismicityRateModel;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_CrustalSeismicityRate;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_DeclusteringAlgorithms;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_SeisSmoothingAlgorithms;
@@ -215,10 +216,9 @@ public class IndividualMFDPlots {
 				else if (trt == TectonicRegionType.SUBDUCTION_INTERFACE)
 					onFaultMean = CombinedMFDsPlot.calcFaultMFD(reg, sol, refMFD);
 				
-				List<UncertainBoundedIncrMagFreqDist> obsList = new ArrayList<>();
-				List<UncertainArbDiscFunc> obsCmlList = new ArrayList<>();
-				List<UncertainBoundedIncrMagFreqDist> origObsList = r == 0 ? null : new ArrayList<>();
-				List<Double> obsWeights = new ArrayList<>();
+				WeightedList<UncertainBoundedIncrMagFreqDist> obsList = new WeightedList<>();
+				WeightedList<UncertainArbDiscFunc> obsCmlList = new WeightedList<>();
+				WeightedList<UncertainBoundedIncrMagFreqDist> origObsList = r == 0 ? null : new WeightedList<>();
 				for (PRVI25_SeismicityRateEpoch epoch : PRVI25_SeismicityRateEpoch.values()) {
 					double weight = epoch.getNodeWeight(null);
 					if (weight == 0d)
@@ -227,23 +227,22 @@ public class IndividualMFDPlots {
 					SeismicityRateModel cmlSeisModel = seisModelFunc.apply(epoch, RateType.EXACT);
 					UncertainBoundedIncrMagFreqDist obs = seisModel.getBounded(refMFD, xRange.getUpperBound()+0.1);
 					if (r == 0) {
-						obsList.add(obs);
-						obsCmlList.add(cmlSeisModel.getBoundedCml(refMFD, xRange.getUpperBound()+0.1));
+						obsList.add(obs, weight);
+						obsCmlList.add(cmlSeisModel.getBoundedCml(refMFD, xRange.getUpperBound()+0.1), weight);
 //						System.out.println("OBS cml for "+epoch+":\n"+obsCmlList.get(obsCmlList.size()-1));
 					} else {
 						UncertainBoundedIncrMagFreqDist subsetObs = seisModel.getRemapped(reg, seisReg, PRVI25_DeclusteringAlgorithms.AVERAGE,
 								PRVI25_SeisSmoothingAlgorithms.AVERAGE, refMFD, xRange.getUpperBound()+0.1);
 						subsetObs.setName("Observed (subset), N5="+new DecimalFormat("0.0#").format(obs.getCumRate(obs.getClosestXIndex(5.01))));
-						obsList.add(subsetObs);
-						origObsList.add(obs);
+						obsList.add(subsetObs, weight);
+						origObsList.add(obs, weight);
 						obsCmlList.add(new UncertainArbDiscFunc(
 								subsetObs.getCumRateDistWithOffset(), subsetObs.getLower().getCumRateDistWithOffset(),
-								subsetObs.getUpper().getCumRateDistWithOffset(), subsetObs.getBoundType()));
+								subsetObs.getUpper().getCumRateDistWithOffset(), subsetObs.getBoundType()), weight);
 					}
-					obsWeights.add(weight);
 				}
-				UncertainBoundedIncrMagFreqDist obs = PRVI25_SeismicityRateEpoch.averageUncert(obsList, obsWeights);
-				UncertainArbDiscFunc obsCml = PRVI25_SeismicityRateEpoch.averageUncertCml(obsCmlList, obsWeights);
+				UncertainBoundedIncrMagFreqDist obs = SeismicityRateModel.averageUncert(obsList);
+				UncertainArbDiscFunc obsCml = SeismicityRateModel.averageUncertCml(obsCmlList);
 				IncrementalMagFreqDist gridded;
 				UncertainBoundedIncrMagFreqDist[] griddedDists;
 				if (trt == TectonicRegionType.ACTIVE_SHALLOW || trt == TectonicRegionType.SUBDUCTION_INTERFACE) {
@@ -297,7 +296,7 @@ public class IndividualMFDPlots {
 				texFW.write(LaTeXUtils.defineValueCommand(texPrefix+"ObsMFiveRI",
 						LaTeXUtils.numberExpFormatFixedDecimal(1d/obsM5, 1), false)+"\n");
 				if (r > 0) {
-					UncertainBoundedIncrMagFreqDist origObs = PRVI25_SeismicityRateEpoch.averageUncert(origObsList, obsWeights);
+					UncertainBoundedIncrMagFreqDist origObs = SeismicityRateModel.averageUncert(origObsList);
 					double origM5 = origObs.getCumRate(origObs.getClosestXIndex(5.01));
 					texFW.write(LaTeXUtils.defineValueCommand(texPrefix+"ObsMFivePercent",
 							LaTeXUtils.numberAsPercent(100d*obsM5/origM5, 0), false)+"\n");
@@ -594,12 +593,12 @@ public class IndividualMFDPlots {
 			UncertainBoundedIncrMagFreqDist[] totalDists, IncrementalMagFreqDist total,
 			UncertainBoundedIncrMagFreqDist obs) throws IOException {
 		Color onFaultColor = Colors.tab_red;
-		Color onFaultTransColor = new Color(onFaultColor.getRed(), onFaultColor.getGreen(), onFaultColor.getBlue(), 60);
+		Color onFaultTransColor = ColorUtils.transparent(onFaultColor, 60);
 		Color obsColor = Colors.tab_green;
 		Color griddedColor = Colors.tab_blue;
-		Color griddedTransColor = new Color(griddedColor.getRed(), griddedColor.getGreen(), griddedColor.getBlue(), 60);
+		Color griddedTransColor = ColorUtils.transparent(griddedColor, 60);
 		Color totalColor = Colors.tab_purple;
-		Color totalTransColor = new Color(totalColor.getRed(), totalColor.getGreen(), totalColor.getBlue(), 60);
+		Color totalTransColor = ColorUtils.transparent(totalColor, 60);
 		
 		List<DiscretizedFunc> funcs = new ArrayList<>();
 		List<PlotCurveCharacterstics> chars = new ArrayList<>();
@@ -854,8 +853,7 @@ public class IndividualMFDPlots {
 	
 	private static UncertainBoundedIncrMagFreqDist getMmaxAveragedSlab(EvenlyDiscretizedFunc refMFD,
 			PRVI25_SeismicityRegions seisReg, boolean averageRate) throws IOException {
-		List<UncertainBoundedIncrMagFreqDist> slabMFDs = new ArrayList<>();
-		List<Double> slabWeights = new ArrayList<>();
+		WeightedList<UncertainBoundedIncrMagFreqDist> slabMFDs = new WeightedList<>();
 		for (PRVI25_SeismicityRateEpoch epoch : PRVI25_SeismicityRateEpoch.values()) {
 			double epochWeight = epoch.getNodeWeight(null);
 			if (epochWeight == 0d)
@@ -885,11 +883,10 @@ public class IndividualMFDPlots {
 				} else {
 					throw new IllegalStateException();
 				}
-				slabMFDs.add(siesModel.getBounded(refMFD, slabMmax.getIncrementalMmax()));
-				slabWeights.add(epochWeight*mMaxWeight);
+				slabMFDs.add(siesModel.getBounded(refMFD, slabMmax.getIncrementalMmax()), epochWeight*mMaxWeight);
 			}
 		}
-		return PRVI25_SeismicityRateEpoch.averageUncert(slabMFDs, slabWeights);
+		return SeismicityRateModel.averageUncert(slabMFDs);
 	}
 	
 	static IncrementalMagFreqDist calcGriddedMFD(Region region, TectonicRegionType trt,

@@ -16,7 +16,7 @@ import org.opensha.commons.hpc.mpj.FastMPJShellScriptWriter;
 import org.opensha.commons.hpc.mpj.MPJExpressShellScriptWriter;
 import org.opensha.commons.hpc.pbs.BatchScriptWriter;
 import org.opensha.commons.hpc.pbs.StampedeScriptWriter;
-import org.opensha.commons.hpc.pbs.USC_HPCC_ScriptWriter;
+import org.opensha.commons.hpc.pbs.USC_CARC_ScriptWriter;
 import org.opensha.sha.imr.AttenRelRef;
 import org.opensha.sha.imr.AttenuationRelationship;
 
@@ -193,14 +193,14 @@ public class MPJ_ETAS_HazardMapCalcScriptGen {
 			boolean fmpj = nodes < 25;
 			fmpj = false;
 			if (fmpj) {
-				mpjWrite = new FastMPJShellScriptWriter(USC_HPCC_ScriptWriter.JAVA_BIN, memGigs*1024,
-						null, USC_HPCC_ScriptWriter.FMPJ_HOME);
+				mpjWrite = new FastMPJShellScriptWriter(USC_CARC_ScriptWriter.JAVA_BIN, memGigs*1024,
+						null, USC_CARC_ScriptWriter.FMPJ_HOME);
 				((FastMPJShellScriptWriter)mpjWrite).setUseLaunchWrapper(true);
 			} else {
-				mpjWrite = new MPJExpressShellScriptWriter(USC_HPCC_ScriptWriter.JAVA_BIN, memGigs*1024,
-						null, USC_HPCC_ScriptWriter.MPJ_HOME);
+				mpjWrite = new MPJExpressShellScriptWriter(USC_CARC_ScriptWriter.JAVA_BIN, memGigs*1024,
+						null, USC_CARC_ScriptWriter.MPJ_HOME);
 			}
-			pbsWrite = new USC_HPCC_ScriptWriter();
+			pbsWrite = new USC_CARC_ScriptWriter();
 			
 			remoteMainDir = new File("/home/scec-02/kmilner/ucerf3/etas_hazard");
 			
@@ -275,7 +275,7 @@ public class MPJ_ETAS_HazardMapCalcScriptGen {
 			List<String> script = mpjWrite.buildScript(MPJ_ETAS_HazardMapCalc.class.getName(), argz);
 			
 			int mins = hours*60;
-			script = pbsWrite.buildScript(script, mins, nodes, ppn, queue);
+			script = pbsWrite.buildScript(script, mins, nodes, ppn, -1, queue);
 			String scriptName;
 			if (stampede) {
 				if (knl)

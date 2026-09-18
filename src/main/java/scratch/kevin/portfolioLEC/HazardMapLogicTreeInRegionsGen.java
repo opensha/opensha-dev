@@ -256,7 +256,7 @@ public class HazardMapLogicTreeInRegionsGen {
 			File pbsFile = new File(writeDir, prefix+".pbs");
 			
 			USC_HPCC_ScriptWriter pbsWriter = new USC_HPCC_ScriptWriter();
-			pbsWriter.writeScript(pbsFile, script, mins, nodes, ppn, queue);
+			pbsWriter.writeScript(pbsFile, script, mins, nodes, ppn, -1, queue);
 		}
 	}
 

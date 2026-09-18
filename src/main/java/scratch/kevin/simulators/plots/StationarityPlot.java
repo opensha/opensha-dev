@@ -9,6 +9,7 @@ import java.util.List;
 
 import org.jfree.chart.ui.RectangleEdge;
 import org.jfree.data.Range;
+import org.opensha.commons.util.ColorUtils;
 import org.opensha.commons.data.function.ArbitrarilyDiscretizedFunc;
 import org.opensha.commons.data.function.DefaultXY_DataSet;
 import org.opensha.commons.data.function.EvenlyDiscretizedFunc;
@@ -198,7 +199,7 @@ public class StationarityPlot extends AbstractPlot {
 			straightLine.set(maxX, meanForMag);
 			funcs.add(straightLine);
 			chars.add(new PlotCurveCharacterstics(PlotLineType.DASHED, 2f,
-					new Color(c.getRed(), c.getGreen(), c.getBlue(), 100)));
+					ColorUtils.transparent(c, 100)));
 		}
 		
 		String title = getCatalogName()+" Stationarity";

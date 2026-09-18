@@ -15,6 +15,7 @@ import java.util.zip.ZipFile;
 import org.jfree.chart.plot.DatasetRenderingOrder;
 import org.jfree.chart.ui.RectangleAnchor;
 import org.jfree.data.Range;
+import org.opensha.commons.util.ColorUtils;
 import org.opensha.commons.data.function.DiscretizedFunc;
 import org.opensha.commons.data.function.EvenlyDiscretizedFunc;
 import org.opensha.commons.data.uncertainty.UncertainArbDiscFunc;
@@ -455,7 +456,7 @@ public class MultiRunSummaryCompare {
 						
 						incrFuncs.add(sigmaIncrBounds);
 						chars.add(new PlotCurveCharacterstics(PlotLineType.SHADED_UNCERTAIN, 1f,
-								new Color(color.getRed(), color.getGreen(), color.getBlue(), 60)));
+								ColorUtils.transparent(color, 60)));
 					}
 				}
 			}
@@ -640,7 +641,7 @@ public class MultiRunSummaryCompare {
 		}
 		if (hasFM32)
 			tree = tree.matchingAll(FaultModels.FM3_1);
-		return new LogicTreeHazardCompare(slt, tree, new File(dir, "results_hazard.zip"), rps, periods, spacing);
+		return new LogicTreeHazardCompare(slt, tree, new File(dir, "results_hazard.zip"), rps, periods, spacing, false, false);
 	}
 	
 	private static FaultSystemSolution loadBA_Sol(File dir) throws IOException {
