@@ -7,8 +7,10 @@ import java.io.IOException;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.TreeMap;
 
 import org.jfree.chart.annotations.XYTextAnnotation;
 import org.jfree.chart.ui.TextAnchor;
@@ -96,6 +98,7 @@ public class HazardMapPlots {
 		}
 
 		// Plot the first realization available for each method and requested sample count.
+		Map<File, HazardData> fullSobolRunCache = new HashMap<>();
 		for (int size : indvSizes) {
 			File sizeDir = new File(mapDir, size+"_samples");
 			Preconditions.checkState(sizeDir.exists() || sizeDir.mkdir());
@@ -109,17 +112,27 @@ public class HazardMapPlots {
 					refMCS = mcsPool.without(firstMCSDir, size, data.meanCurves(), gridReg);
 					refSobol = sobolPool.data();
 				} else {
-					List<File> runDirs = HazardConvergenceCalcs.runDirs.get(method, size);
-					if (runDirs == null || runDirs.isEmpty())
+					File runDir = selectIndividualRun(method, size, sobolPoolDirs);
+					if (runDir == null)
 						continue;
-					File runDir = runDirs.get(0);
 					data = loadRunPrefix(runDir, size, gridReg, period,
 							method == SamplingMethod.OWEN_SCRAMBLED_SOBOL ? sobolPool : null);
 					refMCS = mcsPool.data();
-					if (method == SamplingMethod.OWEN_SCRAMBLED_SOBOL && sobolPool.contains(runDir))
-						refSobol = sobolPool.without(runDir, size, data.meanCurves(), gridReg);
-					else
+					if (method == SamplingMethod.OWEN_SCRAMBLED_SOBOL && sobolPool.contains(runDir)) {
+						int fullRunSize = sobolPool.runSize(runDir);
+						HazardData fullRun = data;
+						if (size < fullRunSize) {
+							fullRun = fullSobolRunCache.get(runDir.getAbsoluteFile());
+							if (fullRun == null) {
+								fullRun = loadRunPrefix(runDir, fullRunSize, gridReg, period, sobolPool);
+								fullSobolRunCache.put(runDir.getAbsoluteFile(), fullRun);
+							}
+						}
+						// Prefixes from one scramble are not independent of its suffix, so exclude the entire parent run.
+						refSobol = sobolPool.without(runDir, fullRunSize, fullRun.meanCurves(), gridReg);
+					} else {
 						refSobol = sobolPool.data();
+					}
 				}
 				
 				String name = "Individual "+HazardConvergencePlots.getMethodName(method)+" ("+nStr(data)+")";
@@ -130,6 +143,31 @@ public class HazardMapPlots {
 						method.name().toLowerCase()+"_vs_pooled_sobol", name+" vs pooled Sobol' ("+nStr(refSobol)+")");
 			}
 		}
+	}
+
+	private static File selectIndividualRun(SamplingMethod method, int sampleCount,
+			List<File> sobolPoolDirs) {
+		List<File> exactRuns = HazardConvergenceCalcs.runDirs.get(method, sampleCount);
+		if (exactRuns != null && !exactRuns.isEmpty())
+			return exactRuns.get(0);
+		if (method != SamplingMethod.OWEN_SCRAMBLED_SOBOL)
+			return null;
+
+		// Sobol sequences are nested: a larger realization supplies every shorter leading prefix. Prefer a parent
+		// already in the consensus pool so that the comparison can apply the same leave-one-out treatment as the
+		// convergence calculations.
+		Map<Integer, List<File>> sobolRuns = HazardConvergenceCalcs.runDirs.row(method);
+		for (Map.Entry<Integer, List<File>> entry : new TreeMap<>(sobolRuns).entrySet()) {
+			if (entry.getKey() < sampleCount)
+				continue;
+			for (File runDir : entry.getValue())
+				if (sobolPoolDirs.contains(runDir))
+					return runDir;
+		}
+		for (Map.Entry<Integer, List<File>> entry : new TreeMap<>(sobolRuns).entrySet())
+			if (entry.getKey() >= sampleCount && !entry.getValue().isEmpty())
+				return entry.getValue().get(0);
+		return null;
 	}
 	
 	private static final DecimalFormat groupedDF = new DecimalFormat("0");
@@ -460,6 +498,12 @@ public class HazardMapPlots {
 		double[][] branchMaps(File runDir) {
 			return blocks.stream().filter(block -> block.matches(runDir)).findFirst()
 					.map(RunBlock::branchMaps).orElse(null);
+		}
+
+		int runSize(File runDir) {
+			double[][] maps = branchMaps(runDir);
+			Preconditions.checkState(maps != null, "Run is not in pooled data: %s", runDir.getName());
+			return maps.length;
 		}
 
 		HazardData without(File runDir, int excludedCount, DiscretizedFunc[] excludedMean,

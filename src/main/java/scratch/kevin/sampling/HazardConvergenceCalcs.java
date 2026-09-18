@@ -55,6 +55,8 @@ public class HazardConvergenceCalcs {
 	private static final int MAX_RUN_LOAD_THREADS = 4;
 	private static final int MCS_POOL_BOOTSTRAP_REPLICATES = 200;
 	private static final long MCS_POOL_BOOTSTRAP_SEED = 0x5eed5eedL;
+	/** Smallest dyadic Sobol prefix retained as a separate convergence realization. */
+	static final int MIN_SOBOL_PREFIX_SAMPLE_COUNT = 512;
 	/** Set to {@code null} to build the Sobol consensus from every available run size. */
 	static final Integer FIXED_SOBOL_CONSENSUS_SIZE = 8192;
 
@@ -66,86 +68,98 @@ public class HazardConvergenceCalcs {
 		 * MCS runs
 		 */
 		runDirs.put(SamplingMethod.MONTE_CARLO, 20000, List.of(
-				new File(PaperPaths.INVS_DIR, "2026_07_17-nshm27-AMSAM-20000samples-mcs"),
-				new File(PaperPaths.INVS_DIR, "2026_09_03-nshm27-AMSAM-20000samples-mcs-unique_seed"),
-				new File(PaperPaths.INVS_DIR, "2026_09_05-nshm27-AMSAM-20000samples-mcs-unique_seed-2"),
-				new File(PaperPaths.INVS_DIR, "2026_09_10-nshm27-AMSAM-20000samples-mcs-unique_seed-3")
-//				new File(PaperPaths.INVS_DIR, "2026_09_10-nshm27-AMSAM-20000samples-mcs-unique_seed-4"),
-//				new File(PaperPaths.INVS_DIR, "2026_09_15-nshm27-AMSAM-20000samples-mcs-unique_seed-5"),
-//				new File(PaperPaths.INVS_DIR, "2026_09_15-nshm27-AMSAM-20000samples-mcs-unique_seed-6"),
-//				new File(PaperPaths.INVS_DIR, "2026_09_16-nshm27-AMSAM-20000samples-mcs-unique_seed-7"),
-//				new File(PaperPaths.INVS_DIR, "2026_09_16-nshm27-AMSAM-20000samples-mcs-unique_seed-8"),
-//				new File(PaperPaths.INVS_DIR, "2026_09_16-nshm27-AMSAM-20000samples-mcs-unique_seed-9")
+				new File(PaperPaths.INVS_DIR, "2026_09_03-nshm27-AMSAM-20000samples-mcs-unique_seed"),		// DONE recalc on frontera
+				new File(PaperPaths.INVS_DIR, "2026_09_05-nshm27-AMSAM-20000samples-mcs-unique_seed-2"),	// DONE recalc on frontera
+				new File(PaperPaths.INVS_DIR, "2026_09_10-nshm27-AMSAM-20000samples-mcs-unique_seed-3"),	// DONE recalc on frontera
+				new File(PaperPaths.INVS_DIR, "2026_09_10-nshm27-AMSAM-20000samples-mcs-unique_seed-4"),	// DONE recalc on CARC
+				new File(PaperPaths.INVS_DIR, "2026_09_15-nshm27-AMSAM-20000samples-mcs-unique_seed-5"), 	// DONE on frontera
+				new File(PaperPaths.INVS_DIR, "2026_09_15-nshm27-AMSAM-20000samples-mcs-unique_seed-6"), 	// DONE on frontera
+				new File(PaperPaths.INVS_DIR, "2026_09_16-nshm27-AMSAM-20000samples-mcs-unique_seed-7"), 	// DONE on frontera
+				new File(PaperPaths.INVS_DIR, "2026_09_16-nshm27-AMSAM-20000samples-mcs-unique_seed-8"), 	// DONE on frontera
+				new File(PaperPaths.INVS_DIR, "2026_09_16-nshm27-AMSAM-20000samples-mcs-unique_seed-9") 	// DONE on frontera
+//				new File(PaperPaths.INVS_DIR, "2026_09_17-nshm27-AMSAM-20000samples-mcs-unique_seed-10"), 	// running on frontera
+//				new File(PaperPaths.INVS_DIR, "2026_09_17-nshm27-AMSAM-20000samples-mcs-unique_seed-11"), 	// running on frontera
+//				new File(PaperPaths.INVS_DIR, "2026_09_17-nshm27-AMSAM-20000samples-mcs-unique_seed-12"), 	// running on frontera
+//				new File(PaperPaths.INVS_DIR, "2026_09_17-nshm27-AMSAM-20000samples-mcs-unique_seed-13"), 	// running on frontera
+//				new File(PaperPaths.INVS_DIR, "2026_09_17-nshm27-AMSAM-20000samples-mcs-unique_seed-14"), 	// running on frontera
+//				new File(PaperPaths.INVS_DIR, "2026_09_17-nshm27-AMSAM-20000samples-mcs-unique_seed-15"), 	// running on frontera
+//				new File(PaperPaths.INVS_DIR, "2026_09_17-nshm27-AMSAM-20000samples-mcs-unique_seed-16"), 	// running on frontera
+//				new File(PaperPaths.INVS_DIR, "2026_09_17-nshm27-AMSAM-20000samples-mcs-unique_seed-17"), 	// running on frontera
+//				new File(PaperPaths.INVS_DIR, "2026_09_17-nshm27-AMSAM-20000samples-mcs-unique_seed-18"), 	// running on frontera
+//				new File(PaperPaths.INVS_DIR, "2026_09_17-nshm27-AMSAM-20000samples-mcs-unique_seed-19"), 	// running on frontera
+//				new File(PaperPaths.INVS_DIR, "2026_09_17-nshm27-AMSAM-20000samples-mcs-unique_seed-20") 	// running on frontera
 				));
 
 		/*
 		 * Sobol runs
 		 */
-		runDirs.put(SamplingMethod.OWEN_SCRAMBLED_SOBOL, 512, List.of(
-				new File(PaperPaths.INVS_DIR, "2026_08_25-nshm27-AMSAM-512samples-sobol_scrambled"),
-				new File(PaperPaths.INVS_DIR, "2026_08_25-nshm27-AMSAM-512samples-sobol_scrambled-unique_seed")
-				));
-		runDirs.put(SamplingMethod.OWEN_SCRAMBLED_SOBOL, 1024, List.of(
-				new File(PaperPaths.INVS_DIR, "2026_08_25-nshm27-AMSAM-1024samples-sobol_scrambled"),
-				new File(PaperPaths.INVS_DIR, "2026_08_25-nshm27-AMSAM-1024samples-sobol_scrambled-unique_seed")
-				));
-		runDirs.put(SamplingMethod.OWEN_SCRAMBLED_SOBOL, 2048, List.of(
-				new File(PaperPaths.INVS_DIR, "2026_08_25-nshm27-AMSAM-2048samples-sobol_scrambled"),
-				new File(PaperPaths.INVS_DIR, "2026_08_25-nshm27-AMSAM-2048samples-sobol_scrambled-unique_seed")
-				));
-		runDirs.put(SamplingMethod.OWEN_SCRAMBLED_SOBOL, 4096, List.of(
-				new File(PaperPaths.INVS_DIR, "2026_08_25-nshm27-AMSAM-4096samples-sobol_scrambled"),
-				new File(PaperPaths.INVS_DIR, "2026_08_25-nshm27-AMSAM-4096samples-sobol_scrambled-unique_seed"),
-				new File(PaperPaths.INVS_DIR, "2026_08_27-nshm27-AMSAM-4096samples-sobol_scrambled-unique_seed-2"),
-				new File(PaperPaths.INVS_DIR, "2026_08_27-nshm27-AMSAM-4096samples-sobol_scrambled-unique_seed-3")
-				));
 		runDirs.put(SamplingMethod.OWEN_SCRAMBLED_SOBOL, 8192, List.of(
-				new File(PaperPaths.INVS_DIR, "2026_08_28-nshm27-AMSAM-8192samples-sobol_scrambled"),
-				new File(PaperPaths.INVS_DIR, "2026_08_28-nshm27-AMSAM-8192samples-sobol_scrambled-unique_seed"),
-				new File(PaperPaths.INVS_DIR, "2026_08_29-nshm27-AMSAM-8192samples-sobol_scrambled-unique_seed-2"),
-				new File(PaperPaths.INVS_DIR, "2026_08_29-nshm27-AMSAM-8192samples-sobol_scrambled-unique_seed-3"),
-				new File(PaperPaths.INVS_DIR, "2026_09_09-nshm27-AMSAM-8192samples-sobol_scrambled-unique_seed-4"),
-				new File(PaperPaths.INVS_DIR, "2026_09_09-nshm27-AMSAM-8192samples-sobol_scrambled-unique_seed-5")
-//				new File(PaperPaths.INVS_DIR, "2026_09_16-nshm27-AMSAM-8192samples-sobol_scrambled-unique_seed-6"),
-//				new File(PaperPaths.INVS_DIR, "2026_09_16-nshm27-AMSAM-8192samples-sobol_scrambled-unique_seed-7")
+				new File(PaperPaths.INVS_DIR, "2026_08_28-nshm27-AMSAM-8192samples-sobol_scrambled"),				// DONE hazard recalc CARC
+				new File(PaperPaths.INVS_DIR, "2026_08_28-nshm27-AMSAM-8192samples-sobol_scrambled-unique_seed"),	// DONE hazard recalc CARC
+//				new File(PaperPaths.INVS_DIR, "2026_08_29-nshm27-AMSAM-8192samples-sobol_scrambled-unique_seed-2"),	// submitted hazard CARC
+//				new File(PaperPaths.INVS_DIR, "2026_08_29-nshm27-AMSAM-8192samples-sobol_scrambled-unique_seed-3"),	// submitted hazard CARC
+//				new File(PaperPaths.INVS_DIR, "2026_09_09-nshm27-AMSAM-8192samples-sobol_scrambled-unique_seed-4"),	// submitted hazard CARC
+//				new File(PaperPaths.INVS_DIR, "2026_09_09-nshm27-AMSAM-8192samples-sobol_scrambled-unique_seed-5")	// submitted hazard CARC
+				new File(PaperPaths.INVS_DIR, "2026_09_16-nshm27-AMSAM-8192samples-sobol_scrambled-unique_seed-6"), // DONE on frontera
+				new File(PaperPaths.INVS_DIR, "2026_09_16-nshm27-AMSAM-8192samples-sobol_scrambled-unique_seed-7") 	// DONE on frontera
 				));
+//		runDirs.put(SamplingMethod.OWEN_SCRAMBLED_SOBOL, 16384, List.of(
+//				new File(PaperPaths.INVS_DIR, "2026_09_17-nshm27-AMSAM-16384samples-sobol_scrambled"), 				// running on frontera
+//				new File(PaperPaths.INVS_DIR, "2026_09_17-nshm27-AMSAM-16384samples-sobol_scrambled-unique_seed"), 	// running on frontera
+//				new File(PaperPaths.INVS_DIR, "2026_09_17-nshm27-AMSAM-16384samples-sobol_scrambled-unique_seed-1"),// running on frontera
+//				new File(PaperPaths.INVS_DIR, "2026_09_17-nshm27-AMSAM-16384samples-sobol_scrambled-unique_seed-2"),// running on frontera
+//				new File(PaperPaths.INVS_DIR, "2026_09_14-nshm27-AMSAM-16384samples-sobol_scrambled-unique_seed-3"),// running on frontera
+//				new File(PaperPaths.INVS_DIR, "2026_09_14-nshm27-AMSAM-16384samples-sobol_scrambled-unique_seed-4"),// running on frontera
+//				new File(PaperPaths.INVS_DIR, "2026_09_14-nshm27-AMSAM-16384samples-sobol_scrambled-unique_seed-5"),// running on frontera
+//				new File(PaperPaths.INVS_DIR, "2026_09_14-nshm27-AMSAM-16384samples-sobol_scrambled-unique_seed-6") // running on frontera
+//				));
 		
 		/*
 		 * LHS runs
+		 * TODO add more 4096? do 8192?
 		 */
-		runDirs.put(SamplingMethod.LATIN_HYPERCUBE, 4096, List.of(
-				new File(PaperPaths.INVS_DIR, "2026_09_08-nshm27-AMSAM-4096samples-lhs"),
-				new File(PaperPaths.INVS_DIR, "2026_09_08-nshm27-AMSAM-4096samples-lhs-unique_seed"),
-				new File(PaperPaths.INVS_DIR, "2026_09_08-nshm27-AMSAM-4096samples-lhs-unique_seed-2"),
-				new File(PaperPaths.INVS_DIR, "2026_09_08-nshm27-AMSAM-4096samples-lhs-unique_seed-3")
-				));
+//		runDirs.put(SamplingMethod.LATIN_HYPERCUBE, 4096, List.of(	// TODO these are ready for recalc, stage jar and submit hazard
+//				new File(PaperPaths.INVS_DIR, "2026_09_08-nshm27-AMSAM-4096samples-lhs"),				// TODO: recalc hazard CARC
+//				new File(PaperPaths.INVS_DIR, "2026_09_08-nshm27-AMSAM-4096samples-lhs-unique_seed"),	// TODO: recalc hazard CARC
+//				new File(PaperPaths.INVS_DIR, "2026_09_08-nshm27-AMSAM-4096samples-lhs-unique_seed-2"),	// TODO: recalc hazard CARC
+//				new File(PaperPaths.INVS_DIR, "2026_09_08-nshm27-AMSAM-4096samples-lhs-unique_seed-3")	// TODO: recalc hazard CARC
+//				// TODO: configure/run 4 more
+//				));
+//		runDirs.put(SamplingMethod.LATIN_HYPERCUBE, 8192, List.of(	// TODO these are ready for recalc, stage jar and submit hazard
+//				// TODO: configure/run 8
+//				));
 		
 		/*
 		 * Pairwise-LHS runs
 		 */
 		runDirs.put(SamplingMethod.PAIRWISE_OPTIMIZED_LATIN_HYPERCUBE, 4096, List.of(
-				new File(PaperPaths.INVS_DIR, "2026_08_28-nshm27-AMSAM-4096samples-lhs_pairwise"),
-				new File(PaperPaths.INVS_DIR, "2026_08_28-nshm27-AMSAM-4096samples-lhs_pairwise-unique_seed"),
-				new File(PaperPaths.INVS_DIR, "2026_08_29-nshm27-AMSAM-4096samples-lhs_pairwise-unique_seed-2"),
-				new File(PaperPaths.INVS_DIR, "2026_08_29-nshm27-AMSAM-4096samples-lhs_pairwise-unique_seed-3"),
-				new File(PaperPaths.INVS_DIR, "2026_09_10-nshm27-AMSAM-4096samples-lhs_pairwise-unique_seed-4"),
-				new File(PaperPaths.INVS_DIR, "2026_09_10-nshm27-AMSAM-4096samples-lhs_pairwise-unique_seed-5")
-//				new File(PaperPaths.INVS_DIR, "2026_09_16-nshm27-AMSAM-4096samples-lhs_pairwise-unique_seed-6"),
-//				new File(PaperPaths.INVS_DIR, "2026_09_16-nshm27-AMSAM-4096samples-lhs_pairwise-unique_seed-7")
+//				new File(PaperPaths.INVS_DIR, "2026_08_28-nshm27-AMSAM-4096samples-lhs_pairwise"),					// submitted hazard CARC
+//				new File(PaperPaths.INVS_DIR, "2026_08_28-nshm27-AMSAM-4096samples-lhs_pairwise-unique_seed"),		// submitted hazard CARC
+//				new File(PaperPaths.INVS_DIR, "2026_08_29-nshm27-AMSAM-4096samples-lhs_pairwise-unique_seed-2"),	// submitted hazard CARC
+//				new File(PaperPaths.INVS_DIR, "2026_08_29-nshm27-AMSAM-4096samples-lhs_pairwise-unique_seed-3"),	// submitted hazard CARC
+//				new File(PaperPaths.INVS_DIR, "2026_09_10-nshm27-AMSAM-4096samples-lhs_pairwise-unique_seed-4"),	// submitted hazard CARC
+//				new File(PaperPaths.INVS_DIR, "2026_09_10-nshm27-AMSAM-4096samples-lhs_pairwise-unique_seed-5")		// submitted hazard CARC
+				new File(PaperPaths.INVS_DIR, "2026_09_16-nshm27-AMSAM-4096samples-lhs_pairwise-unique_seed-6"),	// DONE on CARC
+				new File(PaperPaths.INVS_DIR, "2026_09_16-nshm27-AMSAM-4096samples-lhs_pairwise-unique_seed-7")		// DONE on CARC
 				));
-//		runDirs.put(SamplingMethod.PAIRWISE_OPTIMIZED_LATIN_HYPERCUBE, 8192, List.of(
-//				new File(PaperPaths.INVS_DIR, "2026_09_16-nshm27-AMSAM-8192samples-lhs_pairwise"),
-//				new File(PaperPaths.INVS_DIR, "2026_09_16-nshm27-AMSAM-8192samples-lhs_pairwise-unique_seed"),
-//				new File(PaperPaths.INVS_DIR, "2026_09_16-nshm27-AMSAM-8192samples-lhs_pairwise-unique_seed-2"),
-//				new File(PaperPaths.INVS_DIR, "2026_09_16-nshm27-AMSAM-8192samples-lhs_pairwise-unique_seed-3"),
-//				new File(PaperPaths.INVS_DIR, "2026_09_16-nshm27-AMSAM-8192samples-lhs_pairwise-unique_seed-4"),
-//				new File(PaperPaths.INVS_DIR, "2026_09_16-nshm27-AMSAM-8192samples-lhs_pairwise-unique_seed-5"),
-//				new File(PaperPaths.INVS_DIR, "2026_09_16-nshm27-AMSAM-8192samples-lhs_pairwise-unique_seed-6"),
-//				new File(PaperPaths.INVS_DIR, "2026_09_16-nshm27-AMSAM-8192samples-lhs_pairwise-unique_seed-7")
-//				));
+		runDirs.put(SamplingMethod.PAIRWISE_OPTIMIZED_LATIN_HYPERCUBE, 8192, List.of(
+				new File(PaperPaths.INVS_DIR, "2026_09_16-nshm27-AMSAM-8192samples-lhs_pairwise"), 					// DONE on frontera
+				new File(PaperPaths.INVS_DIR, "2026_09_16-nshm27-AMSAM-8192samples-lhs_pairwise-unique_seed"), 		// DONE on frontera
+				new File(PaperPaths.INVS_DIR, "2026_09_16-nshm27-AMSAM-8192samples-lhs_pairwise-unique_seed-2"), 	// DONE on frontera
+				new File(PaperPaths.INVS_DIR, "2026_09_16-nshm27-AMSAM-8192samples-lhs_pairwise-unique_seed-3"), 	// DONE on frontera
+				new File(PaperPaths.INVS_DIR, "2026_09_16-nshm27-AMSAM-8192samples-lhs_pairwise-unique_seed-4"), 	// DONE on frontera
+				new File(PaperPaths.INVS_DIR, "2026_09_16-nshm27-AMSAM-8192samples-lhs_pairwise-unique_seed-5"), 	// DONE on frontera
+				new File(PaperPaths.INVS_DIR, "2026_09_16-nshm27-AMSAM-8192samples-lhs_pairwise-unique_seed-6"), 	// DONE on frontera
+				new File(PaperPaths.INVS_DIR, "2026_09_16-nshm27-AMSAM-8192samples-lhs_pairwise-unique_seed-7") 	// DONE on frontera
+				));
 	}
 
 	public static void main(String[] args) throws IOException {
+		Preconditions.checkState(MIN_SOBOL_PREFIX_SAMPLE_COUNT > 0
+				&& Integer.bitCount(MIN_SOBOL_PREFIX_SAMPLE_COUNT) == 1,
+				"MIN_SOBOL_PREFIX_SAMPLE_COUNT must be a positive power of two: %s",
+				MIN_SOBOL_PREFIX_SAMPLE_COUNT);
+
 		File outputDir = new File(PaperPaths.FIGURES_DIR, "hazard_convergence");
 		Preconditions.checkState(outputDir.exists() || outputDir.mkdir(),
 				"Couldn't create output directory: %s", outputDir.getAbsolutePath());
@@ -402,7 +416,7 @@ public class HazardConvergenceCalcs {
 				int count = b+1;
 				boolean fullRun = count == run.maxSamples();
 				boolean sobolCheckpoint = run.method() == SamplingMethod.OWEN_SCRAMBLED_SOBOL
-						&& count >= 512 && Integer.bitCount(count) == 1;
+						&& count >= MIN_SOBOL_PREFIX_SAMPLE_COUNT && Integer.bitCount(count) == 1;
 				if (Arrays.stream(spanCounts).anyMatch(size -> (globalOffset+count) % size == 0))
 					curveBoundaries.put(count, Arrays.stream(curveSums).map(double[]::clone).toArray(double[][]::new));
 				if (fullRun || sobolCheckpoint) {
