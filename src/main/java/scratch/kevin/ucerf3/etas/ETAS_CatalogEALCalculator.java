@@ -39,6 +39,7 @@ import org.opensha.commons.gui.plot.PlotCurveCharacterstics;
 import org.opensha.commons.gui.plot.PlotElement;
 import org.opensha.commons.gui.plot.PlotLineType;
 import org.opensha.commons.gui.plot.PlotSpec;
+import org.opensha.commons.util.ColorUtils;
 import org.opensha.commons.util.DataUtils;
 import org.opensha.commons.util.DataUtils.MinMaxAveTracker;
 import org.opensha.commons.util.cpt.CPT;
@@ -1175,7 +1176,7 @@ public class ETAS_CatalogEALCalculator {
 			List<PlotElement> myElems = Lists.newArrayList();
 			List<PlotCurveCharacterstics> myChars = Lists.newArrayList();
 
-			Color rangeColor = new Color((c.getRed()+255)/2, (c.getGreen()+255)/2, (c.getBlue()+255)/2);
+			Color rangeColor = ColorUtils.saturate(c, 1);
 			if (hasConf) {
 //				UncertainArbDiscDataset confRange = null;
 //				try {

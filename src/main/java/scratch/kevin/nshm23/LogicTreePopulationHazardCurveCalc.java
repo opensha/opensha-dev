@@ -104,7 +104,7 @@ public class LogicTreePopulationHazardCurveCalc {
 		int exit = 0;
 		try {
 			mapper = new LogicTreeHazardCompare(solTree, tree,
-					hazardFile, rps, periods, spacing);
+					hazardFile, rps, periods, spacing, false, false);
 			
 			LogicTree<?> compTree = null;
 			if (compHazardFile != null) {
@@ -120,7 +120,7 @@ public class LogicTreePopulationHazardCurveCalc {
 //						compTree.setWeightProvider(new BranchWeightProvider.CurrentWeights());
 				}
 				comp = new LogicTreeHazardCompare(compSolTree, compTree,
-						compHazardFile, rps, periods, spacing);
+						compHazardFile, rps, periods, spacing, false, false);
 			}
 			
 			Preconditions.checkState(outputDir.exists() || outputDir.mkdir());

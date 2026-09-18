@@ -49,11 +49,7 @@ public abstract class NshmSource<E> extends ProbEqkSource {
 		throw new UnsupportedOperationException();
 	}
 
-	public Object getDelegate() {
-		return delegate;
-	}
-
-	static class Fault extends NshmSource<NshmpIterableRuptureSet> {
+	public static class Fault extends NshmSource<NshmpIterableRuptureSet> {
 
 		private final List<NshmRupture> ruptures;
 
@@ -99,7 +95,7 @@ public abstract class NshmSource<E> extends ProbEqkSource {
 		}
 	}
 
-	static class Point extends NshmSource<NshmpGridSource> {
+	public static class Point extends NshmSource<NshmpGridSource> {
 
 		final double weight;
 		double duration;
@@ -142,7 +138,7 @@ public abstract class NshmSource<E> extends ProbEqkSource {
 		}
 	}
 
-	static class System extends NshmSource<SystemRupture> {
+	public static class System extends NshmSource<SystemRupture> {
 
 		final List<NshmSurface> surfaces;
 		final NshmRupture rupture;

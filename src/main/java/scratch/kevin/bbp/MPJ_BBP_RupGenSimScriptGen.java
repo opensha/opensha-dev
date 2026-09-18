@@ -94,7 +94,7 @@ public class MPJ_BBP_RupGenSimScriptGen {
 				USC_HPCC_ScriptWriter.JAVA_BIN, heapSizeMB, classpath, USC_HPCC_ScriptWriter.MPJ_HOME);
 		List<String> script = mpjWrite.buildScript(MPJ_BBP_RupGenSim.class.getName(), argz);
 		
-		script = pbsWrite.buildScript(script, mins, nodes, threads, queue);
+		script = pbsWrite.buildScript(script, mins, nodes, threads, -1, queue);
 		pbsWrite.writeScript(new File(localJobDir, "bbp_parallel.pbs"), script);
 	}
 	

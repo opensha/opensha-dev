@@ -89,7 +89,7 @@ public class MPJ_SpatiallyCorrelatedLossCalcScriptGen {
 		argz += " "+remoteJobDir.getAbsolutePath();
 		
 		List<String> script = mpjWrite.buildScript(MPJ_SpatiallyCorrelatedLossCalc.class.getName(), argz);
-		script = pbsWrite.buildScript(script, mins, nodes, threads, queue);
+		script = pbsWrite.buildScript(script, mins, nodes, threads, -1, queue);
 		pbsWrite.writeScript(new File(localJobDir, "spatial_calc.slurm"), script);
 	}
 

@@ -25,6 +25,7 @@ import org.jfree.chart.plot.XYPlot;
 import org.jfree.chart.ui.RectangleAnchor;
 import org.jfree.chart.ui.TextAnchor;
 import org.jfree.data.Range;
+import org.opensha.commons.util.ColorUtils;
 import org.opensha.commons.data.function.ArbitrarilyDiscretizedFunc;
 import org.opensha.commons.data.function.DefaultXY_DataSet;
 import org.opensha.commons.data.function.EvenlyDiscretizedFunc;
@@ -816,8 +817,8 @@ public class SubductionDefModConvert {
 			int interpAlpha = 40;
 			Color interpColor1 = Colors.tab_orange;
 			Color interpColor2 = Colors.tab_blue;
-			interpColor1 = new Color(interpColor1.getRed(), interpColor1.getGreen(), interpColor1.getBlue(), interpAlpha);
-			interpColor2 = new Color(interpColor2.getRed(), interpColor2.getGreen(), interpColor2.getBlue(), interpAlpha);
+			interpColor1 = ColorUtils.transparent(interpColor1, interpAlpha);
+			interpColor2 = ColorUtils.transparent(interpColor2, interpAlpha);
 
 			double interpMinY = 0d;
 			double interpMaxY = maxY;
@@ -834,8 +835,8 @@ public class SubductionDefModConvert {
 			
 			// annotate interpolation ranges
 			// use darker color
-			interpColor1 = new Color(interpColor1.getRed(), interpColor1.getGreen(), interpColor1.getBlue(), Integer.min(150, interpAlpha*4));
-			interpColor2 = new Color(interpColor2.getRed(), interpColor2.getGreen(), interpColor2.getBlue(), Integer.min(150, interpAlpha*4));
+			interpColor1 = ColorUtils.transparent(interpColor1, Integer.min(150, interpAlpha*4));
+			interpColor2 = ColorUtils.transparent(interpColor2, Integer.min(150, interpAlpha*4));
 			EvenlyDiscretizedFunc fakeHist = new EvenlyDiscretizedFunc(0d, 1d, 10);
 			fakeHist.setName(" ");
 			funcs.add(fakeHist);

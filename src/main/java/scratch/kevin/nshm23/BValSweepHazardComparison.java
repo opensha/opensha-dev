@@ -14,6 +14,7 @@ import org.opensha.commons.data.xyz.GriddedGeoDataSet;
 import org.opensha.commons.geo.GriddedRegion;
 import org.opensha.commons.geo.Region;
 import org.opensha.commons.mapping.gmt.elements.GMT_CPT_Files;
+import org.opensha.commons.util.ColorUtils;
 import org.opensha.commons.util.MarkdownUtils;
 import org.opensha.commons.util.cpt.CPT;
 import org.opensha.commons.util.cpt.CPTVal;
@@ -129,8 +130,8 @@ public class BValSweepHazardComparison {
 		bValCPT.setBelowMinColor(bValCPT.getMinColor().darker());
 		bValCPT.setAboveMaxColor(bValCPT.getMaxColor().darker());
 		for (CPTVal c : bValCPT) {
-			c.minColor = saturate(c.minColor);
-			c.maxColor = saturate(c.maxColor);
+			c.minColor = ColorUtils.saturate(c.minColor, 1);
+			c.maxColor = ColorUtils.saturate(c.maxColor, 1);
 		}
 		bValCPT.add(0, new CPTVal((float)(minB-0.02), bValCPT.getBelowMinColor(), (float)minB, bValCPT.getBelowMinColor()));
 		bValCPT.add(new CPTVal((float)maxB, bValCPT.getAboveMaxColor(), (float)(maxB+0.02), bValCPT.getAboveMaxColor()));
@@ -227,20 +228,4 @@ public class BValSweepHazardComparison {
 		return calc;
 	}
 	
-	private static final int saturation_steps = 1;
-	
-	private static Color saturate(Color c) {
-		int r = c.getRed();
-		int g = c.getGreen();
-		int b = c.getBlue();
-		
-		for (int i=0; i<saturation_steps; i++) {
-			r = (int)(0.5d*(r + 255d)+0.5);
-			g = (int)(0.5d*(g + 255d)+0.5);
-			b = (int)(0.5d*(b + 255d)+0.5);
-		}
-		
-		return new Color(r, g, b, c.getAlpha());
-	}
-
 }

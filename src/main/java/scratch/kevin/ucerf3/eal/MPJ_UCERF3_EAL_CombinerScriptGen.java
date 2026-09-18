@@ -134,7 +134,7 @@ public class MPJ_UCERF3_EAL_CombinerScriptGen {
 		argz += " "+remoteJobDir.getAbsolutePath();
 		
 		List<String> script = mpjWrite.buildScript(MPJ_UCERF3_EAL_Combiner.class.getName(), argz);
-		script = pbsWrite.buildScript(script, mins, nodes, threads, queue);
+		script = pbsWrite.buildScript(script, mins, nodes, threads, -1, queue);
 		pbsWrite.writeScript(new File(localJobDir, "eal_consolidate.slurm"), script);
 	}
 

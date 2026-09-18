@@ -23,7 +23,8 @@ public class MultiSolComparisonMapScriptGen {
 
 	public static void main(String[] args) throws IOException {
 		File localMainDir = new File("/home/kevin/OpenSHA/UCERF3/biasi_downsample_tests");
-		RunSites site = RunSites.HPCC;
+//		RunSites site = RunSites.HPCC;
+		RunSites site = null;
 		File remoteMainDir = new File("/home/scec-02/kmilner/ucerf3/maps");
 		
 		String runName = "biasi-downsample-pga";
@@ -84,7 +85,7 @@ public class MultiSolComparisonMapScriptGen {
 			
 			List<String> script = mpjWrite.buildScript(className, classArgs);
 			
-			batchWrite.writeScript(pbsFile, script, jobMins, nodes, site.getPPN(null), null);
+			batchWrite.writeScript(pbsFile, script, jobMins, nodes, site.getPPN(null), -1, null);
 		}
 	}
 

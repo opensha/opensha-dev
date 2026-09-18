@@ -20,7 +20,7 @@ import org.opensha.commons.hpc.mpj.FastMPJShellScriptWriter;
 import org.opensha.commons.hpc.mpj.FastMPJShellScriptWriter.Device;
 import org.opensha.commons.hpc.mpj.MPJExpressShellScriptWriter;
 import org.opensha.commons.hpc.pbs.StampedeScriptWriter;
-import org.opensha.commons.hpc.pbs.USC_HPCC_ScriptWriter;
+import org.opensha.commons.hpc.pbs.USC_CARC_ScriptWriter;
 import org.opensha.commons.param.Parameter;
 import org.opensha.commons.util.XMLUtils;
 import org.opensha.sha.calc.hazardMap.components.BinaryCurveArchiver;
@@ -172,12 +172,12 @@ public class HazardMapCompareScriptGen {
 		int nodes = 18;
 		int ppn = 20;
 		String queue = "scec_hiprio";
-		File javaBin = USC_HPCC_ScriptWriter.JAVA_BIN;
+		File javaBin = USC_CARC_ScriptWriter.JAVA_BIN;
 		File remoteMainDir = new File("/home/scec-02/kmilner/simulators/hazard");
 		JavaShellScriptWriter mpj = new MPJExpressShellScriptWriter(javaBin, 55*1024, null,
-				USC_HPCC_ScriptWriter.MPJ_HOME);
+				USC_CARC_ScriptWriter.MPJ_HOME);
 		((MPJExpressShellScriptWriter)mpj).setUseLaunchWrapper(true);
-		USC_HPCC_ScriptWriter writer = new USC_HPCC_ScriptWriter();
+		USC_CARC_ScriptWriter writer = new USC_CARC_ScriptWriter();
 		
 //		int mins = 24*60;
 //		int nodes = 10;
@@ -375,7 +375,7 @@ public class HazardMapCompareScriptGen {
 				
 				List<String> script = mpj.buildScript(MPJHazardCurveDriver.class.getName(), cliArgs);
 				
-				script = writer.buildScript(script, mins, nodes, ppn, queue);
+				script = writer.buildScript(script, mins, nodes, ppn, -1, queue);
 				
 				String jobName = localJobDir.getName();
 				if (!rsqsim)
@@ -435,7 +435,7 @@ public class HazardMapCompareScriptGen {
 					
 					List<String> script = mpj.buildScript(MPJHazardCurveDriver.class.getName(), cliArgs);
 					
-					script = writer.buildScript(script, mins, nodes, ppn, queue);
+					script = writer.buildScript(script, mins, nodes, ppn, -1, queue);
 					
 					String jobName = localJobDir.getName()+"_"+getIMTLabel(imt, period);
 					File pbsFile = new File(localJobDir, jobName+".pbs");

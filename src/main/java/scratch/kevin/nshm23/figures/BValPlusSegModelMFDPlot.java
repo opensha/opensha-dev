@@ -19,6 +19,7 @@ import org.jfree.chart.annotations.XYTextAnnotation;
 import org.jfree.chart.ui.RectangleAnchor;
 import org.jfree.chart.ui.TextAnchor;
 import org.jfree.data.Range;
+import org.opensha.commons.util.ColorUtils;
 import org.opensha.commons.data.function.ArbDiscrEmpiricalDistFunc;
 import org.opensha.commons.data.function.DiscretizedFunc;
 import org.opensha.commons.data.function.EvenlyDiscretizedFunc;
@@ -200,7 +201,7 @@ public class BValPlusSegModelMFDPlot {
 				obsColor = new Color(125, 80, 145); // "indigo"
 				PlotCurveCharacterstics obsChar = new PlotCurveCharacterstics(PlotLineType.SOLID, 3f, obsColor);
 				PlotCurveCharacterstics obsBoundsChar = new PlotCurveCharacterstics(
-						PlotLineType.SHADED_UNCERTAIN, 1f, new Color(obsColor.getRed(), obsColor.getGreen(), obsColor.getBlue(), 40));
+						PlotLineType.SHADED_UNCERTAIN, 1f, ColorUtils.transparent(obsColor, 40));
 				bValIncrFuncs.add(observedIncr);
 				bValIncrChars.add(obsChar);
 				if (includeObsUncert) {
@@ -279,7 +280,7 @@ public class BValPlusSegModelMFDPlot {
 							color = segModelCPT.getColor((float)s);
 						else
 							color = bValCPT.getColor((float)b);
-						color = new Color(color.getRed(), color.getGreen(), color.getBlue(), indvTrans);
+						color = ColorUtils.transparent(color, indvTrans);
 						PlotCurveCharacterstics pChar = new PlotCurveCharacterstics(PlotLineType.SOLID, 1.5f, color);
 						
 						allCurves[b][s] = mfd;

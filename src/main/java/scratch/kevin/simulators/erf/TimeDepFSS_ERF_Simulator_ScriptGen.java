@@ -55,7 +55,7 @@ public class TimeDepFSS_ERF_Simulator_ScriptGen {
 			
 			String scriptArgs = remoteOutputDir.getAbsolutePath()+" "+prefix+" "+trialsPerJob+" "+cov.name()+" "+duration;
 			List<String> script = writer.buildScript(TimeDepFSS_ERF_Simulator_Test.class.getName(), scriptArgs);
-			pbsWrite.writeScript(pbsFile, script, mins, 1, 8, null);
+			pbsWrite.writeScript(pbsFile, script, mins, 1, 8, -1, null);
 		}
 	}
 
