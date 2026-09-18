@@ -21,6 +21,7 @@ import org.opensha.commons.mapping.gmt.elements.CoastAttributes;
 import org.opensha.commons.mapping.gmt.elements.GMT_CPT_Files;
 import org.opensha.commons.mapping.gmt.elements.PSXYPolygon;
 import org.opensha.commons.mapping.gmt.elements.TopographicSlopeFile;
+import org.opensha.commons.util.ColorUtils;
 import org.opensha.commons.util.DataUtils.MinMaxAveTracker;
 import org.opensha.commons.util.cpt.CPT;
 import org.opensha.commons.util.cpt.CPTVal;
@@ -152,8 +153,8 @@ public class U3vsPopulationMap {
 //		for (int i=0; i<popCPT.size(); i++) {
 //			double weight =  (double)i/(double)(popCPT.size()-1);
 //			CPTVal val = popCPT.get(i);
-//			val.minColor = blend(val.minColor, saturate(val.minColor), weight);
-//			val.maxColor = blend(val.maxColor, saturate(val.maxColor), weight);
+//			val.minColor = ColorUtils.blend(ColorUtils.saturate(val.minColor, 1), val.minColor, weight);
+//			val.maxColor = ColorUtils.blend(ColorUtils.saturate(val.maxColor, 1), val.maxColor, weight);
 //		}
 		CPT popCPT = getLogPopCPT();
 		
@@ -353,11 +354,4 @@ public class U3vsPopulationMap {
 		System.out.println("DONE");
 	}
 	
-	private static Color blend(Color c1, Color c2, double weight) {
-		float r = (float)((weight*c1.getRed() + (1d-weight)*c2.getRed())/255d);
-		float g = (float)((weight*c1.getGreen() + (1d-weight)*c2.getGreen())/255d);
-		float b = (float)((weight*c1.getBlue() + (1d-weight)*c2.getBlue())/255d);
-		return new Color(r, g, b);
-	}
-
 }
