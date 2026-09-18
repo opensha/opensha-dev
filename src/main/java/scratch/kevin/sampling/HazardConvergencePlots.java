@@ -49,6 +49,7 @@ public class HazardConvergencePlots {
 	private static final SamplingMethod MCS = SamplingMethod.MONTE_CARLO;
 	private static final SamplingMethod SOBOL = SamplingMethod.OWEN_SCRAMBLED_SOBOL;
 
+	private static final boolean INCLUDE_SIGNED_VARIABILITY_UNCERTAINTIES = true;
 
 //	private static final ConvergenceMetric[] PLOT_METRICS = ConvergenceMetric.values();
 	static final ConvergenceMetric[] PLOT_METRICS = {
@@ -286,13 +287,22 @@ public class HazardConvergencePlots {
 			Color color = METRIC_COLORS.get(entry.getKey());
 			PlotSymbol sym = METRIC_SYMBOLS.get(entry.getKey());
 			PlotSymbol outlineSym = PlotSymbol.getOutlineSymbol(sym);
-			// Signed ranges overlap heavily, so only show mean +/- one standard deviation for mean hazard. Positive quantities use the
-			// median-centered multiplicative range defined by one standard deviation of the log-transformed values.
+			// Positive quantities use a shaded, median-centered multiplicative range defined by one standard
+			// deviation of the log-transformed values. For signed biases, retain that shading for mean hazard but
+			// draw the other mean +/- standard-deviation ranges as unobtrusive dotted bounds to avoid overlapping
+			// shaded regions.
 			if (!signed || entry.getKey() == ConvergenceMetric.MEAN_HAZARD) {
 				UncertainArbDiscFunc uncertainty = new UncertainArbDiscFunc(median, lower, upper);
 				funcs.add(uncertainty);
 				chars.add(new PlotCurveCharacterstics(PlotLineType.SHADED_UNCERTAIN, 1f,
 						ColorUtils.transparent(color, 70)));
+			} else if (INCLUDE_SIGNED_VARIABILITY_UNCERTAINTIES) {
+				funcs.add(lower);
+				chars.add(new PlotCurveCharacterstics(PlotLineType.DOTTED, 1f,
+						ColorUtils.transparent(color, 120)));
+				funcs.add(upper);
+				chars.add(new PlotCurveCharacterstics(PlotLineType.DOTTED, 1f,
+						ColorUtils.transparent(color, 120)));
 			}
 			if (indvMeans != null) {
 				medianFuncs.add(indvMeans);
