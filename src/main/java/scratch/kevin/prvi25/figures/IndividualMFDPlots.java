@@ -18,6 +18,7 @@ import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.apache.commons.math3.util.Precision;
 import org.jfree.chart.ui.RectangleAnchor;
 import org.jfree.data.Range;
+import org.opensha.commons.util.ColorUtils;
 import org.opensha.commons.data.WeightedList;
 import org.opensha.commons.data.function.ArbitrarilyDiscretizedFunc;
 import org.opensha.commons.data.function.DiscretizedFunc;
@@ -592,12 +593,12 @@ public class IndividualMFDPlots {
 			UncertainBoundedIncrMagFreqDist[] totalDists, IncrementalMagFreqDist total,
 			UncertainBoundedIncrMagFreqDist obs) throws IOException {
 		Color onFaultColor = Colors.tab_red;
-		Color onFaultTransColor = new Color(onFaultColor.getRed(), onFaultColor.getGreen(), onFaultColor.getBlue(), 60);
+		Color onFaultTransColor = ColorUtils.transparent(onFaultColor, 60);
 		Color obsColor = Colors.tab_green;
 		Color griddedColor = Colors.tab_blue;
-		Color griddedTransColor = new Color(griddedColor.getRed(), griddedColor.getGreen(), griddedColor.getBlue(), 60);
+		Color griddedTransColor = ColorUtils.transparent(griddedColor, 60);
 		Color totalColor = Colors.tab_purple;
-		Color totalTransColor = new Color(totalColor.getRed(), totalColor.getGreen(), totalColor.getBlue(), 60);
+		Color totalTransColor = ColorUtils.transparent(totalColor, 60);
 		
 		List<DiscretizedFunc> funcs = new ArrayList<>();
 		List<PlotCurveCharacterstics> chars = new ArrayList<>();

@@ -20,6 +20,7 @@ import org.jfree.chart.axis.NumberAxis;
 import org.jfree.chart.ui.RectangleAnchor;
 import org.jfree.chart.ui.RectangleInsets;
 import org.jfree.data.Range;
+import org.opensha.commons.util.ColorUtils;
 import org.opensha.commons.data.CSVFile;
 import org.opensha.commons.data.function.ArbitrarilyDiscretizedFunc;
 import org.opensha.commons.data.function.DefaultXY_DataSet;
@@ -291,7 +292,7 @@ public class HazardConvergencePlots {
 				UncertainArbDiscFunc uncertainty = new UncertainArbDiscFunc(median, lower, upper);
 				funcs.add(uncertainty);
 				chars.add(new PlotCurveCharacterstics(PlotLineType.SHADED_UNCERTAIN, 1f,
-						new Color(color.getRed(), color.getGreen(), color.getBlue(), 70)));
+						ColorUtils.transparent(color, 70)));
 			}
 			if (indvMeans != null) {
 				medianFuncs.add(indvMeans);

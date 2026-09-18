@@ -19,6 +19,7 @@ import org.apache.commons.math3.stat.StatUtils;
 import org.apache.commons.math3.util.Precision;
 import org.jfree.chart.ui.RectangleAnchor;
 import org.jfree.data.Range;
+import org.opensha.commons.util.ColorUtils;
 import org.opensha.commons.data.CSVFile;
 import org.opensha.commons.data.Site;
 import org.opensha.commons.data.function.ArbitrarilyDiscretizedFunc;
@@ -809,11 +810,11 @@ public class ComparisonPageGen {
 								
 								rakeHistWrapper.setName("Wrapper");
 								funcs.add(rakeHistWrapper);
-								chars.add(new PlotCurveCharacterstics(PlotLineType.HISTOGRAM, 1f, trans(Colors.tab_green, 127)));
+								chars.add(new PlotCurveCharacterstics(PlotLineType.HISTOGRAM, 1f, ColorUtils.transparent(Colors.tab_green, 127)));
 								
 								rakeHistFSS.setName(nameMine);
 								funcs.add(rakeHistFSS);
-								chars.add(new PlotCurveCharacterstics(PlotLineType.HISTOGRAM, 1f, trans(Colors.tab_blue, 127)));
+								chars.add(new PlotCurveCharacterstics(PlotLineType.HISTOGRAM, 1f, ColorUtils.transparent(Colors.tab_blue, 127)));
 								
 								PlotSpec plot = new PlotSpec(funcs, chars, " ", "Nearby rupture rake (degrees)", "Rate");
 								plot.setLegendInset(RectangleAnchor.TOP_LEFT);
@@ -875,11 +876,11 @@ public class ComparisonPageGen {
 									
 									histWrapper.setName(null);
 									funcs.add(histWrapper);
-									chars.add(new PlotCurveCharacterstics(PlotLineType.HISTOGRAM, 1f, trans(Colors.tab_green, 127)));
+									chars.add(new PlotCurveCharacterstics(PlotLineType.HISTOGRAM, 1f, ColorUtils.transparent(Colors.tab_green, 127)));
 									
 									histFSS.setName(null);
 									funcs.add(histFSS);
-									chars.add(new PlotCurveCharacterstics(PlotLineType.HISTOGRAM, 1f, trans(Colors.tab_blue, 127)));
+									chars.add(new PlotCurveCharacterstics(PlotLineType.HISTOGRAM, 1f, ColorUtils.transparent(Colors.tab_blue, 127)));
 									
 									EvenlyDiscretizedFunc cmlFSS = new EvenlyDiscretizedFunc(histFSS.getMinX()-0.5*histFSS.getDelta(), histFSS.size(), histFSS.getDelta());
 									double sum = 0d;
@@ -1238,10 +1239,6 @@ public class ComparisonPageGen {
 				}
 			}
 		});
-	}
-	
-	private static Color trans(Color c, int a) {
-		return new Color(c.getRed(), c.getGreen(), c.getBlue(), a);
 	}
 	
 	private static double curveVal(DiscretizedFunc curve, ReturnPeriods rp) {

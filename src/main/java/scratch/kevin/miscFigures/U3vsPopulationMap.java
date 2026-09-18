@@ -353,22 +353,6 @@ public class U3vsPopulationMap {
 		System.out.println("DONE");
 	}
 	
-	private static final int saturation_steps = 1;
-	
-	private static Color saturate(Color c) {
-		int r = c.getRed();
-		int g = c.getGreen();
-		int b = c.getBlue();
-		
-		for (int i=0; i<saturation_steps; i++) {
-			r = (int)(0.5d*(r + 255d)+0.5);
-			g = (int)(0.5d*(g + 255d)+0.5);
-			b = (int)(0.5d*(b + 255d)+0.5);
-		}
-		
-		return new Color(r, g, b, c.getAlpha());
-	}
-	
 	private static Color blend(Color c1, Color c2, double weight) {
 		float r = (float)((weight*c1.getRed() + (1d-weight)*c2.getRed())/255d);
 		float g = (float)((weight*c1.getGreen() + (1d-weight)*c2.getGreen())/255d);

@@ -22,6 +22,7 @@ import org.jfree.chart.annotations.XYTextAnnotation;
 import org.jfree.chart.plot.DatasetRenderingOrder;
 import org.jfree.chart.ui.TextAnchor;
 import org.jfree.data.Range;
+import org.opensha.commons.util.ColorUtils;
 import org.opensha.commons.data.function.DefaultXY_DataSet;
 import org.opensha.commons.data.function.EvenlyDiscretizedFunc;
 import org.opensha.commons.data.function.XY_DataSet;
@@ -428,7 +429,7 @@ public class LHSExampleFigures {
 									anns.add(indexAnn);
 								}
 								anns.add(new XYBoxAnnotation(x0, y0, x1, y1, outlineStroke, Color.BLACK,
-										new Color(color.getRed(), color.getGreen(), color.getBlue(), 60)));
+										ColorUtils.transparent(color, 60)));
 							} else {
 								anns.add(new XYBoxAnnotation(x0, y0, x1, y1, outlineStroke, Color.BLACK, color));
 								indexAnn.setFont(indexSwappedFont);

@@ -16,6 +16,7 @@ import org.apache.commons.statistics.distribution.UniformContinuousDistribution;
 import org.jfree.chart.plot.DatasetRenderingOrder;
 import org.jfree.chart.ui.RectangleAnchor;
 import org.jfree.data.Range;
+import org.opensha.commons.util.ColorUtils;
 import org.opensha.commons.data.function.DefaultXY_DataSet;
 import org.opensha.commons.data.function.EvenlyDiscretizedFunc;
 import org.opensha.commons.data.function.HistogramFunction;
@@ -64,10 +65,10 @@ public class BValDistFigure {
 		Range yRange = new Range(0, 1.4);
 		
 		Color hingedColor = Colors.tab_blue;
-		hingedColor = new Color(hingedColor.getRed(), hingedColor.getGreen(), hingedColor.getBlue(), 200);
+		hingedColor = ColorUtils.transparent(hingedColor, 200);
 		Color hingedBelowOverlayColor = new Color(255, 255, 255, 160);
 		Color extrapColor = Colors.tab_green;
-		extrapColor = new Color(extrapColor.getRed(), extrapColor.getGreen(), extrapColor.getBlue(), 200);
+		extrapColor = ColorUtils.transparent(extrapColor, 200);
 		Color combColor = Colors.tab_lightred;
 		
 		double extrapolateWeight = NSHM27_InterfaceObsSeisDMAdjustment.EXTRAPOLATE.getNodeWeight();

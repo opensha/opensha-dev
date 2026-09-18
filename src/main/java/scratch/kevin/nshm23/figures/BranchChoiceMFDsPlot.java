@@ -8,6 +8,7 @@ import java.util.List;
 
 import org.jfree.chart.ui.RectangleAnchor;
 import org.jfree.data.Range;
+import org.opensha.commons.util.ColorUtils;
 import org.opensha.commons.data.function.DiscretizedFunc;
 import org.opensha.commons.data.function.EvenlyDiscretizedFunc;
 import org.opensha.commons.data.uncertainty.UncertainArbDiscFunc;
@@ -119,10 +120,10 @@ class BranchChoiceMFDsPlot {
 			
 			incrFuncs.add(dataForBounds);
 			incrChars.add(new PlotCurveCharacterstics(PlotLineType.SHADED_UNCERTAIN, 1f,
-					new Color(obsColor.getRed(), obsColor.getGreen(), obsColor.getBlue(), 60)));
+					ColorUtils.transparent(obsColor, 60)));
 			cmlFuncs.add(cmlBounded);
 			cmlChars.add(new PlotCurveCharacterstics(PlotLineType.SHADED_UNCERTAIN, 1f,
-					new Color(obsColor.getRed(), obsColor.getGreen(), obsColor.getBlue(), 60)));
+					ColorUtils.transparent(obsColor, 60)));
 			
 			LogicTreeNode[] nodes = nodesList.get(i);
 			String prefix = prefixes.get(i);
@@ -158,7 +159,7 @@ class BranchChoiceMFDsPlot {
 			
 			for (int j=startCopyIndex; j<endCopyIndex; j++) {
 				Color color = cpt.getColor((float)(j-startCopyIndex));
-				Color transColor = new Color(color.getRed(), color.getGreen(), color.getBlue(), 127);
+				Color transColor = ColorUtils.transparent(color, 127);
 				IncrementalMagFreqDist mfd = incrFuncs.get(j).deepClone();
 				mfd.setName(null);
 				incrChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 3f, transColor));

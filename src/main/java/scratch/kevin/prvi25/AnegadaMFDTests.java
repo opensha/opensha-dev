@@ -8,6 +8,7 @@ import java.util.List;
 
 import org.jfree.chart.ui.RectangleAnchor;
 import org.jfree.data.Range;
+import org.opensha.commons.util.ColorUtils;
 import org.opensha.commons.data.function.DiscretizedFunc;
 import org.opensha.commons.data.function.EvenlyDiscretizedFunc;
 import org.opensha.commons.gui.plot.HeadlessGraphPanel;
@@ -138,7 +139,7 @@ public class AnegadaMFDTests {
 					if (type == MFDType.MAG_CORNER) {
 						mfd.setName(null);
 						funcs.add(mfd);
-						chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, new Color(color.getRed(), color.getGreen(), color.getBlue(), 127)));
+						chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, ColorUtils.transparent(color, 127)));
 						mfdTable.put(b, seg, mfd);
 					}
 					IncrementalMagFreqDist weightedOverall = mfd.deepClone();
@@ -201,7 +202,7 @@ public class AnegadaMFDTests {
 							if (mfd == null)
 								continue;
 							funcs.add(mfd);
-							chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, new Color(color.getRed(), color.getGreen(), color.getBlue(), 127)));
+							chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, ColorUtils.transparent(color, 127)));
 							weightSum += b.weight;
 							
 							mfd = mfd.deepClone();
@@ -228,7 +229,7 @@ public class AnegadaMFDTests {
 								mfd.setName("b="+(float)b.bValue);
 								chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 3f, color));
 							} else {
-								chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, new Color(color.getRed(), color.getGreen(), color.getBlue(), 127)));
+								chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, ColorUtils.transparent(color, 127)));
 							}
 							funcs.add(mfd);
 						}

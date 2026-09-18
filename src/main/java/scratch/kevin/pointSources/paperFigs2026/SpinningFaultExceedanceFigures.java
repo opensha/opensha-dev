@@ -49,6 +49,7 @@ import org.opensha.commons.gui.plot.PlotPreferences;
 import org.opensha.commons.gui.plot.PlotSpec;
 import org.opensha.commons.gui.plot.PlotSymbol;
 import org.opensha.commons.gui.plot.PlotUtils;
+import org.opensha.commons.util.ColorUtils;
 import org.opensha.commons.util.DataUtils.MinMaxAveTracker;
 import org.opensha.commons.util.cpt.CPT;
 import org.opensha.sha.calc.RuptureExceedProbCalculator;
@@ -94,7 +95,7 @@ public class SpinningFaultExceedanceFigures {
 			label = Label;
 			this.function = function;
 			this.color = color;
-			this.transColor = new Color(color.getRed(), color.getGreen(), color.getBlue(), 80);
+			this.transColor = ColorUtils.transparent(color, 80);
 		}
 	};
 
@@ -1614,8 +1615,8 @@ public class SpinningFaultExceedanceFigures {
 			}
 			
 			// spin the centered surfaces
-			Color centeredHWColor = overWhite(transColor(Colors.tab_blue, 80));
-			Color centeredFWColor = overWhite(transColor(Colors.tab_lightblue, 80));
+			Color centeredHWColor = overWhite(ColorUtils.transparent(Colors.tab_blue, 80));
+			Color centeredFWColor = overWhite(ColorUtils.transparent(Colors.tab_lightblue, 80));
 			if (mech == FocalMech.STRIKE_SLIP) {
 				// simple, no hw/fw
 				DefaultXY_DataSet xyCircle = new DefaultXY_DataSet();
@@ -2043,7 +2044,7 @@ public class SpinningFaultExceedanceFigures {
 			Location refLoc, RectangularSurface surf, Color surfaceColor, float thickness, int minAlpha) {
 		// draw forward and reverse edges
 		int steps = 20;
-		Color transColor = new Color(surfaceColor.getRed(), surfaceColor.getGreen(), surfaceColor.getBlue(), minAlpha);
+		Color transColor = ColorUtils.transparent(surfaceColor, minAlpha);
 		CPT transCPT = new CPT(0d,  (double)steps-1d, surfaceColor, transColor);
 		
 		double horzWidth = surf.getAveHorizontalWidth();
@@ -2072,10 +2073,6 @@ public class SpinningFaultExceedanceFigures {
 		
 		funcs.add(xy);
 		chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, thickness, transColor));
-	}
-	
-	private static Color transColor(Color color, int alpha) {
-		return new Color(color.getRed(), color.getGreen(), color.getBlue(), alpha);
 	}
 	
 	public static Color overWhite(Color rgba) {

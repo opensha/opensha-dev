@@ -14,6 +14,7 @@ import java.util.concurrent.CompletableFuture;
 
 import org.apache.commons.statistics.distribution.ContinuousDistribution;
 import org.jfree.data.Range;
+import org.opensha.commons.util.ColorUtils;
 import org.opensha.commons.data.WeightedList;
 import org.opensha.commons.data.function.ArbDiscrEmpiricalDistFunc;
 import org.opensha.commons.data.function.ArbitrarilyDiscretizedFunc;
@@ -359,7 +360,7 @@ public class InterfaceLogicTreeMFDExploration {
 				cmlExtrema.setName(null);
 				incrFuncs.add(incrExtrema);
 				cmlFuncs.add(cmlExtrema);
-				chars.add(new PlotCurveCharacterstics(PlotLineType.SHADED_UNCERTAIN, 1f, new Color(base.getRed(), base.getGreen(), base.getBlue(), 50)));
+				chars.add(new PlotCurveCharacterstics(PlotLineType.SHADED_UNCERTAIN, 1f, ColorUtils.transparent(base, 50)));
 				
 				UncertainBoundedIncrMagFreqDist incr95 = new UncertainBoundedIncrMagFreqDist(
 						incrMedian, incrFractiles[1], incrFractiles[5], null);
@@ -368,7 +369,7 @@ public class InterfaceLogicTreeMFDExploration {
 				cml95.setName(null);
 				incrFuncs.add(incr95);
 				cmlFuncs.add(cml95);
-				chars.add(new PlotCurveCharacterstics(PlotLineType.SHADED_UNCERTAIN, 1f, new Color(base.getRed(), base.getGreen(), base.getBlue(), 70)));
+				chars.add(new PlotCurveCharacterstics(PlotLineType.SHADED_UNCERTAIN, 1f, ColorUtils.transparent(base, 70)));
 				
 				UncertainBoundedIncrMagFreqDist incr68 = new UncertainBoundedIncrMagFreqDist(
 						incrMedian, incrFractiles[2], incrFractiles[4], null);
@@ -377,7 +378,7 @@ public class InterfaceLogicTreeMFDExploration {
 				cml68.setName(fractileNames);
 				incrFuncs.add(incr68);
 				cmlFuncs.add(cml68);
-				chars.add(new PlotCurveCharacterstics(PlotLineType.SHADED_UNCERTAIN, 1f, new Color(base.getRed(), base.getGreen(), base.getBlue(), 100)));
+				chars.add(new PlotCurveCharacterstics(PlotLineType.SHADED_UNCERTAIN, 1f, ColorUtils.transparent(base, 100)));
 				
 				if (sampledLevel instanceof MaxRuptureLengthBranchNode.DistributionSamplingLevel) {
 					MaxRuptureLengthBranchNode.DistributionSamplingLevel distSampleLevel =

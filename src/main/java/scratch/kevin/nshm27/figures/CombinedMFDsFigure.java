@@ -13,6 +13,7 @@ import org.apache.commons.math3.stat.StatUtils;
 import org.jfree.chart.plot.DatasetRenderingOrder;
 import org.jfree.chart.ui.RectangleAnchor;
 import org.jfree.data.Range;
+import org.opensha.commons.util.ColorUtils;
 import org.opensha.commons.data.CSVFile;
 import org.opensha.commons.data.function.ArbDiscrEmpiricalDistFunc;
 import org.opensha.commons.data.function.DiscretizedFunc;
@@ -72,11 +73,11 @@ public class CombinedMFDsFigure {
 		
 		Color fractileBase = Color.DARK_GRAY;
 		PlotCurveCharacterstics extremaChar = new PlotCurveCharacterstics(PlotLineType.SHADED_UNCERTAIN, 1f,
-				new Color(fractileBase.getRed(), fractileBase.getGreen(), fractileBase.getBlue(), 50));
+				ColorUtils.transparent(fractileBase, 50));
 		PlotCurveCharacterstics bounds95Char = new PlotCurveCharacterstics(PlotLineType.SHADED_UNCERTAIN, 1f,
-				new Color(fractileBase.getRed(), fractileBase.getGreen(), fractileBase.getBlue(), 70));
+				ColorUtils.transparent(fractileBase, 70));
 		PlotCurveCharacterstics bounds68Char = new PlotCurveCharacterstics(PlotLineType.SHADED_UNCERTAIN, 1f,
-				new Color(fractileBase.getRed(), fractileBase.getGreen(), fractileBase.getBlue(), 100));
+				ColorUtils.transparent(fractileBase, 100));
 		double[] fractiles = {0d, 0.025, 0.16, 0.5, 0.84, 0.975, 1d};
 		String fractileLabel = "p[0, 2.5, 16, 84, 97.5, 100]";
 		
