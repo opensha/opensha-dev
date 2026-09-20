@@ -318,16 +318,20 @@ public class HazardConvergencePlots {
 			median.setName(entry.getKey().shortLabel);
 			medianFuncs.add(median);
 			if (primary == ConvergenceSummary.MEAN_ABSOLUTE) {
-				ArbitrarilyDiscretizedFunc worst = new ArbitrarilyDiscretizedFunc();
+				ArbitrarilyDiscretizedFunc typicalWorst = new ArbitrarilyDiscretizedFunc();
 				for (int i=0; i<counts.length; i++) {
 					int count = counts[i];
-					rows.stream().filter(row -> row.metric() == entry.getKey() && row.count() == count
-							&& row.spatialSummary() == ConvergenceSummary.MAXIMUM_ABSOLUTE)
-							.mapToDouble(SummaryRow::maximum).max()
-							.ifPresent(maximum -> worst.set((double)Arrays.binarySearch(counts, count), maximum));
+					List<? extends SummaryRow> matchingMaximums = rows.stream()
+							.filter(row -> row.metric() == entry.getKey() && row.count() == count
+									&& row.spatialSummary() == ConvergenceSummary.MAXIMUM_ABSOLUTE)
+							.toList();
+					// Each value is the largest spatial error in one realization. Their median represents the
+					// typical realization's worst site without increasing merely because more runs are available.
+					if (!matchingMaximums.isEmpty())
+						typicalWorst.set((double)i, combineRows(matchingMaximums).median());
 				}
-				if (worst.size() > 0) {
-					maxFuncs.add(worst); // Unnamed, so it adds no legend entry.
+				if (typicalWorst.size() > 0) {
+					maxFuncs.add(typicalWorst); // Unnamed, so it adds no legend entry.
 					maxChars.add(new PlotCurveCharacterstics(PlotLineType.SHORT_DASHED, 0.5f,
 							PlotSymbol.getOutlineSymbol(sym), 3f, color));
 				}

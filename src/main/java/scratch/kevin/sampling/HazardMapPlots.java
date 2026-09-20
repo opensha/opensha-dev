@@ -47,7 +47,7 @@ public class HazardMapPlots {
 
 	public static void main(String[] args) throws IOException {
 		File convergenceDir = new File(PaperPaths.FIGURES_DIR, "hazard_convergence");
-		int[] sizes = { 512, 1024, 2048, 4096, 8192 };
+		int[] sizes = { 512, 1024, 2048, 4096, 8192, 16384 };
 		plotPeriod(new File(convergenceDir, "pga_two_in_50"), 0d, "PGA, "+RP.label, sizes);
 		plotPeriod(new File(convergenceDir, "1s_sa_two_in_50"), 1d, "1s SA, "+RP.label, sizes);
 	}
