@@ -239,6 +239,12 @@ public class SlipProjectionFigures {
 				
 				mapMaker.clearScatters();
 				mapMaker.clearAnnotations();
+				
+				mapMaker.plotSectScalars(s->Double.NaN,
+						slipCPT, "Slip deficit rate (mm/yr)");
+				
+				mapMaker.plot(outputDir, fm.name()+"_"+dm.getFilePrefix()+"_slip_empty",
+						dm.getShortName()+" DM");
 			}
 		}
 		
