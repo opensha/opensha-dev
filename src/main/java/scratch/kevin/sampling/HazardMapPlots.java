@@ -63,6 +63,10 @@ public class HazardMapPlots {
 				Feature.read(new File(firstMCSDir, "gridded_region.geojson")));
 
 		List<File> mcsPoolDirs = flatten(HazardConvergenceCalcs.runDirs.row(SamplingMethod.MONTE_CARLO));
+		File mcsReserveDir = HazardConvergenceCalcs.MCS_RESERVE_DIR;
+		LogicTree<?> mcsReserveTree = LogicTree.read(new File(mcsReserveDir, "logic_tree_analysis.json"));
+		Preconditions.checkState(mcsReserveTree.getSamplingMethod() == SamplingMethod.MONTE_CARLO,
+				"Expected MCS reserve, have %s", mcsReserveTree.getSamplingMethod());
 		List<File> sobolPoolDirs;
 		if (HazardConvergenceCalcs.FIXED_SOBOL_CONSENSUS_SIZE == null) {
 			sobolPoolDirs = flatten(HazardConvergenceCalcs.runDirs.row(SamplingMethod.OWEN_SCRAMBLED_SOBOL));
@@ -107,9 +111,11 @@ public class HazardMapPlots {
 				HazardData refMCS;
 				HazardData refSobol;
 				if (method == SamplingMethod.MONTE_CARLO) {
-					// MCS comparisons use the first span of the first run and remove that span from the MCS pool.
-					data = loadRunPrefix(firstMCSDir, size, gridReg, period, mcsPool);
-					refMCS = mcsPool.without(firstMCSDir, size, data.meanCurves(), gridReg);
+					if (size > mcsReserveTree.size())
+						continue;
+					// The reserve is independent of, and deliberately excluded from, the primary MCS pool.
+					data = loadRunPrefix(mcsReserveDir, size, gridReg, period, null);
+					refMCS = mcsPool.data();
 					refSobol = sobolPool.data();
 				} else {
 					File runDir = selectIndividualRun(method, size, sobolPoolDirs);

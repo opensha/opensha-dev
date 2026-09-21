@@ -24,7 +24,7 @@ public class HazardConvergencePlotsTest {
 						HazardConvergenceCalcs.MCS_REFERENCE_NAME, metric, ConvergenceSummary.MEAN_ABSOLUTE,
 						2, 0.2, 0.05, 0.1, 0.2, 0.3, 0.25, new double[] {0.15, 0.25}));
 			rows.add(new ReferenceSummary(SamplingMethod.MONTE_CARLO, 512,
-					HazardConvergenceCalcs.LOO_MCS_REFERENCE_NAME, metric, ConvergenceSummary.MEAN_ABSOLUTE,
+					HazardConvergenceCalcs.REPLACED_MCS_REFERENCE_NAME, metric, ConvergenceSummary.MEAN_ABSOLUTE,
 					4, 0.3, 0.05, 0.2, 0.3, 0.4, 0.2, new double[] {0.2, 0.25, 0.35, 0.4}));
 			rows.add(new ReferenceSummary(SamplingMethod.LATIN_HYPERCUBE, 512,
 					HazardConvergenceCalcs.MCS_REFERENCE_NAME, metric, ConvergenceSummary.MEAN_ABSOLUTE,

@@ -122,13 +122,17 @@ public class HazardConvergencePlots {
 
 	private static String referenceFor(SamplingMethod method, boolean sobolPool) {
 		return sobolPool ? (method == SOBOL ? SOBOL_REFERENCE : POOLED_SOBOL_REFERENCE)
-				: (method == MCS ? HazardConvergenceCalcs.LOO_MCS_REFERENCE_NAME : MCS_REFERENCE);
+				: (method == MCS ? HazardConvergenceCalcs.REPLACED_MCS_REFERENCE_NAME : MCS_REFERENCE);
 	}
 
 	private static boolean matchesReference(ReferenceSummary row, SamplingMethod method, boolean sobolPool) {
 		if (sobolPool && method == SOBOL)
 			// A fixed-size consensus only leaves out Sobol runs of that size; other sizes use the full pool.
 			return row.reference().equals(SOBOL_REFERENCE) || row.reference().equals(POOLED_SOBOL_REFERENCE);
+		if (!sobolPool && method == MCS)
+			// Primary-pool spans use reserve replacement; the independent reserve prefix uses the full pool.
+			return row.reference().equals(HazardConvergenceCalcs.REPLACED_MCS_REFERENCE_NAME)
+					|| row.reference().equals(MCS_REFERENCE);
 		return row.reference().equals(referenceFor(method, sobolPool));
 	}
 

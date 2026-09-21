@@ -48,17 +48,25 @@ import com.google.common.collect.Table;
 
 public class HazardConvergenceCalcs {
 	static final String MCS_REFERENCE_NAME = "Pooled MCS";
-	static final String LOO_MCS_REFERENCE_NAME = "Pooled MCS, leave span out";
+	static final String REPLACED_MCS_REFERENCE_NAME = "Pooled MCS, span replaced from reserve";
 	static final String POOLED_SOBOL_REFERENCE_NAME = "Pooled Sobol";
 	static final String LOO_SOBOL_REFERENCE_NAME = "Pooled Sobol, leave one out";
 	static final String POOLED_PO_LHS_REFERENCE_NAME = "Pooled Pairwise-Optimized LHS";
-	private static final int MAX_RUN_LOAD_THREADS = 4;
+	/**
+	 * Maximum number of runs loaded concurrently. Curve loading is largely CPU-bound
+	 * CSV parsing, so use more than the historical four-reader default while allowing
+	 * tuning for machines with different CPU, storage, and memory limits.
+	 */
+	private static final int MAX_RUN_LOAD_THREADS = Math.max(1,
+			Integer.getInteger("hazard.load.threads", 16));
 	private static final int MCS_POOL_BOOTSTRAP_REPLICATES = 200;
 	private static final long MCS_POOL_BOOTSTRAP_SEED = 0x5eed5eedL;
 	/** Smallest dyadic Sobol prefix retained as a separate convergence realization. */
 	static final int MIN_SOBOL_PREFIX_SAMPLE_COUNT = 256;
 	/** Set to {@code null} to build the Sobol consensus from every available run size. */
 	static final Integer FIXED_SOBOL_CONSENSUS_SIZE = 16384;
+	static final File MCS_RESERVE_DIR = new File(PaperPaths.INVS_DIR,
+			"2026_09_19-nshm27-AMSAM-16384samples-mcs-unique_seed-reserve");
 
 	static final Table<SamplingMethod, Integer, List<File>> runDirs;
 	static {
@@ -87,50 +95,66 @@ public class HazardConvergenceCalcs {
 				new File(PaperPaths.INVS_DIR, "2026_09_18-nshm27-AMSAM-20000samples-mcs-unique_seed-17"), 	// DONE on frontera
 				new File(PaperPaths.INVS_DIR, "2026_09_18-nshm27-AMSAM-20000samples-mcs-unique_seed-18"), 	// DONE on frontera
 				new File(PaperPaths.INVS_DIR, "2026_09_18-nshm27-AMSAM-20000samples-mcs-unique_seed-19"), 	// DONE on frontera
-				new File(PaperPaths.INVS_DIR, "2026_09_18-nshm27-AMSAM-20000samples-mcs-unique_seed-20") 	// DONE on frontera
-//				new File(PaperPaths.INVS_DIR, "2026_09_19-nshm27-AMSAM-20000samples-mcs-unique_seed-21"), 	// running on frontera
-//				new File(PaperPaths.INVS_DIR, "2026_09_19-nshm27-AMSAM-20000samples-mcs-unique_seed-22"), 	// running on frontera
+				new File(PaperPaths.INVS_DIR, "2026_09_18-nshm27-AMSAM-20000samples-mcs-unique_seed-20"), 	// DONE on frontera
+				new File(PaperPaths.INVS_DIR, "2026_09_19-nshm27-AMSAM-20000samples-mcs-unique_seed-21"), 	// DONE on frontera
+				new File(PaperPaths.INVS_DIR, "2026_09_19-nshm27-AMSAM-20000samples-mcs-unique_seed-22"), 	// DONE on frontera
 //				new File(PaperPaths.INVS_DIR, "2026_09_19-nshm27-AMSAM-20000samples-mcs-unique_seed-23"), 	// running on frontera
-//				new File(PaperPaths.INVS_DIR, "2026_09_19-nshm27-AMSAM-20000samples-mcs-unique_seed-24"), 	// running on frontera
-//				new File(PaperPaths.INVS_DIR, "2026_09_19-nshm27-AMSAM-20000samples-mcs-unique_seed-25"), 	// running on frontera
+				new File(PaperPaths.INVS_DIR, "2026_09_19-nshm27-AMSAM-20000samples-mcs-unique_seed-24"), 	// DONE on frontera
+				new File(PaperPaths.INVS_DIR, "2026_09_19-nshm27-AMSAM-20000samples-mcs-unique_seed-25") 	// DONE on frontera
 				));
 
 		/*
 		 * Sobol runs
 		 */
 		runDirs.put(SamplingMethod.OWEN_SCRAMBLED_SOBOL, 8192, List.of(
-				new File(PaperPaths.INVS_DIR, "2026_08_28-nshm27-AMSAM-8192samples-sobol_scrambled"),				// DONE hazard recalc CARC
-				new File(PaperPaths.INVS_DIR, "2026_08_28-nshm27-AMSAM-8192samples-sobol_scrambled-unique_seed"),	// DONE hazard recalc CARC
-//				new File(PaperPaths.INVS_DIR, "2026_08_29-nshm27-AMSAM-8192samples-sobol_scrambled-unique_seed-2"),	// submitted hazard CARC
-//				new File(PaperPaths.INVS_DIR, "2026_08_29-nshm27-AMSAM-8192samples-sobol_scrambled-unique_seed-3"),	// submitted hazard CARC
-//				new File(PaperPaths.INVS_DIR, "2026_09_09-nshm27-AMSAM-8192samples-sobol_scrambled-unique_seed-4"),	// submitted hazard CARC
-//				new File(PaperPaths.INVS_DIR, "2026_09_09-nshm27-AMSAM-8192samples-sobol_scrambled-unique_seed-5")	// submitted hazard CARC
-				new File(PaperPaths.INVS_DIR, "2026_09_16-nshm27-AMSAM-8192samples-sobol_scrambled-unique_seed-6"), // DONE on frontera
-				new File(PaperPaths.INVS_DIR, "2026_09_16-nshm27-AMSAM-8192samples-sobol_scrambled-unique_seed-7") 	// DONE on frontera
+				new File(PaperPaths.INVS_DIR, "2026_08_28-nshm27-AMSAM-8192samples-sobol_scrambled"),					// DONE hazard recalc CARC
+				new File(PaperPaths.INVS_DIR, "2026_08_28-nshm27-AMSAM-8192samples-sobol_scrambled-unique_seed"),		// DONE hazard recalc CARC
+				new File(PaperPaths.INVS_DIR, "2026_08_29-nshm27-AMSAM-8192samples-sobol_scrambled-unique_seed-2"),		// DONE hazard CARC
+				new File(PaperPaths.INVS_DIR, "2026_08_29-nshm27-AMSAM-8192samples-sobol_scrambled-unique_seed-3"),		// DONE hazard CARC
+				new File(PaperPaths.INVS_DIR, "2026_09_09-nshm27-AMSAM-8192samples-sobol_scrambled-unique_seed-4"),		// DONE hazard CARC
+//				new File(PaperPaths.INVS_DIR, "2026_09_09-nshm27-AMSAM-8192samples-sobol_scrambled-unique_seed-5"),		// submitted hazard CARC
+				new File(PaperPaths.INVS_DIR, "2026_09_16-nshm27-AMSAM-8192samples-sobol_scrambled-unique_seed-6"),		// DONE on frontera
+				new File(PaperPaths.INVS_DIR, "2026_09_16-nshm27-AMSAM-8192samples-sobol_scrambled-unique_seed-7"),		// DONE on frontera
+				new File(PaperPaths.INVS_DIR, "2026_09_20-nshm27-AMSAM-8192samples-sobol_scrambled-unique_seed-8"),		// DONE on frontera
+				new File(PaperPaths.INVS_DIR, "2026_09_20-nshm27-AMSAM-8192samples-sobol_scrambled-unique_seed-9"),		// DONE on frontera
+				new File(PaperPaths.INVS_DIR, "2026_09_20-nshm27-AMSAM-8192samples-sobol_scrambled-unique_seed-10"),	// DONE on frontera
+				new File(PaperPaths.INVS_DIR, "2026_09_20-nshm27-AMSAM-8192samples-sobol_scrambled-unique_seed-11"),	// DONE on frontera
+				new File(PaperPaths.INVS_DIR, "2026_09_20-nshm27-AMSAM-8192samples-sobol_scrambled-unique_seed-12"),	// DONE on frontera
+				new File(PaperPaths.INVS_DIR, "2026_09_20-nshm27-AMSAM-8192samples-sobol_scrambled-unique_seed-13"),	// DONE on frontera
+				new File(PaperPaths.INVS_DIR, "2026_09_20-nshm27-AMSAM-8192samples-sobol_scrambled-unique_seed-14"),	// DONE on frontera
+				new File(PaperPaths.INVS_DIR, "2026_09_20-nshm27-AMSAM-8192samples-sobol_scrambled-unique_seed-15")		// DONE on frontera
 				));
 		runDirs.put(SamplingMethod.OWEN_SCRAMBLED_SOBOL, 16384, List.of(
-				new File(PaperPaths.INVS_DIR, "2026_09_17-nshm27-AMSAM-16384samples-sobol_scrambled"), 				// DONE on frontera
-				new File(PaperPaths.INVS_DIR, "2026_09_17-nshm27-AMSAM-16384samples-sobol_scrambled-unique_seed"), 	// DONE on frontera
-				new File(PaperPaths.INVS_DIR, "2026_09_17-nshm27-AMSAM-16384samples-sobol_scrambled-unique_seed-1"),// DONE on frontera
-				new File(PaperPaths.INVS_DIR, "2026_09_17-nshm27-AMSAM-16384samples-sobol_scrambled-unique_seed-2"),// DONE on frontera
-				new File(PaperPaths.INVS_DIR, "2026_09_18-nshm27-AMSAM-16384samples-sobol_scrambled-unique_seed-3"),// DONE on frontera
-				new File(PaperPaths.INVS_DIR, "2026_09_18-nshm27-AMSAM-16384samples-sobol_scrambled-unique_seed-4"),// DONE on frontera
-				new File(PaperPaths.INVS_DIR, "2026_09_18-nshm27-AMSAM-16384samples-sobol_scrambled-unique_seed-5"),// DONE on frontera
-				new File(PaperPaths.INVS_DIR, "2026_09_18-nshm27-AMSAM-16384samples-sobol_scrambled-unique_seed-6") // DONE on frontera
+				new File(PaperPaths.INVS_DIR, "2026_09_17-nshm27-AMSAM-16384samples-sobol_scrambled"), 					// DONE on frontera
+				new File(PaperPaths.INVS_DIR, "2026_09_17-nshm27-AMSAM-16384samples-sobol_scrambled-unique_seed"), 		// DONE on frontera
+				new File(PaperPaths.INVS_DIR, "2026_09_17-nshm27-AMSAM-16384samples-sobol_scrambled-unique_seed-1"),	// DONE on frontera
+				new File(PaperPaths.INVS_DIR, "2026_09_17-nshm27-AMSAM-16384samples-sobol_scrambled-unique_seed-2"),	// DONE on frontera
+				new File(PaperPaths.INVS_DIR, "2026_09_18-nshm27-AMSAM-16384samples-sobol_scrambled-unique_seed-3"),	// DONE on frontera
+				new File(PaperPaths.INVS_DIR, "2026_09_18-nshm27-AMSAM-16384samples-sobol_scrambled-unique_seed-4"),	// DONE on frontera
+				new File(PaperPaths.INVS_DIR, "2026_09_18-nshm27-AMSAM-16384samples-sobol_scrambled-unique_seed-5"),	// DONE on frontera
+				new File(PaperPaths.INVS_DIR, "2026_09_18-nshm27-AMSAM-16384samples-sobol_scrambled-unique_seed-6") 	// DONE on frontera
+//				new File(PaperPaths.INVS_DIR, "2026_09_20-nshm27-AMSAM-16384samples-sobol_scrambled-unique_seed-8"),	// running on frontera
+//				new File(PaperPaths.INVS_DIR, "2026_09_20-nshm27-AMSAM-16384samples-sobol_scrambled-unique_seed-9"),	// running on frontera
+//				new File(PaperPaths.INVS_DIR, "2026_09_20-nshm27-AMSAM-16384samples-sobol_scrambled-unique_seed-10"),	// running on frontera
+//				new File(PaperPaths.INVS_DIR, "2026_09_20-nshm27-AMSAM-16384samples-sobol_scrambled-unique_seed-11"),	// running on frontera
+//				new File(PaperPaths.INVS_DIR, "2026_09_20-nshm27-AMSAM-16384samples-sobol_scrambled-unique_seed-12"),	// running on frontera
+//				new File(PaperPaths.INVS_DIR, "2026_09_20-nshm27-AMSAM-16384samples-sobol_scrambled-unique_seed-13"),	// running on frontera
+//				new File(PaperPaths.INVS_DIR, "2026_09_20-nshm27-AMSAM-16384samples-sobol_scrambled-unique_seed-14"),	// running on frontera
+//				new File(PaperPaths.INVS_DIR, "2026_09_20-nshm27-AMSAM-16384samples-sobol_scrambled-unique_seed-15")	// running on frontera
 				));
 		
 		/*
 		 * LHS runs
 		 * TODO add more 4096? do 8192?
 		 */
-//		runDirs.put(SamplingMethod.LATIN_HYPERCUBE, 4096, List.of(	// TODO these are ready for recalc, stage jar and submit hazard
-//				new File(PaperPaths.INVS_DIR, "2026_09_08-nshm27-AMSAM-4096samples-lhs"),				// TODO: recalc hazard CARC
-//				new File(PaperPaths.INVS_DIR, "2026_09_08-nshm27-AMSAM-4096samples-lhs-unique_seed"),	// TODO: recalc hazard CARC
-//				new File(PaperPaths.INVS_DIR, "2026_09_08-nshm27-AMSAM-4096samples-lhs-unique_seed-2"),	// TODO: recalc hazard CARC
-//				new File(PaperPaths.INVS_DIR, "2026_09_08-nshm27-AMSAM-4096samples-lhs-unique_seed-3")	// TODO: recalc hazard CARC
+//		runDirs.put(SamplingMethod.LATIN_HYPERCUBE, 4096, List.of(
+//				new File(PaperPaths.INVS_DIR, "2026_09_08-nshm27-AMSAM-4096samples-lhs"),				// submitted hazard CARC
+//				new File(PaperPaths.INVS_DIR, "2026_09_08-nshm27-AMSAM-4096samples-lhs-unique_seed"),	// submitted hazard CARC
+//				new File(PaperPaths.INVS_DIR, "2026_09_08-nshm27-AMSAM-4096samples-lhs-unique_seed-2"),	// submitted hazard CARC
+//				new File(PaperPaths.INVS_DIR, "2026_09_08-nshm27-AMSAM-4096samples-lhs-unique_seed-3")	// submitted hazard CARC
 //				// TODO: configure/run 4 more
 //				));
-//		runDirs.put(SamplingMethod.LATIN_HYPERCUBE, 8192, List.of(	// TODO these are ready for recalc, stage jar and submit hazard
+//		runDirs.put(SamplingMethod.LATIN_HYPERCUBE, 8192, List.of(
 //				// TODO: configure/run 8
 //				));
 		
@@ -143,7 +167,7 @@ public class HazardConvergenceCalcs {
 //				new File(PaperPaths.INVS_DIR, "2026_08_29-nshm27-AMSAM-4096samples-lhs_pairwise-unique_seed-2"),	// submitted hazard CARC
 //				new File(PaperPaths.INVS_DIR, "2026_08_29-nshm27-AMSAM-4096samples-lhs_pairwise-unique_seed-3"),	// submitted hazard CARC
 //				new File(PaperPaths.INVS_DIR, "2026_09_10-nshm27-AMSAM-4096samples-lhs_pairwise-unique_seed-4"),	// submitted hazard CARC
-//				new File(PaperPaths.INVS_DIR, "2026_09_10-nshm27-AMSAM-4096samples-lhs_pairwise-unique_seed-5")		// submitted hazard CARC
+//				new File(PaperPaths.INVS_DIR, "2026_09_10-nshm27-AMSAM-4096samples-lhs_pairwise-unique_seed-5"),	// submitted hazard CARC
 				new File(PaperPaths.INVS_DIR, "2026_09_16-nshm27-AMSAM-4096samples-lhs_pairwise-unique_seed-6"),	// DONE on CARC
 				new File(PaperPaths.INVS_DIR, "2026_09_16-nshm27-AMSAM-4096samples-lhs_pairwise-unique_seed-7")		// DONE on CARC
 				));
@@ -160,6 +184,9 @@ public class HazardConvergenceCalcs {
 	}
 
 	public static void main(String[] args) throws IOException {
+		if (Runtime.getRuntime().availableProcessors() > 32)
+			System.setProperty("java.util.concurrent.ForkJoinPool.common.parallelism", "32");
+		
 		Preconditions.checkState(MIN_SOBOL_PREFIX_SAMPLE_COUNT > 0
 				&& Integer.bitCount(MIN_SOBOL_PREFIX_SAMPLE_COUNT) == 1,
 				"MIN_SOBOL_PREFIX_SAMPLE_COUNT must be a positive power of two: %s",
@@ -179,8 +206,11 @@ public class HazardConvergenceCalcs {
 				fullDesignRuns.addAll(loadRunSpecs(method, runDirs.row(method)));
 		List<RunSpec> mcsRuns = loadRunSpecs(SamplingMethod.MONTE_CARLO,
 				runDirs.row(SamplingMethod.MONTE_CARLO));
+		RunSpec mcsReserveRun = loadRunSpecs(SamplingMethod.MONTE_CARLO,
+				List.of(MCS_RESERVE_DIR)).getFirst();
 		System.out.println("MCS reference has "+mcsRuns.stream().mapToInt(RunSpec::maxSamples).sum()
 				+" branches across "+mcsRuns.size()+" runs");
+		System.out.println("MCS reserve has "+mcsReserveRun.maxSamples()+" branches: "+mcsReserveRun.id());
 
 		GriddedRegion gridReg = GriddedRegion.fromFeature(
 				Feature.read(new File(mcsRuns.get(0).directory, "gridded_region.geojson")));
@@ -193,7 +223,7 @@ public class HazardConvergenceCalcs {
 			Preconditions.checkState(periodDir.exists() || periodDir.mkdir(),
 					"Couldn't create output directory: %s", periodDir.getAbsolutePath());
 			System.out.println("\n========== "+periodNames[p]+", "+rp+" ==========");
-			runSamplingConvergence(sobolRuns, fullDesignRuns, mcsRuns,
+			runSamplingConvergence(sobolRuns, fullDesignRuns, mcsRuns, mcsReserveRun,
 					gridReg, periods[p], periodNames[p], rp, periodDir);
 		}
 	}
@@ -230,13 +260,19 @@ public class HazardConvergenceCalcs {
 	}
 
 	private static void runSamplingConvergence(List<RunSpec> sobolRuns, List<RunSpec> fullDesignRuns,
-			List<RunSpec> mcsRuns,
+			List<RunSpec> mcsRuns, RunSpec mcsReserveRun,
 			GriddedRegion gridReg, double period, String periodName, ReturnPeriods rp, File outputDir) throws IOException {
 		List<RunPeriodData> sobolData = loadRunPeriodData(sobolRuns, gridReg, period, rp);
 		List<RunPeriodData> fullDesignData = loadRunPeriodData(fullDesignRuns, gridReg, period, rp);
 		int[] sampleCounts = sobolData.stream().flatMap(data -> data.checkpoints().keySet().stream())
 				.mapToInt(Integer::intValue).distinct().sorted().toArray();
+		Preconditions.checkState(sampleCounts.length > 0
+				&& sampleCounts[sampleCounts.length-1] <= mcsReserveRun.maxSamples(),
+				"MCS reserve has %s samples but comparisons require %s",
+				mcsReserveRun.maxSamples(), sampleCounts.length == 0 ? 0 : sampleCounts[sampleCounts.length-1]);
 		List<RunPeriodData> mcsData = loadRunPeriodData(mcsRuns, gridReg, period, rp, sampleCounts);
+		RunPeriodData mcsReserveData = loadRunPeriodData(
+				List.of(mcsReserveRun), gridReg, period, rp, sampleCounts).getFirst();
 		List<RunPeriodData> sobolConsensusData;
 		if (FIXED_SOBOL_CONSENSUS_SIZE == null) {
 			sobolConsensusData = sobolData;
@@ -294,8 +330,8 @@ public class HazardConvergenceCalcs {
 			appendComparisons(comparisons, data.run(), data.run().maxSamples(),
 					statistics, mcsReference, gridReg);
 		}
-		List<Realization> mcsSpans = appendMCSSpanComparisons(comparisons, mcsData, sampleCounts,
-				pooledSobol, gridReg, rp);
+		List<Realization> mcsRealizations = appendMCSSpanComparisons(comparisons, mcsData, mcsReserveData,
+				sampleCounts, mcsReference, pooledSobol, gridReg, rp);
 		writeReferenceComparisons(new File(outputDir, "reference_comparisons.csv"), comparisons);
 		writeReferenceComparisonSummary(new File(outputDir, "reference_comparison_summary.csv"), comparisons);
 
@@ -319,7 +355,7 @@ public class HazardConvergenceCalcs {
 		List<RunPeriodData> allData = new ArrayList<>(sobolData);
 		allData.addAll(fullDesignData);
 		allData.addAll(mcsData);
-		List<Realization> realizations = new ArrayList<>(mcsSpans);
+		List<Realization> realizations = new ArrayList<>(mcsRealizations);
 		for (RunPeriodData data : allData)
 			data.checkpoints().forEach((count, statistics) -> realizations.add(new Realization(data.run(), count, statistics)));
 		List<RealizationPairComparison> realizationPairs = buildRealizationPairComparisons(realizations, gridReg);
@@ -504,14 +540,20 @@ public class HazardConvergenceCalcs {
 				+outputDir.getAbsolutePath());
 	}
 
-	/** Uses disjoint spans across the concatenated MCS pool; leftover branches still contribute to every reference. */
+	/**
+	 * Uses disjoint spans across the concatenated primary MCS pool. Each span is replaced in its reference by an
+	 * equally sized prefix of the independent reserve, keeping the reference size fixed without including the test
+	 * samples themselves. The reserve prefix is also evaluated once against the untouched primary pool.
+	 */
 	static List<Realization> appendMCSSpanComparisons(List<ReferenceComparison> comparisons,
-			List<RunPeriodData> runs, int[] sampleCounts, ReferenceStatistics sobolReference,
+			List<RunPeriodData> runs, RunPeriodData reserve, int[] sampleCounts,
+			ReferenceStatistics mcsReference, ReferenceStatistics sobolReference,
 			GriddedRegion gridReg, ReturnPeriods rp) {
-		List<Realization> spans = new ArrayList<>();
+		List<Realization> realizations = new ArrayList<>();
 		double[][] allMaps = runs.stream().flatMap(data -> Arrays.stream(data.branchMaps()))
 				.toArray(double[][]::new);
 		double[] curveX = runs.get(0).curveX();
+		Preconditions.checkState(Arrays.equals(curveX, reserve.curveX()), "MCS reserve curve grid differs");
 		double[][] totalCurves = new double[gridReg.getNodeCount()][curveX.length];
 		for (RunPeriodData data : runs) {
 			Preconditions.checkState(Arrays.equals(curveX, data.curveX()), "MCS curve grids differ");
@@ -523,41 +565,51 @@ public class HazardConvergenceCalcs {
 		RunSpec pooledRun = new RunSpec("pooled-mcs", firstRun.directory(), firstRun.tree(),
 				firstRun.method(), 0L, allMaps.length);
 		for (int count : sampleCounts) {
+			Preconditions.checkState(count <= reserve.branchMaps().length,
+					"MCS reserve has %s samples but %s are required", reserve.branchMaps().length, count);
+			double[][] reserveMaps = Arrays.copyOf(reserve.branchMaps(), count);
+			double[][] reserveCurves = pooledCurvePrefix(List.of(reserve), count, curveX.length);
+			HazardStatistics reserveStatistics = calcHazardStatistics(reserveMaps, count,
+					buildCurveMeanMap(reserveCurves, curveX, count, rp));
+			realizations.add(new Realization(reserve.run(), count, reserveStatistics));
+			appendComparisons(comparisons, reserve.run(), count, reserveStatistics, mcsReference, gridReg);
+			appendComparisons(comparisons, reserve.run(), count, reserveStatistics, sobolReference, gridReg);
+
 			double[][] before = new double[totalCurves.length][curveX.length];
 			int numSpans = allMaps.length/count;
 			for (int spanIndex=0; spanIndex<numSpans; spanIndex++) {
 				int start = spanIndex*count;
 				int end = start+count;
-				Preconditions.checkState(allMaps.length-count > 1, "Too few MCS reference samples after exclusion");
 				double[][] after = pooledCurvePrefix(runs, end, curveX.length);
 				double[][] spanCurves = new double[totalCurves.length][curveX.length];
-				double[][] remainingCurves = new double[totalCurves.length][curveX.length];
+				double[][] replacementCurves = new double[totalCurves.length][curveX.length];
 				for (int n=0; n<totalCurves.length; n++) {
 					for (int i=0; i<curveX.length; i++) {
 						spanCurves[n][i] = after[n][i]-before[n][i];
-						remainingCurves[n][i] = totalCurves[n][i]-spanCurves[n][i];
+						replacementCurves[n][i] = totalCurves[n][i]-spanCurves[n][i]+reserveCurves[n][i];
 					}
 				}
 				// Only copy row references; the maps themselves remain shared and read-only.
 				double[][] spanMaps = Arrays.copyOfRange(allMaps, start, end);
-				double[][] remainingMaps = excludeSpan(allMaps, start, end);
+				double[][] replacementMaps = replaceSpan(allMaps, reserveMaps, start, end);
 				HazardStatistics statistics = calcHazardStatistics(spanMaps, count,
 						buildCurveMeanMap(spanCurves, curveX, count, rp));
 				// Retain the small statistics arrays for pair comparisons; curve and map arrays are unnecessary there.
 				RunSpec spanRun = new RunSpec(pooledRun.id()+"["+start+","+end+")",
 						pooledRun.directory(), pooledRun.tree(), pooledRun.method(), pooledRun.seed(), count);
-				spans.add(new Realization(spanRun, count, statistics));
-				ReferenceStatistics reference = new ReferenceStatistics(LOO_MCS_REFERENCE_NAME,
-						spanRun.id(), remainingMaps.length,
-						calcHazardStatistics(remainingMaps, remainingMaps.length,
-								buildCurveMeanMap(remainingCurves, curveX, remainingMaps.length, rp)));
+				realizations.add(new Realization(spanRun, count, statistics));
+				ReferenceStatistics reference = new ReferenceStatistics(REPLACED_MCS_REFERENCE_NAME,
+						spanRun.id(), replacementMaps.length,
+						calcHazardStatistics(replacementMaps, replacementMaps.length,
+								buildCurveMeanMap(replacementCurves, curveX, replacementMaps.length, rp)));
 				appendComparisons(comparisons, pooledRun, count, statistics, reference, gridReg, start);
 				appendComparisons(comparisons, pooledRun, count, statistics, sobolReference, gridReg, start);
 				before = after;
 			}
-			System.out.println("Compared pooled MCS: "+numSpans+" disjoint "+count+"-sample spans");
+			System.out.println("Compared pooled MCS: "+numSpans+" disjoint "+count
+					+"-sample spans with reserve replacement, plus the reserve prefix");
 		}
-		return spans;
+		return realizations;
 	}
 
 	private static double[][] pooledCurvePrefix(List<RunPeriodData> runs, int sampleCount, int curveSize) {
@@ -585,12 +637,13 @@ public class HazardConvergenceCalcs {
 		return prefix;
 	}
 
-	static double[][] excludeSpan(double[][] rows, int start, int end) {
+	static double[][] replaceSpan(double[][] rows, double[][] replacements, int start, int end) {
 		Preconditions.checkArgument(start >= 0 && start < end && end <= rows.length);
-		double[][] remaining = new double[rows.length-(end-start)][];
-		System.arraycopy(rows, 0, remaining, 0, start);
-		System.arraycopy(rows, end, remaining, start, rows.length-end);
-		return remaining;
+		Preconditions.checkArgument(replacements.length == end-start,
+				"Need %s replacements for [%s,%s), have %s", end-start, start, end, replacements.length);
+		double[][] replaced = rows.clone();
+		System.arraycopy(replacements, 0, replaced, start, replacements.length);
+		return replaced;
 	}
 
 	static double[] buildCurveMeanMap(double[][] curveSums, double[] curveX,
