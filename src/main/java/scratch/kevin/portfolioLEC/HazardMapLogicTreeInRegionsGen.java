@@ -15,6 +15,7 @@ import org.dom4j.DocumentException;
 import org.dom4j.Element;
 import org.opensha.commons.data.Site;
 import org.opensha.commons.data.TimeSpan;
+import org.opensha.commons.data.TimeSpan.StartTimePrecision;
 import org.opensha.commons.data.function.ArbitrarilyDiscretizedFunc;
 import org.opensha.commons.data.function.DiscretizedFunc;
 import org.opensha.commons.data.siteData.OrderedSiteDataProviderList;
@@ -220,7 +221,7 @@ public class HazardMapLogicTreeInRegionsGen {
 		
 		for (int i=0; i<listERF.getNumERFs(); i++) {
 			ERF erf = listERF.getERF(i);
-			if (!erf.getTimeSpan().getStartTimePrecision().equals(TimeSpan.NONE)) {
+			if (erf.getTimeSpan().getStartTimePrecision() != StartTimePrecision.NONE) {
 				// can only set time span for BPT, not empirical model
 				try {
 					erf.getTimeSpan().setStartTime(startYear);
