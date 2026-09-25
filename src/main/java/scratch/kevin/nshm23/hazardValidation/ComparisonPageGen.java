@@ -65,7 +65,7 @@ import org.opensha.sha.earthquake.faultSysSolution.modules.RupMFDsModule;
 import org.opensha.sha.earthquake.faultSysSolution.ruptures.ClusterRupture;
 import org.opensha.sha.earthquake.faultSysSolution.ruptures.util.RupCartoonGenerator;
 import org.opensha.sha.earthquake.faultSysSolution.util.SolHazardMapCalc;
-import org.opensha.sha.earthquake.faultSysSolution.util.SolHazardMapCalc.ReturnPeriods;
+import org.opensha.sha.calc.ReturnPeriod;
 import org.opensha.sha.earthquake.param.IncludeBackgroundOption;
 import org.opensha.sha.earthquake.param.IncludeBackgroundParam;
 import org.opensha.sha.earthquake.param.UseRupMFDsParam;
@@ -110,8 +110,8 @@ public class ComparisonPageGen {
 				closestDist = Math.min(closestDist, LocationUtils.horzDistanceFast(loc, new Location(loc.lat, -115)));
 		System.out.println("Closest CEUS grid node to the -115 boundary: "+(int)closestDist+" km");
 		
-//		ReturnPeriods[] rps = ReturnPeriods.values();
-		ReturnPeriods[] rps = { ReturnPeriods.TWO_IN_50, ReturnPeriods.TEN_IN_50 };
+//		ReturnPeriod[] rps = ReturnPeriod.standardValues();
+		ReturnPeriod[] rps = { ReturnPeriod.TWO_IN_50, ReturnPeriod.TEN_IN_50 };
 		
 		EnumSet<TectonicRegionType> trts = EnumSet.of(
 				TectonicRegionType.ACTIVE_SHALLOW
@@ -386,19 +386,19 @@ public class ComparisonPageGen {
 			}
 			lines.add(topLink); lines.add("");
 			
-			for (ReturnPeriods rp : rps) {
+			for (ReturnPeriod rp : rps) {
 				GriddedGeoDataSet myMap = curvestoMap(myCurves, mapReg, rp);
 				GriddedGeoDataSet extMap = curvestoMap(extCurves, mapReg, rp);
 				
 				System.out.println("Doing "+bgOp+", "+rp);
 				
-				lines.add("### "+rp.label);
+				lines.add("### "+rp.getLabel());
 				lines.add(topLink); lines.add("");
 				
 				boolean[] zooms = zoomReg == null ? new boolean[] {false} : new boolean[] {false,true};
 				
 				for (boolean zoom : zooms) {
-					String hazLabel = imtName+", "+rp.label;
+					String hazLabel = imtName+", "+rp.getLabel();
 					String prefix = bgOp.name()+"_"+rp.name();
 					
 					boolean curves = zoom || zooms.length == 1;
@@ -745,7 +745,7 @@ public class ComparisonPageGen {
 								Range yRange = new Range(1e-5, 1e0);
 								
 								DefaultXY_DataSet imFunc = new DefaultXY_DataSet(targetIM, yRange.getLowerBound(), targetIM, yRange.getUpperBound());
-								imFunc.setName(rp.label+": "+(float)targetIM);
+								imFunc.setName(rp.getLabel()+": "+(float)targetIM);
 								funcs.add(imFunc);
 								chars.add(new PlotCurveCharacterstics(PlotLineType.DOTTED, 2f, Color.DARK_GRAY));
 								
@@ -1102,7 +1102,7 @@ public class ComparisonPageGen {
 		return ret;
 	}
 	
-	private static GriddedGeoDataSet curvestoMap(DiscretizedFunc[] curves, GriddedRegion gridRegion, ReturnPeriods rp) {
+	private static GriddedGeoDataSet curvestoMap(DiscretizedFunc[] curves, GriddedRegion gridRegion, ReturnPeriod rp) {
 		GriddedGeoDataSet ret = new GriddedGeoDataSet(gridRegion);
 		for (int i=0; i<ret.size(); i++)
 			ret.set(i, Double.NaN);
@@ -1241,16 +1241,16 @@ public class ComparisonPageGen {
 		});
 	}
 	
-	private static double curveVal(DiscretizedFunc curve, ReturnPeriods rp) {
+	private static double curveVal(DiscretizedFunc curve, ReturnPeriod rp) {
 		if (curve == null)
 			return Double.NaN;
-		if (rp.oneYearProb > curve.getMaxY())
+		if (rp.getProbability(1d) > curve.getMaxY())
 			return 0d;
-		if (rp.oneYearProb < curve.getMinY())
+		if (rp.getProbability(1d) < curve.getMinY())
 			// saturated
 			return curve.getMaxX();
-		return curve.getFirstInterpolatedX_inLogXLogYDomain(rp.oneYearProb);
-//		return curve.getFirstInterpolatedX_inLogYDomain(rp.oneYearProb);
+		return curve.getFirstInterpolatedX_inLogXLogYDomain(rp.getProbability(1d));
+//		return curve.getFirstInterpolatedX_inLogYDomain(rp.getProbability(1d));
 	}
 
 }

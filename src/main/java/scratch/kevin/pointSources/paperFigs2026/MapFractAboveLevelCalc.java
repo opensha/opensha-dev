@@ -9,12 +9,12 @@ import java.util.zip.ZipException;
 import java.util.zip.ZipFile;
 
 import org.opensha.commons.data.xyz.GriddedGeoDataSet;
-import org.opensha.sha.earthquake.faultSysSolution.util.SolHazardMapCalc.ReturnPeriods;
+import org.opensha.sha.calc.ReturnPeriod;
 
 public class MapFractAboveLevelCalc {
 
 	public static void main(String[] args) throws ZipException, IOException {
-		ReturnPeriods rp = ReturnPeriods.TWO_IN_50;
+		ReturnPeriod rp = ReturnPeriod.TWO_IN_50;
 		double[] thresholds = {0.1, 0.25};
 		
 		String mapZipName = "results_hazard_INCLUDE.zip";

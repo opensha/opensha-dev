@@ -46,7 +46,7 @@ import org.opensha.sha.earthquake.faultSysSolution.modules.GridSourceList.Gridde
 import org.opensha.sha.earthquake.faultSysSolution.modules.GridSourceList.GriddedRuptureProperties;
 import org.opensha.sha.earthquake.faultSysSolution.util.FaultSysTools;
 import org.opensha.sha.earthquake.faultSysSolution.util.SolHazardMapCalc;
-import org.opensha.sha.earthquake.faultSysSolution.util.SolHazardMapCalc.ReturnPeriods;
+import org.opensha.sha.calc.ReturnPeriod;
 import org.opensha.sha.earthquake.param.IncludeBackgroundOption;
 import org.opensha.sha.earthquake.param.IncludeBackgroundParam;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.gridded.PRVI25_GridSourceBuilder;
@@ -97,8 +97,8 @@ public class SlabTestModGridProvWriter {
 //		double hazResolution = 0.025;
 		GriddedRegion hazardGrid = new GriddedRegion(calcReg, hazResolution, GriddedRegion.ANCHOR_0_0);
 		double[] periods = {0d, 0.2, 1d, 5d};
-//		ReturnPeriods[] rps = SolHazardMapCalc.MAP_RPS;
-		ReturnPeriods[] rps = { ReturnPeriods.TWO_IN_50 };
+//		ReturnPeriod[] rps = SolHazardMapCalc.MAP_RPS;
+		ReturnPeriod[] rps = { ReturnPeriod.TWO_IN_50 };
 		AttenRelRef gmmRef = AttenRelRef.USGS_PRVI_SLAB;
 		
 		ExecutorService exec = Executors.newFixedThreadPool(FaultSysTools.defaultNumThreads());
@@ -313,7 +313,7 @@ public class SlabTestModGridProvWriter {
 	
 	private static GriddedGeoDataSet[][] calcMaps(FaultSystemSolution sol, GridSourceList gridSources,
 			AttenRelRef gmmRef, ArrayDeque<ScalarIMR> gmmDeque, ArrayDeque<HazardCurveCalculator> calcDeque,
-			double[] periods, ReturnPeriods[] rps, GriddedRegion gridReg, ExecutorService exec, DiscretizedFunc[][] addCurves) {
+			double[] periods, ReturnPeriod[] rps, GriddedRegion gridReg, ExecutorService exec, DiscretizedFunc[][] addCurves) {
 		
 		sol.setGridSourceProvider(gridSources);
 		BaseFaultSystemSolutionERF erf = new BaseFaultSystemSolutionERF();
@@ -337,7 +337,7 @@ public class SlabTestModGridProvWriter {
 				if (addCurves != null)
 					curve = addCurves(curve, addCurves[p][s]);
 				for (int r=0; r<rps.length; r++) {
-					double prob = rps[r].oneYearProb;
+					double prob = rps[r].getProbability(1d);
 					double val;
 					if (prob > curve.getMaxY())
 						val = 0d;
@@ -460,7 +460,7 @@ public class SlabTestModGridProvWriter {
 			
 //			double[] ret = new double[rps.length];
 //			for (int r=0; r<rps.length; r++) {
-//				double prob = rps[r].oneYearProb;
+//				double prob = rps[r].getProbability(1d);
 //				if (prob > curve.getMaxY())
 //					ret[r] = 0d;
 //				else if (prob < curve.getMinY())
@@ -496,14 +496,14 @@ public class SlabTestModGridProvWriter {
 	private static boolean FIRST_CURVE_DEBUG = true;
 	
 	private static void writeMap(File outputDir, String prefix, String label,
-			GriddedGeoDataSet[][] maps, double[] periods, ReturnPeriods[] rps) throws IOException {
+			GriddedGeoDataSet[][] maps, double[] periods, ReturnPeriod[] rps) throws IOException {
 		GeographicMapMaker mapMaker = new GeographicMapMaker(maps[0][0].getRegion());
 		
 		CPT logCPT = GMT_CPT_Files.RAINBOW_UNIFORM.instance().rescale(-3, 1);
 		
 		for (int r=0; r<rps.length; r++) {
 			String rpPrefix = prefix+"_"+rps[r].name();
-			String rpLabel = rps[r].label;
+			String rpLabel = rps[r].getLabel();
 			
 			List<PlotSpec> plots = new ArrayList<>();
 			
@@ -542,14 +542,14 @@ public class SlabTestModGridProvWriter {
 	}
 	
 	private static void writeMapComparisons(File outputDir, String prefix, String label,
-			GriddedGeoDataSet[][] testMaps, GriddedGeoDataSet[][] refMaps, double[] periods, ReturnPeriods[] rps) throws IOException {
+			GriddedGeoDataSet[][] testMaps, GriddedGeoDataSet[][] refMaps, double[] periods, ReturnPeriod[] rps) throws IOException {
 		GeographicMapMaker mapMaker = new GeographicMapMaker(refMaps[0][0].getRegion());
 		
 		CPT pDiffCPT = GMT_CPT_Files.DIVERGING_VIK_UNIFORM.instance().rescale(-50d, 50d);
 		
 		for (int r=0; r<rps.length; r++) {
 			String rpPrefix = prefix+"_"+rps[r].name();
-			String rpLabel = "% change due to intraslab, "+rps[r].label;
+			String rpLabel = "% change due to intraslab, "+rps[r].getLabel();
 			
 			List<PlotSpec> plots = new ArrayList<>();
 			

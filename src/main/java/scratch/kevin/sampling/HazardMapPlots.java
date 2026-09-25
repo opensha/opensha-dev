@@ -33,7 +33,7 @@ import org.opensha.commons.mapping.gmt.elements.GMT_CPT_Files;
 import org.opensha.commons.util.DataUtils.MinMaxAveTracker;
 import org.opensha.commons.util.cpt.CPT;
 import org.opensha.sha.earthquake.faultSysSolution.util.SolHazardMapCalc;
-import org.opensha.sha.earthquake.faultSysSolution.util.SolHazardMapCalc.ReturnPeriods;
+import org.opensha.sha.calc.ReturnPeriod;
 
 import com.google.common.base.Preconditions;
 
@@ -43,13 +43,13 @@ import scratch.kevin.sampling.HazardConvergenceCalcs.ModelHazardMaps;
 
 public class HazardMapPlots {
 
-	private static final ReturnPeriods RP = ReturnPeriods.TWO_IN_50;
+	private static final ReturnPeriod RP = ReturnPeriod.TWO_IN_50;
 
 	public static void main(String[] args) throws IOException {
 		File convergenceDir = new File(PaperPaths.FIGURES_DIR, "hazard_convergence");
 		int[] sizes = { 512, 1024, 2048, 4096, 8192 };
-		plotPeriod(new File(convergenceDir, "pga_two_in_50"), 0d, "PGA, "+RP.label, sizes);
-		plotPeriod(new File(convergenceDir, "1s_sa_two_in_50"), 1d, "1s SA, "+RP.label, sizes);
+		plotPeriod(new File(convergenceDir, "pga_two_in_50"), 0d, "PGA, "+RP.getLabel(), sizes);
+		plotPeriod(new File(convergenceDir, "1s_sa_two_in_50"), 1d, "1s SA, "+RP.getLabel(), sizes);
 	}
 
 	private static void plotPeriod(File periodDir, double period, String perLabel, int... indvSizes)
@@ -262,7 +262,7 @@ public class HazardMapPlots {
 
 	private static HazardData buildHazardData(DiscretizedFunc[] meanCurves, double[][] branchMaps,
 			GriddedRegion gridReg) {
-		GriddedGeoDataSet meanMap = SolHazardMapCalc.buildMap(meanCurves, gridReg, RP);
+		GriddedGeoDataSet meanMap = SolHazardMapCalc.buildMap(meanCurves, gridReg, RP.getProbability(1d), false);
 		double[] meanValues = new double[meanMap.size()];
 		for (int i=0; i<meanValues.length; i++)
 			meanValues[i] = meanMap.get(i);
@@ -331,7 +331,7 @@ public class HazardMapPlots {
 			String perLabel, File outputDir, String prefix) throws IOException {
 		GeographicMapMaker mapMaker = new GeographicMapMaker(getMapReagion(gridReg));
 		CPT hazCPT = GMT_CPT_Files.RAINBOW_UNIFORM.instance().rescale(1e-2, 3d).asLog10();
-		GriddedGeoDataSet map = SolHazardMapCalc.buildMap(data.meanCurves(), gridReg, RP);
+		GriddedGeoDataSet map = SolHazardMapCalc.buildMap(data.meanCurves(), gridReg, RP.getProbability(1d), false);
 		mapMaker.plotXYZData(map, hazCPT, "Mean hazard, "+perLabel+" (g)");
 		mapMaker.plot(outputDir, prefix, "", PlotUtils.DEFAULT_USABLE_PAGE_WIDTH/2d, 300);
 	}

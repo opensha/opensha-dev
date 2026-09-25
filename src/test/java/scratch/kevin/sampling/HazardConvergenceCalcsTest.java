@@ -12,7 +12,7 @@ import org.junit.Test;
 import org.opensha.commons.geo.GriddedRegion;
 import org.opensha.commons.geo.Location;
 import org.opensha.commons.logicTree.sampling.SamplingMethod;
-import org.opensha.sha.earthquake.faultSysSolution.util.SolHazardMapCalc.ReturnPeriods;
+import org.opensha.sha.calc.ReturnPeriod;
 
 import scratch.kevin.sampling.HazardConvergenceCalcs.*;
 
@@ -27,7 +27,7 @@ public class HazardConvergenceCalcsTest {
 				null, 7, HazardConvergenceCalcs.calcHazardStatistics(first.branchMaps(), 7, new double[] { 1 }));
 		List<ReferenceComparison> rows = new ArrayList<>();
 		List<Realization> spans = HazardConvergenceCalcs.appendMCSSpanComparisons(rows, List.of(first, second), new int[] {2, 4},
-				sobol, grid, ReturnPeriods.TWO_IN_50);
+				sobol, grid, ReturnPeriod.TWO_IN_50);
 		assertEquals(9, spans.size());
 		// C(6,2) at size 2 plus C(3,2) at size 4, each with five metrics.
 		assertEquals(90, HazardConvergenceCalcs.buildRealizationPairComparisons(spans, grid).size());
@@ -56,9 +56,9 @@ public class HazardConvergenceCalcsTest {
 					else remainingScale += i+1;
 				}
 				double test = HazardConvergenceCalcs.buildCurveMeanMap(curves(spanScale), first.curveX(),
-						row.sampleCount(), ReturnPeriods.TWO_IN_50)[0];
+						row.sampleCount(), ReturnPeriod.TWO_IN_50)[0];
 				double ref = HazardConvergenceCalcs.buildCurveMeanMap(curves(remainingScale), first.curveX(),
-						row.referenceSampleCount(), ReturnPeriods.TWO_IN_50)[0];
+						row.referenceSampleCount(), ReturnPeriod.TWO_IN_50)[0];
 				assertEquals(100d*(test/ref-1), row.comparison().meanPercentChange(), 1e-10);
 			}
 		}

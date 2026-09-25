@@ -40,7 +40,7 @@ import org.opensha.sha.earthquake.faultSysSolution.modules.InversionMisfitStats.
 import org.opensha.sha.earthquake.faultSysSolution.modules.InversionTargetMFDs;
 import org.opensha.sha.earthquake.faultSysSolution.modules.SolutionLogicTree;
 import org.opensha.sha.earthquake.faultSysSolution.reports.plots.SolMFDPlot;
-import org.opensha.sha.earthquake.faultSysSolution.util.SolHazardMapCalc.ReturnPeriods;
+import org.opensha.sha.calc.ReturnPeriod;
 import org.opensha.sha.magdist.GutenbergRichterMagFreqDist;
 import org.opensha.sha.magdist.IncrementalMagFreqDist;
 
@@ -624,7 +624,7 @@ public class MultiRunSummaryCompare {
 		MarkdownUtils.writeReadmeAndHTML(lines, indexDir);
 	}
 	
-	private static final ReturnPeriods[] rps = { ReturnPeriods.TWO_IN_50, ReturnPeriods.TEN_IN_50 };
+	private static final ReturnPeriod[] rps = { ReturnPeriod.TWO_IN_50, ReturnPeriod.TEN_IN_50 };
 	private static final double[] periods = { 0d, 1d };
 	
 	private static final double spacing = 0.1;

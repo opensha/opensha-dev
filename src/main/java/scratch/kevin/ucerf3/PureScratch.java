@@ -153,7 +153,7 @@ import org.opensha.sha.earthquake.faultSysSolution.util.BranchAverageSolutionCre
 import org.opensha.sha.earthquake.faultSysSolution.util.FaultSectionUtils;
 import org.opensha.sha.earthquake.faultSysSolution.util.FaultSysHazardCalcSettings;
 import org.opensha.sha.earthquake.faultSysSolution.util.FaultSysTools;
-import org.opensha.sha.earthquake.faultSysSolution.util.SolHazardMapCalc.ReturnPeriods;
+import org.opensha.sha.calc.ReturnPeriod;
 import org.opensha.sha.earthquake.nshmp.seismicity.SeismicityRateModel;
 import org.opensha.sha.earthquake.nshmp.seismicity.SeismicityRateFileLoader.RateType;
 import org.opensha.sha.earthquake.faultSysSolution.util.SubSectionBuilder;
@@ -3129,10 +3129,10 @@ public class PureScratch {
 	}
 	
 	private static void test338() throws IOException {
-		for (ReturnPeriods rp : ReturnPeriods.values()) {
+		for (ReturnPeriod rp : ReturnPeriod.standardValues()) {
 			System.out.println(rp);
-			System.out.println("prob: "+rp.oneYearProb);
-			System.out.println("equiv RP: "+rp.returnPeriod);
+			System.out.println("prob: "+rp.getProbability(1d));
+			System.out.println("equiv RP: "+rp.getReturnPeriodYears());
 		}
 	}
 	

@@ -21,7 +21,7 @@ import org.opensha.commons.util.MarkdownUtils;
 import org.opensha.commons.util.MarkdownUtils.TableBuilder;
 import org.opensha.commons.util.cpt.CPT;
 import org.opensha.sha.earthquake.faultSysSolution.ruptures.util.RupSetMapMaker;
-import org.opensha.sha.earthquake.faultSysSolution.util.SolHazardMapCalc.ReturnPeriods;
+import org.opensha.sha.calc.ReturnPeriod;
 import org.opensha.sha.earthquake.param.IncludeBackgroundOption;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.util.NSHM23_RegionLoader;
 import org.opensha.sha.imr.AttenRelRef;
@@ -56,9 +56,9 @@ public class WrapperComparisonPageGen {
 		File extGriddedHazFile1 = new File(modelsDir, "ext_hazard_calcs/conus-2023-erf-6a6-grid/map_conus-2023-erf-6a6-GRID_vs760_PGA_02475yrs.gmt");
 		File extGriddedHazFile2 = new File(modelsDir, "ext_hazard_calcs/conus-2018-530-GRID/map_conus-2018-530-GRID_vs760_PGA_02475yrs.gmt");
 		
-		ReturnPeriods rp = ReturnPeriods.TWO_IN_50;
+		ReturnPeriod rp = ReturnPeriod.TWO_IN_50;
 		double period = 0d;
-		String hazLabel = "PGA, "+rp.label;
+		String hazLabel = "PGA, "+rp.getLabel();
 		
 		Preconditions.checkState(outputDir.exists() || outputDir.mkdir());
 		File resourcesDir = new File(outputDir, "resources");

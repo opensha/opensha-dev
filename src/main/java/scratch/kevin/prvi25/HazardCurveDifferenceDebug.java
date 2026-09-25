@@ -40,7 +40,7 @@ import org.opensha.sha.earthquake.faultSysSolution.modules.GridSourceList.Gridde
 import org.opensha.sha.earthquake.faultSysSolution.modules.GridSourceProvider;
 import org.opensha.sha.earthquake.faultSysSolution.modules.SolutionLogicTree;
 import org.opensha.sha.earthquake.faultSysSolution.util.FaultSysHazardCalcSettings;
-import org.opensha.sha.earthquake.faultSysSolution.util.SolHazardMapCalc.ReturnPeriods;
+import org.opensha.sha.calc.ReturnPeriod;
 import org.opensha.sha.earthquake.param.IncludeBackgroundOption;
 import org.opensha.sha.earthquake.param.IncludeBackgroundParam;
 import org.opensha.sha.earthquake.param.UseRupMFDsParam;
@@ -325,8 +325,8 @@ public class HazardCurveDifferenceDebug {
 //			System.out.println("X: "+(float)x+"\tFull: "+(float)y1+"\tQuick: "+(float)y2+"\tDiff: "+(float)diff+" ("+(float)pDiff+" %)");
 //		}
 //		
-//		ReturnPeriods rp = ReturnPeriods.TWO_IN_50;
-//		double rpProb = rp.oneYearProb;
+//		ReturnPeriod rp = ReturnPeriod.TWO_IN_50;
+//		double rpProb = rp.getProbability(1d);
 //		System.out.println("Return period: "+rp+" at y="+rpProb);
 //		double rp1 = fullCurve.getFirstInterpolatedX_inLogXLogYDomain(rpProb);
 //		double rp2 = avgQuickCurve.getFirstInterpolatedX_inLogXLogYDomain(rpProb);

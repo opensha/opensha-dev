@@ -30,7 +30,7 @@ import org.opensha.sha.earthquake.faultSysSolution.erf.BaseFaultSystemSolutionER
 import org.opensha.sha.earthquake.faultSysSolution.modules.GridSourceList;
 import org.opensha.sha.earthquake.faultSysSolution.modules.GridSourceList.GriddedRupture;
 import org.opensha.sha.earthquake.faultSysSolution.modules.GridSourceList.GriddedRuptureProperties;
-import org.opensha.sha.earthquake.faultSysSolution.util.SolHazardMapCalc.ReturnPeriods;
+import org.opensha.sha.calc.ReturnPeriod;
 import org.opensha.sha.earthquake.param.BackgroundRupType;
 import org.opensha.sha.earthquake.param.IncludeBackgroundOption;
 import org.opensha.sha.earthquake.param.IncludeBackgroundParam;
@@ -146,7 +146,7 @@ public class GriddedHazardSingleSiteComparison {
 		
 		System.out.println("DONE");
 		
-		double primary2In50 = primaryCurve.getFirstInterpolatedX_inLogXLogYDomain(ReturnPeriods.TWO_IN_50.oneYearProb); 
+		double primary2In50 = primaryCurve.getFirstInterpolatedX_inLogXLogYDomain(ReturnPeriod.TWO_IN_50.getProbability(1d));
 		System.out.println("Primary 2% in 50: "+(float)primary2In50);
 		
 		erf.setParameter(IncludeBackgroundParam.NAME, IncludeBackgroundOption.ONLY);
@@ -166,7 +166,7 @@ public class GriddedHazardSingleSiteComparison {
 		
 		System.out.println("DONE");
 		
-		double comp2In50 = compCurve.getFirstInterpolatedX_inLogXLogYDomain(ReturnPeriods.TWO_IN_50.oneYearProb);
+		double comp2In50 = compCurve.getFirstInterpolatedX_inLogXLogYDomain(ReturnPeriod.TWO_IN_50.getProbability(1d));
 		System.out.println("Comparison 2% in 50: "+(float)comp2In50);
 		
 		List<DiscretizedFunc> funcs = new ArrayList<>();

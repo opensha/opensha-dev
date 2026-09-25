@@ -75,7 +75,7 @@ import org.opensha.sha.earthquake.faultSysSolution.modules.GridSourceList.Gridde
 import org.opensha.sha.earthquake.faultSysSolution.modules.GridSourceProvider;
 import org.opensha.sha.earthquake.faultSysSolution.modules.MFDGridSourceProvider;
 import org.opensha.sha.earthquake.faultSysSolution.util.FaultSysTools;
-import org.opensha.sha.earthquake.faultSysSolution.util.SolHazardMapCalc.ReturnPeriods;
+import org.opensha.sha.calc.ReturnPeriod;
 import org.opensha.sha.earthquake.rupForecastImpl.PointSourceNshm;
 import org.opensha.sha.earthquake.rupForecastImpl.PointToFiniteSource;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.gridded.NSHM23_AbstractGridSourceProvider;
@@ -1140,7 +1140,7 @@ public class PointSourceHazardComparison {
 		double[] periods = {0d, 1d};
 //		double[] periods = {0d};
 		
-		ReturnPeriods[] rps = { ReturnPeriods.TWO_IN_50, ReturnPeriods.TEN_IN_50 };
+		ReturnPeriod[] rps = { ReturnPeriod.TWO_IN_50, ReturnPeriod.TEN_IN_50 };
 		
 		Map<Double, Double> rakeToDipMap = new HashMap<>();
 		rakeToDipMap.put(0d, 90d);
@@ -2010,8 +2010,8 @@ public class PointSourceHazardComparison {
 						}
 					}
 					
-					spec = new PlotSpec(funcs, chars, rps[r].label+" vs Distance",
-							"Distance (km)", rps[r].label+", "+perLabels[p]+" ("+perUnits[p]+")");
+					spec = new PlotSpec(funcs, chars, rps[r].getLabel()+" vs Distance",
+							"Distance (km)", rps[r].getLabel()+", "+perLabels[p]+" ("+perUnits[p]+")");
 					spec.setLegendInset(RectangleAnchor.TOP_RIGHT);
 					
 					gp.drawGraphPanel(spec, false, true, distPlotRange, logBufferedYRange(funcs));
@@ -2030,15 +2030,15 @@ public class PointSourceHazardComparison {
 				for (int r=0; r<rps.length; r++) {
 					if (rps.length > 1) {
 						if (periods.length > 1)
-							lines.add("#### "+mechLabel+", "+perLabels[p]+", "+rps[r].label);
+							lines.add("#### "+mechLabel+", "+perLabels[p]+", "+rps[r].getLabel());
 						else
-							lines.add("### "+mechLabel+", "+rps[r].label);
+							lines.add("### "+mechLabel+", "+rps[r].getLabel());
 						lines.add(topLink); lines.add("");
 					}
 					String mapPrefix = mechPerPrefix+"_"+rps[r].name();
 					
-					String hazLabel = rps[r].label+", "+perLabels[p]+" ("+perUnits[p]+")";
-					String hazChangeLabel = rps[r].label+", "+perLabels[p]+", % Change";
+					String hazLabel = rps[r].getLabel()+", "+perLabels[p]+" ("+perUnits[p]+")";
+					String hazChangeLabel = rps[r].getLabel()+", "+perLabels[p]+", % Change";
 					
 					for (GridType grid : siteGrids.keySet()) {
 						
@@ -2331,15 +2331,15 @@ public class PointSourceHazardComparison {
 				for (int r=0; r<rps.length; r++) {
 					if (rps.length > 1) {
 						if (periods.length > 1)
-							lines.add("#### "+modelLabel+", "+perLabels[p]+", "+rps[r].label);
+							lines.add("#### "+modelLabel+", "+perLabels[p]+", "+rps[r].getLabel());
 						else
-							lines.add("### "+modelLabel+", "+rps[r].label);
+							lines.add("### "+modelLabel+", "+rps[r].getLabel());
 						lines.add(topLink); lines.add("");
 					}
 					String mapPrefix = modelPerPrefix+"_"+rps[r].name();
 					
-					String hazLabel = rps[r].label+", "+perLabels[p]+" ("+perUnits[p]+")";
-					String hazChangeLabel = rps[r].label+", "+perLabels[p]+", % Change";
+					String hazLabel = rps[r].getLabel()+", "+perLabels[p]+" ("+perUnits[p]+")";
+					String hazChangeLabel = rps[r].getLabel()+", "+perLabels[p]+", % Change";
 					
 					for (GridType grid : siteGrids.keySet()) {
 						
@@ -2666,7 +2666,7 @@ public class PointSourceHazardComparison {
 		
 	}
 	
-	private static GriddedGeoDataSet curvesToMap(GriddedRegion reg, List<DiscretizedFunc> curves, ReturnPeriods rp) {
+	private static GriddedGeoDataSet curvesToMap(GriddedRegion reg, List<DiscretizedFunc> curves, ReturnPeriod rp) {
 		Preconditions.checkState(curves.size() == reg.getNodeCount());
 		GriddedGeoDataSet map = new GriddedGeoDataSet(reg);
 		for (int i=0; i<curves.size(); i++) {
@@ -2676,19 +2676,19 @@ public class PointSourceHazardComparison {
 		return map;
 	}
 	
-	private static double curveVal(DiscretizedFunc curve, ReturnPeriods rp) {
+	private static double curveVal(DiscretizedFunc curve, ReturnPeriod rp) {
 		double val;
-		if (rp.oneYearProb > curve.getMaxY())
+		if (rp.getProbability(1d) > curve.getMaxY())
 			val = 0d;
-		else if (rp.oneYearProb < curve.getMinY())
+		else if (rp.getProbability(1d) < curve.getMinY())
 			// saturated
 			val = curve.getMaxX();
 		else
-			val = curve.getFirstInterpolatedX_inLogXLogYDomain(rp.oneYearProb);
+			val = curve.getFirstInterpolatedX_inLogXLogYDomain(rp.getProbability(1d));
 		return val;
 	}
 	
-	private static EvenlyDiscretizedFunc distValFunc(EvenlyDiscretizedFunc distFunc, List<DiscretizedFunc> curves, ReturnPeriods rp) {
+	private static EvenlyDiscretizedFunc distValFunc(EvenlyDiscretizedFunc distFunc, List<DiscretizedFunc> curves, ReturnPeriod rp) {
 		EvenlyDiscretizedFunc ret = distFunc.deepClone();
 		
 		for (int i=0; i<ret.size(); i++)

@@ -31,7 +31,7 @@ import org.opensha.sha.earthquake.ProbEqkRupture;
 import org.opensha.sha.earthquake.ProbEqkSource;
 import org.opensha.sha.earthquake.faultSysSolution.FaultSystemSolution;
 import org.opensha.sha.earthquake.faultSysSolution.util.FaultSysTools;
-import org.opensha.sha.earthquake.faultSysSolution.util.SolHazardMapCalc.ReturnPeriods;
+import org.opensha.sha.calc.ReturnPeriod;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.util.NSHM23_RegionLoader;
 import org.opensha.sha.faultSurface.PointSurface;
 import org.opensha.sha.faultSurface.RuptureSurface;
@@ -162,55 +162,55 @@ public class SimpleSmoothHazardMapCalc {
 	}
 	
 	public static GriddedGeoDataSet hazMapMomentSmooth(GriddedGeoDataSet momentMap, AttenRelRef gmpeRef, double refMag,
-			double period, ReturnPeriods rp) {
+			double period, ReturnPeriod rp) {
 		return hazMapMomentSmooth(momentMap, gmpeRef, refMag, period, rp, momentMap.getRegion());
 	}
 	
 	public static GriddedGeoDataSet hazMapMomentSmooth(GriddedGeoDataSet momentMap, AttenRelRef gmpeRef, double refMag,
-			double period, ReturnPeriods rp, GriddedRegion gridReg) {
+			double period, ReturnPeriod rp, GriddedRegion gridReg) {
 		AbstractERF erf = new MomentScaledFixedMagERF(momentMap, refMag);
 		
 		return hazMapSmooth(gridReg, gmpeRef, period, rp, erf);
 	}
 	
 	public static GriddedGeoDataSet hazMapMomentSmooth(GriddedGeoDataSet momentMap, AttenRelRef gmpeRef,
-			IncrementalMagFreqDist mfdShape, double period, ReturnPeriods rp) {
+			IncrementalMagFreqDist mfdShape, double period, ReturnPeriod rp) {
 		return hazMapMomentSmooth(momentMap, gmpeRef, mfdShape, period, rp, momentMap.getRegion());
 	}
 	
 	public static GriddedGeoDataSet hazMapMomentSmooth(GriddedGeoDataSet momentMap, AttenRelRef gmpeRef,
-			IncrementalMagFreqDist mfdShape, double period, ReturnPeriods rp, GriddedRegion gridReg) {
+			IncrementalMagFreqDist mfdShape, double period, ReturnPeriod rp, GriddedRegion gridReg) {
 		AbstractERF erf = new MomentScaledMFDShapeERF(momentMap, mfdShape);
 		
 		return hazMapSmooth(gridReg, gmpeRef, period, rp, erf);
 	}
 	
 	public static GriddedGeoDataSet hazMapRateSmooth(GriddedGeoDataSet rateMap, AttenRelRef gmpeRef, double refMag,
-			double period, ReturnPeriods rp) {
+			double period, ReturnPeriod rp) {
 		return hazMapRateSmooth(rateMap, gmpeRef, refMag, period, rp, rateMap.getRegion());
 	}
 	
 	public static GriddedGeoDataSet hazMapRateSmooth(GriddedGeoDataSet rateMap, AttenRelRef gmpeRef, double refMag,
-			double period, ReturnPeriods rp, GriddedRegion gridReg) {
+			double period, ReturnPeriod rp, GriddedRegion gridReg) {
 		AbstractERF erf = new RateScaledFixedMagERF(rateMap, refMag);
 		
 		return hazMapSmooth(gridReg, gmpeRef, period, rp, erf);
 	}
 	
 	public static GriddedGeoDataSet hazMapRateSmooth(GriddedGeoDataSet rateMap, AttenRelRef gmpeRef,
-			IncrementalMagFreqDist mfdShape, double period, ReturnPeriods rp) {
+			IncrementalMagFreqDist mfdShape, double period, ReturnPeriod rp) {
 		return hazMapRateSmooth(rateMap, gmpeRef, mfdShape, period, rp, rateMap.getRegion());
 	}
 	
 	public static GriddedGeoDataSet hazMapRateSmooth(GriddedGeoDataSet rateMap, AttenRelRef gmpeRef,
-			IncrementalMagFreqDist mfdShape, double period, ReturnPeriods rp, GriddedRegion gridReg) {
+			IncrementalMagFreqDist mfdShape, double period, ReturnPeriod rp, GriddedRegion gridReg) {
 		AbstractERF erf = new RateScaledMFDShapeERF(rateMap, mfdShape);
 		
 		return hazMapSmooth(gridReg, gmpeRef, period, rp, erf);
 	}
 	
 	private static GriddedGeoDataSet hazMapSmooth(GriddedRegion gridReg, AttenRelRef gmpeRef, double period,
-			ReturnPeriods rp, AbstractERF erf) {
+			ReturnPeriod rp, AbstractERF erf) {
 		GriddedGeoDataSet ret = new GriddedGeoDataSet(gridReg);
 		
 		double maxDist = Math.min(500d, LocationUtils.horzDistanceFast(new Location(gridReg.getMinGridLat(), gridReg.getMinGridLon()),
@@ -249,7 +249,7 @@ public class SimpleSmoothHazardMapCalc {
 					for (int i=0; i<logCurve.size(); i++)
 						curve.set(xVals.getX(i), logCurve.getY(i));
 					
-					double curveLevel = rp.oneYearProb;
+					double curveLevel = rp.getProbability(1d);
 					double curveVal;
 					if (curveLevel > curve.getMaxY())
 						curveVal = 0d;
@@ -627,14 +627,14 @@ public class SimpleSmoothHazardMapCalc {
 //		GriddedRegion gridReg = new GriddedRegion(NSHM23_RegionLoader.loadFullConterminousWUS(), 0.1d, GriddedRegion.ANCHOR_0_0);
 //		GriddedGeoDataSet moRates = SingleSiteHazardAndDataComparisonPageGen.calcFSSPartic(sol, gridReg, new double[0], null).momentRateMap;
 //		
-//		hazMapMomentSmooth(moRates, AttenRelRef.ASK_2014, 7d, 0d, ReturnPeriods.TWO_IN_50);
+//		hazMapMomentSmooth(moRates, AttenRelRef.ASK_2014, 7d, 0d, ReturnPeriod.TWO_IN_50);
 		
 		GriddedRegion gridReg = new GriddedRegion(NSHM23_RegionLoader.loadFullConterminousWUS(), 0.1d, GriddedRegion.ANCHOR_0_0);
 		GriddedGeoDataSet ratesM5 = SingleSiteHazardAndDataComparisonPageGen.calcFSSPartic(sol, gridReg, new double[] {5d}, null).nuclRateMaps[0];
 		
-//		hazMapRateSmooth(ratesM5, AttenRelRef.ASK_2014, 5d, 0d, ReturnPeriods.TWO_IN_50);
+//		hazMapRateSmooth(ratesM5, AttenRelRef.ASK_2014, 5d, 0d, ReturnPeriod.TWO_IN_50);
 		GutenbergRichterMagFreqDist mfdShape = new GutenbergRichterMagFreqDist(5d, 6, 0.5, 1e16, 1d);
-		hazMapRateSmooth(ratesM5, AttenRelRef.ASK_2014, mfdShape, 0d, ReturnPeriods.TWO_IN_50);
+		hazMapRateSmooth(ratesM5, AttenRelRef.ASK_2014, mfdShape, 0d, ReturnPeriod.TWO_IN_50);
 	}
 
 }

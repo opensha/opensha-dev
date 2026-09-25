@@ -38,7 +38,7 @@ import org.opensha.commons.util.MarkdownUtils.TableBuilder;
 import org.opensha.commons.util.cpt.CPT;
 import org.opensha.sha.earthquake.faultSysSolution.hazard.mpj.MPJ_LogicTreeHazardCalc;
 import org.opensha.sha.earthquake.faultSysSolution.util.SolHazardMapCalc;
-import org.opensha.sha.earthquake.faultSysSolution.util.SolHazardMapCalc.ReturnPeriods;
+import org.opensha.sha.calc.ReturnPeriod;
 import org.opensha.sha.earthquake.param.IncludeBackgroundOption;
 
 import com.google.common.base.Preconditions;
@@ -78,7 +78,7 @@ public class MapSourceTypeDisagg {
 		EnumMap<MapType, File> dirs = new EnumMap<>(MapType.class);
 		
 		double[] periods = {0d, 0.2d, 1d, 5d};
-		ReturnPeriods[] rps = SolHazardMapCalc.MAP_RPS;
+		ReturnPeriod[] rps = SolHazardMapCalc.MAP_RPS;
 		
 //		String suffix = "-vs760";
 		String suffix = "-vs260";
@@ -103,10 +103,10 @@ public class MapSourceTypeDisagg {
 		if (suffix.contains("760"))
 			texFW = new FileWriter(texFile);
 		double texPeriod = 1d;
-		ReturnPeriods texRP = ReturnPeriods.TWO_IN_50;
+		ReturnPeriod texRP = ReturnPeriod.TWO_IN_50;
 		
 		double debugPeriod = 5d;
-		ReturnPeriods debugRP = ReturnPeriods.TWO_IN_50;
+		ReturnPeriod debugRP = ReturnPeriod.TWO_IN_50;
 //		Location debugLoc = new Location(17.75, -64.7);
 		Location debugLoc = null;
 		
@@ -285,7 +285,7 @@ public class MapSourceTypeDisagg {
 				perPrefix = oDF.format(periods[p])+"s";
 			}
 			for (int r=0; r<rps.length; r++) {
-				String rpLabel = rps[r].label;
+				String rpLabel = rps[r].getLabel();
 				String rpPrefix = rps[r].name();
 				
 				String perRPLabel = perLabel+", "+rpLabel;

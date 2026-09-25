@@ -44,7 +44,7 @@ import org.opensha.sha.earthquake.faultSysSolution.modules.NamedFaults;
 import org.opensha.sha.earthquake.faultSysSolution.modules.RupMFDsModule;
 import org.opensha.sha.earthquake.faultSysSolution.ruptures.util.RupSetMapMaker;
 import org.opensha.sha.earthquake.faultSysSolution.util.FaultSectionUtils;
-import org.opensha.sha.earthquake.faultSysSolution.util.SolHazardMapCalc.ReturnPeriods;
+import org.opensha.sha.calc.ReturnPeriod;
 import org.opensha.sha.faultSurface.FaultSection;
 import org.opensha.sha.faultSurface.FaultTrace;
 import org.opensha.sha.gui.infoTools.IMT_Info;
@@ -322,8 +322,8 @@ public class PreferredDirectionPageGen {
 			
 			TableBuilder twoIn50Table = MarkdownUtils.tableBuilder();
 			twoIn50Table.addLine("", "Original", "Directivity & Direction Modified", "Gain");
-			double twoInFiftyProb = ReturnPeriods.TWO_IN_50.oneYearProb;
-			String twoInFiftyLabel = ReturnPeriods.TWO_IN_50.label;
+			double twoInFiftyProb = ReturnPeriod.TWO_IN_50.getProbability(1d);
+			String twoInFiftyLabel = ReturnPeriod.TWO_IN_50.getLabel();
 			
 			for (int p=0; p<periods.length; p++) {
 				System.out.println("Period: "+periodNames[p]);

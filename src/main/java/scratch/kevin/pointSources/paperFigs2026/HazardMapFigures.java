@@ -45,7 +45,7 @@ import org.opensha.commons.gui.plot.PlotUtils;
 import org.opensha.commons.mapping.gmt.elements.GMT_CPT_Files;
 import org.opensha.commons.util.DataUtils;
 import org.opensha.commons.util.cpt.CPT;
-import org.opensha.sha.earthquake.faultSysSolution.util.SolHazardMapCalc.ReturnPeriods;
+import org.opensha.sha.calc.ReturnPeriod;
 import org.opensha.sha.earthquake.observedEarthquake.ObsEqkRupList;
 import org.opensha.sha.earthquake.observedEarthquake.ObsEqkRupture;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_FaultModels;
@@ -65,11 +65,11 @@ public class HazardMapFigures {
 
 	public static void main(String[] args) throws IOException {
 		double[] periods = { 0d, 1d };
-		ReturnPeriods[] rps = { ReturnPeriods.TWO_IN_50, ReturnPeriods.TEN_IN_50 };
+		ReturnPeriod[] rps = { ReturnPeriod.TWO_IN_50, ReturnPeriod.TEN_IN_50 };
 		
-		Map<ReturnPeriods, String> texRPSuffixes = new HashMap<>();
-		texRPSuffixes.put(ReturnPeriods.TWO_IN_50, "");
-		texRPSuffixes.put(ReturnPeriods.TEN_IN_50, "TenFifty");
+		Map<ReturnPeriod, String> texRPSuffixes = new HashMap<>();
+		texRPSuffixes.put(ReturnPeriod.TWO_IN_50, "");
+		texRPSuffixes.put(ReturnPeriod.TEN_IN_50, "TenFifty");
 		
 		boolean replot = false;
 		
@@ -391,14 +391,14 @@ public class HazardMapFigures {
 				perTexPrefix = "SAOne";
 			}
 			
-			for (ReturnPeriods rp : rps) {
+			for (ReturnPeriod rp : rps) {
 				GriddedGeoDataSet[] maps = new GriddedGeoDataSet[models.length];
 				GriddedGeoDataSet[] zoomMaps = new GriddedGeoDataSet[models.length];
 				GriddedGeoDataSet[] zoomHiresMaps = new GriddedGeoDataSet[models.length];
 				
 				String entryName = "map_"+perPrefix+"_"+rp.name()+".txt";
 				
-				System.out.println("Loading maps for "+perLabel+", "+rp.label);
+				System.out.println("Loading maps for "+perLabel+", "+rp.getLabel());
 				
 				for (int i=0; i<models.length; i++) {
 					GriddedRegion fullReg = FULL_GRID_REG;
@@ -419,8 +419,8 @@ public class HazardMapFigures {
 						zoomHiresMaps[i] = loadXYZ(modelZoomHiresZips[i], zoomHiresReg, entryName, null);
 				}
 				
-				String mapLabel = perLabel+" "+perUnits+", "+rp.label;
-				String mapDiffLabel = "% change, "+perLabel+", "+rp.label;
+				String mapLabel = perLabel+" "+perUnits+", "+rp.getLabel();
+				String mapDiffLabel = "% change, "+perLabel+", "+rp.getLabel();
 				
 				for (boolean paper : new boolean[] {false,true}) {
 					File subDir = new File(paper ? hazardDir : hazardRawDir, perPrefix+"_"+rp.name());

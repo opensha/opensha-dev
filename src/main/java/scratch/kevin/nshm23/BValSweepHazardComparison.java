@@ -24,7 +24,7 @@ import org.opensha.sha.earthquake.faultSysSolution.reports.RupSetMetadata;
 import org.opensha.sha.earthquake.faultSysSolution.reports.plots.HazardMapPlot;
 import org.opensha.sha.earthquake.faultSysSolution.util.FaultSysTools;
 import org.opensha.sha.earthquake.faultSysSolution.util.SolHazardMapCalc;
-import org.opensha.sha.earthquake.faultSysSolution.util.SolHazardMapCalc.ReturnPeriods;
+import org.opensha.sha.calc.ReturnPeriod;
 import org.opensha.sha.imr.AttenRelRef;
 
 import com.google.common.base.Preconditions;
@@ -77,7 +77,7 @@ public class BValSweepHazardComparison {
 		System.out.println("Calculating comparison hazard...");
 		SolHazardMapCalc compCalc = getCalcCurves(new File(compDir, "hazard"), compSol, gmpeRef, periods, gridReg);
 		
-		ReturnPeriods[] rps = ReturnPeriods.values();
+		ReturnPeriod[] rps = ReturnPeriod.standardValues();
 		
 		GriddedGeoDataSet[][] compMaps = new GriddedGeoDataSet[periods.length][rps.length];
 		System.out.println("Calculating comparison maps...");
@@ -193,10 +193,10 @@ public class BValSweepHazardComparison {
 						+percentDF.format((double)numWithin/(double)compWithin.size())+")");
 				
 				String prefix = "b_val_seep_map_"+perPrefix+"_"+rps[r].name().toLowerCase();
-				String zLabel = "b-value w/ Closest U3 Hazard, "+perLabel+", "+rps[r].label;
+				String zLabel = "b-value w/ Closest U3 Hazard, "+perLabel+", "+rps[r].getLabel();
 				compCalc.plotMap(outputDir, prefix+"_b_dist", compWithin, bValCPT, "b-Value Sweep/UCERF3 Comparison", zLabel);
 				
-				zLabel = "% Difference from Closest Sweep Map, "+perLabel+", "+rps[r].label;
+				zLabel = "% Difference from Closest Sweep Map, "+perLabel+", "+rps[r].getLabel();
 				compCalc.plotMap(outputDir, prefix+"_pDiff", compPDiff, pDiffCPT, "b-Value Sweep/UCERF3 Comparison", zLabel);
 			}
 		}

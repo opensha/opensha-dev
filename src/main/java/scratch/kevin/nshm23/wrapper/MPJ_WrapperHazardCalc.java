@@ -43,7 +43,7 @@ import org.opensha.sha.earthquake.faultSysSolution.hazard.mpj.MPJ_LogicTreeHazar
 import org.opensha.sha.earthquake.faultSysSolution.modules.GridSourceProvider;
 import org.opensha.sha.earthquake.faultSysSolution.util.FaultSysTools;
 import org.opensha.sha.earthquake.faultSysSolution.util.SolHazardMapCalc;
-import org.opensha.sha.earthquake.faultSysSolution.util.SolHazardMapCalc.ReturnPeriods;
+import org.opensha.sha.calc.ReturnPeriod;
 import org.opensha.sha.earthquake.param.BackgroundRupType;
 import org.opensha.sha.earthquake.param.IncludeBackgroundOption;
 import org.opensha.sha.earthquake.util.GriddedSeismicitySettings;
@@ -84,7 +84,7 @@ public class MPJ_WrapperHazardCalc extends MPJTaskCalculator {
 	public static final double[] PERIODS_DEFAULT = { 0d, 1d };
 	private double[] periods = PERIODS_DEFAULT;
 	
-	private ReturnPeriods[] rps = ReturnPeriods.values();
+	private ReturnPeriod[] rps = ReturnPeriod.standardValues();
 	
 	private static final IncludeBackgroundOption GRID_SEIS_DEFAULT = IncludeBackgroundOption.INCLUDE;
 	private IncludeBackgroundOption gridSeisOp = GRID_SEIS_DEFAULT;
@@ -510,10 +510,10 @@ public class MPJ_WrapperHazardCalc extends MPJTaskCalculator {
 				SolHazardMapCalc.writeCurvesCSV(curvesFile, perCurves, gridRegion.getNodeList());
 				zipFileNames.add(curvesFileName);
 				
-				for (ReturnPeriods rp : rps) {
+				for (ReturnPeriod rp : rps) {
 					GriddedGeoDataSet xyz = new GriddedGeoDataSet(gridRegion, false);
 
-					double curveLevel = rp.oneYearProb;
+					double curveLevel = rp.getProbability(1d);
 
 					for (int i = 0; i < perCurves.length; i++) {
 						DiscretizedFunc curve = perCurves[i];

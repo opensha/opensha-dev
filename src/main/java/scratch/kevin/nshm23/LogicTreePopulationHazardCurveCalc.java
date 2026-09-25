@@ -46,7 +46,7 @@ import org.opensha.sha.earthquake.faultSysSolution.hazard.SiteLogicTreeHazardPag
 import org.opensha.sha.earthquake.faultSysSolution.modules.SolutionLogicTree;
 import org.opensha.sha.earthquake.faultSysSolution.ruptures.util.RupSetMapMaker;
 import org.opensha.sha.earthquake.faultSysSolution.util.SolHazardMapCalc;
-import org.opensha.sha.earthquake.faultSysSolution.util.SolHazardMapCalc.ReturnPeriods;
+import org.opensha.sha.calc.ReturnPeriod;
 
 import com.google.common.base.Preconditions;
 import com.google.common.io.LittleEndianDataInputStream;
@@ -89,7 +89,7 @@ public class LogicTreePopulationHazardCurveCalc {
 		
 		SolutionLogicTree solTree = SolutionLogicTree.load(resultsFile);
 		
-		ReturnPeriods[] rps = ReturnPeriods.values();
+		ReturnPeriod[] rps = ReturnPeriod.standardValues();
 		double[] periods = { 0d, 1d };
 		double spacing = -1; // detect
 //		double spacing = 0.1;
@@ -140,7 +140,7 @@ public class LogicTreePopulationHazardCurveCalc {
 	
 	private static void buildPopulationCurveReport(LogicTreeHazardCompare mapper, String name, LogicTree<?> tree,
 			LogicTreeHazardCompare comp, String compName, LogicTree<?> compTree, File outputDir, File popDataFile,
-			ReturnPeriods[] rps, double[] periods) throws IOException {
+			ReturnPeriod[] rps, double[] periods) throws IOException {
 		GriddedGeoDataSet populationXYZ = null;
 		
 		List<String> lines = new ArrayList<>();
@@ -171,7 +171,7 @@ public class LogicTreePopulationHazardCurveCalc {
 			
 			DiscretizedFunc xVals = null;
 			
-			for (ReturnPeriods rp : rps) {
+			for (ReturnPeriod rp : rps) {
 				GriddedGeoDataSet[] maps = mapper.loadMaps(rp, period);
 				Preconditions.checkNotNull(maps);
 				for (int i=0; i<maps.length; i++)
@@ -220,7 +220,7 @@ public class LogicTreePopulationHazardCurveCalc {
 					populationXYZ.scale(popScalar);
 				}
 				
-				String label = perLabel+", "+rp.label;
+				String label = perLabel+", "+rp.getLabel();
 				String prefix = perPrefix+"_"+rp.name();
 				
 				System.out.println(label);

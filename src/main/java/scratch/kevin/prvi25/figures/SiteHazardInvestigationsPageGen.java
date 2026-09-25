@@ -51,7 +51,7 @@ import org.opensha.sha.earthquake.ProbEqkSource;
 import org.opensha.sha.earthquake.faultSysSolution.FaultSystemSolution;
 import org.opensha.sha.earthquake.faultSysSolution.erf.BaseFaultSystemSolutionERF;
 import org.opensha.sha.earthquake.faultSysSolution.util.FaultSysTools;
-import org.opensha.sha.earthquake.faultSysSolution.util.SolHazardMapCalc.ReturnPeriods;
+import org.opensha.sha.calc.ReturnPeriod;
 import org.opensha.sha.earthquake.faultSysSolution.util.SolSiteHazardCalc;
 import org.opensha.sha.earthquake.param.IncludeBackgroundOption;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.util.PRVI25_RegionLoader;
@@ -245,7 +245,7 @@ public class SiteHazardInvestigationsPageGen {
 		
 		double[] periods = {0d, 0.2d, 1d, 5d};
 		
-		ReturnPeriods[] rps = {ReturnPeriods.TWO_IN_50, ReturnPeriods.TEN_IN_50};
+		ReturnPeriod[] rps = {ReturnPeriod.TWO_IN_50, ReturnPeriod.TEN_IN_50};
 		
 		ScalarIMR crustalGMM = AttenRelRef.USGS_PRVI_ACTIVE.get();
 		ScalarIMR interfaceGMM = AttenRelRef.USGS_PRVI_INTERFACE.get();
@@ -372,8 +372,8 @@ public class SiteHazardInvestigationsPageGen {
 				
 				DisaggregationPlotData[] disaggDatas = new DisaggregationPlotData[rps.length];
 				for (int r=0; r<rps.length; r++) {
-					ReturnPeriods rp = rps[r];
-					double iml = newTotalCurve.getFirstInterpolatedX_inLogXLogYDomain(rp.oneYearProb);
+					ReturnPeriod rp = rps[r];
+					double iml = newTotalCurve.getFirstInterpolatedX_inLogXLogYDomain(rp.getProbability(1d));
 					disagg.disaggregate(Math.log(iml), site, gmmsMap, calcERF, calc.getSourceFilters(), calc.getAdjustableParams());
 					
 					disaggDatas[r] = disagg.getDisaggPlotData();
@@ -381,7 +381,7 @@ public class SiteHazardInvestigationsPageGen {
 					if (plotTRT != null) {
 						// scale to my contribution
 						double myProb = newCurve.getInterpolatedY_inLogXLogYDomain(iml);
-						double scale = myProb/rp.oneYearProb;
+						double scale = myProb/rp.getProbability(1d);
 						double[][][] pdf3D = disaggDatas[r].getPdf3D();
 						for (int d=0; d<pdf3D.length; d++)
 							for (int m=0; m<pdf3D[d].length; m++)
@@ -413,16 +413,16 @@ public class SiteHazardInvestigationsPageGen {
 			lines.add("");
 			
 			for (int r=0; r<rps.length; r++) {
-				ReturnPeriods rp = rps[r];
-				lines.add("### "+perLabel+" "+rp.label+" disaggregations");
+				ReturnPeriod rp = rps[r];
+				lines.add("### "+perLabel+" "+rp.getLabel()+" disaggregations");
 				lines.add(topLink); lines.add("");
 				
-				double iml = newTotalCurve.getFirstInterpolatedX_inLogXLogYDomain(rp.oneYearProb);
-				double prevIML = prevTotalCurve.getFirstInterpolatedX_inLogXLogYDomain(rp.oneYearProb);
+				double iml = newTotalCurve.getFirstInterpolatedX_inLogXLogYDomain(rp.getProbability(1d));
+				double prevIML = prevTotalCurve.getFirstInterpolatedX_inLogXLogYDomain(rp.getProbability(1d));
 				
 				table = MarkdownUtils.tableBuilder();
 				table.addLine("", "2025", "2003");
-				table.addLine(rp.label, (float)iml, (float)prevIML);
+				table.addLine(rp.getLabel(), (float)iml, (float)prevIML);
 				
 				lines.addAll(table.build());
 				lines.add("");
@@ -459,7 +459,7 @@ public class SiteHazardInvestigationsPageGen {
 					}
 					
 					if (trt != null) {
-						lines.add("#### "+perLabel+" "+rp.label+" "+type+" Disaggregation");
+						lines.add("#### "+perLabel+" "+rp.getLabel()+" "+type+" Disaggregation");
 						lines.add(topLink); lines.add("");
 					}
 					

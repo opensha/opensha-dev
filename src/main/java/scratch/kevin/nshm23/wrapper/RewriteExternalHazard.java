@@ -13,7 +13,7 @@ import org.opensha.commons.data.xyz.GriddedGeoDataSet;
 import org.opensha.commons.geo.GriddedRegion;
 import org.opensha.commons.geo.Location;
 import org.opensha.commons.geo.json.Feature;
-import org.opensha.sha.earthquake.faultSysSolution.util.SolHazardMapCalc.ReturnPeriods;
+import org.opensha.sha.calc.ReturnPeriod;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.util.NSHM23_RegionLoader;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.util.PRVI25_RegionLoader;
 
@@ -55,7 +55,7 @@ public class RewriteExternalHazard {
 //				0.1, GriddedRegion.ANCHOR_0_0);
 		
 //		double[] periods = {0d, 1d};
-		ReturnPeriods[] rps = {ReturnPeriods.TWO_IN_50, ReturnPeriods.TEN_IN_50};
+		ReturnPeriod[] rps = {ReturnPeriod.TWO_IN_50, ReturnPeriod.TEN_IN_50};
 		
 		Preconditions.checkState(outputDir.exists() || outputDir.mkdir());
 		ZipOutputStream zout = new ZipOutputStream(new BufferedOutputStream(new FileOutputStream(
@@ -76,8 +76,8 @@ public class RewriteExternalHazard {
 			
 			CSVFile<String> extCSV = CSVFile.readFile(new File(extSubDir, "map.csv"), true);
 			
-			for (ReturnPeriods rp : rps) {
-				double years = rp.returnPeriod;
+			for (ReturnPeriod rp : rps) {
+				double years = rp.getReturnPeriodYears();
 				double minDiff = Double.POSITIVE_INFINITY;
 				int closestCol = -1;
 				for (int col=2; col<extCSV.getNumCols(); col++) {
@@ -90,7 +90,7 @@ public class RewriteExternalHazard {
 				}
 				System.out.println("Matched "+rp+" with CSV column "+extCSV.get(0, closestCol));
 				Preconditions.checkState(minDiff < 5d, "RP mimatch! |ours (%s = %s) - theirs (%s)| = %s",
-						rp, rp.returnPeriod, extCSV.get(0, closestCol), minDiff);
+						rp, rp.getReturnPeriodYears(), extCSV.get(0, closestCol), minDiff);
 				
 				int numSkipped = 0;
 				int numMatched = 0;

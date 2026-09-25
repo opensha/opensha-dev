@@ -59,7 +59,7 @@ import org.opensha.sha.earthquake.faultSysSolution.modules.GridSourceProvider;
 import org.opensha.sha.earthquake.faultSysSolution.reports.plots.NucleationRatePlot;
 import org.opensha.sha.earthquake.faultSysSolution.ruptures.util.RupSetMapMaker;
 import org.opensha.sha.earthquake.faultSysSolution.util.FaultSysTools;
-import org.opensha.sha.earthquake.faultSysSolution.util.SolHazardMapCalc.ReturnPeriods;
+import org.opensha.sha.calc.ReturnPeriod;
 import org.opensha.sha.earthquake.param.IncludeBackgroundOption;
 import org.opensha.sha.earthquake.param.IncludeBackgroundParam;
 import org.opensha.sha.earthquake.param.ProbabilityModelOptions;
@@ -368,7 +368,7 @@ public class SingleSiteHazardAndDataComparisonPageGen {
 		DiscretizedFunc[] fullCurves = new DiscretizedFunc[periods.length];
 		DiscretizedFunc[] compFullCurves = hasComp ? new DiscretizedFunc[periods.length] : null;
 		
-		ReturnPeriods[] rps = ReturnPeriods.values();
+		ReturnPeriod[] rps = ReturnPeriod.standardValues();
 		
 		table.initNewLine();
 		for (int p=0; p<periods.length; p++) {
@@ -458,10 +458,10 @@ public class SingleSiteHazardAndDataComparisonPageGen {
 			
 			Range xRange = new Range(1e-2, 1e1);
 			
-			for (ReturnPeriods rp : rps) {
+			for (ReturnPeriod rp : rps) {
 				DiscretizedFunc rpFunc = new ArbitrarilyDiscretizedFunc();
-				rpFunc.set(xRange.getLowerBound(), rp.oneYearProb);
-				rpFunc.set(xRange.getUpperBound(), rp.oneYearProb);
+				rpFunc.set(xRange.getLowerBound(), rp.getProbability(1d));
+				rpFunc.set(xRange.getUpperBound(), rp.getProbability(1d));
 				funcs.add(rpFunc);
 				chars.add(new PlotCurveCharacterstics(PlotLineType.DASHED, 1f, Color.GRAY));
 			}
@@ -470,8 +470,8 @@ public class SingleSiteHazardAndDataComparisonPageGen {
 					xLabel, "Annual Probability of Exceedance");
 			spec.setLegendInset(true);
 			
-			for (ReturnPeriods rp : rps) {
-				XYTextAnnotation ann = new XYTextAnnotation(rp.label, xRange.getLowerBound(), rp.oneYearProb);
+			for (ReturnPeriod rp : rps) {
+				XYTextAnnotation ann = new XYTextAnnotation(rp.getLabel(), xRange.getLowerBound(), rp.getProbability(1d));
 				ann.setTextAnchor(TextAnchor.BASELINE_LEFT);
 				ann.setPaint(Color.DARK_GRAY);
 				ann.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 18));;
@@ -505,10 +505,10 @@ public class SingleSiteHazardAndDataComparisonPageGen {
 		}
 		table.finalizeLine();
 		
-		for (ReturnPeriods rp : rps) {
+		for (ReturnPeriod rp : rps) {
 			table.initNewLine();
 			
-			table.addColumn(rp.label);
+			table.addColumn(rp.getLabel());
 			for (int p=0; p<periods.length; p++) {
 				double iml = calcCurveIML(rp, fullCurves[p]);
 				table.addColumn((float)iml);
@@ -1230,8 +1230,8 @@ public class SingleSiteHazardAndDataComparisonPageGen {
 		return map;
 	}
 	
-	private static double calcCurveIML(ReturnPeriods rp, DiscretizedFunc curve) {
-		double curveLevel = rp.oneYearProb;
+	private static double calcCurveIML(ReturnPeriod rp, DiscretizedFunc curve) {
+		double curveLevel = rp.getProbability(1d);
 		if (curveLevel > curve.getMaxY())
 			return 0d;
 		else if (curveLevel < curve.getMinY())

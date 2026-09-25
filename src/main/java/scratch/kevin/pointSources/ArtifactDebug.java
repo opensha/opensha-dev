@@ -27,7 +27,7 @@ import org.opensha.sha.earthquake.faultSysSolution.modules.GridSourceList.Gridde
 import org.opensha.sha.earthquake.faultSysSolution.modules.GridSourceProvider;
 import org.opensha.sha.earthquake.faultSysSolution.util.FaultSysTools;
 import org.opensha.sha.earthquake.faultSysSolution.util.SolHazardMapCalc;
-import org.opensha.sha.earthquake.faultSysSolution.util.SolHazardMapCalc.ReturnPeriods;
+import org.opensha.sha.calc.ReturnPeriod;
 import org.opensha.sha.earthquake.param.IncludeBackgroundOption;
 import org.opensha.sha.earthquake.util.GridCellSupersamplingSettings;
 import org.opensha.sha.faultSurface.utils.ptSrcCorr.DistanceDistributionCorrection;
@@ -52,7 +52,7 @@ public class ArtifactDebug {
 		
 		double period = 0d;
 		int threads = FaultSysTools.defaultNumThreads();
-		ReturnPeriods rp = ReturnPeriods.TWO_IN_50;
+		ReturnPeriod rp = ReturnPeriod.TWO_IN_50;
 
 		CPT cpt = GMT_CPT_Files.DIVERGING_VIK_UNIFORM.instance().rescale(-5d, 5d);
 		CPT hazCPT = GMT_CPT_Files.RAINBOW_UNIFORM.instance().rescale(-0.8, -0.3);

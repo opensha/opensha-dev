@@ -36,7 +36,7 @@ import org.opensha.commons.mapping.gmt.elements.TopographicSlopeFile;
 import org.opensha.commons.param.Parameter;
 import org.opensha.commons.param.ParameterList;
 import org.opensha.commons.util.FileUtils;
-import org.opensha.commons.util.ReturnPeriodUtils;
+import org.opensha.sha.calc.ReturnPeriodUtils;
 import org.opensha.commons.util.XMLUtils;
 import org.opensha.commons.util.cpt.CPT;
 import org.opensha.sha.calc.HazardCurveCalculator;

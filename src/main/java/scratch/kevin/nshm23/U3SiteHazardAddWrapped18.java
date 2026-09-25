@@ -21,7 +21,7 @@ import org.opensha.commons.geo.Location;
 import org.opensha.commons.geo.Region;
 import org.opensha.sha.calc.HazardCurveCalculator;
 import org.opensha.sha.earthquake.faultSysSolution.hazard.mpj.MPJ_SiteLogicTreeHazardCurveCalc;
-import org.opensha.sha.earthquake.faultSysSolution.util.SolHazardMapCalc.ReturnPeriods;
+import org.opensha.sha.calc.ReturnPeriod;
 import org.opensha.sha.earthquake.param.IncludeBackgroundOption;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.util.NSHM23_RegionLoader;
 import org.opensha.sha.gui.infoTools.IMT_Info;
@@ -124,7 +124,7 @@ public class U3SiteHazardAddWrapped18 {
 						curve.set(xVals.getX(i), logXVals.getY(i));
 
 					System.out.println("Hazard curve:\n"+curve);
-					System.out.println("2 in 50: "+curve.getFirstInterpolatedX_inLogXLogYDomain(ReturnPeriods.TWO_IN_50.oneYearProb));
+					System.out.println("2 in 50: "+curve.getFirstInterpolatedX_inLogXLogYDomain(ReturnPeriod.TWO_IN_50.getProbability(1d)));
 					
 					List<String> header = new ArrayList<>();
 					header.add("Site Name");

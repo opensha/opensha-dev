@@ -21,7 +21,7 @@ import org.opensha.commons.gui.plot.PlotCurveCharacterstics;
 import org.opensha.commons.gui.plot.PlotLineType;
 import org.opensha.commons.mapping.gmt.elements.GMT_CPT_Files;
 import org.opensha.commons.util.cpt.CPT;
-import org.opensha.sha.earthquake.faultSysSolution.util.SolHazardMapCalc.ReturnPeriods;
+import org.opensha.sha.calc.ReturnPeriod;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_DeformationModels;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_FaultModels;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.util.NSHM23_RegionLoader;
@@ -34,7 +34,7 @@ public class WrapperCompareToExternal {
 		File wrapperCalcDir = new File("/data/kevin/nshm23/batch_inversions/2024_02_08-nshm23-wrapped-conus-hazard-ask2014-0.1deg");
 //		File wrapperCalcDir = new File("/data/kevin/nshm23/batch_inversions/2024_02_13-nshm23-wrapped-conus-hazard-wrapedask2014-0.1deg");
 		double[] periods = {0d, 1d};
-		ReturnPeriods[] rps = {ReturnPeriods.TWO_IN_50, ReturnPeriods.TEN_IN_50};
+		ReturnPeriod[] rps = {ReturnPeriod.TWO_IN_50, ReturnPeriod.TEN_IN_50};
 		
 		Region region = NSHM23_RegionLoader.loadFullConterminousUS();
 		GriddedRegion gridReg = new GriddedRegion(region, 0.1, GriddedRegion.ANCHOR_0_0);
@@ -46,8 +46,8 @@ public class WrapperCompareToExternal {
 		File outputDir = new File(wrapperCalcDir, "hazard_comparison_nsmp_haz_no_smooth");
 		Preconditions.checkState(outputDir.exists() || outputDir.mkdir());
 		
-		for (ReturnPeriods rp : rps)
-			System.out.println(rp+" is "+rp.returnPeriod+" years");
+		for (ReturnPeriod rp : rps)
+			System.out.println(rp+" is "+rp.getReturnPeriodYears()+" years");
 		
 		ZipFile wrapperZip = new ZipFile(new File(wrapperCalcDir, "results_hazard.zip"));
 		
@@ -81,8 +81,8 @@ public class WrapperCompareToExternal {
 			
 			CSVFile<String> extCSV = CSVFile.readFile(new File(extSubDir, "map.csv"), true);
 			
-			for (ReturnPeriods rp : rps) {
-				double years = rp.returnPeriod;
+			for (ReturnPeriod rp : rps) {
+				double years = rp.getReturnPeriodYears();
 				double minDiff = Double.POSITIVE_INFINITY;
 				int closestCol = -1;
 				for (int col=2; col<extCSV.getNumCols(); col++) {
@@ -95,7 +95,7 @@ public class WrapperCompareToExternal {
 				}
 				System.out.println("Matched "+rp+" with CSV column "+extCSV.get(0, closestCol));
 				Preconditions.checkState(minDiff < 5d, "RP mimatch! |ours (%s = %s) - theirs (%s)| = %s",
-						rp, rp.returnPeriod, extCSV.get(0, closestCol), minDiff);
+						rp, rp.getReturnPeriodYears(), extCSV.get(0, closestCol), minDiff);
 				
 				int numSkipped = 0;
 				int numMatched = 0;
@@ -147,7 +147,7 @@ public class WrapperCompareToExternal {
 				GriddedGeoDataSet diff = WUS_HazardChangePageGen.mapDiff(wrapperXYZ, extXYZ);
 				
 				String prefix = mapPrefix+"_"+rp.name();
-				String label = perLabel+", "+rp.label;
+				String label = perLabel+", "+rp.getLabel();
 				
 				mapMaker.plotXYZData(diff, diffCPT, "Wrapper - NSHMP-Haz, "+label);
 				mapMaker.plot(outputDir, prefix+"_diff", " ");

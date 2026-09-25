@@ -61,7 +61,7 @@ import scratch.kevin.simCompare.GroundMotionScatterPlot;
 import scratch.kevin.simulators.RSQSimCatalog;
 import scratch.kevin.simulators.RSQSimCatalog.Catalogs;
 import org.opensha.commons.util.MarkdownUtils;
-import org.opensha.commons.util.ReturnPeriodUtils;
+import org.opensha.sha.calc.ReturnPeriodUtils;
 import org.opensha.commons.util.MarkdownUtils.TableBuilder;
 
 public class HazardClusteringGMPECalc {

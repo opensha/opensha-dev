@@ -31,7 +31,7 @@ import org.opensha.sha.earthquake.ProbEqkRupture;
 import org.opensha.sha.earthquake.ProbEqkSource;
 import org.opensha.sha.earthquake.faultSysSolution.hazard.mpj.MPJ_LogicTreeHazardCalc;
 import org.opensha.sha.earthquake.faultSysSolution.util.SolHazardMapCalc;
-import org.opensha.sha.earthquake.faultSysSolution.util.SolHazardMapCalc.ReturnPeriods;
+import org.opensha.sha.calc.ReturnPeriod;
 import org.opensha.sha.earthquake.param.IncludeBackgroundOption;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.util.NSHM23_RegionLoader;
 import org.opensha.sha.gui.infoTools.IMT_Info;
@@ -115,7 +115,7 @@ public class WrapperHazardCalc {
 				imtInfo.getDefaultHazardCurve(PGA_Param.NAME),
 				imtInfo.getDefaultHazardCurve(SA_Param.NAME) };
 
-		ReturnPeriods[] rps = ReturnPeriods.values();
+		ReturnPeriod[] rps = ReturnPeriod.standardValues();
 
 		DiscretizedFunc[] logXVals = new DiscretizedFunc[linearXVals.length];
 		for (int i = 0; i < logXVals.length; i++) {
@@ -166,10 +166,10 @@ public class WrapperHazardCalc {
 			SolHazardMapCalc.writeCurvesCSV(curvesFile, curves[p], gridReg.getNodeList());
 			zipFileNames.add(curvesFile.getName());
 
-			for (ReturnPeriods rp : rps) {
+			for (ReturnPeriod rp : rps) {
 				GriddedGeoDataSet xyz = new GriddedGeoDataSet(gridReg, false);
 
-				double curveLevel = rp.oneYearProb;
+				double curveLevel = rp.getProbability(1d);
 
 				for (int i = 0; i < curves[p].length; i++) {
 					DiscretizedFunc curve = curves[p][i];

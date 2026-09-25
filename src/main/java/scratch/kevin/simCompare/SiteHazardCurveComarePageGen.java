@@ -45,7 +45,7 @@ import com.google.common.primitives.Doubles;
 import scratch.kevin.simCompare.SimulationDisaggAttenuationRelationshipWrapper.Source;
 
 import org.opensha.commons.util.MarkdownUtils;
-import org.opensha.commons.util.ReturnPeriodUtils;
+import org.opensha.sha.calc.ReturnPeriodUtils;
 import org.opensha.commons.util.MarkdownUtils.TableBuilder;
 
 public abstract class SiteHazardCurveComarePageGen<E> {

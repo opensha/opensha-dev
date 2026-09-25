@@ -19,7 +19,7 @@ import org.opensha.commons.util.MarkdownUtils;
 import org.opensha.commons.util.MarkdownUtils.TableBuilder;
 import org.opensha.commons.util.cpt.CPT;
 import org.opensha.sha.earthquake.faultSysSolution.ruptures.util.RupSetMapMaker;
-import org.opensha.sha.earthquake.faultSysSolution.util.SolHazardMapCalc.ReturnPeriods;
+import org.opensha.sha.calc.ReturnPeriod;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.util.NSHM23_RegionLoader;
 
 import com.google.common.base.Preconditions;
@@ -40,7 +40,7 @@ public class ExternalHazardCompPageGen {
 //		String imtName = "1s SA";
 //		String imtDir = "SA1P0";
 		
-		ReturnPeriods[] rps = ReturnPeriods.values();
+		ReturnPeriod[] rps = ReturnPeriod.standardValues();
 		
 		String name23 = "NSHM23";
 		String name18 = "NSHM18";
@@ -128,7 +128,7 @@ public class ExternalHazardCompPageGen {
 		lines.add("");
 		
 		String csvStr = "Download map CSVs:";
-		for (ReturnPeriods rp : rps) {
+		for (ReturnPeriod rp : rps) {
 			System.out.println("Building CSV for "+rp);
 			CSVFile<String> csv = new CSVFile<>(true);
 			csv.addLine("Location Index", "Latitude", "Longitude", name23, name18,
@@ -211,13 +211,13 @@ public class ExternalHazardCompPageGen {
 			lines.add(description);
 			lines.add("");
 			
-			for (ReturnPeriods rp : rps) {
-				System.out.println("Plotting "+label+", "+rp.label);
+			for (ReturnPeriod rp : rps) {
+				System.out.println("Plotting "+label+", "+rp.getLabel());
 				
-				lines.add("### "+label+", "+rp.label);
+				lines.add("### "+label+", "+rp.getLabel());
 				lines.add(topLink); lines.add("");
 				
-				String hazLabel = imtName+", "+rp.label;
+				String hazLabel = imtName+", "+rp.getLabel();
 				String prefix = type.name()+"_"+rp.name();
 				
 				GriddedGeoDataSet map23 = curvestoMap(curves23, curveLocs, mapReg, rp);
@@ -324,12 +324,12 @@ public class ExternalHazardCompPageGen {
 	}
 	
 	private static GriddedGeoDataSet curvestoMap(DiscretizedFunc[] curves, List<Location> curveLocs,
-			GriddedRegion gridRegion, ReturnPeriods rp) {
+			GriddedRegion gridRegion, ReturnPeriod rp) {
 		GriddedGeoDataSet ret = new GriddedGeoDataSet(gridRegion);
 		for (int i=0; i<ret.size(); i++)
 			ret.set(i, Double.NaN);
 		
-		double rate = -Math.log(1d - rp.oneYearProb);
+		double rate = -Math.log(1d - rp.getProbability(1d));
 		
 		for (int i=0; i<curveLocs.size(); i++) {
 			Location loc = curveLocs.get(i);

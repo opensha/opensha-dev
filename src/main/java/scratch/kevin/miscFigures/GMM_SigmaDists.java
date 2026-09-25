@@ -23,7 +23,7 @@ import org.opensha.commons.gui.plot.PlotCurveCharacterstics;
 import org.opensha.commons.gui.plot.PlotLineType;
 import org.opensha.commons.gui.plot.PlotSpec;
 import org.opensha.commons.param.Parameter;
-import org.opensha.commons.util.ReturnPeriodUtils;
+import org.opensha.sha.calc.ReturnPeriodUtils;
 import org.opensha.sha.calc.HazardCurveCalculator;
 import org.opensha.sha.earthquake.EqkRupture;
 import org.opensha.sha.imr.AttenRelRef;

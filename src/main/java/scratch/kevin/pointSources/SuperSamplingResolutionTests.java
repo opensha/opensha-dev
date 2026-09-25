@@ -34,7 +34,7 @@ import org.opensha.sha.earthquake.faultSysSolution.FaultSystemSolution;
 import org.opensha.sha.earthquake.faultSysSolution.modules.GridSourceList;
 import org.opensha.sha.earthquake.faultSysSolution.util.FaultSysTools;
 import org.opensha.sha.earthquake.faultSysSolution.util.SolHazardMapCalc;
-import org.opensha.sha.earthquake.faultSysSolution.util.SolHazardMapCalc.ReturnPeriods;
+import org.opensha.sha.calc.ReturnPeriod;
 import org.opensha.sha.earthquake.param.IncludeBackgroundOption;
 import org.opensha.sha.earthquake.param.IncludeBackgroundParam;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.util.NSHM23_RegionLoader;
@@ -75,7 +75,7 @@ public class SuperSamplingResolutionTests {
 		File outputDir = new File("/tmp");
 		String csvPrefix = "super_sampling_results_"+siteLocs.size()+"sites";
 		
-		ReturnPeriods[] testRPs = ReturnPeriods.values();
+		ReturnPeriod[] testRPs = ReturnPeriod.standardValues();
 		
 //		AttenRelRef gmmRef = AttenRelRef.ASK_2014;
 		AttenRelRef gmmRef = AttenRelRef.WRAPPED_ASK_2014;
@@ -257,7 +257,7 @@ public class SuperSamplingResolutionTests {
 					String rpLabel;
 					
 					if (r < testRPs.length) {
-						rpLabel = testRPs[r].label;
+						rpLabel = testRPs[r].getLabel();
 						double[] map = calcMap(curves, testRPs[r]);
 						double[] refMap = calcMap(refCurves, testRPs[r]);
 
@@ -328,10 +328,10 @@ public class SuperSamplingResolutionTests {
 		return ret;
 	}
 	
-	private static double[] calcMap(DiscretizedFunc[] curves, ReturnPeriods rp) {
+	private static double[] calcMap(DiscretizedFunc[] curves, ReturnPeriod rp) {
 		double[] ret = new double[curves.length];
 		
-		double level = rp.oneYearProb;
+		double level = rp.getProbability(1d);
 		
 		for (int i=0; i<curves.length; i++) {
 			// curveLevel is a probability, return the IML at that probability

@@ -40,7 +40,7 @@ import org.opensha.commons.logicTree.sampling.SamplingMethod;
 import org.opensha.commons.util.RandomSeedUtils;
 import org.opensha.sha.earthquake.faultSysSolution.hazard.mpj.MPJ_LogicTreeHazardCalc;
 import org.opensha.sha.earthquake.faultSysSolution.util.SolHazardMapCalc;
-import org.opensha.sha.earthquake.faultSysSolution.util.SolHazardMapCalc.ReturnPeriods;
+import org.opensha.sha.calc.ReturnPeriod;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.HashBasedTable;
@@ -164,7 +164,7 @@ public class HazardConvergenceCalcs {
 		Preconditions.checkState(outputDir.exists() || outputDir.mkdir(),
 				"Couldn't create output directory: %s", outputDir.getAbsolutePath());
 
-		ReturnPeriods rp = ReturnPeriods.TWO_IN_50;
+		ReturnPeriod rp = ReturnPeriod.TWO_IN_50;
 
 		List<RunSpec> sobolRuns = loadRunSpecs(SamplingMethod.OWEN_SCRAMBLED_SOBOL,
 				runDirs.row(SamplingMethod.OWEN_SCRAMBLED_SOBOL));
@@ -226,7 +226,7 @@ public class HazardConvergenceCalcs {
 
 	private static void runSamplingConvergence(List<RunSpec> sobolRuns, List<RunSpec> fullDesignRuns,
 			List<RunSpec> mcsRuns,
-			GriddedRegion gridReg, double period, String periodName, ReturnPeriods rp, File outputDir) throws IOException {
+			GriddedRegion gridReg, double period, String periodName, ReturnPeriod rp, File outputDir) throws IOException {
 		List<RunPeriodData> sobolData = loadRunPeriodData(sobolRuns, gridReg, period, rp);
 		List<RunPeriodData> fullDesignData = loadRunPeriodData(fullDesignRuns, gridReg, period, rp);
 		int[] sampleCounts = sobolData.stream().flatMap(data -> data.checkpoints().keySet().stream())
@@ -340,7 +340,7 @@ public class HazardConvergenceCalcs {
 	}
 
 	private static List<RunPeriodData> loadRunPeriodData(List<RunSpec> runs,
-			GriddedRegion gridReg, double period, ReturnPeriods rp, int... spanCounts) throws IOException {
+			GriddedRegion gridReg, double period, ReturnPeriod rp, int... spanCounts) throws IOException {
 		if (runs.isEmpty())
 			return List.of();
 		int[] globalOffsets = new int[runs.size()];
@@ -385,7 +385,7 @@ public class HazardConvergenceCalcs {
 	}
 
 	private static RunPeriodData loadRunPeriodData(RunSpec run, GriddedRegion gridReg,
-			double period, ReturnPeriods rp, int[] spanCounts, int globalOffset) throws IOException {
+			double period, ReturnPeriod rp, int[] spanCounts, int globalOffset) throws IOException {
 		System.out.println("\nLoading "+run.method().getShortName()+" run: "+run.id());
 		ModelHazardMaps maps = loadMaps(new File(run.directory(), "results_hazard.zip"),
 				run.tree(), gridReg, period, rp);
@@ -434,7 +434,7 @@ public class HazardConvergenceCalcs {
 	}
 
 	private static PooledHazardData buildPooledHazardData(List<RunPeriodData> allRuns,
-			RunSpec excluded, GriddedRegion gridReg, ReturnPeriods rp,
+			RunSpec excluded, GriddedRegion gridReg, ReturnPeriod rp,
 			String pooledName, String leaveOneOutName) {
 		int sampleCount = 0;
 		int curveSize = -1;
@@ -475,7 +475,7 @@ public class HazardConvergenceCalcs {
 	}
 
 	private static void writePooledHazardFiles(File outputDir, PooledHazardData pooled,
-			GriddedRegion gridReg, double period, ReturnPeriods rp) throws IOException {
+			GriddedRegion gridReg, double period, ReturnPeriod rp) throws IOException {
 		Preconditions.checkState(outputDir.exists() || outputDir.mkdir(),
 				"Couldn't create pooled hazard directory: %s", outputDir.getAbsolutePath());
 		int sampleCount = pooled.reference().sampleCount();
@@ -502,7 +502,7 @@ public class HazardConvergenceCalcs {
 	/** Uses disjoint spans across the concatenated MCS pool; leftover branches still contribute to every reference. */
 	static List<Realization> appendMCSSpanComparisons(List<ReferenceComparison> comparisons,
 			List<RunPeriodData> runs, int[] sampleCounts, ReferenceStatistics sobolReference,
-			GriddedRegion gridReg, ReturnPeriods rp) {
+			GriddedRegion gridReg, ReturnPeriod rp) {
 		List<Realization> spans = new ArrayList<>();
 		double[][] allMaps = runs.stream().flatMap(data -> Arrays.stream(data.branchMaps()))
 				.toArray(double[][]::new);
@@ -589,19 +589,19 @@ public class HazardConvergenceCalcs {
 	}
 
 	static double[] buildCurveMeanMap(double[][] curveSums, double[] curveX,
-			int sampleCount, ReturnPeriods rp) {
+			int sampleCount, ReturnPeriod rp) {
 		double[] map = new double[curveSums.length];
 		double[] meanY = new double[curveX.length];
 		for (int n=0; n<curveSums.length; n++) {
 			for (int i=0; i<meanY.length; i++)
 				meanY[i] = curveSums[n][i]/sampleCount;
 			LightFixedXFunc curve = new LightFixedXFunc(curveX, meanY);
-			if (rp.oneYearProb > curve.getMaxY())
+			if (rp.getProbability(1d) > curve.getMaxY())
 				map[n] = 0d;
-			else if (rp.oneYearProb < curve.getMinY())
+			else if (rp.getProbability(1d) < curve.getMinY())
 				map[n] = curve.getMaxX();
 			else
-				map[n] = curve.getFirstInterpolatedX_inLogXLogYDomain(rp.oneYearProb);
+				map[n] = curve.getFirstInterpolatedX_inLogXLogYDomain(rp.getProbability(1d));
 		}
 		return map;
 	}
@@ -1217,7 +1217,7 @@ public class HazardConvergenceCalcs {
 		return 100d*(testValue/referenceValue - 1d);
 	}
 
-	private static String mapFilePrefix(double period, ReturnPeriods rp) {
+	private static String mapFilePrefix(double period, ReturnPeriod rp) {
 		String perStr = period == 0d ? "pga" : (float)period+"s";
 		return perStr+"_"+rp.name();
 	}
@@ -1246,7 +1246,7 @@ public class HazardConvergenceCalcs {
 	}
 
 	static ModelHazardMaps loadMaps(File hazardZip, LogicTree<?> tree, GriddedRegion gridReg,
-			double period, ReturnPeriods rp) throws ZipException, IOException {
+			double period, ReturnPeriod rp) throws ZipException, IOException {
 		System.out.println("Loading maps from "+hazardZip.getAbsolutePath());
 		try (ZipFile zip = new ZipFile(hazardZip)) {
 			String suffix = mapFilePrefix(period, rp)+".txt";

@@ -34,7 +34,7 @@ import org.opensha.sha.earthquake.faultSysSolution.FaultSystemSolution;
 import org.opensha.sha.earthquake.faultSysSolution.erf.BaseFaultSystemSolutionERF;
 import org.opensha.sha.earthquake.faultSysSolution.modules.GridSourceList;
 import org.opensha.sha.earthquake.faultSysSolution.util.SolSiteHazardCalc;
-import org.opensha.sha.earthquake.faultSysSolution.util.SolHazardMapCalc.ReturnPeriods;
+import org.opensha.sha.calc.ReturnPeriod;
 import org.opensha.sha.earthquake.param.IncludeBackgroundOption;
 import org.opensha.sha.earthquake.param.IncludeBackgroundParam;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.util.NSHM23_RegionLoader;
@@ -92,8 +92,8 @@ public class CityHazardCurveFigures {
 			}
 		};
 		
-		ReturnPeriods[] plotRPs = { ReturnPeriods.TEN_IN_50, ReturnPeriods.TWO_IN_50 };
-		ReturnPeriods sortRP = ReturnPeriods.TWO_IN_50;
+		ReturnPeriod[] plotRPs = { ReturnPeriod.TEN_IN_50, ReturnPeriod.TWO_IN_50 };
+		ReturnPeriod sortRP = ReturnPeriod.TWO_IN_50;
 		
 		List<BaseFaultSystemSolutionERF> erfs = new ArrayList<>();
 		List<String> erfNames = new ArrayList<>();
@@ -243,7 +243,7 @@ public class CityHazardCurveFigures {
 		private final double percentChange;
 		private final double absChange;
 		
-		private CityResult(NEHRP_TestCity city, DiscretizedFunc[] curves, ReturnPeriods sortRP) {
+		private CityResult(NEHRP_TestCity city, DiscretizedFunc[] curves, ReturnPeriod sortRP) {
 			super();
 			this.city = city;
 			this.curves = curves;
@@ -272,12 +272,12 @@ public class CityHazardCurveFigures {
 		return erf;
 	}
 	
-	private static double getCurveVal(DiscretizedFunc curve, ReturnPeriods rp) {
-		if (rp.oneYearProb > curve.getY(0))
+	private static double getCurveVal(DiscretizedFunc curve, ReturnPeriod rp) {
+		if (rp.getProbability(1d) > curve.getY(0))
 			return curve.getX(0);
-		if (rp.oneYearProb < curve.getMinY())
+		if (rp.getProbability(1d) < curve.getMinY())
 			return curve.getMaxX();
-		return curve.getFirstInterpolatedX_inLogXLogYDomain(rp.oneYearProb);
+		return curve.getFirstInterpolatedX_inLogXLogYDomain(rp.getProbability(1d));
 	}
 
 }

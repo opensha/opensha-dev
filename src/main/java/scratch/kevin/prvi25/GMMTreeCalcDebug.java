@@ -37,7 +37,7 @@ import org.opensha.sha.earthquake.faultSysSolution.erf.BaseFaultSystemSolutionER
 import org.opensha.sha.earthquake.faultSysSolution.hazard.mpj.MPJ_LogicTreeHazardCalc;
 import org.opensha.sha.earthquake.faultSysSolution.util.FaultSysHazardCalcSettings;
 import org.opensha.sha.earthquake.faultSysSolution.util.SolHazardMapCalc;
-import org.opensha.sha.earthquake.faultSysSolution.util.SolHazardMapCalc.ReturnPeriods;
+import org.opensha.sha.calc.ReturnPeriod;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_GMM_GenericEpistemicModel;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_GMM_SlabEpistemicModel;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_GMM_SlabSigmaModel;
@@ -180,8 +180,8 @@ public class GMMTreeCalcDebug {
 			System.out.println("X: "+(float)x+"\tAvg: "+(float)y1+"\tCalc Avg: "+(float)y2+"\tDiff: "+(float)diff+" ("+(float)pDiff+" %)");
 		}
 		
-		ReturnPeriods rp = ReturnPeriods.TWO_IN_50;
-		double rpProb = RATE_CURVES ? 1d/rp.returnPeriod : rp.oneYearProb;
+		ReturnPeriod rp = ReturnPeriod.TWO_IN_50;
+		double rpProb = RATE_CURVES ? 1d/rp.getReturnPeriodYears() : rp.getProbability(1d);
 		System.out.println("Return period: "+rp+" at y="+rpProb);
 		double rp1 = avgCurve.getFirstInterpolatedX_inLogXLogYDomain(rpProb);
 		double rp2 = calcAvgCurve.getFirstInterpolatedX_inLogXLogYDomain(rpProb);

@@ -19,7 +19,7 @@ import org.opensha.commons.data.function.LightFixedXFunc;
 import org.opensha.commons.logicTree.LogicTree;
 import org.opensha.commons.util.DataUtils.MinMaxAveTracker;
 import org.opensha.sha.earthquake.faultSysSolution.hazard.mpj.MPJ_SiteLogicTreeHazardCurveCalc;
-import org.opensha.sha.earthquake.faultSysSolution.util.SolHazardMapCalc.ReturnPeriods;
+import org.opensha.sha.calc.ReturnPeriod;
 
 import com.google.common.base.Preconditions;
 
@@ -34,7 +34,7 @@ public class HazardAveragingTests {
 		
 		LogicTree<?> tree = LogicTree.read(new InputStreamReader(zip.getInputStream(zip.getEntry("logic_tree.json"))));
 		
-		ReturnPeriods rp = ReturnPeriods.TWO_IN_50;
+		ReturnPeriod rp = ReturnPeriod.TWO_IN_50;
 		
 		List<Site> sites = MPJ_SiteLogicTreeHazardCurveCalc.parseSitesCSV(sitesCSV, null);
 		
@@ -121,8 +121,8 @@ public class HazardAveragingTests {
 		return perEntires;
 	}
 	
-	private static double hazardVal(DiscretizedFunc curve, ReturnPeriods rp) {
-		double curveLevel = rp.oneYearProb;
+	private static double hazardVal(DiscretizedFunc curve, ReturnPeriod rp) {
+		double curveLevel = rp.getProbability(1d);
 		// curveLevel is a probability, return the IML at that probability
 		if (curveLevel > curve.getMaxY())
 			return 0d;

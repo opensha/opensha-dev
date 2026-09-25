@@ -29,7 +29,7 @@ import org.opensha.commons.geo.json.Feature;
 import org.opensha.sha.earthquake.faultSysSolution.hazard.mpj.MPJ_LogicTreeHazardCalc;
 import org.opensha.sha.earthquake.faultSysSolution.util.FaultSysTools;
 import org.opensha.sha.earthquake.faultSysSolution.util.SolHazardMapCalc;
-import org.opensha.sha.earthquake.faultSysSolution.util.SolHazardMapCalc.ReturnPeriods;
+import org.opensha.sha.calc.ReturnPeriod;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.util.NSHM23_RegionLoader;
 
 import com.google.common.base.Preconditions;
@@ -74,7 +74,7 @@ public class GriddedBBPToHazardMap {
 		List<BBP_Site> sites = BBP_Site.readFile(bbpDir);
 		GriddedRegion gridReg = new GriddedRegion(region, gridSpacing, GriddedRegion.ANCHOR_0_0);
 		double[] periods = {2d, 3d, 5d};
-		ReturnPeriods[] rps = SolHazardMapCalc.MAP_RPS;
+		ReturnPeriod[] rps = SolHazardMapCalc.MAP_RPS;
 		VelocityModel vm = VelocityModel.LA_BASIN_500;
 		
 		Preconditions.checkState(gridReg.getNodeCount() == sites.size(),
@@ -204,10 +204,10 @@ public class GriddedBBPToHazardMap {
 			File curvesFile = new File(hazDir, SolHazardMapCalc.getCSV_FileName("curves", periods[p]));
 			SolHazardMapCalc.writeCurvesCSV(curvesFile, perCurves, locs, true);
 			
-			for (ReturnPeriods rp : rps) {
+			for (ReturnPeriod rp : rps) {
 				String mapFileName = MPJ_LogicTreeHazardCalc.mapPrefix(periods[p], rp)+".txt";
 				
-				double curveLevel = rp.oneYearProb;
+				double curveLevel = rp.getProbability(1d);
 				GriddedGeoDataSet xyz = new GriddedGeoDataSet(gridReg, false);
 				for (int i=0; i<xyz.size(); i++) {
 					DiscretizedFunc curve = perCurves[i];

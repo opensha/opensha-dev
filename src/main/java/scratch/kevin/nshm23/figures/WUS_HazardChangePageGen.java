@@ -43,7 +43,7 @@ import org.opensha.commons.util.cpt.CPTVal;
 import org.opensha.sha.earthquake.faultSysSolution.FaultSystemSolution;
 import org.opensha.sha.earthquake.faultSysSolution.modules.FaultGridAssociations;
 import org.opensha.sha.earthquake.faultSysSolution.ruptures.util.RupSetMapMaker;
-import org.opensha.sha.earthquake.faultSysSolution.util.SolHazardMapCalc.ReturnPeriods;
+import org.opensha.sha.calc.ReturnPeriod;
 import org.opensha.sha.earthquake.param.IncludeBackgroundOption;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.gridded.NSHM23_FaultCubeAssociations;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.gridded.NSHM23_SingleRegionGridSourceProvider;
@@ -70,8 +70,8 @@ public class WUS_HazardChangePageGen {
 
 	public static void main(String[] args) throws IOException {
 		
-		ReturnPeriods rp = ReturnPeriods.TWO_IN_50;
-//		ReturnPeriods rp = ReturnPeriods.TEN_IN_50;
+		ReturnPeriod rp = ReturnPeriod.TWO_IN_50;
+//		ReturnPeriod rp = ReturnPeriod.TEN_IN_50;
 //		double period = 0d;
 		double period = 1d;
 		
@@ -79,12 +79,12 @@ public class WUS_HazardChangePageGen {
 		if (period == 0d) {
 			entryName = "map_pga_"+rp.name()+".txt";
 			wrapperEntryName = "map_pga_"+rp.name()+".txt";
-			hazLabel = "PGA, "+rp.label;
+			hazLabel = "PGA, "+rp.getLabel();
 			dirPrefix = "pga";
 		} else {
 			entryName = "map_"+(float)period+"s_"+rp.name()+".txt";
 			wrapperEntryName = "map_"+(float)period+"s_"+rp.name()+".txt";
-			hazLabel = oDF.format(period)+"s SA, "+rp.label;
+			hazLabel = oDF.format(period)+"s SA, "+rp.getLabel();
 			dirPrefix = "sa_"+oDF.format(period)+"s";
 		}
 		// this still uses old naming

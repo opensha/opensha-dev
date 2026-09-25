@@ -27,7 +27,7 @@ import org.opensha.commons.util.cpt.CPT;
 import org.opensha.sha.earthquake.faultSysSolution.hazard.mpj.MPJ_LogicTreeHazardCalc;
 import org.opensha.sha.earthquake.faultSysSolution.ruptures.util.RupSetMapMaker;
 import org.opensha.sha.earthquake.faultSysSolution.util.SolHazardMapCalc;
-import org.opensha.sha.earthquake.faultSysSolution.util.SolHazardMapCalc.ReturnPeriods;
+import org.opensha.sha.calc.ReturnPeriod;
 import org.opensha.sha.earthquake.param.IncludeBackgroundOption;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.util.NSHM23_RegionLoader;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.util.PRVI25_RegionLoader;
@@ -76,8 +76,8 @@ public class HazardComp2003PageGen {
 		String imtDir = "SA5P0";
 		double period = 5d;
 		
-//		ReturnPeriods[] rps = ReturnPeriods.values();
-		ReturnPeriods[] rps = { ReturnPeriods.TWO_IN_50, ReturnPeriods.TEN_IN_50 };
+//		ReturnPeriod[] rps = ReturnPeriod.standardValues();
+		ReturnPeriod[] rps = { ReturnPeriod.TWO_IN_50, ReturnPeriod.TEN_IN_50 };
 		
 		String name25 = "NSHM25";
 		String name03 = "NSHM03";
@@ -174,7 +174,7 @@ public class HazardComp2003PageGen {
 		lines.add("");
 		
 		String csvStr = "Download map CSVs:";
-		for (ReturnPeriods rp : rps) {
+		for (ReturnPeriod rp : rps) {
 			System.out.println("Building CSV for "+rp);
 			CSVFile<String> csv = new CSVFile<>(true);
 			csv.addLine("Location Index", "Latitude", "Longitude", name25, name03,
@@ -283,13 +283,13 @@ public class HazardComp2003PageGen {
 			lines.add("");
 			
 			for (int r=0; r<rps.length; r++) {
-				ReturnPeriods rp = rps[r];
-				System.out.println("Plotting "+label+", "+rp.label);
+				ReturnPeriod rp = rps[r];
+				System.out.println("Plotting "+label+", "+rp.getLabel());
 				
-				lines.add("### "+label+", "+rp.label);
+				lines.add("### "+label+", "+rp.getLabel());
 				lines.add(topLink); lines.add("");
 				
-				String hazLabel = imtName+", "+rp.label;
+				String hazLabel = imtName+", "+rp.getLabel();
 				String prefix = type.name()+"_"+rp.name();
 				
 				GriddedGeoDataSet map25 = curvestoMap(curves25, mapReg, rp);
@@ -347,7 +347,7 @@ public class HazardComp2003PageGen {
 								twoDigits.format(diffStats.getAverage()),
 								"["+twoDigits.format(diffStats.getMin())+", "+twoDigits.format(diffStats.getMax())+"]");
 						
-						if (land && rp == ReturnPeriods.TWO_IN_50) {
+						if (land && rp == ReturnPeriod.TWO_IN_50) {
 							String myPrefix = texPrefix;
 							if (abs)
 								myPrefix += "Abs";
@@ -365,7 +365,7 @@ public class HazardComp2003PageGen {
 		
 		List<String> rpSummaryLines = new ArrayList<>();
 		for (int r=0; r<rps.length; r++) {
-			rpSummaryLines.add("### "+rps[r].label+" Summary");
+			rpSummaryLines.add("### "+rps[r].getLabel()+" Summary");
 			rpSummaryLines.add(topLink); rpSummaryLines.add("");
 			rpTables[r].finalizeLine();
 			rpSummaryLines.addAll(rpTables[r].wrap(2, 0).build());
@@ -540,7 +540,7 @@ public class HazardComp2003PageGen {
 		return ret;
 	}
 	
-	private static GriddedGeoDataSet curvestoMap(DiscretizedFunc[] curves, GriddedRegion gridRegion, ReturnPeriods rp) {
+	private static GriddedGeoDataSet curvestoMap(DiscretizedFunc[] curves, GriddedRegion gridRegion, ReturnPeriod rp) {
 		GriddedGeoDataSet ret = new GriddedGeoDataSet(gridRegion);
 		for (int i=0; i<ret.size(); i++)
 			ret.set(i, Double.NaN);
@@ -550,13 +550,13 @@ public class HazardComp2003PageGen {
 			double val;
 			if (curve == null)
 				val = Double.NaN;
-			else if (rp.oneYearProb > curve.getMaxY())
+			else if (rp.getProbability(1d) > curve.getMaxY())
 				val = 0d;
-			else if (rp.oneYearProb < curve.getMinY())
+			else if (rp.getProbability(1d) < curve.getMinY())
 				// saturated
 				val = curve.getMaxX();
 			else
-				val = curve.getFirstInterpolatedX_inLogXLogYDomain(rp.oneYearProb);
+				val = curve.getFirstInterpolatedX_inLogXLogYDomain(rp.getProbability(1d));
 			ret.set(i, val);
 		}
 		
