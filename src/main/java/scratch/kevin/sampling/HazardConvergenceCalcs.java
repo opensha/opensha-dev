@@ -160,7 +160,15 @@ public class HazardConvergenceCalcs {
 				new File(PaperPaths.INVS_DIR, "2026_09_22-nshm27-AMSAM-4096samples-lhs-unique_seed-4"),	// DONE on CARC
 				new File(PaperPaths.INVS_DIR, "2026_09_22-nshm27-AMSAM-4096samples-lhs-unique_seed-5"),	// DONE on CARC
 				new File(PaperPaths.INVS_DIR, "2026_09_22-nshm27-AMSAM-4096samples-lhs-unique_seed-6"),	// running on CARC
-				new File(PaperPaths.INVS_DIR, "2026_09_22-nshm27-AMSAM-4096samples-lhs-unique_seed-7")	// running on CARC
+				new File(PaperPaths.INVS_DIR, "2026_09_22-nshm27-AMSAM-4096samples-lhs-unique_seed-7"),	// running on CARC
+				new File(PaperPaths.INVS_DIR, "2026_09_24-nshm27-AMSAM-4096samples-lhs-unique_seed-8"),	// DONE on frontera
+				new File(PaperPaths.INVS_DIR, "2026_09_24-nshm27-AMSAM-4096samples-lhs-unique_seed-9"),	// DONE on frontera
+				new File(PaperPaths.INVS_DIR, "2026_09_24-nshm27-AMSAM-4096samples-lhs-unique_seed-10"),// DONE on frontera
+				new File(PaperPaths.INVS_DIR, "2026_09_24-nshm27-AMSAM-4096samples-lhs-unique_seed-11"),// DONE on frontera
+				new File(PaperPaths.INVS_DIR, "2026_09_24-nshm27-AMSAM-4096samples-lhs-unique_seed-12"),// DONE on frontera
+				new File(PaperPaths.INVS_DIR, "2026_09_24-nshm27-AMSAM-4096samples-lhs-unique_seed-13"),// DONE on frontera
+				new File(PaperPaths.INVS_DIR, "2026_09_24-nshm27-AMSAM-4096samples-lhs-unique_seed-14"),// DONE on frontera
+				new File(PaperPaths.INVS_DIR, "2026_09_24-nshm27-AMSAM-4096samples-lhs-unique_seed-15")	// DONE on frontera
 				));
 		runDirs.put(SamplingMethod.LATIN_HYPERCUBE, 8192, List.of(
 				new File(PaperPaths.INVS_DIR, "2026_09_22-nshm27-AMSAM-8192samples-lhs"),				// DONE on frontera
@@ -170,7 +178,15 @@ public class HazardConvergenceCalcs {
 				new File(PaperPaths.INVS_DIR, "2026_09_22-nshm27-AMSAM-8192samples-lhs-unique_seed-4"),	// DONE on frontera
 				new File(PaperPaths.INVS_DIR, "2026_09_22-nshm27-AMSAM-8192samples-lhs-unique_seed-5"),	// DONE on frontera
 				new File(PaperPaths.INVS_DIR, "2026_09_22-nshm27-AMSAM-8192samples-lhs-unique_seed-6"),	// DONE on frontera
-				new File(PaperPaths.INVS_DIR, "2026_09_22-nshm27-AMSAM-8192samples-lhs-unique_seed-7")	// DONE on frontera
+				new File(PaperPaths.INVS_DIR, "2026_09_22-nshm27-AMSAM-8192samples-lhs-unique_seed-7"),	// DONE on frontera
+				new File(PaperPaths.INVS_DIR, "2026_09_24-nshm27-AMSAM-8192samples-lhs-unique_seed-8"),	// DONE on frontera
+				new File(PaperPaths.INVS_DIR, "2026_09_24-nshm27-AMSAM-8192samples-lhs-unique_seed-9"),	// DONE on frontera
+				new File(PaperPaths.INVS_DIR, "2026_09_24-nshm27-AMSAM-8192samples-lhs-unique_seed-10"),// DONE on frontera
+				new File(PaperPaths.INVS_DIR, "2026_09_24-nshm27-AMSAM-8192samples-lhs-unique_seed-11"),// DONE on frontera
+				new File(PaperPaths.INVS_DIR, "2026_09_24-nshm27-AMSAM-8192samples-lhs-unique_seed-12"),// DONE on frontera
+				new File(PaperPaths.INVS_DIR, "2026_09_24-nshm27-AMSAM-8192samples-lhs-unique_seed-13"),// DONE on frontera
+				new File(PaperPaths.INVS_DIR, "2026_09_24-nshm27-AMSAM-8192samples-lhs-unique_seed-14"),// DONE on frontera
+				new File(PaperPaths.INVS_DIR, "2026_09_24-nshm27-AMSAM-8192samples-lhs-unique_seed-15")	// DONE on frontera
 				));
 		
 		/*
@@ -192,7 +208,23 @@ public class HazardConvergenceCalcs {
 				new File(PaperPaths.INVS_DIR, "2026_09_21-nshm27-AMSAM-4096samples-lhs_pairwise-unique_seed-12"),	// DONE on frontera
 				new File(PaperPaths.INVS_DIR, "2026_09_21-nshm27-AMSAM-4096samples-lhs_pairwise-unique_seed-13"),	// DONE on frontera
 				new File(PaperPaths.INVS_DIR, "2026_09_21-nshm27-AMSAM-4096samples-lhs_pairwise-unique_seed-14"),	// DONE on frontera
-				new File(PaperPaths.INVS_DIR, "2026_09_21-nshm27-AMSAM-4096samples-lhs_pairwise-unique_seed-15")	// DONE on frontera
+				new File(PaperPaths.INVS_DIR, "2026_09_21-nshm27-AMSAM-4096samples-lhs_pairwise-unique_seed-15"),	// DONE on frontera
+				new File(PaperPaths.INVS_DIR, "2026_09_24-nshm27-AMSAM-4096samples-lhs_pairwise-unique_seed-16"),	// DONE on frontera
+				new File(PaperPaths.INVS_DIR, "2026_09_24-nshm27-AMSAM-4096samples-lhs_pairwise-unique_seed-17"),	// DONE on frontera
+				new File(PaperPaths.INVS_DIR, "2026_09_24-nshm27-AMSAM-4096samples-lhs_pairwise-unique_seed-18"),	// DONE on frontera
+				new File(PaperPaths.INVS_DIR, "2026_09_24-nshm27-AMSAM-4096samples-lhs_pairwise-unique_seed-19"),	// DONE on frontera
+				new File(PaperPaths.INVS_DIR, "2026_09_24-nshm27-AMSAM-4096samples-lhs_pairwise-unique_seed-20"),	// DONE on frontera
+				new File(PaperPaths.INVS_DIR, "2026_09_24-nshm27-AMSAM-4096samples-lhs_pairwise-unique_seed-21"),	// DONE on frontera
+				new File(PaperPaths.INVS_DIR, "2026_09_24-nshm27-AMSAM-4096samples-lhs_pairwise-unique_seed-22"),	// DONE on frontera
+				new File(PaperPaths.INVS_DIR, "2026_09_24-nshm27-AMSAM-4096samples-lhs_pairwise-unique_seed-23"),	// DONE on frontera
+				new File(PaperPaths.INVS_DIR, "2026_09_24-nshm27-AMSAM-4096samples-lhs_pairwise-unique_seed-24"),	// DONE on frontera
+				new File(PaperPaths.INVS_DIR, "2026_09_24-nshm27-AMSAM-4096samples-lhs_pairwise-unique_seed-25"),	// DONE on frontera
+				new File(PaperPaths.INVS_DIR, "2026_09_24-nshm27-AMSAM-4096samples-lhs_pairwise-unique_seed-26"),	// DONE on frontera
+				new File(PaperPaths.INVS_DIR, "2026_09_24-nshm27-AMSAM-4096samples-lhs_pairwise-unique_seed-27"),	// DONE on frontera
+				new File(PaperPaths.INVS_DIR, "2026_09_24-nshm27-AMSAM-4096samples-lhs_pairwise-unique_seed-28"),	// DONE on frontera
+				new File(PaperPaths.INVS_DIR, "2026_09_24-nshm27-AMSAM-4096samples-lhs_pairwise-unique_seed-29"),	// DONE on frontera
+				new File(PaperPaths.INVS_DIR, "2026_09_24-nshm27-AMSAM-4096samples-lhs_pairwise-unique_seed-30"),	// DONE on frontera
+				new File(PaperPaths.INVS_DIR, "2026_09_24-nshm27-AMSAM-4096samples-lhs_pairwise-unique_seed-31")	// DONE on frontera
 				));
 		runDirs.put(SamplingMethod.PAIRWISE_OPTIMIZED_LATIN_HYPERCUBE, 8192, List.of(
 				new File(PaperPaths.INVS_DIR, "2026_09_21-nshm27-AMSAM-8192samples-lhs_pairwise"),					// DONE on frontera
@@ -210,7 +242,23 @@ public class HazardConvergenceCalcs {
 				new File(PaperPaths.INVS_DIR, "2026_09_21-nshm27-AMSAM-8192samples-lhs_pairwise-unique_seed-12"),	// DONE on frontera
 				new File(PaperPaths.INVS_DIR, "2026_09_21-nshm27-AMSAM-8192samples-lhs_pairwise-unique_seed-13"),	// DONE on frontera
 				new File(PaperPaths.INVS_DIR, "2026_09_21-nshm27-AMSAM-8192samples-lhs_pairwise-unique_seed-14"),	// DONE on frontera
-				new File(PaperPaths.INVS_DIR, "2026_09_21-nshm27-AMSAM-8192samples-lhs_pairwise-unique_seed-15")	// DONE on frontera
+				new File(PaperPaths.INVS_DIR, "2026_09_21-nshm27-AMSAM-8192samples-lhs_pairwise-unique_seed-15"),	// DONE on frontera
+				new File(PaperPaths.INVS_DIR, "2026_09_24-nshm27-AMSAM-8192samples-lhs_pairwise-unique_seed-16"),	// DONE on frontera
+				new File(PaperPaths.INVS_DIR, "2026_09_24-nshm27-AMSAM-8192samples-lhs_pairwise-unique_seed-17"),	// DONE on frontera
+				new File(PaperPaths.INVS_DIR, "2026_09_24-nshm27-AMSAM-8192samples-lhs_pairwise-unique_seed-18"),	// DONE on frontera
+				new File(PaperPaths.INVS_DIR, "2026_09_24-nshm27-AMSAM-8192samples-lhs_pairwise-unique_seed-19"),	// DONE on frontera
+				new File(PaperPaths.INVS_DIR, "2026_09_24-nshm27-AMSAM-8192samples-lhs_pairwise-unique_seed-20"),	// DONE on frontera
+				new File(PaperPaths.INVS_DIR, "2026_09_24-nshm27-AMSAM-8192samples-lhs_pairwise-unique_seed-21"),	// DONE on frontera
+				new File(PaperPaths.INVS_DIR, "2026_09_24-nshm27-AMSAM-8192samples-lhs_pairwise-unique_seed-22"),	// DONE on frontera
+				new File(PaperPaths.INVS_DIR, "2026_09_24-nshm27-AMSAM-8192samples-lhs_pairwise-unique_seed-23"),	// DONE on frontera
+				new File(PaperPaths.INVS_DIR, "2026_09_24-nshm27-AMSAM-8192samples-lhs_pairwise-unique_seed-24"),	// DONE on frontera
+				new File(PaperPaths.INVS_DIR, "2026_09_24-nshm27-AMSAM-8192samples-lhs_pairwise-unique_seed-25"),	// DONE on frontera
+				new File(PaperPaths.INVS_DIR, "2026_09_24-nshm27-AMSAM-8192samples-lhs_pairwise-unique_seed-26"),	// DONE on frontera
+				new File(PaperPaths.INVS_DIR, "2026_09_24-nshm27-AMSAM-8192samples-lhs_pairwise-unique_seed-27"),	// DONE on frontera
+				new File(PaperPaths.INVS_DIR, "2026_09_24-nshm27-AMSAM-8192samples-lhs_pairwise-unique_seed-28"),	// DONE on frontera
+				new File(PaperPaths.INVS_DIR, "2026_09_24-nshm27-AMSAM-8192samples-lhs_pairwise-unique_seed-29"),	// DONE on frontera
+				new File(PaperPaths.INVS_DIR, "2026_09_24-nshm27-AMSAM-8192samples-lhs_pairwise-unique_seed-30"),	// DONE on frontera
+				new File(PaperPaths.INVS_DIR, "2026_09_24-nshm27-AMSAM-8192samples-lhs_pairwise-unique_seed-31")	// DONE on frontera
 				));
 	}
 
