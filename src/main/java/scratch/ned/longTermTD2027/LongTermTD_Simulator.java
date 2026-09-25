@@ -21,6 +21,7 @@ import org.apache.commons.math3.stat.correlation.PearsonsCorrelation;
 import org.apache.commons.math3.stat.descriptive.DescriptiveStatistics;
 import org.jfree.data.Range;
 import org.opensha.commons.calc.FaultMomentCalc;
+import org.opensha.commons.data.TimeSpan.DurationUnits;
 import org.opensha.commons.data.function.ArbDiscrEmpiricalDistFunc_3D;
 import org.opensha.commons.data.function.DefaultXY_DataSet;
 import org.opensha.commons.data.function.EvenlyDiscretizedFunc;
@@ -76,7 +77,7 @@ import scratch.ned.nshm23.PoissonRateFromNinT_Calc;
 
 public class LongTermTD_Simulator {
 	
-	final static double MILLISEC_PER_YEAR = TimeDepUtils.MILLISEC_PER_YEAR;
+	final static double MILLISEC_PER_YEAR = DurationUnits.YEARS.toMillis(1d);
 
 	
 	/**
@@ -948,7 +949,7 @@ public class LongTermTD_Simulator {
 				if(dateOfLastForSect[i] != Long.MIN_VALUE) {
 					long timeSince = currentTimeMillis-dateOfLastForSect[i];	// ti
 					if(timeSince < 0) {
-						if(timeSince > -TimeDepUtils.MILLISEC_PER_YEAR) {
+						if(timeSince > -MILLISEC_PER_YEAR) {
 							System.out.println("Converting slightly negative time since last ("+timeSince+") to zero");
 							timeSince=0;
 						}

@@ -16,6 +16,7 @@ import org.apache.commons.math3.analysis.solvers.BisectionSolver;
 import org.apache.commons.math3.stat.descriptive.DescriptiveStatistics;
 import org.jfree.data.Range;
 import org.opensha.commons.data.WeightedList;
+import org.opensha.commons.data.TimeSpan.DurationUnits;
 import org.opensha.commons.data.function.ArbDiscrEmpiricalDistFunc;
 import org.opensha.commons.data.function.DiscretizedFunc;
 import org.opensha.commons.data.function.HistogramFunction;
@@ -771,7 +772,7 @@ public class LongTermTD_2027_Analyses {
 		FaultSystemRupSet fltSysRupSet = erf.getSolution().getRupSet();
 		long origStartTimeMillis = erf.getTimeSpan().getStartTimeInMillis();
 		for(int s=0; s<fltSysRupSet.getNumSections();s++) {
-			long doleMillis = origStartTimeMillis-(long)(fractRI*(1.0/longTermPartRateForSectArray[s])*TimeDepUtils.MILLISEC_PER_YEAR);
+			long doleMillis = origStartTimeMillis-(long)DurationUnits.YEARS.toMillis(fractRI*(1.0/longTermPartRateForSectArray[s]));
 			fltSysRupSet.getFaultSectionData(s).setDateOfLastEvent(doleMillis);
 			probModel.setSectDOLE(s, doleMillis);
 		}
