@@ -48,6 +48,11 @@ public class HazardMapPlots {
 	public static void main(String[] args) throws IOException {
 		File convergenceDir = new File(PaperPaths.FIGURES_DIR, "hazard_convergence");
 		int[] sizes = { 512, 1024, 2048, 4096, 8192, 16384 };
+		try {
+			Thread.sleep(1000*60*60*2);
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		}
 		plotPeriod(new File(convergenceDir, "pga_two_in_50"), 0d, "PGA, "+RP.label, sizes);
 		plotPeriod(new File(convergenceDir, "1s_sa_two_in_50"), 1d, "1s SA, "+RP.label, sizes);
 	}
@@ -82,6 +87,19 @@ public class HazardMapPlots {
 
 		PooledHazardData mcsPool = loadPool(periodDir, "pooled_mcs", mcsPoolDirs, gridReg, period);
 		PooledHazardData sobolPool = loadPool(periodDir, "pooled_sobol", sobolPoolDirs, gridReg, period);
+		Map<Integer, PooledHazardData> exactSobolPools = new TreeMap<>();
+		for (int sampleCount : HazardConvergenceCalcs.SOBOL_POOL_OUTPUT_SIZES) {
+			List<File> exactSizeDirs = HazardConvergenceCalcs.runDirs.get(
+					SamplingMethod.OWEN_SCRAMBLED_SOBOL, sampleCount);
+			if (exactSizeDirs == null || exactSizeDirs.isEmpty())
+				continue;
+			PooledHazardData pool = HazardConvergenceCalcs.FIXED_SOBOL_CONSENSUS_SIZE != null
+					&& sampleCount == HazardConvergenceCalcs.FIXED_SOBOL_CONSENSUS_SIZE
+					&& exactSizeDirs.equals(sobolPoolDirs) ? sobolPool
+							: loadPool(periodDir, HazardConvergenceCalcs.sobolPoolDirName(sampleCount),
+									exactSizeDirs, gridReg, period);
+			exactSobolPools.put(sampleCount, pool);
+		}
 		List<File> poLHSPoolDirs = largestRuns(HazardConvergenceCalcs.runDirs.row(
 				SamplingMethod.PAIRWISE_OPTIMIZED_LATIN_HYPERCUBE));
 		PooledHazardData poLHSPool = poLHSPoolDirs.isEmpty() ? null
@@ -91,6 +109,12 @@ public class HazardMapPlots {
 		plotMeanHazard(gridReg, mcsPool.data(), perLabel, mapDir, "pooled_mcs");
 		plotComparisons(gridReg, sobolPool.data(), mcsPool.data(), perLabel, mapDir, "pooled_sobol_vs_mcs",
 				"Pooled Sobol' ("+nStr(sobolPool.data)+") vs MCS ("+nStr(mcsPool.data)+")");
+		PooledHazardData sobol8192 = exactSobolPools.get(8192);
+		PooledHazardData sobol16384 = exactSobolPools.get(16384);
+		if (sobol8192 != null && sobol16384 != null)
+			plotComparisons(gridReg, sobol16384.data(), sobol8192.data(), perLabel, mapDir,
+					"pooled_sobol_16384_vs_8192", "Pooled 16,384-sample Sobol' ("+nStr(sobol16384.data)
+					+") vs 8,192-sample Sobol' ("+nStr(sobol8192.data)+")");
 		if (poLHSPool != null) {
 			plotMeanHazard(gridReg, poLHSPool.data(), perLabel, mapDir, "pooled_po_lhs");
 			plotComparisons(gridReg, poLHSPool.data(), mcsPool.data(), perLabel, mapDir,

@@ -13,6 +13,7 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Random;
 import java.util.stream.IntStream;
 
 import org.apache.commons.math3.stat.StatUtils;
@@ -43,6 +44,8 @@ public class HazardConvergencePlots {
 
 	private static final Range Y_RANGE = new Range(5e-3, 2e1);
 	private static final Range SIGNED_Y_RANGE = new Range(-1d, 1d);
+	private static final double[] CONVERGENCE_REFERENCE_ERRORS = {0.1d, 1d, 10d};
+//	private static final double[] CONVERGENCE_REFERENCE_ERRORS = {0.01, 0.1d, 1d, 10d, 100};
 	private static final String SOBOL_REFERENCE = HazardConvergenceCalcs.LOO_SOBOL_REFERENCE_NAME;
 	private static final String POOLED_SOBOL_REFERENCE = HazardConvergenceCalcs.POOLED_SOBOL_REFERENCE_NAME;
 	private static final String MCS_REFERENCE = HazardConvergenceCalcs.MCS_REFERENCE_NAME;
@@ -96,8 +99,8 @@ public class HazardConvergencePlots {
 	}
 
 	static void plotPeriod(File outputDir, String periodName) throws IOException {
-		List<ReferenceSummary> references = loadReferenceSummaries(
-				new File(outputDir, "reference_comparisons.csv"));
+		File referenceFile = new File(outputDir, "reference_comparisons.csv");
+		List<ReferenceSummary> references = loadReferenceSummaries(referenceFile);
 		List<RealizationPairSummary> realizationPairs = loadRealizationPairSummaries(
 				new File(outputDir, "realization_pair_comparisons.csv"));
 
@@ -118,6 +121,154 @@ public class HazardConvergencePlots {
 		}
 		plotRealizationPairs(outputDir, realizationPairs, ConvergenceSummary.MEAN_ABSOLUTE,
 				"Absolute difference (%)");
+		plotMeanHazardDoublingImprovement(outputDir, loadReferenceValues(referenceFile));
+	}
+
+	/**
+	 * Plots the reduction in spatially averaged mean-hazard error when the sample count is doubled. Sobol' values use
+	 * nested prefixes from the same scramble. MCS values pair each disjoint span with the twice-as-long span having the
+	 * same starting index. This keeps realization-to-realization variation out of each improvement ratio.
+	 */
+	private static void plotMeanHazardDoublingImprovement(File outputDir, List<ReferenceValue> rows)
+			throws IOException {
+		int maxSobolRunSize = rows.stream()
+				.filter(row -> row.method() == SOBOL && row.reference().equals(MCS_REFERENCE))
+				.mapToInt(ReferenceValue::maximumRunSize).max().orElse(0);
+		List<PairedImprovement> improvements = new ArrayList<>();
+
+		// Use only the longest Sobol' runs so every doubling is drawn from a consistent collection of scrambles.
+		Map<String, Map<Integer, ReferenceValue>> sobolByRun = new LinkedHashMap<>();
+		for (ReferenceValue row : rows) {
+			if (row.method() == SOBOL && row.maximumRunSize() == maxSobolRunSize
+					&& row.reference().equals(MCS_REFERENCE) && row.metric() == ConvergenceMetric.MEAN_HAZARD)
+				sobolByRun.computeIfAbsent(row.run(), unused -> new HashMap<>()).put(row.sampleCount(), row);
+		}
+		Map<Integer, List<Double>> sobolRatios = new LinkedHashMap<>();
+		for (Map<Integer, ReferenceValue> runRows : sobolByRun.values()) {
+			for (ReferenceValue lower : runRows.values()) {
+				ReferenceValue upper = runRows.get(2*lower.sampleCount());
+				if (upper != null)
+					addImprovement(sobolRatios, lower, upper);
+			}
+		}
+		addImprovementSummaries(improvements, SOBOL, sobolRatios);
+
+		// Primary MCS spans use a fixed-size leave-span-out reference with an independent reserve replacement.
+		Map<Long, ReferenceValue> mcsByStartAndCount = new HashMap<>();
+		for (ReferenceValue row : rows) {
+			if (row.method() == MCS && row.reference().equals(HazardConvergenceCalcs.REPLACED_MCS_REFERENCE_NAME)
+					&& row.metric() == ConvergenceMetric.MEAN_HAZARD)
+				mcsByStartAndCount.put(spanKey(row.startIndex(), row.sampleCount()), row);
+		}
+		Map<Integer, List<Double>> mcsRatios = new LinkedHashMap<>();
+		for (ReferenceValue lower : mcsByStartAndCount.values()) {
+			// Match the first N-point half to its containing 2N-point span. Restricting to aligned starts avoids
+			// counting two strongly related child spans against the same parent as independent observations.
+			if (lower.startIndex() % (2*lower.sampleCount()) != 0)
+				continue;
+			ReferenceValue upper = mcsByStartAndCount.get(spanKey(lower.startIndex(), 2*lower.sampleCount()));
+			if (upper != null)
+				addImprovement(mcsRatios, lower, upper);
+		}
+		addImprovementSummaries(improvements, MCS, mcsRatios);
+
+		int[] lowerCounts = improvements.stream().mapToInt(PairedImprovement::lowerCount).distinct().sorted().toArray();
+		if (lowerCounts.length == 0)
+			return;
+		System.out.println("Building plot: paired mean-hazard doubling improvement");
+		List<XY_DataSet> funcs = new ArrayList<>();
+		List<PlotCurveCharacterstics> chars = new ArrayList<>();
+
+		ArbitrarilyDiscretizedFunc noImprovement = horizontalLine(lowerCounts.length, 1d);
+		funcs.add(noImprovement);
+		chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 0.75f, Color.GRAY));
+		addRateReference(funcs, chars, lowerCounts.length, Math.sqrt(2d), "N^-1/2 (1.41x)", PlotLineType.DASHED);
+		addRateReference(funcs, chars, lowerCounts.length, 2d, "N^-1 (2x)", PlotLineType.DOTTED);
+		addRateReference(funcs, chars, lowerCounts.length, Math.pow(2d, 1.5d), "N^-3/2 (2.83x)",
+				PlotLineType.DOTTED_AND_DASHED);
+
+		for (SamplingMethod method : new SamplingMethod[] { MCS, SOBOL }) {
+			Color color = method == MCS ? Colors.tab_red : Colors.tab_blue;
+			PlotSymbol symbol = method == MCS ? PlotSymbol.FILLED_CIRCLE : PlotSymbol.FILLED_SQUARE;
+			ArbitrarilyDiscretizedFunc median = new ArbitrarilyDiscretizedFunc();
+			ArbitrarilyDiscretizedFunc lower = new ArbitrarilyDiscretizedFunc();
+			ArbitrarilyDiscretizedFunc upper = new ArbitrarilyDiscretizedFunc();
+			for (int i=0; i<lowerCounts.length; i++) {
+				int count = lowerCounts[i];
+				PairedImprovement summary = improvements.stream()
+						.filter(candidate -> candidate.method() == method && candidate.lowerCount() == count)
+						.findFirst().orElse(null);
+				if (summary == null)
+					continue;
+				median.set((double)i, summary.median());
+				double factor = Double.isFinite(summary.logStandardDeviation())
+						? Math.exp(summary.logStandardDeviation()) : 1d;
+				lower.set((double)i, summary.median()/factor);
+				upper.set((double)i, summary.median()*factor);
+				System.out.println("\t"+getMethodName(method)+" "+count+" -> "+(2*count)+": median="
+						+(float)summary.median()+", pairs="+summary.pairs());
+			}
+			if (median.size() == 0)
+				continue;
+			UncertainArbDiscFunc uncertainty = new UncertainArbDiscFunc(median, lower, upper);
+			funcs.add(uncertainty);
+			chars.add(new PlotCurveCharacterstics(PlotLineType.SHADED_UNCERTAIN, 1f,
+					ColorUtils.transparent(color, 55)));
+			median.setName(getMethodName(method));
+			funcs.add(median);
+			chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 2f, symbol, 5f, color));
+		}
+
+		PlotSpec plot = new PlotSpec(funcs, chars, "Mean hazard convergence rate", "Initial sample count, N",
+				"Error reduction, E(N) / E(2N)");
+		plot.setLegendInset(RectangleAnchor.BOTTOM, 0.5, 0.025, 0.9, false);
+		HeadlessGraphPanel gp = PlotUtils.initPrintHeadless();
+		gp.getPlotPrefs().setPlotLabelFontSize(10);
+		gp.getPlotPrefs().setLegendFontSize(8);
+		gp.getPlotPrefs().setLegendLineLength(6d);
+		gp.getPlotPrefs().setTickLabelFontSize(8);
+		Range xRange = lowerCounts.length == 1 ? new Range(-0.5, 0.5) : new Range(-0.2d, lowerCounts.length-0.8d);
+		gp.drawGraphPanel(plot, false, false, xRange, new Range(0.5d, 4d));
+		PlotUtils.setXTick(gp, 1d);
+		((NumberAxis)gp.getXAxis()).setNumberFormatOverride(categoryFormat(
+				Arrays.stream(lowerCounts).mapToObj(Integer::toString).toArray(String[]::new)));
+		PlotUtils.writePrintPlots(outputDir, "mean_hazard_doubling_improvement", gp,
+				PlotUtils.DEFAULT_USABLE_PAGE_WIDTH/2d, 3.4d, 300, true, true, false);
+	}
+
+	private static void addImprovement(Map<Integer, List<Double>> ratios,
+			ReferenceValue lower, ReferenceValue upper) {
+		if (lower.meanAbsolutePercentChange() > 0d && upper.meanAbsolutePercentChange() > 0d)
+			ratios.computeIfAbsent(lower.sampleCount(), unused -> new ArrayList<>())
+					.add(lower.meanAbsolutePercentChange()/upper.meanAbsolutePercentChange());
+	}
+
+	private static void addImprovementSummaries(List<PairedImprovement> summaries,
+			SamplingMethod method, Map<Integer, List<Double>> ratios) {
+		for (Map.Entry<Integer, List<Double>> entry : ratios.entrySet()) {
+			double[] values = entry.getValue().stream().mapToDouble(Double::doubleValue).toArray();
+			summaries.add(new PairedImprovement(method, entry.getKey(), values.length,
+					StatUtils.percentile(values, 50d), HazardConvergenceCalcs.logStandardDeviation(values)));
+		}
+	}
+
+	private static long spanKey(int startIndex, int sampleCount) {
+		return ((long)startIndex << 32) ^ (sampleCount & 0xffffffffL);
+	}
+
+	private static ArbitrarilyDiscretizedFunc horizontalLine(int count, double y) {
+		ArbitrarilyDiscretizedFunc line = new ArbitrarilyDiscretizedFunc();
+		line.set(-0.2d, y);
+		line.set(count-0.8d, y);
+		return line;
+	}
+
+	private static void addRateReference(List<XY_DataSet> funcs, List<PlotCurveCharacterstics> chars,
+			int count, double factor, String name, PlotLineType lineType) {
+		ArbitrarilyDiscretizedFunc reference = horizontalLine(count, factor);
+		reference.setName(name);
+		funcs.add(reference);
+		chars.add(new PlotCurveCharacterstics(lineType, 1f, Color.DARK_GRAY));
 	}
 
 	private static String referenceFor(SamplingMethod method, boolean sobolPool) {
@@ -247,6 +398,31 @@ public class HazardConvergencePlots {
 		List<PlotCurveCharacterstics> maxChars = new ArrayList<>();
 		List<XY_DataSet> medianFuncs = new ArrayList<>();
 		List<PlotCurveCharacterstics> medianChars = new ArrayList<>();
+		if (primary == ConvergenceSummary.MEAN_ABSOLUTE && xLabel.equals("Sample count")) {
+			int referenceCount = counts[0];
+			for (int r=0; r<CONVERGENCE_REFERENCE_ERRORS.length; r++) {
+				double refError = CONVERGENCE_REFERENCE_ERRORS[r];
+				ArbitrarilyDiscretizedFunc reference = new ArbitrarilyDiscretizedFunc();
+				for (int i=-1; i<=counts.length; i++) {
+					double count;
+					if (i == -1)
+						count = counts[0]/2;
+					else if (i == counts.length)
+						count = counts[i-1]*2;
+					else
+						count = counts[i];
+					reference.set((double)i, refError*Math.sqrt((double)referenceCount/count));
+				}
+				if (r == 0)
+					reference.setName("N^-½");
+//					reference.setName("N^⁻½");
+//					reference.setName("ₙ⁻½");
+//					reference.setName("1/√N");
+				funcs.add(reference);
+//				chars.add(new PlotCurveCharacterstics(PlotLineType.DASHED, 1f, Color.DARK_GRAY));
+				chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 0.5f, Color.GRAY));
+			}
+		}
 		if (signed) {
 			ArbitrarilyDiscretizedFunc zero = new ArbitrarilyDiscretizedFunc();
 			zero.set(-0.3d, 0d);
@@ -268,6 +444,14 @@ public class HazardConvergencePlots {
 						.filter(candidate -> candidate.count() == count).toList());
 				if (indvMeans != null) {
 					double[] values = row.individualValues();
+					if (values.length > 3000) {
+						double[] subValues = new double[2000];
+						Random r = new Random(values.length);
+						for (int j=0; j<subValues.length; j++)
+							subValues[j] = values[r.nextInt(values.length)];
+						System.out.println("\tDownsampling "+values.length+" down to "+subValues.length);
+						values = subValues;
+					}
 					for (double value : values)
 						indvMeans.set((double)i, value);
 
@@ -367,7 +551,7 @@ public class HazardConvergencePlots {
 //		plot.setLegendInset(RectangleAnchor.TOP_RIGHT);
 //		plot.setLegendInset(RectangleAnchor.TOP);
 //		plot.setLegendInset(RectangleAnchor.TOP, 0.5, 0.975, 0.9, false);
-		plot.setLegendInset(RectangleAnchor.BOTTOM, 0.5, 0.025, 0.9, false);
+		plot.setLegendInset(RectangleAnchor.BOTTOM, 0.5, 0.025, 0.925, false);
 		HeadlessGraphPanel gp = PlotUtils.initPrintHeadless();
 		gp.getPlotPrefs().setPlotLabelFontSize(10);
 		gp.getPlotPrefs().setLegendFontSize(8);
@@ -425,6 +609,18 @@ public class HazardConvergencePlots {
 					HazardConvergenceCalcs.standardDeviation(values), StatUtils.min(values),
 					StatUtils.percentile(values, 50d), StatUtils.max(values),
 					HazardConvergenceCalcs.logStandardDeviation(values), values));
+		}
+		return rows;
+	}
+
+	private static List<ReferenceValue> loadReferenceValues(File file) throws IOException {
+		CSVFile<String> csv = CSVFile.readFile(file, true);
+		List<ReferenceValue> rows = new ArrayList<>(csv.getNumRows()-1);
+		for (int row=1; row<csv.getNumRows(); row++) {
+			rows.add(new ReferenceValue(csv.get(row, 0), SamplingMethod.valueOf(csv.get(row, 1)),
+					Integer.parseInt(csv.get(row, 3)), Integer.parseInt(csv.get(row, 4)), csv.get(row, 5),
+					ConvergenceMetric.fromLabel(csv.get(row, 7)), Double.parseDouble(csv.get(row, 9)),
+					Integer.parseInt(csv.get(row, 16)), Integer.parseInt(csv.get(row, 17))));
 		}
 		return rows;
 	}
@@ -506,6 +702,13 @@ public class HazardConvergencePlots {
 			double logStandardDeviation, double[] individualValues) implements SummaryRow {
 		@Override public int count() { return sampleCount; }
 	}
+
+	private record ReferenceValue(String run, SamplingMethod method, int maximumRunSize, int sampleCount,
+			String reference, ConvergenceMetric metric, double meanAbsolutePercentChange,
+			int startIndex, int endIndex) {}
+
+	private record PairedImprovement(SamplingMethod method, int lowerCount, int pairs,
+			double median, double logStandardDeviation) {}
 
 	private record MethodSummary(int methodIndex, ConvergenceMetric metric,
 			ConvergenceSummary spatialSummary, int realizations,

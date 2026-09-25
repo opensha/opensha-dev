@@ -25,6 +25,7 @@ import java.util.zip.ZipException;
 import java.util.zip.ZipFile;
 
 import org.apache.commons.math3.stat.StatUtils;
+import org.apache.commons.statistics.descriptive.Quantile;
 import org.opensha.commons.data.CSVFile;
 import org.opensha.commons.data.function.DiscretizedFunc;
 import org.opensha.commons.data.function.LightFixedXFunc;
@@ -47,6 +48,9 @@ import com.google.common.collect.HashBasedTable;
 import com.google.common.collect.Table;
 
 public class HazardConvergenceCalcs {
+	private static final Quantile QUANTILE = Quantile.withDefaults();
+	private static final double[] HAZARD_QUANTILE_PROBABILITIES =
+			{ 0.025, 0.16, 0.25, 0.75, 0.84, 0.975 };
 	static final String MCS_REFERENCE_NAME = "Pooled MCS";
 	static final String REPLACED_MCS_REFERENCE_NAME = "Pooled MCS, span replaced from reserve";
 	static final String POOLED_SOBOL_REFERENCE_NAME = "Pooled Sobol";
@@ -65,6 +69,8 @@ public class HazardConvergenceCalcs {
 	static final int MIN_SOBOL_PREFIX_SAMPLE_COUNT = 256;
 	/** Set to {@code null} to build the Sobol consensus from every available run size. */
 	static final Integer FIXED_SOBOL_CONSENSUS_SIZE = 16384;
+	/** Exact-size Sobol pools retained for direct comparisons between independent designs. */
+	static final List<Integer> SOBOL_POOL_OUTPUT_SIZES = List.of(8192, 16384);
 	static final File MCS_RESERVE_DIR = new File(PaperPaths.INVS_DIR,
 			"2026_09_19-nshm27-AMSAM-16384samples-mcs-unique_seed-reserve");
 
@@ -98,7 +104,7 @@ public class HazardConvergenceCalcs {
 				new File(PaperPaths.INVS_DIR, "2026_09_18-nshm27-AMSAM-20000samples-mcs-unique_seed-20"), 	// DONE on frontera
 				new File(PaperPaths.INVS_DIR, "2026_09_19-nshm27-AMSAM-20000samples-mcs-unique_seed-21"), 	// DONE on frontera
 				new File(PaperPaths.INVS_DIR, "2026_09_19-nshm27-AMSAM-20000samples-mcs-unique_seed-22"), 	// DONE on frontera
-//				new File(PaperPaths.INVS_DIR, "2026_09_19-nshm27-AMSAM-20000samples-mcs-unique_seed-23"), 	// running on frontera
+				new File(PaperPaths.INVS_DIR, "2026_09_19-nshm27-AMSAM-20000samples-mcs-unique_seed-23"), 	// DONE on frontera
 				new File(PaperPaths.INVS_DIR, "2026_09_19-nshm27-AMSAM-20000samples-mcs-unique_seed-24"), 	// DONE on frontera
 				new File(PaperPaths.INVS_DIR, "2026_09_19-nshm27-AMSAM-20000samples-mcs-unique_seed-25") 	// DONE on frontera
 				));
@@ -112,7 +118,7 @@ public class HazardConvergenceCalcs {
 				new File(PaperPaths.INVS_DIR, "2026_08_29-nshm27-AMSAM-8192samples-sobol_scrambled-unique_seed-2"),		// DONE hazard CARC
 				new File(PaperPaths.INVS_DIR, "2026_08_29-nshm27-AMSAM-8192samples-sobol_scrambled-unique_seed-3"),		// DONE hazard CARC
 				new File(PaperPaths.INVS_DIR, "2026_09_09-nshm27-AMSAM-8192samples-sobol_scrambled-unique_seed-4"),		// DONE hazard CARC
-//				new File(PaperPaths.INVS_DIR, "2026_09_09-nshm27-AMSAM-8192samples-sobol_scrambled-unique_seed-5"),		// submitted hazard CARC
+				new File(PaperPaths.INVS_DIR, "2026_09_09-nshm27-AMSAM-8192samples-sobol_scrambled-unique_seed-5"),		// DONE hazard CARC
 				new File(PaperPaths.INVS_DIR, "2026_09_16-nshm27-AMSAM-8192samples-sobol_scrambled-unique_seed-6"),		// DONE on frontera
 				new File(PaperPaths.INVS_DIR, "2026_09_16-nshm27-AMSAM-8192samples-sobol_scrambled-unique_seed-7"),		// DONE on frontera
 				new File(PaperPaths.INVS_DIR, "2026_09_20-nshm27-AMSAM-8192samples-sobol_scrambled-unique_seed-8"),		// DONE on frontera
@@ -132,60 +138,85 @@ public class HazardConvergenceCalcs {
 				new File(PaperPaths.INVS_DIR, "2026_09_18-nshm27-AMSAM-16384samples-sobol_scrambled-unique_seed-3"),	// DONE on frontera
 				new File(PaperPaths.INVS_DIR, "2026_09_18-nshm27-AMSAM-16384samples-sobol_scrambled-unique_seed-4"),	// DONE on frontera
 				new File(PaperPaths.INVS_DIR, "2026_09_18-nshm27-AMSAM-16384samples-sobol_scrambled-unique_seed-5"),	// DONE on frontera
-				new File(PaperPaths.INVS_DIR, "2026_09_18-nshm27-AMSAM-16384samples-sobol_scrambled-unique_seed-6") 	// DONE on frontera
-//				new File(PaperPaths.INVS_DIR, "2026_09_20-nshm27-AMSAM-16384samples-sobol_scrambled-unique_seed-8"),	// running on frontera
-//				new File(PaperPaths.INVS_DIR, "2026_09_20-nshm27-AMSAM-16384samples-sobol_scrambled-unique_seed-9"),	// running on frontera
-//				new File(PaperPaths.INVS_DIR, "2026_09_20-nshm27-AMSAM-16384samples-sobol_scrambled-unique_seed-10"),	// running on frontera
-//				new File(PaperPaths.INVS_DIR, "2026_09_20-nshm27-AMSAM-16384samples-sobol_scrambled-unique_seed-11"),	// running on frontera
-//				new File(PaperPaths.INVS_DIR, "2026_09_20-nshm27-AMSAM-16384samples-sobol_scrambled-unique_seed-12"),	// running on frontera
-//				new File(PaperPaths.INVS_DIR, "2026_09_20-nshm27-AMSAM-16384samples-sobol_scrambled-unique_seed-13"),	// running on frontera
-//				new File(PaperPaths.INVS_DIR, "2026_09_20-nshm27-AMSAM-16384samples-sobol_scrambled-unique_seed-14"),	// running on frontera
-//				new File(PaperPaths.INVS_DIR, "2026_09_20-nshm27-AMSAM-16384samples-sobol_scrambled-unique_seed-15")	// running on frontera
+				new File(PaperPaths.INVS_DIR, "2026_09_18-nshm27-AMSAM-16384samples-sobol_scrambled-unique_seed-6"), 	// DONE on frontera
+				new File(PaperPaths.INVS_DIR, "2026_09_20-nshm27-AMSAM-16384samples-sobol_scrambled-unique_seed-7"),	// DONE on frontera
+				new File(PaperPaths.INVS_DIR, "2026_09_20-nshm27-AMSAM-16384samples-sobol_scrambled-unique_seed-8"),	// DONE on frontera
+				new File(PaperPaths.INVS_DIR, "2026_09_20-nshm27-AMSAM-16384samples-sobol_scrambled-unique_seed-9"),	// DONE on frontera
+				new File(PaperPaths.INVS_DIR, "2026_09_20-nshm27-AMSAM-16384samples-sobol_scrambled-unique_seed-10"),	// DONE on frontera
+				new File(PaperPaths.INVS_DIR, "2026_09_20-nshm27-AMSAM-16384samples-sobol_scrambled-unique_seed-11"),	// DONE on frontera
+				new File(PaperPaths.INVS_DIR, "2026_09_20-nshm27-AMSAM-16384samples-sobol_scrambled-unique_seed-12"),	// DONE on frontera
+				new File(PaperPaths.INVS_DIR, "2026_09_20-nshm27-AMSAM-16384samples-sobol_scrambled-unique_seed-13"),	// DONE on frontera
+				new File(PaperPaths.INVS_DIR, "2026_09_20-nshm27-AMSAM-16384samples-sobol_scrambled-unique_seed-14")	// DONE on frontera
 				));
 		
 		/*
 		 * LHS runs
-		 * TODO add more 4096? do 8192?
 		 */
-//		runDirs.put(SamplingMethod.LATIN_HYPERCUBE, 4096, List.of(
-//				new File(PaperPaths.INVS_DIR, "2026_09_08-nshm27-AMSAM-4096samples-lhs"),				// submitted hazard CARC
-//				new File(PaperPaths.INVS_DIR, "2026_09_08-nshm27-AMSAM-4096samples-lhs-unique_seed"),	// submitted hazard CARC
-//				new File(PaperPaths.INVS_DIR, "2026_09_08-nshm27-AMSAM-4096samples-lhs-unique_seed-2"),	// submitted hazard CARC
-//				new File(PaperPaths.INVS_DIR, "2026_09_08-nshm27-AMSAM-4096samples-lhs-unique_seed-3")	// submitted hazard CARC
-//				// TODO: configure/run 4 more
-//				));
-//		runDirs.put(SamplingMethod.LATIN_HYPERCUBE, 8192, List.of(
-//				// TODO: configure/run 8
-//				));
+		runDirs.put(SamplingMethod.LATIN_HYPERCUBE, 4096, List.of(
+				new File(PaperPaths.INVS_DIR, "2026_09_08-nshm27-AMSAM-4096samples-lhs"),				// DONE hazard CARC
+				new File(PaperPaths.INVS_DIR, "2026_09_08-nshm27-AMSAM-4096samples-lhs-unique_seed"),	// DONE hazard CARC
+				new File(PaperPaths.INVS_DIR, "2026_09_08-nshm27-AMSAM-4096samples-lhs-unique_seed-2"),	// DONE hazard CARC
+				new File(PaperPaths.INVS_DIR, "2026_09_08-nshm27-AMSAM-4096samples-lhs-unique_seed-3"),	// DONE hazard CARC
+				new File(PaperPaths.INVS_DIR, "2026_09_22-nshm27-AMSAM-4096samples-lhs-unique_seed-4"),	// DONE on CARC
+				new File(PaperPaths.INVS_DIR, "2026_09_22-nshm27-AMSAM-4096samples-lhs-unique_seed-5"),	// DONE on CARC
+				new File(PaperPaths.INVS_DIR, "2026_09_22-nshm27-AMSAM-4096samples-lhs-unique_seed-6"),	// running on CARC
+				new File(PaperPaths.INVS_DIR, "2026_09_22-nshm27-AMSAM-4096samples-lhs-unique_seed-7")	// running on CARC
+				));
+		runDirs.put(SamplingMethod.LATIN_HYPERCUBE, 8192, List.of(
+				new File(PaperPaths.INVS_DIR, "2026_09_22-nshm27-AMSAM-8192samples-lhs"),				// DONE on frontera
+				new File(PaperPaths.INVS_DIR, "2026_09_22-nshm27-AMSAM-8192samples-lhs-unique_seed"),	// DONE on frontera
+				new File(PaperPaths.INVS_DIR, "2026_09_22-nshm27-AMSAM-8192samples-lhs-unique_seed-2"),	// DONE on frontera
+				new File(PaperPaths.INVS_DIR, "2026_09_22-nshm27-AMSAM-8192samples-lhs-unique_seed-3"),	// DONE on frontera
+				new File(PaperPaths.INVS_DIR, "2026_09_22-nshm27-AMSAM-8192samples-lhs-unique_seed-4"),	// DONE on frontera
+				new File(PaperPaths.INVS_DIR, "2026_09_22-nshm27-AMSAM-8192samples-lhs-unique_seed-5"),	// DONE on frontera
+				new File(PaperPaths.INVS_DIR, "2026_09_22-nshm27-AMSAM-8192samples-lhs-unique_seed-6"),	// DONE on frontera
+				new File(PaperPaths.INVS_DIR, "2026_09_22-nshm27-AMSAM-8192samples-lhs-unique_seed-7")	// DONE on frontera
+				));
 		
 		/*
 		 * Pairwise-LHS runs
 		 */
 		runDirs.put(SamplingMethod.PAIRWISE_OPTIMIZED_LATIN_HYPERCUBE, 4096, List.of(
-//				new File(PaperPaths.INVS_DIR, "2026_08_28-nshm27-AMSAM-4096samples-lhs_pairwise"),					// submitted hazard CARC
-//				new File(PaperPaths.INVS_DIR, "2026_08_28-nshm27-AMSAM-4096samples-lhs_pairwise-unique_seed"),		// submitted hazard CARC
-//				new File(PaperPaths.INVS_DIR, "2026_08_29-nshm27-AMSAM-4096samples-lhs_pairwise-unique_seed-2"),	// submitted hazard CARC
-//				new File(PaperPaths.INVS_DIR, "2026_08_29-nshm27-AMSAM-4096samples-lhs_pairwise-unique_seed-3"),	// submitted hazard CARC
-//				new File(PaperPaths.INVS_DIR, "2026_09_10-nshm27-AMSAM-4096samples-lhs_pairwise-unique_seed-4"),	// submitted hazard CARC
-//				new File(PaperPaths.INVS_DIR, "2026_09_10-nshm27-AMSAM-4096samples-lhs_pairwise-unique_seed-5"),	// submitted hazard CARC
-				new File(PaperPaths.INVS_DIR, "2026_09_16-nshm27-AMSAM-4096samples-lhs_pairwise-unique_seed-6"),	// DONE on CARC
-				new File(PaperPaths.INVS_DIR, "2026_09_16-nshm27-AMSAM-4096samples-lhs_pairwise-unique_seed-7")		// DONE on CARC
+				new File(PaperPaths.INVS_DIR, "2026_09_21-nshm27-AMSAM-4096samples-lhs_pairwise"),					// DONE on frontera
+				new File(PaperPaths.INVS_DIR, "2026_09_21-nshm27-AMSAM-4096samples-lhs_pairwise-unique_seed"),		// DONE on frontera
+				new File(PaperPaths.INVS_DIR, "2026_09_21-nshm27-AMSAM-4096samples-lhs_pairwise-unique_seed-2"),	// DONE on frontera
+				new File(PaperPaths.INVS_DIR, "2026_09_21-nshm27-AMSAM-4096samples-lhs_pairwise-unique_seed-3"),	// DONE on frontera
+				new File(PaperPaths.INVS_DIR, "2026_09_21-nshm27-AMSAM-4096samples-lhs_pairwise-unique_seed-4"),	// DONE on frontera
+				new File(PaperPaths.INVS_DIR, "2026_09_21-nshm27-AMSAM-4096samples-lhs_pairwise-unique_seed-5"),	// DONE on frontera
+				new File(PaperPaths.INVS_DIR, "2026_09_21-nshm27-AMSAM-4096samples-lhs_pairwise-unique_seed-6"),	// DONE on frontera
+				new File(PaperPaths.INVS_DIR, "2026_09_21-nshm27-AMSAM-4096samples-lhs_pairwise-unique_seed-7"),	// DONE on frontera
+				new File(PaperPaths.INVS_DIR, "2026_09_21-nshm27-AMSAM-4096samples-lhs_pairwise-unique_seed-8"),	// DONE on frontera
+				new File(PaperPaths.INVS_DIR, "2026_09_21-nshm27-AMSAM-4096samples-lhs_pairwise-unique_seed-9"),	// DONE on frontera
+				new File(PaperPaths.INVS_DIR, "2026_09_21-nshm27-AMSAM-4096samples-lhs_pairwise-unique_seed-10"),	// DONE on frontera
+				new File(PaperPaths.INVS_DIR, "2026_09_21-nshm27-AMSAM-4096samples-lhs_pairwise-unique_seed-11"),	// DONE on frontera
+				new File(PaperPaths.INVS_DIR, "2026_09_21-nshm27-AMSAM-4096samples-lhs_pairwise-unique_seed-12"),	// DONE on frontera
+				new File(PaperPaths.INVS_DIR, "2026_09_21-nshm27-AMSAM-4096samples-lhs_pairwise-unique_seed-13"),	// DONE on frontera
+				new File(PaperPaths.INVS_DIR, "2026_09_21-nshm27-AMSAM-4096samples-lhs_pairwise-unique_seed-14"),	// DONE on frontera
+				new File(PaperPaths.INVS_DIR, "2026_09_21-nshm27-AMSAM-4096samples-lhs_pairwise-unique_seed-15")	// DONE on frontera
 				));
 		runDirs.put(SamplingMethod.PAIRWISE_OPTIMIZED_LATIN_HYPERCUBE, 8192, List.of(
-				new File(PaperPaths.INVS_DIR, "2026_09_16-nshm27-AMSAM-8192samples-lhs_pairwise"), 					// DONE on frontera
-				new File(PaperPaths.INVS_DIR, "2026_09_16-nshm27-AMSAM-8192samples-lhs_pairwise-unique_seed"), 		// DONE on frontera
-				new File(PaperPaths.INVS_DIR, "2026_09_16-nshm27-AMSAM-8192samples-lhs_pairwise-unique_seed-2"), 	// DONE on frontera
-				new File(PaperPaths.INVS_DIR, "2026_09_16-nshm27-AMSAM-8192samples-lhs_pairwise-unique_seed-3"), 	// DONE on frontera
-				new File(PaperPaths.INVS_DIR, "2026_09_16-nshm27-AMSAM-8192samples-lhs_pairwise-unique_seed-4"), 	// DONE on frontera
-				new File(PaperPaths.INVS_DIR, "2026_09_16-nshm27-AMSAM-8192samples-lhs_pairwise-unique_seed-5"), 	// DONE on frontera
-				new File(PaperPaths.INVS_DIR, "2026_09_16-nshm27-AMSAM-8192samples-lhs_pairwise-unique_seed-6"), 	// DONE on frontera
-				new File(PaperPaths.INVS_DIR, "2026_09_16-nshm27-AMSAM-8192samples-lhs_pairwise-unique_seed-7") 	// DONE on frontera
+				new File(PaperPaths.INVS_DIR, "2026_09_21-nshm27-AMSAM-8192samples-lhs_pairwise"),					// DONE on frontera
+				new File(PaperPaths.INVS_DIR, "2026_09_21-nshm27-AMSAM-8192samples-lhs_pairwise-unique_seed"),		// DONE on frontera
+				new File(PaperPaths.INVS_DIR, "2026_09_21-nshm27-AMSAM-8192samples-lhs_pairwise-unique_seed-2"),	// DONE on frontera
+				new File(PaperPaths.INVS_DIR, "2026_09_21-nshm27-AMSAM-8192samples-lhs_pairwise-unique_seed-3"),	// DONE on frontera
+				new File(PaperPaths.INVS_DIR, "2026_09_21-nshm27-AMSAM-8192samples-lhs_pairwise-unique_seed-4"),	// DONE on frontera
+				new File(PaperPaths.INVS_DIR, "2026_09_21-nshm27-AMSAM-8192samples-lhs_pairwise-unique_seed-5"),	// DONE on frontera
+				new File(PaperPaths.INVS_DIR, "2026_09_21-nshm27-AMSAM-8192samples-lhs_pairwise-unique_seed-6"),	// DONE on frontera
+				new File(PaperPaths.INVS_DIR, "2026_09_21-nshm27-AMSAM-8192samples-lhs_pairwise-unique_seed-7"),	// DONE on frontera
+				new File(PaperPaths.INVS_DIR, "2026_09_21-nshm27-AMSAM-8192samples-lhs_pairwise-unique_seed-8"),	// DONE on frontera
+				new File(PaperPaths.INVS_DIR, "2026_09_21-nshm27-AMSAM-8192samples-lhs_pairwise-unique_seed-9"),	// DONE on frontera
+				new File(PaperPaths.INVS_DIR, "2026_09_21-nshm27-AMSAM-8192samples-lhs_pairwise-unique_seed-10"),	// DONE on frontera
+				new File(PaperPaths.INVS_DIR, "2026_09_21-nshm27-AMSAM-8192samples-lhs_pairwise-unique_seed-11"),	// DONE on frontera
+				new File(PaperPaths.INVS_DIR, "2026_09_21-nshm27-AMSAM-8192samples-lhs_pairwise-unique_seed-12"),	// DONE on frontera
+				new File(PaperPaths.INVS_DIR, "2026_09_21-nshm27-AMSAM-8192samples-lhs_pairwise-unique_seed-13"),	// DONE on frontera
+				new File(PaperPaths.INVS_DIR, "2026_09_21-nshm27-AMSAM-8192samples-lhs_pairwise-unique_seed-14"),	// DONE on frontera
+				new File(PaperPaths.INVS_DIR, "2026_09_21-nshm27-AMSAM-8192samples-lhs_pairwise-unique_seed-15")	// DONE on frontera
 				));
 	}
 
 	public static void main(String[] args) throws IOException {
-		if (Runtime.getRuntime().availableProcessors() > 32)
-			System.setProperty("java.util.concurrent.ForkJoinPool.common.parallelism", "32");
+//		if (Runtime.getRuntime().availableProcessors() > 32)
+//			System.setProperty("java.util.concurrent.ForkJoinPool.common.parallelism", "16");
 		
 		Preconditions.checkState(MIN_SOBOL_PREFIX_SAMPLE_COUNT > 0
 				&& Integer.bitCount(MIN_SOBOL_PREFIX_SAMPLE_COUNT) == 1,
@@ -305,6 +336,18 @@ public class HazardConvergenceCalcs {
 
 		writePooledHazardFiles(new File(outputDir, "pooled_mcs"), pooledMCSData, gridReg, period, rp);
 		writePooledHazardFiles(new File(outputDir, "pooled_sobol"), pooledSobolData, gridReg, period, rp);
+		for (int sampleCount : SOBOL_POOL_OUTPUT_SIZES) {
+			List<RunPeriodData> exactSizeData = sobolData.stream()
+					.filter(data -> data.run().maxSamples() == sampleCount).toList();
+			if (exactSizeData.isEmpty())
+				continue;
+			PooledHazardData exactSizePool = FIXED_SOBOL_CONSENSUS_SIZE != null
+					&& sampleCount == FIXED_SOBOL_CONSENSUS_SIZE ? pooledSobolData
+							: buildPooledHazardData(exactSizeData, null, gridReg, rp,
+									POOLED_SOBOL_REFERENCE_NAME, LOO_SOBOL_REFERENCE_NAME);
+			writePooledHazardFiles(new File(outputDir, sobolPoolDirName(sampleCount)),
+					exactSizePool, gridReg, period, rp);
+		}
 		List<RunPeriodData> poLHSPoolData = largestMethodRuns(fullDesignData,
 				SamplingMethod.PAIRWISE_OPTIMIZED_LATIN_HYPERCUBE);
 		if (!poLHSPoolData.isEmpty()) {
@@ -364,6 +407,10 @@ public class HazardConvergenceCalcs {
 				new File(outputDir, "realization_pair_summary.csv"), realizationPairs);
 
 		HazardConvergencePlots.plotPeriod(outputDir, periodName);
+	}
+
+	static String sobolPoolDirName(int sampleCount) {
+		return "pooled_sobol_"+sampleCount;
 	}
 
 	private static List<RunPeriodData> largestMethodRuns(List<RunPeriodData> allData,
@@ -693,10 +740,12 @@ public class HazardConvergenceCalcs {
 				Preconditions.checkState(varianceNumerator >= 0d,
 						"Negative variance numerator at site "+n+": "+varianceNumerator);
 				standardDeviation[n] = Math.sqrt(varianceNumerator/sampleCount);
-				Arrays.sort(values);
-				iqr[n] = empiricalFractile(values, 0.75)-empiricalFractile(values, 0.25);
-				central68[n] = empiricalFractile(values, 0.84)-empiricalFractile(values, 0.16);
-				central95[n] = empiricalFractile(values, 0.975)-empiricalFractile(values, 0.025);
+				// Select only the order statistics needed for all three ranges. Apache's default
+				// HF8 estimator is approximately median-unbiased and avoids a full array sort.
+				double[] quantiles = QUANTILE.evaluate(values, HAZARD_QUANTILE_PROBABILITIES);
+				central95[n] = quantiles[5]-quantiles[0];
+				central68[n] = quantiles[4]-quantiles[1];
+				iqr[n] = quantiles[3]-quantiles[2];
 			}
 		});
 		Map<ConvergenceMetric, double[]> metricValues = new EnumMap<>(ConvergenceMetric.class);
@@ -706,32 +755,6 @@ public class HazardConvergenceCalcs {
 		metricValues.put(ConvergenceMetric.CENTRAL_68_RANGE, central68);
 		metricValues.put(ConvergenceMetric.CENTRAL_95_RANGE, central95);
 		return new HazardStatistics(metricValues);
-	}
-
-	private static double empiricalFractile(double[] sortedValues, double fractile) {
-		Preconditions.checkArgument(sortedValues.length > 0 && fractile >= 0d && fractile <= 1d);
-		double previousValue = sortedValues[0];
-		int index = 1;
-		while (index < sortedValues.length && (float)sortedValues[index] == (float)previousValue)
-			index++;
-		double previousCDF = (double)index/sortedValues.length;
-		if (fractile <= previousCDF)
-			return previousValue;
-		while (index < sortedValues.length) {
-			double value = sortedValues[index++];
-			while (index < sortedValues.length && (float)sortedValues[index] == (float)value)
-				index++;
-			double cdf = (double)index/sortedValues.length;
-			if (fractile == cdf)
-				return value;
-			if (fractile < cdf) {
-				double relative = (fractile-previousCDF)/(cdf-previousCDF);
-				return previousValue + relative*(value-previousValue);
-			}
-			previousValue = value;
-			previousCDF = cdf;
-		}
-		return sortedValues[sortedValues.length-1];
 	}
 
 	private static void appendComparisons(List<ReferenceComparison> comparisons, RunSpec run,
@@ -1036,10 +1059,10 @@ public class HazardConvergenceCalcs {
 			Preconditions.checkState(varianceNumerator >= 0d,
 					"Negative bootstrap variance numerator at site "+n+": "+varianceNumerator);
 			standardDeviation[n] = Math.sqrt(varianceNumerator/sampleCount);
-			Arrays.sort(values);
-			iqr[n] = empiricalFractile(values, 0.75)-empiricalFractile(values, 0.25);
-			central68[n] = empiricalFractile(values, 0.84)-empiricalFractile(values, 0.16);
-			central95[n] = empiricalFractile(values, 0.975)-empiricalFractile(values, 0.025);
+			double[] quantiles = QUANTILE.evaluate(values, HAZARD_QUANTILE_PROBABILITIES);
+			central95[n] = quantiles[5]-quantiles[0];
+			central68[n] = quantiles[4]-quantiles[1];
+			iqr[n] = quantiles[3]-quantiles[2];
 		}
 		Map<ConvergenceMetric, double[]> metricValues = new EnumMap<>(ConvergenceMetric.class);
 		metricValues.put(ConvergenceMetric.STANDARD_DEVIATION, standardDeviation);
@@ -1263,9 +1286,8 @@ public class HazardConvergenceCalcs {
 				maxAbsoluteIndex = i;
 			}
 		}
-		Arrays.sort(absoluteChanges);
 		return new MapComparison(sum/testValues.length, sumAbsolute/testValues.length,
-				empiricalFractile(absoluteChanges, 0.95), maxAbsolute, maxAbsoluteIndex, min, max);
+				QUANTILE.evaluate(absoluteChanges, 0.95), maxAbsolute, maxAbsoluteIndex, min, max);
 	}
 
 	private static double percentChange(double testValue, double referenceValue) {
