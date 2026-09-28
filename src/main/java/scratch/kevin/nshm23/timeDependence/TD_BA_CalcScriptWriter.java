@@ -101,6 +101,7 @@ public class TD_BA_CalcScriptWriter {
 					.vs30(760d)
 					.maxDistance(maxDist)
 					.setUseNSHMP_IMLs(nshmpIMLs)
+					.useRupMFDs(false)
 					.durationYears(durationYears);
 			if (timeDependent)
 				hazardBuilder.probabilityModel(probabilityModel).startYear(startYear);
@@ -119,7 +120,6 @@ public class TD_BA_CalcScriptWriter {
 					.run(run)
 					.linkFromDirectoryName(linkFromDir)
 					.solutionFileName(solFileName)
-					.noMFDs(true)
 					.supersamplingMode(SupersamplingMode.FULL)
 					.hazard(hazard)
 					.hpc(hpc)

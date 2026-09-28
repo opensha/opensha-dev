@@ -97,6 +97,7 @@ public class ComparisonCalcScriptWriter {
 				.maxDistance(maxDist)
 				.disablePointOptimizations(disablePointOptimize)
 				.setUseNSHMP_IMLs(nshmpIMLs)
+				.useRupMFDs(false)
 				.build();
 
 
@@ -113,7 +114,6 @@ public class ComparisonCalcScriptWriter {
 				.run(run)
 				.linkFromDirectoryName(linkFromDir)
 				.solutionFileName(solFileName)
-				.noMFDs(true)
 				.supersamplingMode(SupersamplingMode.FULL)
 				.hazard(hazard)
 				.hpc(hpc)
