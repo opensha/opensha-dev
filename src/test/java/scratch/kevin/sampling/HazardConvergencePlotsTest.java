@@ -69,4 +69,23 @@ public class HazardConvergencePlotsTest {
 		assertEquals(1d, combined.minimum(), 0d);
 		assertEquals(9d, combined.maximum(), 0d);
 	}
+
+	@Test public void representativeSelectionUsesDistanceFromMedianRanks() {
+		List<HazardMapPlots.RepresentativeCandidate> candidates = List.of(
+				candidate("a", 1d, 5d, 1d, 5d),
+				candidate("b", 2d, 4d, 2d, 4d),
+				candidate("c", 3d, 3d, 3d, 3d),
+				candidate("d", 4d, 2d, 4d, 2d),
+				candidate("e", 5d, 1d, 5d, 1d));
+		HazardMapPlots.RepresentativeSelection selection = HazardMapPlots.selectRepresentative(candidates);
+		assertEquals("c", selection.candidate().runDir().getName());
+		assertEquals(5, selection.candidateCount());
+		assertEquals(0d, selection.meanRankDistance(), 0d);
+		for (double rank : selection.ranks())
+			assertEquals(0.5, rank, 0d);
+	}
+
+	private static HazardMapPlots.RepresentativeCandidate candidate(String name, double... errors) {
+		return new HazardMapPlots.RepresentativeCandidate(new java.io.File(name), 0, 1, null, errors);
+	}
 }

@@ -7,7 +7,9 @@ import java.io.IOException;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Comparator;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
@@ -120,8 +122,11 @@ public class HazardMapPlots {
 					+") vs Sobol' ("+nStr(sobolPool.data)+")");
 		}
 
-		// Plot the first realization available for each method and requested sample count.
+		CSVFile<String> selectionCSV = initSelectionCSV();
+		CSVFile<String> referenceComparisons = CSVFile.readFile(
+				new File(periodDir, "reference_comparisons.csv"), true);
 		Map<File, HazardData> fullSobolRunCache = new HashMap<>();
+		Map<File, double[][]> runMapCache = new HashMap<>();
 		for (int size : indvSizes) {
 			File sizeDir = new File(mapDir, size+"_samples");
 			Preconditions.checkState(sizeDir.exists() || sizeDir.mkdir());
@@ -129,19 +134,34 @@ public class HazardMapPlots {
 				HazardData data;
 				HazardData refMCS;
 				HazardData refSobol;
+				RepresentativeSelection selection;
 				if (method == SamplingMethod.MONTE_CARLO) {
 					if (size > mcsReserveTree.size())
 						continue;
-					// The reserve is independent of, and deliberately excluded from, the primary MCS pool.
-					data = loadRunPrefix(mcsReserveDir, size, gridReg, period, null);
+					// The reserve is independent of, and deliberately excluded from, the primary MCS pool. Use
+					// only its nonoverlapping spans as candidates; production-pool spans are not considered.
+					List<RepresentativeCandidate> candidates = new ArrayList<>();
+					for (int start=0; start+size<=mcsReserveTree.size(); start+=size) {
+						HazardData candidateData = loadRunSpan(mcsReserveDir, start, size, gridReg, period,
+								null, runMapCache);
+						candidates.add(new RepresentativeCandidate(mcsReserveDir, start, start+size,
+								candidateData, meanAbsErrors(candidateData, mcsPool.data())));
+					}
+					selection = selectRepresentative(candidates);
+					data = selection.candidate().data();
 					refMCS = mcsPool.data();
 					refSobol = sobolPool.data();
 				} else {
-					File runDir = selectIndividualRun(method, size, sobolPoolDirs);
-					if (runDir == null)
+					List<RepresentativeCandidate> candidates = loadCandidateErrors(
+							referenceComparisons, method, size);
+					if (candidates.isEmpty())
 						continue;
-					data = loadRunPrefix(runDir, size, gridReg, period,
-							method == SamplingMethod.OWEN_SCRAMBLED_SOBOL ? sobolPool : null);
+					selection = selectRepresentative(candidates);
+					RepresentativeCandidate selected = selection.candidate();
+					File runDir = selected.runDir();
+					data = loadRunSpan(runDir, selected.startIndex(), size, gridReg, period,
+							method == SamplingMethod.OWEN_SCRAMBLED_SOBOL ? sobolPool : null, runMapCache);
+					selection = selection.withData(data);
 					refMCS = mcsPool.data();
 					if (method == SamplingMethod.OWEN_SCRAMBLED_SOBOL && sobolPool.contains(runDir)) {
 						int fullRunSize = sobolPool.runSize(runDir);
@@ -149,7 +169,8 @@ public class HazardMapPlots {
 						if (size < fullRunSize) {
 							fullRun = fullSobolRunCache.get(runDir.getAbsoluteFile());
 							if (fullRun == null) {
-								fullRun = loadRunPrefix(runDir, fullRunSize, gridReg, period, sobolPool);
+								fullRun = loadRunSpan(runDir, 0, fullRunSize, gridReg, period,
+										sobolPool, runMapCache);
 								fullSobolRunCache.put(runDir.getAbsoluteFile(), fullRun);
 							}
 						}
@@ -159,6 +180,10 @@ public class HazardMapPlots {
 						refSobol = sobolPool.data();
 					}
 				}
+				appendSelection(selectionCSV, method, size, selection);
+				System.out.println("Representative "+method.getShortName()+", N="+size+": "
+						+selection.candidate().description()+", candidates="+selection.candidateCount()
+						+", mean rank distance="+selection.meanRankDistance());
 				
 				String name = "Individual "+HazardConvergencePlots.getMethodName(method)+" ("+nStr(data)+")";
 				
@@ -168,31 +193,178 @@ public class HazardMapPlots {
 						method.name().toLowerCase()+"_vs_pooled_sobol", name+" vs pooled Sobol' ("+nStr(refSobol)+")");
 			}
 		}
+		selectionCSV.writeToFile(new File(mapDir, "representative_selections.csv"));
 	}
 
-	private static File selectIndividualRun(SamplingMethod method, int sampleCount,
-			List<File> sobolPoolDirs) {
-		List<File> exactRuns = HazardConvergenceCalcs.runDirs.get(method, sampleCount);
-		if (exactRuns != null && !exactRuns.isEmpty())
-			return exactRuns.get(0);
-		if (method != SamplingMethod.OWEN_SCRAMBLED_SOBOL)
-			return null;
+	private static List<RepresentativeCandidate> loadCandidateErrors(CSVFile<String> csv,
+			SamplingMethod method, int sampleCount) {
+		List<String> header = csv.getLine(0);
+		int runCol = header.indexOf("Run");
+		int methodCol = header.indexOf("Sampling method");
+		int countCol = header.indexOf("Sample count");
+		int referenceCol = header.indexOf("Reference");
+		int metricCol = header.indexOf("Metric");
+		int meanAbsCol = header.indexOf("Spatial mean absolute % change");
+		int startCol = header.indexOf("Start index");
+		int endCol = header.indexOf("End index (exclusive)");
+		Preconditions.checkState(runCol >= 0 && methodCol >= 0 && countCol >= 0 && referenceCol >= 0
+				&& metricCol >= 0 && meanAbsCol >= 0 && startCol >= 0 && endCol >= 0,
+				"Unexpected reference comparison CSV header");
 
-		// Sobol sequences are nested: a larger realization supplies every shorter leading prefix. Prefer a parent
-		// already in the consensus pool so that the comparison can apply the same leave-one-out treatment as the
-		// convergence calculations.
-		Map<Integer, List<File>> sobolRuns = HazardConvergenceCalcs.runDirs.row(method);
-		for (Map.Entry<Integer, List<File>> entry : new TreeMap<>(sobolRuns).entrySet()) {
-			if (entry.getKey() < sampleCount)
+		Map<CandidateID, double[]> errorsByCandidate = new LinkedHashMap<>();
+		for (int row=1; row<csv.getNumRows(); row++) {
+			if (!csv.get(row, methodCol).equals(method.name())
+					|| Integer.parseInt(csv.get(row, countCol)) != sampleCount
+					|| !csv.get(row, referenceCol).equals(HazardConvergenceCalcs.MCS_REFERENCE_NAME))
 				continue;
-			for (File runDir : entry.getValue())
-				if (sobolPoolDirs.contains(runDir))
-					return runDir;
+			int metricIndex = metricIndex(csv.get(row, metricCol));
+			if (metricIndex < 0)
+				continue;
+			CandidateID id = new CandidateID(csv.get(row, runCol),
+					Integer.parseInt(csv.get(row, startCol)), Integer.parseInt(csv.get(row, endCol)));
+			double[] errors = errorsByCandidate.computeIfAbsent(id, key -> {
+				double[] values = new double[HazardConvergencePlots.PLOT_METRICS.length];
+				Arrays.fill(values, Double.NaN);
+				return values;
+			});
+			Preconditions.checkState(Double.isNaN(errors[metricIndex]),
+					"Duplicate comparison for %s, %s", id, csv.get(row, metricCol));
+			errors[metricIndex] = Double.parseDouble(csv.get(row, meanAbsCol));
 		}
-		for (Map.Entry<Integer, List<File>> entry : new TreeMap<>(sobolRuns).entrySet())
-			if (entry.getKey() >= sampleCount && !entry.getValue().isEmpty())
-				return entry.getValue().get(0);
-		return null;
+
+		List<RepresentativeCandidate> candidates = new ArrayList<>();
+		for (Map.Entry<CandidateID, double[]> entry : errorsByCandidate.entrySet()) {
+			for (double value : entry.getValue())
+				Preconditions.checkState(Double.isFinite(value), "Incomplete comparison for %s", entry.getKey());
+			CandidateID id = entry.getKey();
+			File runDir = findRunDir(method, id.runName());
+			candidates.add(new RepresentativeCandidate(runDir, id.startIndex(), id.endIndex(),
+					null, entry.getValue()));
+		}
+		return candidates;
+	}
+
+	private static int metricIndex(String label) {
+		for (int i=0; i<HazardConvergencePlots.PLOT_METRICS.length; i++)
+			if (HazardConvergencePlots.PLOT_METRICS[i].label.equals(label))
+				return i;
+		return -1;
+	}
+
+	private static File findRunDir(SamplingMethod method, String runName) {
+		for (List<File> dirs : HazardConvergenceCalcs.runDirs.row(method).values())
+			for (File dir : dirs)
+				if (dir.getName().equals(runName))
+					return dir;
+		throw new IllegalStateException("No configured "+method+" run named "+runName);
+	}
+
+	private static double[] meanAbsErrors(HazardData data, HazardData reference) {
+		double[] errors = new double[HazardConvergencePlots.PLOT_METRICS.length];
+		for (int m=0; m<errors.length; m++) {
+			double[] values = data.statistics().values(HazardConvergencePlots.PLOT_METRICS[m]);
+			double[] refValues = reference.statistics().values(HazardConvergencePlots.PLOT_METRICS[m]);
+			double sum = 0d;
+			int count = 0;
+			for (int i=0; i<values.length; i++) {
+				if (Double.isFinite(values[i]) && Double.isFinite(refValues[i]) && refValues[i] != 0d) {
+					sum += Math.abs(100d*(values[i]-refValues[i])/refValues[i]);
+					count++;
+				}
+			}
+			Preconditions.checkState(count > 0);
+			errors[m] = sum/count;
+		}
+		return errors;
+	}
+
+	static RepresentativeSelection selectRepresentative(List<RepresentativeCandidate> candidates) {
+		Preconditions.checkState(!candidates.isEmpty());
+		int count = candidates.size();
+		double[][] ranks = new double[count][HazardConvergencePlots.PLOT_METRICS.length];
+		for (int m=0; m<HazardConvergencePlots.PLOT_METRICS.length; m++) {
+			final int metricIndex = m;
+			List<Integer> order = new ArrayList<>(count);
+			for (int i=0; i<count; i++)
+				order.add(i);
+			order.sort(Comparator.comparingDouble(i -> candidates.get(i).errors()[metricIndex]));
+			for (int start=0; start<count;) {
+				int end = start+1;
+				double value = candidates.get(order.get(start)).errors()[m];
+				while (end < count && Double.compare(candidates.get(order.get(end)).errors()[m], value) == 0)
+					end++;
+				double rank = count == 1 ? 0.5 : (0.5*(start+end-1))/(count-1d);
+				for (int i=start; i<end; i++)
+					ranks[order.get(i)][m] = rank;
+				start = end;
+			}
+		}
+
+		int bestIndex = -1;
+		double bestMean = Double.POSITIVE_INFINITY;
+		double bestMax = Double.POSITIVE_INFINITY;
+		for (int i=0; i<count; i++) {
+			double sum = 0d;
+			double max = 0d;
+			for (double rank : ranks[i]) {
+				double distance = Math.abs(rank-0.5);
+				sum += distance;
+				max = Math.max(max, distance);
+			}
+			double mean = sum/ranks[i].length;
+			if (mean < bestMean || (mean == bestMean && max < bestMax)) {
+				bestIndex = i;
+				bestMean = mean;
+				bestMax = max;
+			}
+		}
+		return new RepresentativeSelection(candidates.get(bestIndex), count,
+				ranks[bestIndex], bestMean, bestMax);
+	}
+
+	private static CSVFile<String> initSelectionCSV() {
+		CSVFile<String> csv = new CSVFile<>(true);
+		List<String> header = new ArrayList<>(List.of("Sampling method", "Sample count", "Run",
+				"Start index", "End index (exclusive)", "Candidate count",
+				"Mean absolute quantile-rank distance", "Maximum absolute quantile-rank distance"));
+		for (ConvergenceMetric metric : HazardConvergencePlots.PLOT_METRICS) {
+			header.add(metric.label+" spatial mean absolute % change");
+			header.add(metric.label+" quantile rank");
+		}
+		csv.addLine(header);
+		return csv;
+	}
+
+	private static void appendSelection(CSVFile<String> csv, SamplingMethod method, int sampleCount,
+			RepresentativeSelection selection) {
+		RepresentativeCandidate candidate = selection.candidate();
+		List<String> line = new ArrayList<>(List.of(method.name(), Integer.toString(sampleCount),
+				candidate.runDir().getName(), Integer.toString(candidate.startIndex()),
+				Integer.toString(candidate.endIndex()), Integer.toString(selection.candidateCount()),
+				Double.toString(selection.meanRankDistance()), Double.toString(selection.maxRankDistance())));
+		for (int m=0; m<candidate.errors().length; m++) {
+			line.add(Double.toString(candidate.errors()[m]));
+			line.add(Double.toString(selection.ranks()[m]));
+		}
+		csv.addLine(line);
+	}
+
+	private record CandidateID(String runName, int startIndex, int endIndex) {}
+
+	record RepresentativeCandidate(File runDir, int startIndex, int endIndex,
+			HazardData data, double[] errors) {
+		String description() {
+			return runDir.getName()+"["+startIndex+","+endIndex+")";
+		}
+	}
+
+	record RepresentativeSelection(RepresentativeCandidate candidate, int candidateCount,
+			double[] ranks, double meanRankDistance, double maxRankDistance) {
+		RepresentativeSelection withData(HazardData data) {
+			return new RepresentativeSelection(new RepresentativeCandidate(candidate.runDir(),
+					candidate.startIndex(), candidate.endIndex(), data, candidate.errors()),
+					candidateCount, ranks, meanRankDistance, maxRankDistance);
+		}
 	}
 	
 	private static final DecimalFormat groupedDF = new DecimalFormat("0");
@@ -237,29 +409,36 @@ public class HazardMapPlots {
 		return new PooledHazardData(buildHazardData(meanCurves, concatenate(blocks), gridReg), blocks);
 	}
 
-	private static HazardData loadRunPrefix(File runDir, int sampleCount, GriddedRegion gridReg,
-			double period, PooledHazardData cachedPool) throws IOException {
+	private static HazardData loadRunSpan(File runDir, int startIndex, int sampleCount,
+			GriddedRegion gridReg, double period, PooledHazardData cachedPool,
+			Map<File, double[][]> runMapCache) throws IOException {
 		LogicTree<?> tree = LogicTree.read(new File(runDir, "logic_tree_analysis.json"));
-		Preconditions.checkState(sampleCount <= tree.size(), "Requested %s of %s branches from %s",
-				sampleCount, tree.size(), runDir.getName());
+		Preconditions.checkState(startIndex >= 0 && startIndex+sampleCount <= tree.size(),
+				"Requested [%s,%s) of %s branches from %s",
+				startIndex, startIndex+sampleCount, tree.size(), runDir.getName());
 		double[][] allBranchMaps = cachedPool == null ? null : cachedPool.branchMaps(runDir);
+		File cacheKey = runDir.getAbsoluteFile();
+		if (allBranchMaps == null)
+			allBranchMaps = runMapCache.get(cacheKey);
 		if (allBranchMaps == null) {
 			ModelHazardMaps maps = HazardConvergenceCalcs.loadMaps(
 					new File(runDir, "results_hazard.zip"), tree, gridReg, period, RP);
 			allBranchMaps = HazardConvergenceCalcs.copyValues(maps.individual());
+			runMapCache.put(cacheKey, allBranchMaps);
 		}
-		double[][] branchMaps = Arrays.copyOf(allBranchMaps, sampleCount);
-		DiscretizedFunc[] meanCurves = loadMeanCurves(runDir, tree, sampleCount, gridReg, period);
+		double[][] branchMaps = Arrays.copyOfRange(allBranchMaps, startIndex, startIndex+sampleCount);
+		DiscretizedFunc[] meanCurves = loadMeanCurves(
+				runDir, tree, startIndex, sampleCount, gridReg, period);
 		return buildHazardData(meanCurves, branchMaps, gridReg);
 	}
 
-	private static DiscretizedFunc[] loadMeanCurves(File runDir, LogicTree<?> tree, int sampleCount,
-			GriddedRegion gridReg, double period) throws IOException {
+	private static DiscretizedFunc[] loadMeanCurves(File runDir, LogicTree<?> tree,
+			int startIndex, int sampleCount, GriddedRegion gridReg, double period) throws IOException {
 		double[] xValues = null;
 		double[][] sums = null;
 		try (HazardConvergenceCalcs.BranchCurveLoader curveLoader =
 				new HazardConvergenceCalcs.BranchCurveLoader(runDir)) {
-			for (int b=0; b<sampleCount; b++) {
+			for (int b=startIndex; b<startIndex+sampleCount; b++) {
 				DiscretizedFunc[] curves = curveLoader.load(tree.getBranch(b), gridReg, period);
 				if (sums == null) {
 					xValues = new double[curves[0].size()];
