@@ -38,11 +38,8 @@ public class TD_BA_CalcScriptWriter {
 		String regToken = "WUS";
 		Region reg = NSHM23_RegionLoader.loadFullConterminousWUS();
 		double spacing = 0.1;
-		String linkFromDir = "2024_02_02-nshm23_branches-WUS_FM_v3";
-		String solFileName = "results_WUS_FM_v3_branch_averaged_gridded_simplified_revised2026.zip";
-		
-//		String solFileName = "results_WUS_FM_v3_branch_averaged_gridded_simplified_revised2026_origRakes.zip";
-//		commonExtraTokens.add("origRakes");
+		String linkFromDir = "2026_10-nshm23-td_erf-solutions";
+		String solFileName = "nshm23-wus-ba-hist_dole.zip";
 
 		File localMainDir = new File("/home/kevin/OpenSHA/fss_inversions");
 		
