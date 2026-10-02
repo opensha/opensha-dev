@@ -1,5 +1,6 @@
 package scratch.ned.nshm23;
 
+import java.io.File;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.EnumSet;
@@ -49,16 +50,16 @@ public class AleutianArc_FSS_Creator {
 	  * @param nshmModelDirPath
 	  * @return
 	  */
-	private static NshmErf getNshmERF(String nshmModelDirPath) {
+	private static NshmErf getNshmERF(File nshmModelDir) {
 	    Set<TectonicRegionType> trts = EnumSet.of(TectonicRegionType.SUBDUCTION_INTERFACE);
-	    NshmErf erf = new NshmErf(Path.of(nshmModelDirPath), trts, IncludeBackgroundOption.EXCLUDE);
+	    NshmErf erf = new NshmErf(nshmModelDir.toPath(), trts, IncludeBackgroundOption.EXCLUDE);
 	    erf.getTimeSpan().setDuration(1.0);
 	    erf.updateForecast();
 	    return erf;
 	}
 	
 
-	private static ArrayList<GeoJSONFaultSection> getFaultSectionList(String nshmModelDirPath, FaultModelEnum fltMod) {
+	private static ArrayList<GeoJSONFaultSection> getFaultSectionList(File nshmModelDir, FaultModelEnum fltMod) {
 		ArrayList<GeoJSONFaultSection> list = new ArrayList<GeoJSONFaultSection>();
 
 		String[] nameArray = {"geodetic","narrow","wide"}; // default case for "ALL"
@@ -83,20 +84,20 @@ public class AleutianArc_FSS_Creator {
 		
 		for(String fltModName:nameArray) {
 			
-			list.add(CEUS_FSS_creator.getFaultSection(nshmModelDirPath+"subduction/interface/Aleutian Arc/features/Adak ("+fltModName+").geojson"));
-			list.add(CEUS_FSS_creator.getFaultSection(nshmModelDirPath+"subduction/interface/Aleutian Arc/features/Amchitka ("+fltModName+").geojson"));
-			list.add(CEUS_FSS_creator.getFaultSection(nshmModelDirPath+"subduction/interface/Aleutian Arc/features/Andreanof ("+fltModName+").geojson"));
-			list.add(CEUS_FSS_creator.getFaultSection(nshmModelDirPath+"subduction/interface/Aleutian Arc/features/Attu ("+fltModName+").geojson"));
-			list.add(CEUS_FSS_creator.getFaultSection(nshmModelDirPath+"subduction/interface/Aleutian Arc/features/Barren Islands ("+fltModName+").geojson"));
-			list.add(CEUS_FSS_creator.getFaultSection(nshmModelDirPath+"subduction/interface/Aleutian Arc/features/Fox Islands ("+fltModName+").geojson"));
-			list.add(CEUS_FSS_creator.getFaultSection(nshmModelDirPath+"subduction/interface/Aleutian Arc/features/Kenai ("+fltModName+").geojson"));
-			list.add(CEUS_FSS_creator.getFaultSection(nshmModelDirPath+"subduction/interface/Aleutian Arc/features/Kodiak ("+fltModName+").geojson"));
-			list.add(CEUS_FSS_creator.getFaultSection(nshmModelDirPath+"subduction/interface/Aleutian Arc/features/Komandorski ("+fltModName+").geojson"));
-			list.add(CEUS_FSS_creator.getFaultSection(nshmModelDirPath+"subduction/interface/Aleutian Arc/features/Prince William Sound ("+fltModName+").geojson"));
-			list.add(CEUS_FSS_creator.getFaultSection(nshmModelDirPath+"subduction/interface/Aleutian Arc/features/Sanak ("+fltModName+").geojson"));
-			list.add(CEUS_FSS_creator.getFaultSection(nshmModelDirPath+"subduction/interface/Aleutian Arc/features/Semidi ("+fltModName+").geojson"));
-			list.add(CEUS_FSS_creator.getFaultSection(nshmModelDirPath+"subduction/interface/Aleutian Arc/features/Shumagin ("+fltModName+").geojson"));
-			list.add(CEUS_FSS_creator.getFaultSection(nshmModelDirPath+"subduction/interface/Aleutian Arc/features/Yakataga ("+fltModName+").geojson"));
+			list.add(CEUS_FSS_creator.getFaultSection(new File(nshmModelDir, "subduction/interface/Aleutian Arc/features/Adak ("+fltModName+").geojson")));
+			list.add(CEUS_FSS_creator.getFaultSection(new File(nshmModelDir, "subduction/interface/Aleutian Arc/features/Amchitka ("+fltModName+").geojson")));
+			list.add(CEUS_FSS_creator.getFaultSection(new File(nshmModelDir, "subduction/interface/Aleutian Arc/features/Andreanof ("+fltModName+").geojson")));
+			list.add(CEUS_FSS_creator.getFaultSection(new File(nshmModelDir, "subduction/interface/Aleutian Arc/features/Attu ("+fltModName+").geojson")));
+			list.add(CEUS_FSS_creator.getFaultSection(new File(nshmModelDir, "subduction/interface/Aleutian Arc/features/Barren Islands ("+fltModName+").geojson")));
+			list.add(CEUS_FSS_creator.getFaultSection(new File(nshmModelDir, "subduction/interface/Aleutian Arc/features/Fox Islands ("+fltModName+").geojson")));
+			list.add(CEUS_FSS_creator.getFaultSection(new File(nshmModelDir, "subduction/interface/Aleutian Arc/features/Kenai ("+fltModName+").geojson")));
+			list.add(CEUS_FSS_creator.getFaultSection(new File(nshmModelDir, "subduction/interface/Aleutian Arc/features/Kodiak ("+fltModName+").geojson")));
+			list.add(CEUS_FSS_creator.getFaultSection(new File(nshmModelDir, "subduction/interface/Aleutian Arc/features/Komandorski ("+fltModName+").geojson")));
+			list.add(CEUS_FSS_creator.getFaultSection(new File(nshmModelDir, "subduction/interface/Aleutian Arc/features/Prince William Sound ("+fltModName+").geojson")));
+			list.add(CEUS_FSS_creator.getFaultSection(new File(nshmModelDir, "subduction/interface/Aleutian Arc/features/Sanak ("+fltModName+").geojson")));
+			list.add(CEUS_FSS_creator.getFaultSection(new File(nshmModelDir, "subduction/interface/Aleutian Arc/features/Semidi ("+fltModName+").geojson")));
+			list.add(CEUS_FSS_creator.getFaultSection(new File(nshmModelDir, "subduction/interface/Aleutian Arc/features/Shumagin ("+fltModName+").geojson")));
+			list.add(CEUS_FSS_creator.getFaultSection(new File(nshmModelDir, "subduction/interface/Aleutian Arc/features/Yakataga ("+fltModName+").geojson")));
 		}
 		return list;
 	}
@@ -108,128 +109,128 @@ public class AleutianArc_FSS_Creator {
 	 * @param srcIDsList
 	 * @param srcFltSectsList
 	 */
-	private static void getSrcIDsAndFaultSectionsLists(HashMap<Integer,int[]> srcFltSectsMap, String nshmModelDirPath, FaultModelEnum fltMod) {
+	private static void getSrcIDsAndFaultSectionsLists(HashMap<Integer,int[]> srcFltSectsMap, File nshmModelDir, FaultModelEnum fltMod) {
 		
 		if(fltMod == FaultModelEnum.GEOLOGIC_WIDE || fltMod == FaultModelEnum.ALL) {
-//			CEUS_FSS_creator.parseRuptureSetFile(nshmModelDirPath+"subduction/interface/Aleutian Arc/unsegmented/wide/rupture-set.json", srcFltSectsMap);
-			CEUS_FSS_creator.parseRuptureSetFile(nshmModelDirPath+"subduction/interface/Aleutian Arc/1-section/geologic/wide/adak/rupture-set.json", srcFltSectsMap);
-			CEUS_FSS_creator.parseRuptureSetFile(nshmModelDirPath+"subduction/interface/Aleutian Arc/1-section/geologic/wide/amchitka/rupture-set.json", srcFltSectsMap);
-			CEUS_FSS_creator.parseRuptureSetFile(nshmModelDirPath+"subduction/interface/Aleutian Arc/1-section/geologic/wide/andreanof/rupture-set.json", srcFltSectsMap);
-			CEUS_FSS_creator.parseRuptureSetFile(nshmModelDirPath+"subduction/interface/Aleutian Arc/1-section/geologic/wide/attu/rupture-set.json", srcFltSectsMap);
-			CEUS_FSS_creator.parseRuptureSetFile(nshmModelDirPath+"subduction/interface/Aleutian Arc/1-section/geologic/wide/barren/rupture-set.json", srcFltSectsMap);
-			CEUS_FSS_creator.parseRuptureSetFile(nshmModelDirPath+"subduction/interface/Aleutian Arc/1-section/geologic/wide/fox/rupture-set.json", srcFltSectsMap);
-			CEUS_FSS_creator.parseRuptureSetFile(nshmModelDirPath+"subduction/interface/Aleutian Arc/1-section/geologic/wide/kenai/rupture-set.json", srcFltSectsMap);
-			CEUS_FSS_creator.parseRuptureSetFile(nshmModelDirPath+"subduction/interface/Aleutian Arc/1-section/geologic/wide/kodiak/rupture-set.json", srcFltSectsMap);
-			CEUS_FSS_creator.parseRuptureSetFile(nshmModelDirPath+"subduction/interface/Aleutian Arc/1-section/geologic/wide/komandorski/rupture-set.json", srcFltSectsMap);
-			CEUS_FSS_creator.parseRuptureSetFile(nshmModelDirPath+"subduction/interface/Aleutian Arc/1-section/geologic/wide/pws/rupture-set.json", srcFltSectsMap);
-			CEUS_FSS_creator.parseRuptureSetFile(nshmModelDirPath+"subduction/interface/Aleutian Arc/1-section/geologic/wide/sanak/rupture-set.json", srcFltSectsMap);
-			CEUS_FSS_creator.parseRuptureSetFile(nshmModelDirPath+"subduction/interface/Aleutian Arc/1-section/geologic/wide/semidi/rupture-set.json", srcFltSectsMap);
-			CEUS_FSS_creator.parseRuptureSetFile(nshmModelDirPath+"subduction/interface/Aleutian Arc/1-section/geologic/wide/shumagin/rupture-set.json", srcFltSectsMap);
-			CEUS_FSS_creator.parseRuptureSetFile(nshmModelDirPath+"subduction/interface/Aleutian Arc/1-section/geologic/wide/yakataga/rupture-set.json", srcFltSectsMap);
-			CEUS_FSS_creator.parseRuptureSetFile(nshmModelDirPath+"subduction/interface/Aleutian Arc/2-sections/geologic/wide/adak-amchitka/rupture-set.json", srcFltSectsMap);
-			CEUS_FSS_creator.parseRuptureSetFile(nshmModelDirPath+"subduction/interface/Aleutian Arc/2-sections/geologic/wide/amchitka-attu/rupture-set.json", srcFltSectsMap);
-			CEUS_FSS_creator.parseRuptureSetFile(nshmModelDirPath+"subduction/interface/Aleutian Arc/2-sections/geologic/wide/andreanof-adak/rupture-set.json", srcFltSectsMap);
-			CEUS_FSS_creator.parseRuptureSetFile(nshmModelDirPath+"subduction/interface/Aleutian Arc/2-sections/geologic/wide/attu-komandorski/rupture-set.json", srcFltSectsMap);
-			CEUS_FSS_creator.parseRuptureSetFile(nshmModelDirPath+"subduction/interface/Aleutian Arc/2-sections/geologic/wide/barren/rupture-set.json", srcFltSectsMap);
-			CEUS_FSS_creator.parseRuptureSetFile(nshmModelDirPath+"subduction/interface/Aleutian Arc/2-sections/geologic/wide/fox-andreanof/rupture-set.json", srcFltSectsMap);
-			CEUS_FSS_creator.parseRuptureSetFile(nshmModelDirPath+"subduction/interface/Aleutian Arc/2-sections/geologic/wide/fox/rupture-set.json", srcFltSectsMap);
-			CEUS_FSS_creator.parseRuptureSetFile(nshmModelDirPath+"subduction/interface/Aleutian Arc/2-sections/geologic/wide/kenai-barren-kodiak/rupture-set.json", srcFltSectsMap);
-			CEUS_FSS_creator.parseRuptureSetFile(nshmModelDirPath+"subduction/interface/Aleutian Arc/2-sections/geologic/wide/kodiak-semidi/rupture-set.json", srcFltSectsMap);
-			CEUS_FSS_creator.parseRuptureSetFile(nshmModelDirPath+"subduction/interface/Aleutian Arc/2-sections/geologic/wide/komandorski/rupture-set.json", srcFltSectsMap);
-			CEUS_FSS_creator.parseRuptureSetFile(nshmModelDirPath+"subduction/interface/Aleutian Arc/2-sections/geologic/wide/pws-kenai/rupture-set.json", srcFltSectsMap);
-			CEUS_FSS_creator.parseRuptureSetFile(nshmModelDirPath+"subduction/interface/Aleutian Arc/2-sections/geologic/wide/pws/rupture-set.json", srcFltSectsMap);
-			CEUS_FSS_creator.parseRuptureSetFile(nshmModelDirPath+"subduction/interface/Aleutian Arc/2-sections/geologic/wide/sanak/rupture-set.json", srcFltSectsMap);
-			CEUS_FSS_creator.parseRuptureSetFile(nshmModelDirPath+"subduction/interface/Aleutian Arc/2-sections/geologic/wide/semidi/rupture-set.json", srcFltSectsMap);
-			CEUS_FSS_creator.parseRuptureSetFile(nshmModelDirPath+"subduction/interface/Aleutian Arc/2-sections/geologic/wide/shumagin/rupture-set.json", srcFltSectsMap);
-			CEUS_FSS_creator.parseRuptureSetFile(nshmModelDirPath+"subduction/interface/Aleutian Arc/2-sections/geologic/wide/yakataga/rupture-set.json", srcFltSectsMap);
-			CEUS_FSS_creator.parseRuptureSetFile(nshmModelDirPath+"subduction/interface/Aleutian Arc/3-sections/geologic/wide/adak-amchitka-attu/rupture-set.json", srcFltSectsMap);
-			CEUS_FSS_creator.parseRuptureSetFile(nshmModelDirPath+"subduction/interface/Aleutian Arc/3-sections/geologic/wide/amchitka-attu-komandorski/rupture-set.json", srcFltSectsMap);
-			CEUS_FSS_creator.parseRuptureSetFile(nshmModelDirPath+"subduction/interface/Aleutian Arc/3-sections/geologic/wide/andreanof-adak-amchitka/rupture-set.json", srcFltSectsMap);
-			CEUS_FSS_creator.parseRuptureSetFile(nshmModelDirPath+"subduction/interface/Aleutian Arc/3-sections/geologic/wide/andreanof/rupture-set.json", srcFltSectsMap);
-			CEUS_FSS_creator.parseRuptureSetFile(nshmModelDirPath+"subduction/interface/Aleutian Arc/3-sections/geologic/wide/attu/rupture-set.json", srcFltSectsMap);
-			CEUS_FSS_creator.parseRuptureSetFile(nshmModelDirPath+"subduction/interface/Aleutian Arc/3-sections/geologic/wide/fox-andreanof-adak/rupture-set.json", srcFltSectsMap);
-			CEUS_FSS_creator.parseRuptureSetFile(nshmModelDirPath+"subduction/interface/Aleutian Arc/3-sections/geologic/wide/fox/rupture-set.json", srcFltSectsMap);
-			CEUS_FSS_creator.parseRuptureSetFile(nshmModelDirPath+"subduction/interface/Aleutian Arc/3-sections/geologic/wide/kenai-barren-kodiak-semidi/rupture-set.json", srcFltSectsMap);
-			CEUS_FSS_creator.parseRuptureSetFile(nshmModelDirPath+"subduction/interface/Aleutian Arc/3-sections/geologic/wide/kodiak/rupture-set.json", srcFltSectsMap);
-			CEUS_FSS_creator.parseRuptureSetFile(nshmModelDirPath+"subduction/interface/Aleutian Arc/3-sections/geologic/wide/komandorski/rupture-set.json", srcFltSectsMap);
-			CEUS_FSS_creator.parseRuptureSetFile(nshmModelDirPath+"subduction/interface/Aleutian Arc/3-sections/geologic/wide/pws-kenai-barren-kodiak/rupture-set.json", srcFltSectsMap);
-			CEUS_FSS_creator.parseRuptureSetFile(nshmModelDirPath+"subduction/interface/Aleutian Arc/3-sections/geologic/wide/pws/rupture-set.json", srcFltSectsMap);
-			CEUS_FSS_creator.parseRuptureSetFile(nshmModelDirPath+"subduction/interface/Aleutian Arc/3-sections/geologic/wide/sanak/rupture-set.json", srcFltSectsMap);
-			CEUS_FSS_creator.parseRuptureSetFile(nshmModelDirPath+"subduction/interface/Aleutian Arc/3-sections/geologic/wide/semidi/rupture-set.json", srcFltSectsMap);
-			CEUS_FSS_creator.parseRuptureSetFile(nshmModelDirPath+"subduction/interface/Aleutian Arc/3-sections/geologic/wide/shumagin/rupture-set.json", srcFltSectsMap);
-			CEUS_FSS_creator.parseRuptureSetFile(nshmModelDirPath+"subduction/interface/Aleutian Arc/3-sections/geologic/wide/yakataga/rupture-set.json", srcFltSectsMap);
+//			CEUS_FSS_creator.parseRuptureSetFile(new File(nshmModelDir, "subduction/interface/Aleutian Arc/unsegmented/wide/rupture-set.json"), srcFltSectsMap);
+			CEUS_FSS_creator.parseRuptureSetFile(new File(nshmModelDir, "subduction/interface/Aleutian Arc/1-section/geologic/wide/adak/rupture-set.json"), srcFltSectsMap);
+			CEUS_FSS_creator.parseRuptureSetFile(new File(nshmModelDir, "subduction/interface/Aleutian Arc/1-section/geologic/wide/amchitka/rupture-set.json"), srcFltSectsMap);
+			CEUS_FSS_creator.parseRuptureSetFile(new File(nshmModelDir, "subduction/interface/Aleutian Arc/1-section/geologic/wide/andreanof/rupture-set.json"), srcFltSectsMap);
+			CEUS_FSS_creator.parseRuptureSetFile(new File(nshmModelDir, "subduction/interface/Aleutian Arc/1-section/geologic/wide/attu/rupture-set.json"), srcFltSectsMap);
+			CEUS_FSS_creator.parseRuptureSetFile(new File(nshmModelDir, "subduction/interface/Aleutian Arc/1-section/geologic/wide/barren/rupture-set.json"), srcFltSectsMap);
+			CEUS_FSS_creator.parseRuptureSetFile(new File(nshmModelDir, "subduction/interface/Aleutian Arc/1-section/geologic/wide/fox/rupture-set.json"), srcFltSectsMap);
+			CEUS_FSS_creator.parseRuptureSetFile(new File(nshmModelDir, "subduction/interface/Aleutian Arc/1-section/geologic/wide/kenai/rupture-set.json"), srcFltSectsMap);
+			CEUS_FSS_creator.parseRuptureSetFile(new File(nshmModelDir, "subduction/interface/Aleutian Arc/1-section/geologic/wide/kodiak/rupture-set.json"), srcFltSectsMap);
+			CEUS_FSS_creator.parseRuptureSetFile(new File(nshmModelDir, "subduction/interface/Aleutian Arc/1-section/geologic/wide/komandorski/rupture-set.json"), srcFltSectsMap);
+			CEUS_FSS_creator.parseRuptureSetFile(new File(nshmModelDir, "subduction/interface/Aleutian Arc/1-section/geologic/wide/pws/rupture-set.json"), srcFltSectsMap);
+			CEUS_FSS_creator.parseRuptureSetFile(new File(nshmModelDir, "subduction/interface/Aleutian Arc/1-section/geologic/wide/sanak/rupture-set.json"), srcFltSectsMap);
+			CEUS_FSS_creator.parseRuptureSetFile(new File(nshmModelDir, "subduction/interface/Aleutian Arc/1-section/geologic/wide/semidi/rupture-set.json"), srcFltSectsMap);
+			CEUS_FSS_creator.parseRuptureSetFile(new File(nshmModelDir, "subduction/interface/Aleutian Arc/1-section/geologic/wide/shumagin/rupture-set.json"), srcFltSectsMap);
+			CEUS_FSS_creator.parseRuptureSetFile(new File(nshmModelDir, "subduction/interface/Aleutian Arc/1-section/geologic/wide/yakataga/rupture-set.json"), srcFltSectsMap);
+			CEUS_FSS_creator.parseRuptureSetFile(new File(nshmModelDir, "subduction/interface/Aleutian Arc/2-sections/geologic/wide/adak-amchitka/rupture-set.json"), srcFltSectsMap);
+			CEUS_FSS_creator.parseRuptureSetFile(new File(nshmModelDir, "subduction/interface/Aleutian Arc/2-sections/geologic/wide/amchitka-attu/rupture-set.json"), srcFltSectsMap);
+			CEUS_FSS_creator.parseRuptureSetFile(new File(nshmModelDir, "subduction/interface/Aleutian Arc/2-sections/geologic/wide/andreanof-adak/rupture-set.json"), srcFltSectsMap);
+			CEUS_FSS_creator.parseRuptureSetFile(new File(nshmModelDir, "subduction/interface/Aleutian Arc/2-sections/geologic/wide/attu-komandorski/rupture-set.json"), srcFltSectsMap);
+			CEUS_FSS_creator.parseRuptureSetFile(new File(nshmModelDir, "subduction/interface/Aleutian Arc/2-sections/geologic/wide/barren/rupture-set.json"), srcFltSectsMap);
+			CEUS_FSS_creator.parseRuptureSetFile(new File(nshmModelDir, "subduction/interface/Aleutian Arc/2-sections/geologic/wide/fox-andreanof/rupture-set.json"), srcFltSectsMap);
+			CEUS_FSS_creator.parseRuptureSetFile(new File(nshmModelDir, "subduction/interface/Aleutian Arc/2-sections/geologic/wide/fox/rupture-set.json"), srcFltSectsMap);
+			CEUS_FSS_creator.parseRuptureSetFile(new File(nshmModelDir, "subduction/interface/Aleutian Arc/2-sections/geologic/wide/kenai-barren-kodiak/rupture-set.json"), srcFltSectsMap);
+			CEUS_FSS_creator.parseRuptureSetFile(new File(nshmModelDir, "subduction/interface/Aleutian Arc/2-sections/geologic/wide/kodiak-semidi/rupture-set.json"), srcFltSectsMap);
+			CEUS_FSS_creator.parseRuptureSetFile(new File(nshmModelDir, "subduction/interface/Aleutian Arc/2-sections/geologic/wide/komandorski/rupture-set.json"), srcFltSectsMap);
+			CEUS_FSS_creator.parseRuptureSetFile(new File(nshmModelDir, "subduction/interface/Aleutian Arc/2-sections/geologic/wide/pws-kenai/rupture-set.json"), srcFltSectsMap);
+			CEUS_FSS_creator.parseRuptureSetFile(new File(nshmModelDir, "subduction/interface/Aleutian Arc/2-sections/geologic/wide/pws/rupture-set.json"), srcFltSectsMap);
+			CEUS_FSS_creator.parseRuptureSetFile(new File(nshmModelDir, "subduction/interface/Aleutian Arc/2-sections/geologic/wide/sanak/rupture-set.json"), srcFltSectsMap);
+			CEUS_FSS_creator.parseRuptureSetFile(new File(nshmModelDir, "subduction/interface/Aleutian Arc/2-sections/geologic/wide/semidi/rupture-set.json"), srcFltSectsMap);
+			CEUS_FSS_creator.parseRuptureSetFile(new File(nshmModelDir, "subduction/interface/Aleutian Arc/2-sections/geologic/wide/shumagin/rupture-set.json"), srcFltSectsMap);
+			CEUS_FSS_creator.parseRuptureSetFile(new File(nshmModelDir, "subduction/interface/Aleutian Arc/2-sections/geologic/wide/yakataga/rupture-set.json"), srcFltSectsMap);
+			CEUS_FSS_creator.parseRuptureSetFile(new File(nshmModelDir, "subduction/interface/Aleutian Arc/3-sections/geologic/wide/adak-amchitka-attu/rupture-set.json"), srcFltSectsMap);
+			CEUS_FSS_creator.parseRuptureSetFile(new File(nshmModelDir, "subduction/interface/Aleutian Arc/3-sections/geologic/wide/amchitka-attu-komandorski/rupture-set.json"), srcFltSectsMap);
+			CEUS_FSS_creator.parseRuptureSetFile(new File(nshmModelDir, "subduction/interface/Aleutian Arc/3-sections/geologic/wide/andreanof-adak-amchitka/rupture-set.json"), srcFltSectsMap);
+			CEUS_FSS_creator.parseRuptureSetFile(new File(nshmModelDir, "subduction/interface/Aleutian Arc/3-sections/geologic/wide/andreanof/rupture-set.json"), srcFltSectsMap);
+			CEUS_FSS_creator.parseRuptureSetFile(new File(nshmModelDir, "subduction/interface/Aleutian Arc/3-sections/geologic/wide/attu/rupture-set.json"), srcFltSectsMap);
+			CEUS_FSS_creator.parseRuptureSetFile(new File(nshmModelDir, "subduction/interface/Aleutian Arc/3-sections/geologic/wide/fox-andreanof-adak/rupture-set.json"), srcFltSectsMap);
+			CEUS_FSS_creator.parseRuptureSetFile(new File(nshmModelDir, "subduction/interface/Aleutian Arc/3-sections/geologic/wide/fox/rupture-set.json"), srcFltSectsMap);
+			CEUS_FSS_creator.parseRuptureSetFile(new File(nshmModelDir, "subduction/interface/Aleutian Arc/3-sections/geologic/wide/kenai-barren-kodiak-semidi/rupture-set.json"), srcFltSectsMap);
+			CEUS_FSS_creator.parseRuptureSetFile(new File(nshmModelDir, "subduction/interface/Aleutian Arc/3-sections/geologic/wide/kodiak/rupture-set.json"), srcFltSectsMap);
+			CEUS_FSS_creator.parseRuptureSetFile(new File(nshmModelDir, "subduction/interface/Aleutian Arc/3-sections/geologic/wide/komandorski/rupture-set.json"), srcFltSectsMap);
+			CEUS_FSS_creator.parseRuptureSetFile(new File(nshmModelDir, "subduction/interface/Aleutian Arc/3-sections/geologic/wide/pws-kenai-barren-kodiak/rupture-set.json"), srcFltSectsMap);
+			CEUS_FSS_creator.parseRuptureSetFile(new File(nshmModelDir, "subduction/interface/Aleutian Arc/3-sections/geologic/wide/pws/rupture-set.json"), srcFltSectsMap);
+			CEUS_FSS_creator.parseRuptureSetFile(new File(nshmModelDir, "subduction/interface/Aleutian Arc/3-sections/geologic/wide/sanak/rupture-set.json"), srcFltSectsMap);
+			CEUS_FSS_creator.parseRuptureSetFile(new File(nshmModelDir, "subduction/interface/Aleutian Arc/3-sections/geologic/wide/semidi/rupture-set.json"), srcFltSectsMap);
+			CEUS_FSS_creator.parseRuptureSetFile(new File(nshmModelDir, "subduction/interface/Aleutian Arc/3-sections/geologic/wide/shumagin/rupture-set.json"), srcFltSectsMap);
+			CEUS_FSS_creator.parseRuptureSetFile(new File(nshmModelDir, "subduction/interface/Aleutian Arc/3-sections/geologic/wide/yakataga/rupture-set.json"), srcFltSectsMap);
 		}
 
 		if(fltMod == FaultModelEnum.GEOLOGIC_NARROW || fltMod == FaultModelEnum.ALL) {
-//			CEUS_FSS_creator.parseRuptureSetFile(nshmModelDirPath+"subduction/interface/Aleutian Arc/unsegmented/narrow/rupture-set.json", srcFltSectsMap);
-			CEUS_FSS_creator.parseRuptureSetFile(nshmModelDirPath+"subduction/interface/Aleutian Arc/1-section/geologic/narrow/adak/rupture-set.json", srcFltSectsMap);
-			CEUS_FSS_creator.parseRuptureSetFile(nshmModelDirPath+"subduction/interface/Aleutian Arc/1-section/geologic/narrow/amchitka/rupture-set.json", srcFltSectsMap);
-			CEUS_FSS_creator.parseRuptureSetFile(nshmModelDirPath+"subduction/interface/Aleutian Arc/1-section/geologic/narrow/andreanof/rupture-set.json", srcFltSectsMap);
-			CEUS_FSS_creator.parseRuptureSetFile(nshmModelDirPath+"subduction/interface/Aleutian Arc/1-section/geologic/narrow/attu/rupture-set.json", srcFltSectsMap);
-			CEUS_FSS_creator.parseRuptureSetFile(nshmModelDirPath+"subduction/interface/Aleutian Arc/1-section/geologic/narrow/barren/rupture-set.json", srcFltSectsMap);
-			CEUS_FSS_creator.parseRuptureSetFile(nshmModelDirPath+"subduction/interface/Aleutian Arc/1-section/geologic/narrow/fox/rupture-set.json", srcFltSectsMap);
-			CEUS_FSS_creator.parseRuptureSetFile(nshmModelDirPath+"subduction/interface/Aleutian Arc/1-section/geologic/narrow/kenai/rupture-set.json", srcFltSectsMap);
-			CEUS_FSS_creator.parseRuptureSetFile(nshmModelDirPath+"subduction/interface/Aleutian Arc/1-section/geologic/narrow/kodiak/rupture-set.json", srcFltSectsMap);
-			CEUS_FSS_creator.parseRuptureSetFile(nshmModelDirPath+"subduction/interface/Aleutian Arc/1-section/geologic/narrow/komandorski/rupture-set.json", srcFltSectsMap);
-			CEUS_FSS_creator.parseRuptureSetFile(nshmModelDirPath+"subduction/interface/Aleutian Arc/1-section/geologic/narrow/pws/rupture-set.json", srcFltSectsMap);
-			CEUS_FSS_creator.parseRuptureSetFile(nshmModelDirPath+"subduction/interface/Aleutian Arc/1-section/geologic/narrow/sanak/rupture-set.json", srcFltSectsMap);
-			CEUS_FSS_creator.parseRuptureSetFile(nshmModelDirPath+"subduction/interface/Aleutian Arc/1-section/geologic/narrow/semidi/rupture-set.json", srcFltSectsMap);
-			CEUS_FSS_creator.parseRuptureSetFile(nshmModelDirPath+"subduction/interface/Aleutian Arc/1-section/geologic/narrow/shumagin/rupture-set.json", srcFltSectsMap);
-			CEUS_FSS_creator.parseRuptureSetFile(nshmModelDirPath+"subduction/interface/Aleutian Arc/1-section/geologic/narrow/yakataga/rupture-set.json", srcFltSectsMap);
-			CEUS_FSS_creator.parseRuptureSetFile(nshmModelDirPath+"subduction/interface/Aleutian Arc/2-sections/geologic/narrow/adak-amchitka/rupture-set.json", srcFltSectsMap);
-			CEUS_FSS_creator.parseRuptureSetFile(nshmModelDirPath+"subduction/interface/Aleutian Arc/2-sections/geologic/narrow/amchitka-attu/rupture-set.json", srcFltSectsMap);
-			CEUS_FSS_creator.parseRuptureSetFile(nshmModelDirPath+"subduction/interface/Aleutian Arc/2-sections/geologic/narrow/andreanof-adak/rupture-set.json", srcFltSectsMap);
-			CEUS_FSS_creator.parseRuptureSetFile(nshmModelDirPath+"subduction/interface/Aleutian Arc/2-sections/geologic/narrow/attu-komandorski/rupture-set.json", srcFltSectsMap);
-			CEUS_FSS_creator.parseRuptureSetFile(nshmModelDirPath+"subduction/interface/Aleutian Arc/2-sections/geologic/narrow/barren/rupture-set.json", srcFltSectsMap);
-			CEUS_FSS_creator.parseRuptureSetFile(nshmModelDirPath+"subduction/interface/Aleutian Arc/2-sections/geologic/narrow/fox-andreanof/rupture-set.json", srcFltSectsMap);
-			CEUS_FSS_creator.parseRuptureSetFile(nshmModelDirPath+"subduction/interface/Aleutian Arc/2-sections/geologic/narrow/fox/rupture-set.json", srcFltSectsMap);
-			CEUS_FSS_creator.parseRuptureSetFile(nshmModelDirPath+"subduction/interface/Aleutian Arc/2-sections/geologic/narrow/kenai-barren-kodiak/rupture-set.json", srcFltSectsMap);
-			CEUS_FSS_creator.parseRuptureSetFile(nshmModelDirPath+"subduction/interface/Aleutian Arc/2-sections/geologic/narrow/kodiak-semidi/rupture-set.json", srcFltSectsMap);
-			CEUS_FSS_creator.parseRuptureSetFile(nshmModelDirPath+"subduction/interface/Aleutian Arc/2-sections/geologic/narrow/komandorski/rupture-set.json", srcFltSectsMap);
-			CEUS_FSS_creator.parseRuptureSetFile(nshmModelDirPath+"subduction/interface/Aleutian Arc/2-sections/geologic/narrow/pws-kenai/rupture-set.json", srcFltSectsMap);
-			CEUS_FSS_creator.parseRuptureSetFile(nshmModelDirPath+"subduction/interface/Aleutian Arc/2-sections/geologic/narrow/pws/rupture-set.json", srcFltSectsMap);
-			CEUS_FSS_creator.parseRuptureSetFile(nshmModelDirPath+"subduction/interface/Aleutian Arc/2-sections/geologic/narrow/sanak/rupture-set.json", srcFltSectsMap);
-			CEUS_FSS_creator.parseRuptureSetFile(nshmModelDirPath+"subduction/interface/Aleutian Arc/2-sections/geologic/narrow/semidi/rupture-set.json", srcFltSectsMap);
-			CEUS_FSS_creator.parseRuptureSetFile(nshmModelDirPath+"subduction/interface/Aleutian Arc/2-sections/geologic/narrow/shumagin/rupture-set.json", srcFltSectsMap);
-			CEUS_FSS_creator.parseRuptureSetFile(nshmModelDirPath+"subduction/interface/Aleutian Arc/2-sections/geologic/narrow/yakataga/rupture-set.json", srcFltSectsMap);
-			CEUS_FSS_creator.parseRuptureSetFile(nshmModelDirPath+"subduction/interface/Aleutian Arc/3-sections/geologic/narrow/adak-amchitka-attu/rupture-set.json", srcFltSectsMap);
-			CEUS_FSS_creator.parseRuptureSetFile(nshmModelDirPath+"subduction/interface/Aleutian Arc/3-sections/geologic/narrow/amchitka-attu-komandorski/rupture-set.json", srcFltSectsMap);
-			CEUS_FSS_creator.parseRuptureSetFile(nshmModelDirPath+"subduction/interface/Aleutian Arc/3-sections/geologic/narrow/andreanof-adak-amchitka/rupture-set.json", srcFltSectsMap);
-			CEUS_FSS_creator.parseRuptureSetFile(nshmModelDirPath+"subduction/interface/Aleutian Arc/3-sections/geologic/narrow/andreanof/rupture-set.json", srcFltSectsMap);
-			CEUS_FSS_creator.parseRuptureSetFile(nshmModelDirPath+"subduction/interface/Aleutian Arc/3-sections/geologic/narrow/attu/rupture-set.json", srcFltSectsMap);
-			CEUS_FSS_creator.parseRuptureSetFile(nshmModelDirPath+"subduction/interface/Aleutian Arc/3-sections/geologic/narrow/fox-andreanof-adak/rupture-set.json", srcFltSectsMap);
-			CEUS_FSS_creator.parseRuptureSetFile(nshmModelDirPath+"subduction/interface/Aleutian Arc/3-sections/geologic/narrow/fox/rupture-set.json", srcFltSectsMap);
-			CEUS_FSS_creator.parseRuptureSetFile(nshmModelDirPath+"subduction/interface/Aleutian Arc/3-sections/geologic/narrow/kenai-barren-kodiak-semidi/rupture-set.json", srcFltSectsMap);
-			CEUS_FSS_creator.parseRuptureSetFile(nshmModelDirPath+"subduction/interface/Aleutian Arc/3-sections/geologic/narrow/kodiak/rupture-set.json", srcFltSectsMap);
-			CEUS_FSS_creator.parseRuptureSetFile(nshmModelDirPath+"subduction/interface/Aleutian Arc/3-sections/geologic/narrow/komandorski/rupture-set.json", srcFltSectsMap);
-			CEUS_FSS_creator.parseRuptureSetFile(nshmModelDirPath+"subduction/interface/Aleutian Arc/3-sections/geologic/narrow/pws-kenai-barren-kodiak/rupture-set.json", srcFltSectsMap);
-			CEUS_FSS_creator.parseRuptureSetFile(nshmModelDirPath+"subduction/interface/Aleutian Arc/3-sections/geologic/narrow/pws/rupture-set.json", srcFltSectsMap);
-			CEUS_FSS_creator.parseRuptureSetFile(nshmModelDirPath+"subduction/interface/Aleutian Arc/3-sections/geologic/narrow/sanak/rupture-set.json", srcFltSectsMap);
-			CEUS_FSS_creator.parseRuptureSetFile(nshmModelDirPath+"subduction/interface/Aleutian Arc/3-sections/geologic/narrow/semidi/rupture-set.json", srcFltSectsMap);
-			CEUS_FSS_creator.parseRuptureSetFile(nshmModelDirPath+"subduction/interface/Aleutian Arc/3-sections/geologic/narrow/shumagin/rupture-set.json", srcFltSectsMap);
-			CEUS_FSS_creator.parseRuptureSetFile(nshmModelDirPath+"subduction/interface/Aleutian Arc/3-sections/geologic/narrow/yakataga/rupture-set.json", srcFltSectsMap);
+//			CEUS_FSS_creator.parseRuptureSetFile(new File(nshmModelDir, "subduction/interface/Aleutian Arc/unsegmented/narrow/rupture-set.json"), srcFltSectsMap);
+			CEUS_FSS_creator.parseRuptureSetFile(new File(nshmModelDir, "subduction/interface/Aleutian Arc/1-section/geologic/narrow/adak/rupture-set.json"), srcFltSectsMap);
+			CEUS_FSS_creator.parseRuptureSetFile(new File(nshmModelDir, "subduction/interface/Aleutian Arc/1-section/geologic/narrow/amchitka/rupture-set.json"), srcFltSectsMap);
+			CEUS_FSS_creator.parseRuptureSetFile(new File(nshmModelDir, "subduction/interface/Aleutian Arc/1-section/geologic/narrow/andreanof/rupture-set.json"), srcFltSectsMap);
+			CEUS_FSS_creator.parseRuptureSetFile(new File(nshmModelDir, "subduction/interface/Aleutian Arc/1-section/geologic/narrow/attu/rupture-set.json"), srcFltSectsMap);
+			CEUS_FSS_creator.parseRuptureSetFile(new File(nshmModelDir, "subduction/interface/Aleutian Arc/1-section/geologic/narrow/barren/rupture-set.json"), srcFltSectsMap);
+			CEUS_FSS_creator.parseRuptureSetFile(new File(nshmModelDir, "subduction/interface/Aleutian Arc/1-section/geologic/narrow/fox/rupture-set.json"), srcFltSectsMap);
+			CEUS_FSS_creator.parseRuptureSetFile(new File(nshmModelDir, "subduction/interface/Aleutian Arc/1-section/geologic/narrow/kenai/rupture-set.json"), srcFltSectsMap);
+			CEUS_FSS_creator.parseRuptureSetFile(new File(nshmModelDir, "subduction/interface/Aleutian Arc/1-section/geologic/narrow/kodiak/rupture-set.json"), srcFltSectsMap);
+			CEUS_FSS_creator.parseRuptureSetFile(new File(nshmModelDir, "subduction/interface/Aleutian Arc/1-section/geologic/narrow/komandorski/rupture-set.json"), srcFltSectsMap);
+			CEUS_FSS_creator.parseRuptureSetFile(new File(nshmModelDir, "subduction/interface/Aleutian Arc/1-section/geologic/narrow/pws/rupture-set.json"), srcFltSectsMap);
+			CEUS_FSS_creator.parseRuptureSetFile(new File(nshmModelDir, "subduction/interface/Aleutian Arc/1-section/geologic/narrow/sanak/rupture-set.json"), srcFltSectsMap);
+			CEUS_FSS_creator.parseRuptureSetFile(new File(nshmModelDir, "subduction/interface/Aleutian Arc/1-section/geologic/narrow/semidi/rupture-set.json"), srcFltSectsMap);
+			CEUS_FSS_creator.parseRuptureSetFile(new File(nshmModelDir, "subduction/interface/Aleutian Arc/1-section/geologic/narrow/shumagin/rupture-set.json"), srcFltSectsMap);
+			CEUS_FSS_creator.parseRuptureSetFile(new File(nshmModelDir, "subduction/interface/Aleutian Arc/1-section/geologic/narrow/yakataga/rupture-set.json"), srcFltSectsMap);
+			CEUS_FSS_creator.parseRuptureSetFile(new File(nshmModelDir, "subduction/interface/Aleutian Arc/2-sections/geologic/narrow/adak-amchitka/rupture-set.json"), srcFltSectsMap);
+			CEUS_FSS_creator.parseRuptureSetFile(new File(nshmModelDir, "subduction/interface/Aleutian Arc/2-sections/geologic/narrow/amchitka-attu/rupture-set.json"), srcFltSectsMap);
+			CEUS_FSS_creator.parseRuptureSetFile(new File(nshmModelDir, "subduction/interface/Aleutian Arc/2-sections/geologic/narrow/andreanof-adak/rupture-set.json"), srcFltSectsMap);
+			CEUS_FSS_creator.parseRuptureSetFile(new File(nshmModelDir, "subduction/interface/Aleutian Arc/2-sections/geologic/narrow/attu-komandorski/rupture-set.json"), srcFltSectsMap);
+			CEUS_FSS_creator.parseRuptureSetFile(new File(nshmModelDir, "subduction/interface/Aleutian Arc/2-sections/geologic/narrow/barren/rupture-set.json"), srcFltSectsMap);
+			CEUS_FSS_creator.parseRuptureSetFile(new File(nshmModelDir, "subduction/interface/Aleutian Arc/2-sections/geologic/narrow/fox-andreanof/rupture-set.json"), srcFltSectsMap);
+			CEUS_FSS_creator.parseRuptureSetFile(new File(nshmModelDir, "subduction/interface/Aleutian Arc/2-sections/geologic/narrow/fox/rupture-set.json"), srcFltSectsMap);
+			CEUS_FSS_creator.parseRuptureSetFile(new File(nshmModelDir, "subduction/interface/Aleutian Arc/2-sections/geologic/narrow/kenai-barren-kodiak/rupture-set.json"), srcFltSectsMap);
+			CEUS_FSS_creator.parseRuptureSetFile(new File(nshmModelDir, "subduction/interface/Aleutian Arc/2-sections/geologic/narrow/kodiak-semidi/rupture-set.json"), srcFltSectsMap);
+			CEUS_FSS_creator.parseRuptureSetFile(new File(nshmModelDir, "subduction/interface/Aleutian Arc/2-sections/geologic/narrow/komandorski/rupture-set.json"), srcFltSectsMap);
+			CEUS_FSS_creator.parseRuptureSetFile(new File(nshmModelDir, "subduction/interface/Aleutian Arc/2-sections/geologic/narrow/pws-kenai/rupture-set.json"), srcFltSectsMap);
+			CEUS_FSS_creator.parseRuptureSetFile(new File(nshmModelDir, "subduction/interface/Aleutian Arc/2-sections/geologic/narrow/pws/rupture-set.json"), srcFltSectsMap);
+			CEUS_FSS_creator.parseRuptureSetFile(new File(nshmModelDir, "subduction/interface/Aleutian Arc/2-sections/geologic/narrow/sanak/rupture-set.json"), srcFltSectsMap);
+			CEUS_FSS_creator.parseRuptureSetFile(new File(nshmModelDir, "subduction/interface/Aleutian Arc/2-sections/geologic/narrow/semidi/rupture-set.json"), srcFltSectsMap);
+			CEUS_FSS_creator.parseRuptureSetFile(new File(nshmModelDir, "subduction/interface/Aleutian Arc/2-sections/geologic/narrow/shumagin/rupture-set.json"), srcFltSectsMap);
+			CEUS_FSS_creator.parseRuptureSetFile(new File(nshmModelDir, "subduction/interface/Aleutian Arc/2-sections/geologic/narrow/yakataga/rupture-set.json"), srcFltSectsMap);
+			CEUS_FSS_creator.parseRuptureSetFile(new File(nshmModelDir, "subduction/interface/Aleutian Arc/3-sections/geologic/narrow/adak-amchitka-attu/rupture-set.json"), srcFltSectsMap);
+			CEUS_FSS_creator.parseRuptureSetFile(new File(nshmModelDir, "subduction/interface/Aleutian Arc/3-sections/geologic/narrow/amchitka-attu-komandorski/rupture-set.json"), srcFltSectsMap);
+			CEUS_FSS_creator.parseRuptureSetFile(new File(nshmModelDir, "subduction/interface/Aleutian Arc/3-sections/geologic/narrow/andreanof-adak-amchitka/rupture-set.json"), srcFltSectsMap);
+			CEUS_FSS_creator.parseRuptureSetFile(new File(nshmModelDir, "subduction/interface/Aleutian Arc/3-sections/geologic/narrow/andreanof/rupture-set.json"), srcFltSectsMap);
+			CEUS_FSS_creator.parseRuptureSetFile(new File(nshmModelDir, "subduction/interface/Aleutian Arc/3-sections/geologic/narrow/attu/rupture-set.json"), srcFltSectsMap);
+			CEUS_FSS_creator.parseRuptureSetFile(new File(nshmModelDir, "subduction/interface/Aleutian Arc/3-sections/geologic/narrow/fox-andreanof-adak/rupture-set.json"), srcFltSectsMap);
+			CEUS_FSS_creator.parseRuptureSetFile(new File(nshmModelDir, "subduction/interface/Aleutian Arc/3-sections/geologic/narrow/fox/rupture-set.json"), srcFltSectsMap);
+			CEUS_FSS_creator.parseRuptureSetFile(new File(nshmModelDir, "subduction/interface/Aleutian Arc/3-sections/geologic/narrow/kenai-barren-kodiak-semidi/rupture-set.json"), srcFltSectsMap);
+			CEUS_FSS_creator.parseRuptureSetFile(new File(nshmModelDir, "subduction/interface/Aleutian Arc/3-sections/geologic/narrow/kodiak/rupture-set.json"), srcFltSectsMap);
+			CEUS_FSS_creator.parseRuptureSetFile(new File(nshmModelDir, "subduction/interface/Aleutian Arc/3-sections/geologic/narrow/komandorski/rupture-set.json"), srcFltSectsMap);
+			CEUS_FSS_creator.parseRuptureSetFile(new File(nshmModelDir, "subduction/interface/Aleutian Arc/3-sections/geologic/narrow/pws-kenai-barren-kodiak/rupture-set.json"), srcFltSectsMap);
+			CEUS_FSS_creator.parseRuptureSetFile(new File(nshmModelDir, "subduction/interface/Aleutian Arc/3-sections/geologic/narrow/pws/rupture-set.json"), srcFltSectsMap);
+			CEUS_FSS_creator.parseRuptureSetFile(new File(nshmModelDir, "subduction/interface/Aleutian Arc/3-sections/geologic/narrow/sanak/rupture-set.json"), srcFltSectsMap);
+			CEUS_FSS_creator.parseRuptureSetFile(new File(nshmModelDir, "subduction/interface/Aleutian Arc/3-sections/geologic/narrow/semidi/rupture-set.json"), srcFltSectsMap);
+			CEUS_FSS_creator.parseRuptureSetFile(new File(nshmModelDir, "subduction/interface/Aleutian Arc/3-sections/geologic/narrow/shumagin/rupture-set.json"), srcFltSectsMap);
+			CEUS_FSS_creator.parseRuptureSetFile(new File(nshmModelDir, "subduction/interface/Aleutian Arc/3-sections/geologic/narrow/yakataga/rupture-set.json"), srcFltSectsMap);
 		}
 
 		if(fltMod == FaultModelEnum.GEODETIC || fltMod == FaultModelEnum.ALL) {
-			CEUS_FSS_creator.parseRuptureSetFile(nshmModelDirPath+"subduction/interface/Aleutian Arc/1-section/geodetic/adak/rupture-set.json", srcFltSectsMap);
-			CEUS_FSS_creator.parseRuptureSetFile(nshmModelDirPath+"subduction/interface/Aleutian Arc/1-section/geodetic/amchitka/rupture-set.json", srcFltSectsMap);
-			CEUS_FSS_creator.parseRuptureSetFile(nshmModelDirPath+"subduction/interface/Aleutian Arc/1-section/geodetic/andreanof/rupture-set.json", srcFltSectsMap);
-			CEUS_FSS_creator.parseRuptureSetFile(nshmModelDirPath+"subduction/interface/Aleutian Arc/1-section/geodetic/attu/rupture-set.json", srcFltSectsMap);
-			CEUS_FSS_creator.parseRuptureSetFile(nshmModelDirPath+"subduction/interface/Aleutian Arc/1-section/geodetic/barren/rupture-set.json", srcFltSectsMap);
-			CEUS_FSS_creator.parseRuptureSetFile(nshmModelDirPath+"subduction/interface/Aleutian Arc/1-section/geodetic/fox/rupture-set.json", srcFltSectsMap);
-			CEUS_FSS_creator.parseRuptureSetFile(nshmModelDirPath+"subduction/interface/Aleutian Arc/1-section/geodetic/kenai/rupture-set.json", srcFltSectsMap);
-			CEUS_FSS_creator.parseRuptureSetFile(nshmModelDirPath+"subduction/interface/Aleutian Arc/1-section/geodetic/kodiak/rupture-set.json", srcFltSectsMap);
-			CEUS_FSS_creator.parseRuptureSetFile(nshmModelDirPath+"subduction/interface/Aleutian Arc/1-section/geodetic/komandorski/rupture-set.json", srcFltSectsMap);
-			CEUS_FSS_creator.parseRuptureSetFile(nshmModelDirPath+"subduction/interface/Aleutian Arc/1-section/geodetic/pws/rupture-set.json", srcFltSectsMap);
-			CEUS_FSS_creator.parseRuptureSetFile(nshmModelDirPath+"subduction/interface/Aleutian Arc/1-section/geodetic/sanak/rupture-set.json", srcFltSectsMap);
-			CEUS_FSS_creator.parseRuptureSetFile(nshmModelDirPath+"subduction/interface/Aleutian Arc/1-section/geodetic/semidi/rupture-set.json", srcFltSectsMap);
-			CEUS_FSS_creator.parseRuptureSetFile(nshmModelDirPath+"subduction/interface/Aleutian Arc/1-section/geodetic/shumagin/rupture-set.json", srcFltSectsMap);
-			CEUS_FSS_creator.parseRuptureSetFile(nshmModelDirPath+"subduction/interface/Aleutian Arc/1-section/geodetic/yakataga/rupture-set.json", srcFltSectsMap);
+			CEUS_FSS_creator.parseRuptureSetFile(new File(nshmModelDir, "subduction/interface/Aleutian Arc/1-section/geodetic/adak/rupture-set.json"), srcFltSectsMap);
+			CEUS_FSS_creator.parseRuptureSetFile(new File(nshmModelDir, "subduction/interface/Aleutian Arc/1-section/geodetic/amchitka/rupture-set.json"), srcFltSectsMap);
+			CEUS_FSS_creator.parseRuptureSetFile(new File(nshmModelDir, "subduction/interface/Aleutian Arc/1-section/geodetic/andreanof/rupture-set.json"), srcFltSectsMap);
+			CEUS_FSS_creator.parseRuptureSetFile(new File(nshmModelDir, "subduction/interface/Aleutian Arc/1-section/geodetic/attu/rupture-set.json"), srcFltSectsMap);
+			CEUS_FSS_creator.parseRuptureSetFile(new File(nshmModelDir, "subduction/interface/Aleutian Arc/1-section/geodetic/barren/rupture-set.json"), srcFltSectsMap);
+			CEUS_FSS_creator.parseRuptureSetFile(new File(nshmModelDir, "subduction/interface/Aleutian Arc/1-section/geodetic/fox/rupture-set.json"), srcFltSectsMap);
+			CEUS_FSS_creator.parseRuptureSetFile(new File(nshmModelDir, "subduction/interface/Aleutian Arc/1-section/geodetic/kenai/rupture-set.json"), srcFltSectsMap);
+			CEUS_FSS_creator.parseRuptureSetFile(new File(nshmModelDir, "subduction/interface/Aleutian Arc/1-section/geodetic/kodiak/rupture-set.json"), srcFltSectsMap);
+			CEUS_FSS_creator.parseRuptureSetFile(new File(nshmModelDir, "subduction/interface/Aleutian Arc/1-section/geodetic/komandorski/rupture-set.json"), srcFltSectsMap);
+			CEUS_FSS_creator.parseRuptureSetFile(new File(nshmModelDir, "subduction/interface/Aleutian Arc/1-section/geodetic/pws/rupture-set.json"), srcFltSectsMap);
+			CEUS_FSS_creator.parseRuptureSetFile(new File(nshmModelDir, "subduction/interface/Aleutian Arc/1-section/geodetic/sanak/rupture-set.json"), srcFltSectsMap);
+			CEUS_FSS_creator.parseRuptureSetFile(new File(nshmModelDir, "subduction/interface/Aleutian Arc/1-section/geodetic/semidi/rupture-set.json"), srcFltSectsMap);
+			CEUS_FSS_creator.parseRuptureSetFile(new File(nshmModelDir, "subduction/interface/Aleutian Arc/1-section/geodetic/shumagin/rupture-set.json"), srcFltSectsMap);
+			CEUS_FSS_creator.parseRuptureSetFile(new File(nshmModelDir, "subduction/interface/Aleutian Arc/1-section/geodetic/yakataga/rupture-set.json"), srcFltSectsMap);
 		}
 	}
 
 
-	public static FaultSystemSolution getFaultSystemSolution(String nshmModelDirPath, FaultModelEnum fltModel) {
+	public static FaultSystemSolution getFaultSystemSolution(File nshmModelDir, FaultModelEnum fltModel) {
 		
 		// rate weight for specified fault model branch
 		double rateWt = 1.0/fltModel.getWeight();
@@ -237,7 +238,7 @@ public class AleutianArc_FSS_Creator {
 		
 	    // get fault section list for given fault model
 	//	HashMap<Integer,GeoJSONFaultSection> faultSectionMap;
-	    ArrayList<GeoJSONFaultSection> faultSectionList = getFaultSectionList(nshmModelDirPath, fltModel);
+	    ArrayList<GeoJSONFaultSection> faultSectionList = getFaultSectionList(nshmModelDir, fltModel);
 		// make parSectID_List & write attributes
 		ArrayList<Integer> sectID_List = new ArrayList<Integer>(); // this is NSHM ID for each parent section
 		if(D) System.out.println("index\tsectID\trake");
@@ -261,7 +262,7 @@ public class AleutianArc_FSS_Creator {
 		
 		// Read from Peter's rupture-set.json files
 		HashMap<Integer,int[]> srcFltSectsMap = new HashMap<Integer,int[]>(); // the fault section used by each source (same order as above)
-		getSrcIDsAndFaultSectionsLists(srcFltSectsMap, nshmModelDirPath, fltModel);
+		getSrcIDsAndFaultSectionsLists(srcFltSectsMap, nshmModelDir, fltModel);
 		Set<Integer> srcIDsList = srcFltSectsMap.keySet();  // a list of all the source IDs (no duplicates)
 
 		// some tests
@@ -302,7 +303,7 @@ public class AleutianArc_FSS_Creator {
 		
 		
 		
-    	NshmErf erf = getNshmERF(nshmModelDirPath);
+    	NshmErf erf = getNshmERF(nshmModelDir);
     	System.out.println("erf.getNumSources() = "+erf.getNumSources());
     	//		int numPtSrc=0;
     	ArrayList<Integer> testSrcIDsList = new ArrayList<Integer>();
@@ -533,7 +534,7 @@ public class AleutianArc_FSS_Creator {
 //		getFaultSystemSolution(nshmModelDirPath, FaultModelEnum.ALL);		
 //		getFaultSystemSolution(nshmModelDirPath, FaultModelEnum.GEODETIC);
 //		getFaultSystemSolution(nshmModelDirPath, FaultModelEnum.GEOLOGIC_NARROW);
-		FaultSystemSolution fss =getFaultSystemSolution(nshmModelDirPath, FaultModelEnum.GEOLOGIC_WIDE);
+		FaultSystemSolution fss =getFaultSystemSolution(new File(nshmModelDirPath), FaultModelEnum.GEOLOGIC_WIDE);
 		
 	    RupSetTectonicRegimes tectonicRegimesTest = fss.getRupSet().getModule(RupSetTectonicRegimes.class);
 	    System.out.println("numRups: "+fss.getRupSet().getNumRuptures());

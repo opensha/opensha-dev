@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.opensha.commons.data.Site;
+import org.opensha.commons.geo.Location;
 import org.opensha.commons.geo.LocationList;
 import org.opensha.commons.geo.LocationUtils;
 import org.opensha.sha.earthquake.ProbEqkRupture;
@@ -135,6 +136,10 @@ public abstract class NshmSource<E> extends ProbEqkSource {
 		@Override
 		public void setDuration(double duration) {
 			this.duration = duration;
+		}
+		
+		public Location location() {
+			return NshmUtil.toOpenShaLocation(delegate.loc);
 		}
 	}
 

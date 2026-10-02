@@ -34,12 +34,20 @@ public class TD_BA_CalcScriptWriter {
 
 	public static void main(String[] args) throws IOException {
 		List<String> commonExtraTokens = new ArrayList<>();
+		
 		// start with WUS-only
-		String regToken = "WUS";
+//		String regToken = "WUS";
+//		Region reg = NSHM23_RegionLoader.loadFullConterminousWUS();
+//		double spacing = 0.1;
+//		String linkFromDir = "2026_10-nshm23-td_erf-solutions";
+//		String solFileName = "nshm23-wus-ba-hist_dole.zip";
+		
+		// start with WUS-only
+		String regToken = "WUS-Cascadia";
 		Region reg = NSHM23_RegionLoader.loadFullConterminousWUS();
 		double spacing = 0.1;
 		String linkFromDir = "2026_10-nshm23-td_erf-solutions";
-		String solFileName = "nshm23-wus-ba-hist_dole.zip";
+		String solFileName = "nshm23-wus-cascadia-middle-hist_dole.zip";
 
 		File localMainDir = new File("/home/kevin/OpenSHA/fss_inversions");
 		
@@ -60,6 +68,8 @@ public class TD_BA_CalcScriptWriter {
 		Map<TectonicRegionType, AttenRelRef> gmpes = new EnumMap<>(TectonicRegionType.class);
 		gmpes.put(TectonicRegionType.ACTIVE_SHALLOW, AttenRelRef.USGS_NSHM23_ACTIVE);
 		gmpes.put(TectonicRegionType.STABLE_SHALLOW, AttenRelRef.USGS_NSHM23_STABLE_R2);
+		gmpes.put(TectonicRegionType.SUBDUCTION_INTERFACE, AttenRelRef.USGS_NSHM23_INTERFACE);
+		gmpes.put(TectonicRegionType.SUBDUCTION_SLAB, AttenRelRef.USGS_NSHM23_INTRASLAB);
 		
 		Double maxDist = null; // use TRT defaults
 		boolean nshmpIMLs = true;
@@ -74,7 +84,8 @@ public class TD_BA_CalcScriptWriter {
 				.remoteMainDir(remoteMainDir)
 				.build();
 		
-		double durationYears = 50d;
+		double tiDurationYears = 1d;
+		double tdDurationYears = 50d;
 		int startYear = 2026;
 		FSS_ProbabilityModels[] probabilityModels = {
 				null, // base, time-independent ERF
@@ -89,6 +100,7 @@ public class TD_BA_CalcScriptWriter {
 				extraTokens.add(probabilityModel.name());
 				extraTokens.add("start_"+startYear);
 			}
+			double durationYears = timeDependent ? tdDurationYears : tiDurationYears;
 			extraTokens.add(durationToken(durationYears));
 			
 			HazardConfig.Builder hazardBuilder = HazardConfig.builder()

@@ -1,5 +1,6 @@
 package scratch.ned.nshm23;
 
+import java.io.File;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.EnumSet;
@@ -8,18 +9,34 @@ import java.util.List;
 import java.util.Set;
 
 import org.opensha.commons.eq.MagUtils;
+import org.opensha.commons.geo.Location;
+import org.opensha.commons.geo.LocationList;
+import org.opensha.sha.earthquake.ProbEqkRupture;
+import org.opensha.sha.earthquake.ProbEqkSource;
 import org.opensha.sha.earthquake.faultSysSolution.FaultSystemSolution;
+import org.opensha.sha.earthquake.faultSysSolution.modules.GridSourceList;
+import org.opensha.sha.earthquake.faultSysSolution.modules.GridSourceList.GriddedRupture;
+import org.opensha.sha.earthquake.faultSysSolution.modules.GridSourceList.GriddedRuptureProperties;
+import org.opensha.sha.earthquake.faultSysSolution.modules.GridSourceList.GriddedRupturePropertiesBuilder;
+import org.opensha.sha.earthquake.faultSysSolution.modules.GridSourceList.GriddedRupturePropertiesCache;
 import org.opensha.sha.earthquake.faultSysSolution.modules.RupSetTectonicRegimes;
 import org.opensha.sha.earthquake.param.IncludeBackgroundOption;
 import org.opensha.sha.faultSurface.ApproxEvenlyGriddedSurface;
 import org.opensha.sha.faultSurface.FaultSection;
 import org.opensha.sha.faultSurface.GeoJSONFaultSection;
+import org.opensha.sha.faultSurface.PointSurface;
+import org.opensha.sha.faultSurface.RuptureSurface;
 import org.opensha.sha.magdist.SummedMagFreqDist;
 import org.opensha.sha.util.TectonicRegionType;
+
+import com.google.common.base.Preconditions;
 
 import org.opensha.nshmp.shaded.fault.surface.NshmpApproxGriddedSurface;
 import org.opensha.nshmp.shaded.model.NshmErf;
 import org.opensha.nshmp.shaded.model.NshmSource;
+import org.opensha.nshmp.shaded.model.NshmSurface;
+import org.opensha.nshmp.shaded.model.NshmpHazardModel;
+
 import scratch.ned.nshm23.CEUS_FSS_creator.FaultModelEnum;
 
 public class Cascadia_FSS_creator {
@@ -40,22 +57,47 @@ public class Cascadia_FSS_creator {
 		 }
 	 }
 
+	 private static NshmpHazardModel getNshmModel(File nshmModelDir) {
+		 return NshmpHazardModel.load(nshmModelDir.toPath());
+	 }
 	
 	 /**
 	  * This returns the ERF with timespan duration set to 1.0
 	  * @param nshmModelDirPath
 	  * @return
 	  */
-	private static NshmErf getNshmERF(String nshmModelDirPath) {
+	private static NshmErf getNshmERF(File nshmModelDir) {
+		return getNshmERF(getNshmModel(nshmModelDir));
+	}
+	
+	 /**
+	  * This returns the ERF with timespan duration set to 1.0
+	  * @param nshmModelDirPath
+	  * @return
+	  */
+	private static NshmErf getNshmERF(NshmpHazardModel model) {
 	    Set<TectonicRegionType> trts = EnumSet.of(TectonicRegionType.SUBDUCTION_INTERFACE);
-	    NshmErf erf = new NshmErf(Path.of(nshmModelDirPath), trts, IncludeBackgroundOption.EXCLUDE);
+	    NshmErf erf = new NshmErf(model, trts, IncludeBackgroundOption.EXCLUDE);
+	    erf.getTimeSpan().setDuration(1.0);
+	    erf.updateForecast();
+	    return erf;
+	}
+	
+	 /**
+	  * This returns the slab ERF with timespan duration set to 1.0
+	  * @param nshmModelDirPath
+	  * @return
+	  */
+	private static NshmErf getNshmSlabERF(NshmpHazardModel model) {
+	    Set<TectonicRegionType> trts = EnumSet.of(TectonicRegionType.SUBDUCTION_SLAB);
+	    NshmErf erf = new NshmErf(model, trts, IncludeBackgroundOption.ONLY);
 	    erf.getTimeSpan().setDuration(1.0);
 	    erf.updateForecast();
 	    return erf;
 	}
 	
 
-	private static ArrayList<GeoJSONFaultSection> getFaultSectionList(String nshmModelDirPath, FaultModelEnum fltMod) {
+	private static ArrayList<GeoJSONFaultSection> getFaultSectionList(File nshmModelDir, FaultModelEnum fltMod) {
 		ArrayList<GeoJSONFaultSection> list = new ArrayList<GeoJSONFaultSection>();
 
 		String[] nameArray = {"top","middle","bottom"}; // default case for "ALL"
@@ -79,28 +121,28 @@ public class Cascadia_FSS_creator {
 		}
 		
 		for(String fltModName:nameArray) {
-			list.add(CEUS_FSS_creator.getFaultSection(nshmModelDirPath+"subduction/interface/Cascadia/features/Cascadia 1-1 ("+fltModName+").geojson"));
-			list.add(CEUS_FSS_creator.getFaultSection(nshmModelDirPath+"subduction/interface/Cascadia/features/Cascadia 1-2 ("+fltModName+").geojson"));
-			list.add(CEUS_FSS_creator.getFaultSection(nshmModelDirPath+"subduction/interface/Cascadia/features/Cascadia 1-3 ("+fltModName+").geojson"));
-			list.add(CEUS_FSS_creator.getFaultSection(nshmModelDirPath+"subduction/interface/Cascadia/features/Cascadia 1-4 ("+fltModName+").geojson"));
-			list.add(CEUS_FSS_creator.getFaultSection(nshmModelDirPath+"subduction/interface/Cascadia/features/Cascadia 1-5 ("+fltModName+").geojson"));
-			list.add(CEUS_FSS_creator.getFaultSection(nshmModelDirPath+"subduction/interface/Cascadia/features/Cascadia 1-6 ("+fltModName+").geojson"));
-			list.add(CEUS_FSS_creator.getFaultSection(nshmModelDirPath+"subduction/interface/Cascadia/features/Cascadia 1-7 ("+fltModName+").geojson"));
-			list.add(CEUS_FSS_creator.getFaultSection(nshmModelDirPath+"subduction/interface/Cascadia/features/Cascadia 2-1 ("+fltModName+").geojson"));
-			list.add(CEUS_FSS_creator.getFaultSection(nshmModelDirPath+"subduction/interface/Cascadia/features/Cascadia 2-2 ("+fltModName+").geojson"));
-			list.add(CEUS_FSS_creator.getFaultSection(nshmModelDirPath+"subduction/interface/Cascadia/features/Cascadia 2-3 ("+fltModName+").geojson"));
-			list.add(CEUS_FSS_creator.getFaultSection(nshmModelDirPath+"subduction/interface/Cascadia/features/Cascadia 3-1 ("+fltModName+").geojson"));
-			list.add(CEUS_FSS_creator.getFaultSection(nshmModelDirPath+"subduction/interface/Cascadia/features/Cascadia 3-2 ("+fltModName+").geojson"));
-			list.add(CEUS_FSS_creator.getFaultSection(nshmModelDirPath+"subduction/interface/Cascadia/features/Cascadia 3-3 ("+fltModName+").geojson"));
-			list.add(CEUS_FSS_creator.getFaultSection(nshmModelDirPath+"subduction/interface/Cascadia/features/Cascadia 4-1 ("+fltModName+").geojson"));
-			list.add(CEUS_FSS_creator.getFaultSection(nshmModelDirPath+"subduction/interface/Cascadia/features/Cascadia 4-2 ("+fltModName+").geojson"));
-			list.add(CEUS_FSS_creator.getFaultSection(nshmModelDirPath+"subduction/interface/Cascadia/features/Cascadia 4-3 ("+fltModName+").geojson"));
-			list.add(CEUS_FSS_creator.getFaultSection(nshmModelDirPath+"subduction/interface/Cascadia/features/Cascadia 4-4 ("+fltModName+").geojson"));
-			list.add(CEUS_FSS_creator.getFaultSection(nshmModelDirPath+"subduction/interface/Cascadia/features/Cascadia 4-5 ("+fltModName+").geojson"));
-			list.add(CEUS_FSS_creator.getFaultSection(nshmModelDirPath+"subduction/interface/Cascadia/features/Cascadia 4-6 ("+fltModName+").geojson"));
-			list.add(CEUS_FSS_creator.getFaultSection(nshmModelDirPath+"subduction/interface/Cascadia/features/Cascadia 4-7 ("+fltModName+").geojson"));
-			list.add(CEUS_FSS_creator.getFaultSection(nshmModelDirPath+"subduction/interface/Cascadia/features/Cascadia 4-8 ("+fltModName+").geojson"));
-			list.add(CEUS_FSS_creator.getFaultSection(nshmModelDirPath+"subduction/interface/Cascadia/features/Cascadia 4-9 ("+fltModName+").geojson"));
+			list.add(CEUS_FSS_creator.getFaultSection(new File(nshmModelDir, "subduction/interface/Cascadia/features/Cascadia 1-1 ("+fltModName+").geojson")));
+			list.add(CEUS_FSS_creator.getFaultSection(new File(nshmModelDir, "subduction/interface/Cascadia/features/Cascadia 1-2 ("+fltModName+").geojson")));
+			list.add(CEUS_FSS_creator.getFaultSection(new File(nshmModelDir, "subduction/interface/Cascadia/features/Cascadia 1-3 ("+fltModName+").geojson")));
+			list.add(CEUS_FSS_creator.getFaultSection(new File(nshmModelDir, "subduction/interface/Cascadia/features/Cascadia 1-4 ("+fltModName+").geojson")));
+			list.add(CEUS_FSS_creator.getFaultSection(new File(nshmModelDir, "subduction/interface/Cascadia/features/Cascadia 1-5 ("+fltModName+").geojson")));
+			list.add(CEUS_FSS_creator.getFaultSection(new File(nshmModelDir, "subduction/interface/Cascadia/features/Cascadia 1-6 ("+fltModName+").geojson")));
+			list.add(CEUS_FSS_creator.getFaultSection(new File(nshmModelDir, "subduction/interface/Cascadia/features/Cascadia 1-7 ("+fltModName+").geojson")));
+			list.add(CEUS_FSS_creator.getFaultSection(new File(nshmModelDir, "subduction/interface/Cascadia/features/Cascadia 2-1 ("+fltModName+").geojson")));
+			list.add(CEUS_FSS_creator.getFaultSection(new File(nshmModelDir, "subduction/interface/Cascadia/features/Cascadia 2-2 ("+fltModName+").geojson")));
+			list.add(CEUS_FSS_creator.getFaultSection(new File(nshmModelDir, "subduction/interface/Cascadia/features/Cascadia 2-3 ("+fltModName+").geojson")));
+			list.add(CEUS_FSS_creator.getFaultSection(new File(nshmModelDir, "subduction/interface/Cascadia/features/Cascadia 3-1 ("+fltModName+").geojson")));
+			list.add(CEUS_FSS_creator.getFaultSection(new File(nshmModelDir, "subduction/interface/Cascadia/features/Cascadia 3-2 ("+fltModName+").geojson")));
+			list.add(CEUS_FSS_creator.getFaultSection(new File(nshmModelDir, "subduction/interface/Cascadia/features/Cascadia 3-3 ("+fltModName+").geojson")));
+			list.add(CEUS_FSS_creator.getFaultSection(new File(nshmModelDir, "subduction/interface/Cascadia/features/Cascadia 4-1 ("+fltModName+").geojson")));
+			list.add(CEUS_FSS_creator.getFaultSection(new File(nshmModelDir, "subduction/interface/Cascadia/features/Cascadia 4-2 ("+fltModName+").geojson")));
+			list.add(CEUS_FSS_creator.getFaultSection(new File(nshmModelDir, "subduction/interface/Cascadia/features/Cascadia 4-3 ("+fltModName+").geojson")));
+			list.add(CEUS_FSS_creator.getFaultSection(new File(nshmModelDir, "subduction/interface/Cascadia/features/Cascadia 4-4 ("+fltModName+").geojson")));
+			list.add(CEUS_FSS_creator.getFaultSection(new File(nshmModelDir, "subduction/interface/Cascadia/features/Cascadia 4-5 ("+fltModName+").geojson")));
+			list.add(CEUS_FSS_creator.getFaultSection(new File(nshmModelDir, "subduction/interface/Cascadia/features/Cascadia 4-6 ("+fltModName+").geojson")));
+			list.add(CEUS_FSS_creator.getFaultSection(new File(nshmModelDir, "subduction/interface/Cascadia/features/Cascadia 4-7 ("+fltModName+").geojson")));
+			list.add(CEUS_FSS_creator.getFaultSection(new File(nshmModelDir, "subduction/interface/Cascadia/features/Cascadia 4-8 ("+fltModName+").geojson")));
+			list.add(CEUS_FSS_creator.getFaultSection(new File(nshmModelDir, "subduction/interface/Cascadia/features/Cascadia 4-9 ("+fltModName+").geojson")));
 		}
 		return list;
 	}
@@ -112,7 +154,7 @@ public class Cascadia_FSS_creator {
 	 * @param srcIDsList
 	 * @param srcFltSectsList
 	 */
-	private static void getSrcIDsAndFaultSectionsLists(HashMap<Integer,int[]> srcFltSectsMap, String nshmModelDirPath, FaultModelEnum fltMod) {
+	private static void getSrcIDsAndFaultSectionsLists(HashMap<Integer,int[]> srcFltSectsMap, File nshmModelDir, FaultModelEnum fltMod) {
 		
 		if(D) System.out.println(fltMod);
 		String[] nameArray = {"top","middle","bottom"}; // default case for "ALL"
@@ -136,83 +178,91 @@ public class Cascadia_FSS_creator {
 		}
 		
 		for(String name:nameArray) {
-			CEUS_FSS_creator.parseRuptureSetFile(nshmModelDirPath+"subduction/interface/Cascadia/"+name+"/full-rupture/cluster-out/rupture-set.json", srcFltSectsMap);
-			CEUS_FSS_creator.parseRuptureSetFile(nshmModelDirPath+"subduction/interface/Cascadia/"+name+"/partial-rupture/segmented/GEA12/B/rupture-set.json", srcFltSectsMap);
-			CEUS_FSS_creator.parseRuptureSetFile(nshmModelDirPath+"subduction/interface/Cascadia/"+name+"/partial-rupture/segmented/GEA12/C/rupture-set.json", srcFltSectsMap);
-			CEUS_FSS_creator.parseRuptureSetFile(nshmModelDirPath+"subduction/interface/Cascadia/"+name+"/partial-rupture/segmented/GEA12/D/rupture-set.json", srcFltSectsMap);
-			CEUS_FSS_creator.parseRuptureSetFile(nshmModelDirPath+"subduction/interface/Cascadia/"+name+"/partial-rupture/segmented/GEA12/northern/rupture-set.json", srcFltSectsMap);
-			CEUS_FSS_creator.parseRuptureSetFile(nshmModelDirPath+"subduction/interface/Cascadia/"+name+"/partial-rupture/segmented/GEA17/B/rupture-set.json", srcFltSectsMap);
-			CEUS_FSS_creator.parseRuptureSetFile(nshmModelDirPath+"subduction/interface/Cascadia/"+name+"/partial-rupture/segmented/GEA17/C'/rupture-set.json", srcFltSectsMap);
-			CEUS_FSS_creator.parseRuptureSetFile(nshmModelDirPath+"subduction/interface/Cascadia/"+name+"/partial-rupture/segmented/GEA17/C/rupture-set.json", srcFltSectsMap);
-			CEUS_FSS_creator.parseRuptureSetFile(nshmModelDirPath+"subduction/interface/Cascadia/"+name+"/partial-rupture/segmented/GEA17/D/rupture-set.json", srcFltSectsMap);
-			CEUS_FSS_creator.parseRuptureSetFile(nshmModelDirPath+"subduction/interface/Cascadia/"+name+"/partial-rupture/segmented/GEA17/E/rupture-set.json", srcFltSectsMap);
-			CEUS_FSS_creator.parseRuptureSetFile(nshmModelDirPath+"subduction/interface/Cascadia/"+name+"/partial-rupture/segmented/GEA17/F/rupture-set.json", srcFltSectsMap);
-			CEUS_FSS_creator.parseRuptureSetFile(nshmModelDirPath+"subduction/interface/Cascadia/"+name+"/partial-rupture/unsegmented/GEA12-A/scaled/rupture-set.json", srcFltSectsMap);
-			CEUS_FSS_creator.parseRuptureSetFile(nshmModelDirPath+"subduction/interface/Cascadia/"+name+"/partial-rupture/unsegmented/GEA12-B/scaled/rupture-set.json", srcFltSectsMap);
+			CEUS_FSS_creator.parseRuptureSetFile(new File(nshmModelDir, "subduction/interface/Cascadia/"+name+"/full-rupture/cluster-out/rupture-set.json"), srcFltSectsMap);
+			CEUS_FSS_creator.parseRuptureSetFile(new File(nshmModelDir, "subduction/interface/Cascadia/"+name+"/partial-rupture/segmented/GEA12/B/rupture-set.json"), srcFltSectsMap);
+			CEUS_FSS_creator.parseRuptureSetFile(new File(nshmModelDir, "subduction/interface/Cascadia/"+name+"/partial-rupture/segmented/GEA12/C/rupture-set.json"), srcFltSectsMap);
+			CEUS_FSS_creator.parseRuptureSetFile(new File(nshmModelDir, "subduction/interface/Cascadia/"+name+"/partial-rupture/segmented/GEA12/D/rupture-set.json"), srcFltSectsMap);
+			CEUS_FSS_creator.parseRuptureSetFile(new File(nshmModelDir, "subduction/interface/Cascadia/"+name+"/partial-rupture/segmented/GEA12/northern/rupture-set.json"), srcFltSectsMap);
+			CEUS_FSS_creator.parseRuptureSetFile(new File(nshmModelDir, "subduction/interface/Cascadia/"+name+"/partial-rupture/segmented/GEA17/B/rupture-set.json"), srcFltSectsMap);
+			CEUS_FSS_creator.parseRuptureSetFile(new File(nshmModelDir, "subduction/interface/Cascadia/"+name+"/partial-rupture/segmented/GEA17/C'/rupture-set.json"), srcFltSectsMap);
+			CEUS_FSS_creator.parseRuptureSetFile(new File(nshmModelDir, "subduction/interface/Cascadia/"+name+"/partial-rupture/segmented/GEA17/C/rupture-set.json"), srcFltSectsMap);
+			CEUS_FSS_creator.parseRuptureSetFile(new File(nshmModelDir, "subduction/interface/Cascadia/"+name+"/partial-rupture/segmented/GEA17/D/rupture-set.json"), srcFltSectsMap);
+			CEUS_FSS_creator.parseRuptureSetFile(new File(nshmModelDir, "subduction/interface/Cascadia/"+name+"/partial-rupture/segmented/GEA17/E/rupture-set.json"), srcFltSectsMap);
+			CEUS_FSS_creator.parseRuptureSetFile(new File(nshmModelDir, "subduction/interface/Cascadia/"+name+"/partial-rupture/segmented/GEA17/F/rupture-set.json"), srcFltSectsMap);
+			CEUS_FSS_creator.parseRuptureSetFile(new File(nshmModelDir, "subduction/interface/Cascadia/"+name+"/partial-rupture/unsegmented/GEA12-A/scaled/rupture-set.json"), srcFltSectsMap);
+			CEUS_FSS_creator.parseRuptureSetFile(new File(nshmModelDir, "subduction/interface/Cascadia/"+name+"/partial-rupture/unsegmented/GEA12-B/scaled/rupture-set.json"), srcFltSectsMap);
 
-			CEUS_FSS_creator.parseClusterSetFile(nshmModelDirPath+"subduction/interface/Cascadia/"+name+"/full-rupture/cluster-in/cluster-7a/cluster-set.json", srcFltSectsMap);
-			CEUS_FSS_creator.parseClusterSetFile(nshmModelDirPath+"subduction/interface/Cascadia/"+name+"/full-rupture/cluster-in/cluster-7b/cluster-set.json", srcFltSectsMap);
-			CEUS_FSS_creator.parseClusterSetFile(nshmModelDirPath+"subduction/interface/Cascadia/"+name+"/full-rupture/cluster-in/cluster-8/cluster-set.json", srcFltSectsMap);
+			CEUS_FSS_creator.parseClusterSetFile(new File(nshmModelDir, "subduction/interface/Cascadia/"+name+"/full-rupture/cluster-in/cluster-7a/cluster-set.json"), srcFltSectsMap);
+			CEUS_FSS_creator.parseClusterSetFile(new File(nshmModelDir, "subduction/interface/Cascadia/"+name+"/full-rupture/cluster-in/cluster-7b/cluster-set.json"), srcFltSectsMap);
+			CEUS_FSS_creator.parseClusterSetFile(new File(nshmModelDir, "subduction/interface/Cascadia/"+name+"/full-rupture/cluster-in/cluster-8/cluster-set.json"), srcFltSectsMap);
 
 		}
 		
-//		CEUS_FSS_creator.parseRuptureSetFile(nshmModelDirPath+"subduction/interface/Cascadia/bottom/full-rupture/cluster-out/rupture-set.json", srcFltSectsMap);
-//		CEUS_FSS_creator.parseRuptureSetFile(nshmModelDirPath+"subduction/interface/Cascadia/bottom/partial-rupture/segmented/GEA12/B/rupture-set.json", srcFltSectsMap);
-//		CEUS_FSS_creator.parseRuptureSetFile(nshmModelDirPath+"subduction/interface/Cascadia/bottom/partial-rupture/segmented/GEA12/C/rupture-set.json", srcFltSectsMap);
-//		CEUS_FSS_creator.parseRuptureSetFile(nshmModelDirPath+"subduction/interface/Cascadia/bottom/partial-rupture/segmented/GEA12/D/rupture-set.json", srcFltSectsMap);
-//		CEUS_FSS_creator.parseRuptureSetFile(nshmModelDirPath+"subduction/interface/Cascadia/bottom/partial-rupture/segmented/GEA12/northern/rupture-set.json", srcFltSectsMap);
-//		CEUS_FSS_creator.parseRuptureSetFile(nshmModelDirPath+"subduction/interface/Cascadia/bottom/partial-rupture/segmented/GEA17/B/rupture-set.json", srcFltSectsMap);
-//		CEUS_FSS_creator.parseRuptureSetFile(nshmModelDirPath+"subduction/interface/Cascadia/bottom/partial-rupture/segmented/GEA17/C'/rupture-set.json", srcFltSectsMap);
-//		CEUS_FSS_creator.parseRuptureSetFile(nshmModelDirPath+"subduction/interface/Cascadia/bottom/partial-rupture/segmented/GEA17/C/rupture-set.json", srcFltSectsMap);
-//		CEUS_FSS_creator.parseRuptureSetFile(nshmModelDirPath+"subduction/interface/Cascadia/bottom/partial-rupture/segmented/GEA17/D/rupture-set.json", srcFltSectsMap);
-//		CEUS_FSS_creator.parseRuptureSetFile(nshmModelDirPath+"subduction/interface/Cascadia/bottom/partial-rupture/segmented/GEA17/E/rupture-set.json", srcFltSectsMap);
-//		CEUS_FSS_creator.parseRuptureSetFile(nshmModelDirPath+"subduction/interface/Cascadia/bottom/partial-rupture/segmented/GEA17/F/rupture-set.json", srcFltSectsMap);
-//		CEUS_FSS_creator.parseRuptureSetFile(nshmModelDirPath+"subduction/interface/Cascadia/bottom/partial-rupture/unsegmented/GEA12-A/scaled/rupture-set.json", srcFltSectsMap);
-//		CEUS_FSS_creator.parseRuptureSetFile(nshmModelDirPath+"subduction/interface/Cascadia/bottom/partial-rupture/unsegmented/GEA12-B/scaled/rupture-set.json", srcFltSectsMap);
+//		CEUS_FSS_creator.parseRuptureSetFile(new File(nshmModelDir, "subduction/interface/Cascadia/bottom/full-rupture/cluster-out/rupture-set.json"), srcFltSectsMap);
+//		CEUS_FSS_creator.parseRuptureSetFile(new File(nshmModelDir, "subduction/interface/Cascadia/bottom/partial-rupture/segmented/GEA12/B/rupture-set.json"), srcFltSectsMap);
+//		CEUS_FSS_creator.parseRuptureSetFile(new File(nshmModelDir, "subduction/interface/Cascadia/bottom/partial-rupture/segmented/GEA12/C/rupture-set.json"), srcFltSectsMap);
+//		CEUS_FSS_creator.parseRuptureSetFile(new File(nshmModelDir, "subduction/interface/Cascadia/bottom/partial-rupture/segmented/GEA12/D/rupture-set.json"), srcFltSectsMap);
+//		CEUS_FSS_creator.parseRuptureSetFile(new File(nshmModelDir, "subduction/interface/Cascadia/bottom/partial-rupture/segmented/GEA12/northern/rupture-set.json"), srcFltSectsMap);
+//		CEUS_FSS_creator.parseRuptureSetFile(new File(nshmModelDir, "subduction/interface/Cascadia/bottom/partial-rupture/segmented/GEA17/B/rupture-set.json"), srcFltSectsMap);
+//		CEUS_FSS_creator.parseRuptureSetFile(new File(nshmModelDir, "subduction/interface/Cascadia/bottom/partial-rupture/segmented/GEA17/C'/rupture-set.json"), srcFltSectsMap);
+//		CEUS_FSS_creator.parseRuptureSetFile(new File(nshmModelDir, "subduction/interface/Cascadia/bottom/partial-rupture/segmented/GEA17/C/rupture-set.json"), srcFltSectsMap);
+//		CEUS_FSS_creator.parseRuptureSetFile(new File(nshmModelDir, "subduction/interface/Cascadia/bottom/partial-rupture/segmented/GEA17/D/rupture-set.json"), srcFltSectsMap);
+//		CEUS_FSS_creator.parseRuptureSetFile(new File(nshmModelDir, "subduction/interface/Cascadia/bottom/partial-rupture/segmented/GEA17/E/rupture-set.json"), srcFltSectsMap);
+//		CEUS_FSS_creator.parseRuptureSetFile(new File(nshmModelDir, "subduction/interface/Cascadia/bottom/partial-rupture/segmented/GEA17/F/rupture-set.json"), srcFltSectsMap);
+//		CEUS_FSS_creator.parseRuptureSetFile(new File(nshmModelDir, "subduction/interface/Cascadia/bottom/partial-rupture/unsegmented/GEA12-A/scaled/rupture-set.json"), srcFltSectsMap);
+//		CEUS_FSS_creator.parseRuptureSetFile(new File(nshmModelDir, "subduction/interface/Cascadia/bottom/partial-rupture/unsegmented/GEA12-B/scaled/rupture-set.json"), srcFltSectsMap);
 //
-//		CEUS_FSS_creator.parseRuptureSetFile(nshmModelDirPath+"subduction/interface/Cascadia/middle/full-rupture/cluster-out/rupture-set.json", srcFltSectsMap);
-//		CEUS_FSS_creator.parseRuptureSetFile(nshmModelDirPath+"subduction/interface/Cascadia/middle/partial-rupture/segmented/GEA12/B/rupture-set.json", srcFltSectsMap);
-//		CEUS_FSS_creator.parseRuptureSetFile(nshmModelDirPath+"subduction/interface/Cascadia/middle/partial-rupture/segmented/GEA12/C/rupture-set.json", srcFltSectsMap);
-//		CEUS_FSS_creator.parseRuptureSetFile(nshmModelDirPath+"subduction/interface/Cascadia/middle/partial-rupture/segmented/GEA12/D/rupture-set.json", srcFltSectsMap);
-//		CEUS_FSS_creator.parseRuptureSetFile(nshmModelDirPath+"subduction/interface/Cascadia/middle/partial-rupture/segmented/GEA12/northern/rupture-set.json", srcFltSectsMap);
-//		CEUS_FSS_creator.parseRuptureSetFile(nshmModelDirPath+"subduction/interface/Cascadia/middle/partial-rupture/segmented/GEA17/B/rupture-set.json", srcFltSectsMap);
-//		CEUS_FSS_creator.parseRuptureSetFile(nshmModelDirPath+"subduction/interface/Cascadia/middle/partial-rupture/segmented/GEA17/C'/rupture-set.json", srcFltSectsMap);
-//		CEUS_FSS_creator.parseRuptureSetFile(nshmModelDirPath+"subduction/interface/Cascadia/middle/partial-rupture/segmented/GEA17/C/rupture-set.json", srcFltSectsMap);
-//		CEUS_FSS_creator.parseRuptureSetFile(nshmModelDirPath+"subduction/interface/Cascadia/middle/partial-rupture/segmented/GEA17/D/rupture-set.json", srcFltSectsMap);
-//		CEUS_FSS_creator.parseRuptureSetFile(nshmModelDirPath+"subduction/interface/Cascadia/middle/partial-rupture/segmented/GEA17/E/rupture-set.json", srcFltSectsMap);
-//		CEUS_FSS_creator.parseRuptureSetFile(nshmModelDirPath+"subduction/interface/Cascadia/middle/partial-rupture/segmented/GEA17/F/rupture-set.json", srcFltSectsMap);
-//		CEUS_FSS_creator.parseRuptureSetFile(nshmModelDirPath+"subduction/interface/Cascadia/middle/partial-rupture/unsegmented/GEA12-A/scaled/rupture-set.json", srcFltSectsMap);
-//		CEUS_FSS_creator.parseRuptureSetFile(nshmModelDirPath+"subduction/interface/Cascadia/middle/partial-rupture/unsegmented/GEA12-B/scaled/rupture-set.json", srcFltSectsMap);
+//		CEUS_FSS_creator.parseRuptureSetFile(new File(nshmModelDir, "subduction/interface/Cascadia/middle/full-rupture/cluster-out/rupture-set.json"), srcFltSectsMap);
+//		CEUS_FSS_creator.parseRuptureSetFile(new File(nshmModelDir, "subduction/interface/Cascadia/middle/partial-rupture/segmented/GEA12/B/rupture-set.json"), srcFltSectsMap);
+//		CEUS_FSS_creator.parseRuptureSetFile(new File(nshmModelDir, "subduction/interface/Cascadia/middle/partial-rupture/segmented/GEA12/C/rupture-set.json"), srcFltSectsMap);
+//		CEUS_FSS_creator.parseRuptureSetFile(new File(nshmModelDir, "subduction/interface/Cascadia/middle/partial-rupture/segmented/GEA12/D/rupture-set.json"), srcFltSectsMap);
+//		CEUS_FSS_creator.parseRuptureSetFile(new File(nshmModelDir, "subduction/interface/Cascadia/middle/partial-rupture/segmented/GEA12/northern/rupture-set.json"), srcFltSectsMap);
+//		CEUS_FSS_creator.parseRuptureSetFile(new File(nshmModelDir, "subduction/interface/Cascadia/middle/partial-rupture/segmented/GEA17/B/rupture-set.json"), srcFltSectsMap);
+//		CEUS_FSS_creator.parseRuptureSetFile(new File(nshmModelDir, "subduction/interface/Cascadia/middle/partial-rupture/segmented/GEA17/C'/rupture-set.json"), srcFltSectsMap);
+//		CEUS_FSS_creator.parseRuptureSetFile(new File(nshmModelDir, "subduction/interface/Cascadia/middle/partial-rupture/segmented/GEA17/C/rupture-set.json"), srcFltSectsMap);
+//		CEUS_FSS_creator.parseRuptureSetFile(new File(nshmModelDir, "subduction/interface/Cascadia/middle/partial-rupture/segmented/GEA17/D/rupture-set.json"), srcFltSectsMap);
+//		CEUS_FSS_creator.parseRuptureSetFile(new File(nshmModelDir, "subduction/interface/Cascadia/middle/partial-rupture/segmented/GEA17/E/rupture-set.json"), srcFltSectsMap);
+//		CEUS_FSS_creator.parseRuptureSetFile(new File(nshmModelDir, "subduction/interface/Cascadia/middle/partial-rupture/segmented/GEA17/F/rupture-set.json"), srcFltSectsMap);
+//		CEUS_FSS_creator.parseRuptureSetFile(new File(nshmModelDir, "subduction/interface/Cascadia/middle/partial-rupture/unsegmented/GEA12-A/scaled/rupture-set.json"), srcFltSectsMap);
+//		CEUS_FSS_creator.parseRuptureSetFile(new File(nshmModelDir, "subduction/interface/Cascadia/middle/partial-rupture/unsegmented/GEA12-B/scaled/rupture-set.json"), srcFltSectsMap);
 //
-//		CEUS_FSS_creator.parseRuptureSetFile(nshmModelDirPath+"subduction/interface/Cascadia/top/full-rupture/cluster-out/rupture-set.json", srcFltSectsMap);
-//		CEUS_FSS_creator.parseRuptureSetFile(nshmModelDirPath+"subduction/interface/Cascadia/top/partial-rupture/segmented/GEA12/B/rupture-set.json", srcFltSectsMap);
-//		CEUS_FSS_creator.parseRuptureSetFile(nshmModelDirPath+"subduction/interface/Cascadia/top/partial-rupture/segmented/GEA12/C/rupture-set.json", srcFltSectsMap);
-//		CEUS_FSS_creator.parseRuptureSetFile(nshmModelDirPath+"subduction/interface/Cascadia/top/partial-rupture/segmented/GEA12/D/rupture-set.json", srcFltSectsMap);
-//		CEUS_FSS_creator.parseRuptureSetFile(nshmModelDirPath+"subduction/interface/Cascadia/top/partial-rupture/segmented/GEA12/northern/rupture-set.json", srcFltSectsMap);
-//		CEUS_FSS_creator.parseRuptureSetFile(nshmModelDirPath+"subduction/interface/Cascadia/top/partial-rupture/segmented/GEA17/B/rupture-set.json", srcFltSectsMap);
-//		CEUS_FSS_creator.parseRuptureSetFile(nshmModelDirPath+"subduction/interface/Cascadia/top/partial-rupture/segmented/GEA17/C'/rupture-set.json", srcFltSectsMap);
-//		CEUS_FSS_creator.parseRuptureSetFile(nshmModelDirPath+"subduction/interface/Cascadia/top/partial-rupture/segmented/GEA17/C/rupture-set.json", srcFltSectsMap);
-//		CEUS_FSS_creator.parseRuptureSetFile(nshmModelDirPath+"subduction/interface/Cascadia/top/partial-rupture/segmented/GEA17/D/rupture-set.json", srcFltSectsMap);
-//		CEUS_FSS_creator.parseRuptureSetFile(nshmModelDirPath+"subduction/interface/Cascadia/top/partial-rupture/segmented/GEA17/E/rupture-set.json", srcFltSectsMap);
-//		CEUS_FSS_creator.parseRuptureSetFile(nshmModelDirPath+"subduction/interface/Cascadia/top/partial-rupture/segmented/GEA17/F/rupture-set.json", srcFltSectsMap);
-//		CEUS_FSS_creator.parseRuptureSetFile(nshmModelDirPath+"subduction/interface/Cascadia/top/partial-rupture/unsegmented/GEA12-A/scaled/rupture-set.json", srcFltSectsMap);
-//		CEUS_FSS_creator.parseRuptureSetFile(nshmModelDirPath+"subduction/interface/Cascadia/top/partial-rupture/unsegmented/GEA12-B/scaled/rupture-set.json", srcFltSectsMap);
+//		CEUS_FSS_creator.parseRuptureSetFile(new File(nshmModelDir, "subduction/interface/Cascadia/top/full-rupture/cluster-out/rupture-set.json"), srcFltSectsMap);
+//		CEUS_FSS_creator.parseRuptureSetFile(new File(nshmModelDir, "subduction/interface/Cascadia/top/partial-rupture/segmented/GEA12/B/rupture-set.json"), srcFltSectsMap);
+//		CEUS_FSS_creator.parseRuptureSetFile(new File(nshmModelDir, "subduction/interface/Cascadia/top/partial-rupture/segmented/GEA12/C/rupture-set.json"), srcFltSectsMap);
+//		CEUS_FSS_creator.parseRuptureSetFile(new File(nshmModelDir, "subduction/interface/Cascadia/top/partial-rupture/segmented/GEA12/D/rupture-set.json"), srcFltSectsMap);
+//		CEUS_FSS_creator.parseRuptureSetFile(new File(nshmModelDir, "subduction/interface/Cascadia/top/partial-rupture/segmented/GEA12/northern/rupture-set.json"), srcFltSectsMap);
+//		CEUS_FSS_creator.parseRuptureSetFile(new File(nshmModelDir, "subduction/interface/Cascadia/top/partial-rupture/segmented/GEA17/B/rupture-set.json"), srcFltSectsMap);
+//		CEUS_FSS_creator.parseRuptureSetFile(new File(nshmModelDir, "subduction/interface/Cascadia/top/partial-rupture/segmented/GEA17/C'/rupture-set.json"), srcFltSectsMap);
+//		CEUS_FSS_creator.parseRuptureSetFile(new File(nshmModelDir, "subduction/interface/Cascadia/top/partial-rupture/segmented/GEA17/C/rupture-set.json"), srcFltSectsMap);
+//		CEUS_FSS_creator.parseRuptureSetFile(new File(nshmModelDir, "subduction/interface/Cascadia/top/partial-rupture/segmented/GEA17/D/rupture-set.json"), srcFltSectsMap);
+//		CEUS_FSS_creator.parseRuptureSetFile(new File(nshmModelDir, "subduction/interface/Cascadia/top/partial-rupture/segmented/GEA17/E/rupture-set.json"), srcFltSectsMap);
+//		CEUS_FSS_creator.parseRuptureSetFile(new File(nshmModelDir, "subduction/interface/Cascadia/top/partial-rupture/segmented/GEA17/F/rupture-set.json"), srcFltSectsMap);
+//		CEUS_FSS_creator.parseRuptureSetFile(new File(nshmModelDir, "subduction/interface/Cascadia/top/partial-rupture/unsegmented/GEA12-A/scaled/rupture-set.json"), srcFltSectsMap);
+//		CEUS_FSS_creator.parseRuptureSetFile(new File(nshmModelDir, "subduction/interface/Cascadia/top/partial-rupture/unsegmented/GEA12-B/scaled/rupture-set.json"), srcFltSectsMap);
 //
-//		CEUS_FSS_creator.parseClusterSetFile(nshmModelDirPath+"subduction/interface/Cascadia/bottom/full-rupture/cluster-in/cluster-7a/cluster-set.json", srcFltSectsMap);
-//		CEUS_FSS_creator.parseClusterSetFile(nshmModelDirPath+"subduction/interface/Cascadia/bottom/full-rupture/cluster-in/cluster-7b/cluster-set.json", srcFltSectsMap);
-//		CEUS_FSS_creator.parseClusterSetFile(nshmModelDirPath+"subduction/interface/Cascadia/bottom/full-rupture/cluster-in/cluster-8/cluster-set.json", srcFltSectsMap);
+//		CEUS_FSS_creator.parseClusterSetFile(nshmModelDirPath+"subduction/interface/Cascadia/bottom/full-rupture/cluster-in/cluster-7a/cluster-set.json"), srcFltSectsMap);
+//		CEUS_FSS_creator.parseClusterSetFile(nshmModelDirPath+"subduction/interface/Cascadia/bottom/full-rupture/cluster-in/cluster-7b/cluster-set.json"), srcFltSectsMap);
+//		CEUS_FSS_creator.parseClusterSetFile(nshmModelDirPath+"subduction/interface/Cascadia/bottom/full-rupture/cluster-in/cluster-8/cluster-set.json"), srcFltSectsMap);
 //
-//		CEUS_FSS_creator.parseClusterSetFile(nshmModelDirPath+"subduction/interface/Cascadia/middle/full-rupture/cluster-in/cluster-7a/cluster-set.json", srcFltSectsMap);
-//		CEUS_FSS_creator.parseClusterSetFile(nshmModelDirPath+"subduction/interface/Cascadia/middle/full-rupture/cluster-in/cluster-7b/cluster-set.json", srcFltSectsMap);
-//		CEUS_FSS_creator.parseClusterSetFile(nshmModelDirPath+"subduction/interface/Cascadia/middle/full-rupture/cluster-in/cluster-8/cluster-set.json", srcFltSectsMap);
+//		CEUS_FSS_creator.parseClusterSetFile(nshmModelDirPath+"subduction/interface/Cascadia/middle/full-rupture/cluster-in/cluster-7a/cluster-set.json"), srcFltSectsMap);
+//		CEUS_FSS_creator.parseClusterSetFile(nshmModelDirPath+"subduction/interface/Cascadia/middle/full-rupture/cluster-in/cluster-7b/cluster-set.json"), srcFltSectsMap);
+//		CEUS_FSS_creator.parseClusterSetFile(nshmModelDirPath+"subduction/interface/Cascadia/middle/full-rupture/cluster-in/cluster-8/cluster-set.json"), srcFltSectsMap);
 //
-//		CEUS_FSS_creator.parseClusterSetFile(nshmModelDirPath+"subduction/interface/Cascadia/top/full-rupture/cluster-in/cluster-7a/cluster-set.json", srcFltSectsMap);
-//		CEUS_FSS_creator.parseClusterSetFile(nshmModelDirPath+"subduction/interface/Cascadia/top/full-rupture/cluster-in/cluster-7b/cluster-set.json", srcFltSectsMap);
-//		CEUS_FSS_creator.parseClusterSetFile(nshmModelDirPath+"subduction/interface/Cascadia/top/full-rupture/cluster-in/cluster-8/cluster-set.json", srcFltSectsMap);
+//		CEUS_FSS_creator.parseClusterSetFile(nshmModelDirPath+"subduction/interface/Cascadia/top/full-rupture/cluster-in/cluster-7a/cluster-set.json"), srcFltSectsMap);
+//		CEUS_FSS_creator.parseClusterSetFile(nshmModelDirPath+"subduction/interface/Cascadia/top/full-rupture/cluster-in/cluster-7b/cluster-set.json"), srcFltSectsMap);
+//		CEUS_FSS_creator.parseClusterSetFile(nshmModelDirPath+"subduction/interface/Cascadia/top/full-rupture/cluster-in/cluster-8/cluster-set.json"), srcFltSectsMap);
 	}
 
 
 	public static FaultSystemSolution getFaultSystemSolution(String nshmModelDirPath, FaultModelEnum fltModel) {
+		return getFaultSystemSolution(new File(nshmModelDirPath), fltModel);
+	}
+	
+	public static FaultSystemSolution getFaultSystemSolution(File nshmModelDir, FaultModelEnum fltModel) {
+		return getFaultSystemSolution(nshmModelDir, getNshmModel(nshmModelDir), fltModel);
+	}
+	
+	public static FaultSystemSolution getFaultSystemSolution(File nshmModelDir, NshmpHazardModel nshmModel, FaultModelEnum fltModel) {
 		
 		// rate weight for specified fault model branch
 		double rateWt = 1.0/fltModel.getWeight();
@@ -220,7 +270,7 @@ public class Cascadia_FSS_creator {
 		
 	    // get fault section list for given fault model
 	//	HashMap<Integer,GeoJSONFaultSection> faultSectionMap;
-	    ArrayList<GeoJSONFaultSection> faultSectionList = getFaultSectionList(nshmModelDirPath, fltModel);
+	    ArrayList<GeoJSONFaultSection> faultSectionList = getFaultSectionList(nshmModelDir, fltModel);
 		// make parSectID_List & write attributes
 		ArrayList<Integer> parSectID_List = new ArrayList<Integer>(); // this is NSHM ID for each parent section
 		if(D) System.out.println("index\tsectID\trake");
@@ -244,7 +294,7 @@ public class Cascadia_FSS_creator {
 		
 		// Read from Peter's rupture-set.json and and cluster-set.json files
 		HashMap<Integer,int[]> srcFltSectsMap = new HashMap<Integer,int[]>(); // the fault section used by each source (same order as above)
-		getSrcIDsAndFaultSectionsLists(srcFltSectsMap, nshmModelDirPath, fltModel);
+		getSrcIDsAndFaultSectionsLists(srcFltSectsMap, nshmModelDir, fltModel);
 		Set<Integer> srcIDsList = srcFltSectsMap.keySet();  // a list of all the source IDs (no duplicates)
 
 		// some tests
@@ -276,9 +326,7 @@ public class Cascadia_FSS_creator {
 
 //		System.exit(0);
 		
-		
-		
-		NshmErf erf = getNshmERF(nshmModelDirPath);
+		NshmErf erf = getNshmERF(nshmModel);
 		System.out.println("erf.getNumSources() = "+erf.getNumSources());
 //		int numPtSrc=0;
 		ArrayList<Integer> testSrcIDsList = new ArrayList<Integer>();
@@ -497,8 +545,69 @@ public class Cascadia_FSS_creator {
 		    }
 		    System.out.println("ERF versus fss tests passed!!");
 	    }   
+	    
+	    fss.setGridSourceProvider(buildSlabGridSources(nshmModel));
 
 		return fss;
+	}
+	
+	static GridSourceList buildSlabGridSources(NshmpHazardModel model) {
+		NshmErf erf = getNshmSlabERF(model);
+		
+		LocationList locs = new LocationList();
+		List<List<GriddedRupture>> ruptureLists = new ArrayList<>();
+		
+		GriddedRupturePropertiesCache cache = new GriddedRupturePropertiesCache();
+		
+		int sourceIndex = 0;
+		int numRups = 0;
+		for (ProbEqkSource source : erf) {
+			System.out.println(source.getClass().getName());
+			NshmSource.Point ptSrc = (NshmSource.Point)source;
+			Location loc = ptSrc.location();
+			
+			List<GriddedRupture> rups;
+			int locIndex;
+			if (locs.isEmpty() || !locs.getLast().equals(loc)) {
+				rups = new ArrayList<>();
+				ruptureLists.add(rups);
+				locIndex = locs.size();
+				locs.add(loc);
+			} else {
+				locIndex = locs.size()-1;
+				rups = ruptureLists.getLast();
+			}
+			Preconditions.checkState(source.getTectonicRegionType() == TectonicRegionType.SUBDUCTION_SLAB);
+			System.out.println("Source "+sourceIndex+" Location: "+loc);
+			sourceIndex++;
+			for (ProbEqkRupture rup : source) {
+				RuptureSurface surf = rup.getRuptureSurface();
+				Location myLoc = ((NshmSurface)surf).centroid();
+				double depth = surf.getAveRupTopDepth();
+				double depth2 = surf.getAveRupBottomDepth();
+				GriddedRuptureProperties props = new GriddedRupturePropertiesBuilder()
+						.dip(surf.getAveDip())
+						.hypocentralDepth(0.5*(depth + depth2))
+						.upperDepth(depth).lowerDepth(depth2)
+						.length(0d) // true point source
+						.magnitude(rup.getMag())
+						.rake(rup.getAveRake())
+						.tectonicRegionType(TectonicRegionType.SUBDUCTION_SLAB)
+						.build();
+				props = cache.getCached(props);
+				GriddedRupture gridRup = new GriddedRupture(locIndex, loc, props, rup.getMeanAnnualRate(1d));
+				rups.add(gridRup);
+//				System.out.println("\tRup at location "+myLoc);
+				System.out.println("\t"+gridRup.properties+"; rate="+(float)gridRup.rate);
+				Preconditions.checkState(myLoc.lat == loc.lat);
+				Preconditions.checkState(myLoc.lon == loc.lon);
+				numRups++;
+			}
+//			if (locs.size() > 5)
+//				System.exit(0);
+		}
+		System.out.println("Built "+numRups+" slab ruptures for "+locs.size()+" locations");
+		return new GridSourceList.Precomputed(locs, TectonicRegionType.SUBDUCTION_SLAB, ruptureLists);
 	}
 	
 
@@ -506,7 +615,7 @@ public class Cascadia_FSS_creator {
 	public static void main(String[] args) {
 		String nshmModelDirPath = "/Users/field/nshm-haz_data/nshm-conus-6.1.2/";
 		
-		ArrayList<GeoJSONFaultSection> sectList = getFaultSectionList(nshmModelDirPath, FaultModelEnum.ALL);
+		ArrayList<GeoJSONFaultSection> sectList = getFaultSectionList(new File(nshmModelDirPath), FaultModelEnum.ALL);
 		for(GeoJSONFaultSection fltSect:sectList)
 			System.out.println(fltSect.getName()+"\t"+fltSect.getSectionId());
 

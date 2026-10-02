@@ -143,8 +143,10 @@ public class FSS_Fetcher2023 {
 
 		// create FSS
 		ArrayList<FaultSystemSolution>  ceusSolList = CEUS_FSS_creator.getFaultSystemSolutionList(nshmCONUS_ModelDirPath,faultModel);
-		FaultSystemSolution sol = MergedSolutionCreator.merge(ceusSolList.get(0), ceusSolList.get(1));
-
+		// Kevin note: this was a bug, I believe, because this list can have more than 2 items
+//		FaultSystemSolution sol = MergedSolutionCreator.merge(ceusSolList.get(0), ceusSolList.get(1));
+		FaultSystemSolution sol = MergedSolutionCreator.merge(ceusSolList);
+		
 		if(ceus_FSS_fileName != null) {
 			try {
 				sol.write(new File(ceus_FSS_fileName));
@@ -229,7 +231,7 @@ public class FSS_Fetcher2023 {
 		}	
 
 		// create FSS
-		FaultSystemSolution sol = AleutianArc_FSS_Creator.getFaultSystemSolution(nshmAK_ModelDirPath, faultModel);
+		FaultSystemSolution sol = AleutianArc_FSS_Creator.getFaultSystemSolution(new File(nshmAK_ModelDirPath), faultModel);
 		if(aleutianArc_FSS_fileName != null) {
 			try {
 				sol.write(new File(aleutianArc_FSS_fileName));
