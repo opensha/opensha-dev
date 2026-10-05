@@ -1,4 +1,4 @@
-package scratch.kevin;
+package scratch.kevin.ucerf3.etas.shakeoutV2;
 
 import java.awt.Color;
 import java.io.File;
@@ -7,6 +7,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.opensha.commons.data.region.CaliforniaRegions;
+import org.opensha.commons.geo.GriddedRegion;
 import org.opensha.commons.geo.Location;
 import org.opensha.commons.geo.Region;
 import org.opensha.commons.gui.plot.GeographicMapMaker;
@@ -65,12 +66,14 @@ public class ScenarioStiffnessCalc {
 		List<FaultSection> sources = rupSet.getFaultSectionDataForRupture(rupIndex);
 		
 //		Region region = new CaliforniaRegions.RELM_SOCAL();
-		Region region = new Region(new Location(32, -120), new Location(36, -114));
+//		Region region = new Region(new Location(32, -120), new Location(36, -114));
+		Region plotReg = new Region(new Location(32.5, -121), new Location(35.5, -115.5));
+		GriddedRegion gridReg = new GriddedRegion(plotReg, 0.02, GriddedRegion.ANCHOR_0_0);
 		
 		CPT cffCPT = GMT_CPT_Files.DIVERGING_VIK_UNIFORM.instance().rescale(-1d, 1d);
 		
 		List<Color> colors = new ArrayList<>(rupSet.getNumSections());
-		double[] sectsInRegion = rupSet.getFractSectsInsideRegion(region, false);
+		double[] sectsInRegion = rupSet.getFractSectsInsideRegion(gridReg, false);
 		
 		List<Double> scalars = new ArrayList<>();
 		for (FaultSection sect : sects) {
@@ -90,11 +93,13 @@ public class ScenarioStiffnessCalc {
 			colors.add(color);
 		}
 		
-		GeographicMapMaker mapMaker = new GeographicMapMaker(region);
+		GeographicMapMaker mapMaker = new GeographicMapMaker(gridReg);
 		mapMaker.setFaultSections(rupSet.getFaultSectionDataList());
 		mapMaker.plotSectColors(colors, cffCPT, "ΔCFF (MPa)", scalars);
 		
-		mapMaker.plot(new File("/tmp"), "u3_cff_"+rupIndex, "Rupture "+rupIndex+" Coulomb Stress Change");
+		File outputDir = new File("/home/kevin/OpenSHA/UCERF3/etas/shakeout_v2");
+//		mapMaker.plot(outputDir, "u3_cff_"+rupIndex, "Rupture "+rupIndex+" Coulomb Stress Change");
+		mapMaker.plot(outputDir, "u3_cff_"+rupIndex, " ");
 		
 		for (FaultSection sect : matchingSects) {
 			double cff = sumAgg.calc(sources, sect);
