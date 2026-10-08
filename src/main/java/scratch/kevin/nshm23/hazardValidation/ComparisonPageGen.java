@@ -116,8 +116,8 @@ public class ComparisonPageGen {
 		EnumSet<TectonicRegionType> trts = EnumSet.of(
 				TectonicRegionType.ACTIVE_SHALLOW
 				, TectonicRegionType.STABLE_SHALLOW
-//				, TectonicRegionType.SUBDUCTION_INTERFACE
-//				, TectonicRegionType.SUBDUCTION_SLAB
+				, TectonicRegionType.SUBDUCTION_INTERFACE
+				, TectonicRegionType.SUBDUCTION_SLAB
 		);
 		
 		int vs30 = 760;
@@ -128,7 +128,8 @@ public class ComparisonPageGen {
 		String suffixTheirs = "ext";
 		
 		File fssDir = new File("/home/kevin/OpenSHA/fss_inversions");
-		File nshm23Dir = new File(fssDir, "2024_02_02-nshm23_branches-WUS_FM_v3/");
+//		File nshm23Dir = new File(fssDir, "2024_02_02-nshm23_branches-WUS_FM_v3/");
+		File nshm23Dir = new File(fssDir, "2026_10-nshm23-td_erf-solutions");
 		
 		EnumSet<IncludeBackgroundOption> bgOps = EnumSet.allOf(IncludeBackgroundOption.class);
 //		EnumSet<IncludeBackgroundOption> bgOps = EnumSet.of(IncludeBackgroundOption.EXCLUDE);
@@ -138,8 +139,11 @@ public class ComparisonPageGen {
 //		File inputDir = new File(fssDir, "2026_07_30-nshm23-hazard_validation-WUS-maxDist300-nshmpIMLs");
 //		File inputDir = new File(fssDir, "2026_07_31-nshm23-hazard_validation-WUS-origRakes-maxDist300-nshmpIMLs");
 //		File inputDir = new File(fssDir, "2026_08_01-nshm23-hazard_validation-WUS-origNGAW2-maxDist300-nshmpIMLs");
-		File inputDir = new File(fssDir, "2026_08_01-nshm23-hazard_validation-WUS-origRakes-origNGAW2-maxDist300-nshmpIMLs");
-		File inputSolFile = new File(nshm23Dir, "results_WUS_FM_v3_branch_averaged_gridded_simplified_revised2026.zip");
+//		File inputDir = new File(fssDir, "2026_08_01-nshm23-hazard_validation-WUS-origRakes-origNGAW2-maxDist300-nshmpIMLs");
+//		File inputSolFile = new File(nshm23Dir, "results_WUS_FM_v3_branch_averaged_gridded_simplified_revised2026.zip");
+		
+		File inputDir = new File(fssDir, "2026_10_02-nshm23-td_erf-WUS-Cascadia-time_indep-1yr");
+		File inputSolFile = new File(nshm23Dir, "nshm23-wus-ba-hist_dole.zip");
 		boolean rupMFDs = false;
 
 		File compDirActiveSub = new File("/home/kevin/OpenSHA/nshm23/nshmp-haz-models/ext_hazard_calcs/"
@@ -184,7 +188,10 @@ public class ComparisonPageGen {
 //		zoomReg = new Region(new Location(40, -115), new Location(49, -105));
 		
 		// Nevada-ish
-		zoomReg = new Region(new Location(35, -121), new Location(43, -113));
+//		zoomReg = new Region(new Location(35, -121), new Location(43, -113));
+		
+		// Cascadia
+		zoomReg = new Region(new Location(37, -125), new Location(49, -115));
 		
 		SourceFilterManager sourceFilters = new SourceFilterManager(SourceFilters.TRT_DIST_CUTOFFS);
 //		SourceFilterManager sourceFilters = new SourceFilterManager(SourceFilters.FIXED_DIST_CUTOFF);
@@ -192,7 +199,9 @@ public class ComparisonPageGen {
 		
 		Map<TectonicRegionType, AttenRelRef> gmmRefs = Map.of(
 				TectonicRegionType.ACTIVE_SHALLOW, AttenRelRef.USGS_NSHM23_ACTIVE,
-				TectonicRegionType.STABLE_SHALLOW, AttenRelRef.USGS_NSHM23_STABLE_R2);
+				TectonicRegionType.STABLE_SHALLOW, AttenRelRef.USGS_NSHM23_STABLE_R2,
+				TectonicRegionType.SUBDUCTION_INTERFACE, AttenRelRef.USGS_NSHM23_INTERFACE,
+				TectonicRegionType.SUBDUCTION_SLAB, AttenRelRef.USGS_NSHM23_INTRASLAB);
 //				TectonicRegionType.ACTIVE_SHALLOW, AttenRelRef.NGAWest_2014_AVG_NOIDRISS);
 		Map<TectonicRegionType, ScalarIMR> gmms = new HashMap<>();
 		Map<TectonicRegionType, ScalarIMR> wrapperGMMs = gmms;

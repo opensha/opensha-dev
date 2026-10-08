@@ -1,6 +1,5 @@
 package scratch.kevin.nshm23.wrapper;
 
-import java.awt.geom.Point2D;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
@@ -10,6 +9,7 @@ import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
@@ -23,8 +23,6 @@ import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.Options;
 import org.opensha.commons.data.CSVFile;
 import org.opensha.commons.data.Site;
-import org.opensha.commons.data.WeightedList;
-import org.opensha.commons.data.function.ArbitrarilyDiscretizedFunc;
 import org.opensha.commons.data.function.DiscretizedFunc;
 import org.opensha.commons.data.xyz.GriddedGeoDataSet;
 import org.opensha.commons.geo.GriddedRegion;
@@ -39,21 +37,19 @@ import org.opensha.sha.calc.HazardCurveCalculator;
 import org.opensha.sha.earthquake.AbstractERF;
 import org.opensha.sha.earthquake.ProbEqkSource;
 import org.opensha.sha.earthquake.faultSysSolution.FaultSystemSolution;
+import org.opensha.sha.earthquake.faultSysSolution.hazard.HazardCurveMetadata;
 import org.opensha.sha.earthquake.faultSysSolution.hazard.mpj.MPJ_LogicTreeHazardCalc;
 import org.opensha.sha.earthquake.faultSysSolution.modules.GridSourceProvider;
+import org.opensha.sha.earthquake.faultSysSolution.util.FaultSysHazardCalcSettings;
+import org.opensha.sha.earthquake.faultSysSolution.util.FaultSysHazardCalcSettings.CurveXValManager;
 import org.opensha.sha.earthquake.faultSysSolution.util.FaultSysTools;
 import org.opensha.sha.earthquake.faultSysSolution.util.SolHazardMapCalc;
 import org.opensha.sha.calc.ReturnPeriod;
-import org.opensha.sha.earthquake.param.BackgroundRupType;
+import org.opensha.sha.calc.sourceFilters.SourceFilterManager;
 import org.opensha.sha.earthquake.param.IncludeBackgroundOption;
 import org.opensha.sha.earthquake.util.GriddedSeismicitySettings;
-import org.opensha.sha.faultSurface.utils.ptSrcCorr.PointSourceDistanceCorrection;
-import org.opensha.sha.faultSurface.utils.ptSrcCorr.PointSourceDistanceCorrections;
-import org.opensha.sha.gui.infoTools.IMT_Info;
-import org.opensha.sha.imr.AttenRelRef;
+import org.opensha.sha.imr.AttenRelSupplier;
 import org.opensha.sha.imr.ScalarIMR;
-import org.opensha.sha.imr.param.IntensityMeasureParams.PGA_Param;
-import org.opensha.sha.imr.param.IntensityMeasureParams.SA_Param;
 import org.opensha.sha.util.TectonicRegionType;
 
 import com.google.common.base.Preconditions;
@@ -71,25 +67,21 @@ public class MPJ_WrapperHazardCalc extends MPJTaskCalculator {
 	private static final double GRID_SPACING_DEFAULT = 0.1d;
 	private double gridSpacing = GRID_SPACING_DEFAULT;
 	
-	private static final double MAX_DIST_DEFAULT = 500;
-	private double maxDistance = MAX_DIST_DEFAULT;
-	
-	private static final double SKIP_MAX_DIST_DEFAULT = 300;
-	private double skipMaxSiteDist = SKIP_MAX_DIST_DEFAULT;
-	
-	private static AttenRelRef GMPE_DEFAULT = AttenRelRef.ASK_2014;
-	private AttenRelRef gmpeRef = GMPE_DEFAULT;
+	private Map<TectonicRegionType, AttenRelSupplier> gmmSuppliers;
+	private SourceFilterManager sourceFilters;
+	private SourceFilterManager siteSkipSourceFilters;
+	private boolean pointSourceOptimizations;
+	private CurveXValManager xValManager;
 	
 //	private static final double[] PERIODS_DEFAULT = { 0d, 0.2d, 1d };
 	public static final double[] PERIODS_DEFAULT = { 0d, 1d };
 	private double[] periods = PERIODS_DEFAULT;
 	
-	private ReturnPeriod[] rps = ReturnPeriod.standardValues();
+	private ReturnPeriod[] rps;
 	
 	private static final IncludeBackgroundOption GRID_SEIS_DEFAULT = IncludeBackgroundOption.INCLUDE;
 	private IncludeBackgroundOption gridSeisOp = GRID_SEIS_DEFAULT;
 	
-	// TODO: CLI
 	private GriddedSeismicitySettings gridSettings = GriddedSeismicitySettings.DEFAULT;
 	
 	private boolean noSubduction = false;
@@ -109,8 +101,6 @@ public class MPJ_WrapperHazardCalc extends MPJTaskCalculator {
 	private ExecutorService exec;
 	
 	private NshmErf erf;
-	private DiscretizedFunc[] linearXVals;
-	private DiscretizedFunc[] logXVals;
 
 	public MPJ_WrapperHazardCalc(CommandLine cmd) throws ZipException, IOException {
 		super(cmd);
@@ -132,14 +122,12 @@ public class MPJ_WrapperHazardCalc extends MPJTaskCalculator {
 		if (cmd.hasOption("grid-spacing"))
 			gridSpacing = Double.parseDouble(cmd.getOptionValue("grid-spacing"));
 		
-		if (cmd.hasOption("max-distance"))
-			maxDistance = Double.parseDouble(cmd.getOptionValue("max-distance"));
-		
-		if (cmd.hasOption("skip-max-distance"))
-			skipMaxSiteDist = Double.parseDouble(cmd.getOptionValue("skip-max-distance"));
-		
-		if (cmd.hasOption("gmpe"))
-			gmpeRef = AttenRelRef.valueOf(cmd.getOptionValue("gmpe"));
+		gmmSuppliers = FaultSysHazardCalcSettings.getGMMs(cmd);
+		sourceFilters = FaultSysHazardCalcSettings.getSourceFilters(cmd);
+		siteSkipSourceFilters = FaultSysHazardCalcSettings.getSiteSkipSourceFilters(sourceFilters, cmd);
+		pointSourceOptimizations = FaultSysHazardCalcSettings.arePointSourceOptimizationsEnabled(cmd);
+		xValManager = FaultSysHazardCalcSettings.getXValManager(cmd);
+		gridSettings = FaultSysHazardCalcSettings.getGridSeisSettings(cmd);
 		
 		if (cmd.hasOption("periods")) {
 			List<Double> periodsList = new ArrayList<>();
@@ -229,28 +217,25 @@ public class MPJ_WrapperHazardCalc extends MPJTaskCalculator {
 			trts.add(TectonicRegionType.SUBDUCTION_SLAB);
 		}
 		Preconditions.checkState(!trts.isEmpty(), "Must supply at least one TRT");
+		if (gmmSuppliers.size() > 1)
+			for (TectonicRegionType trt : trts)
+				Preconditions.checkState(gmmSuppliers.containsKey(trt), "No GMM supplied for %s", trt);
+		if (rank == 0) {
+			debug("GMMs:");
+			for (TectonicRegionType trt : gmmSuppliers.keySet())
+				debug("\t"+trt+": "+gmmSuppliers.get(trt).getName());
+			debug("Source filters: "+sourceFilters);
+			debug("Site skip filters: "+siteSkipSourceFilters);
+		}
 
 		erf = new NshmErf(erfPath, trts, gridSeisOp);
 		System.out.println("NSHM ERF size: " + erf.getNumSources());
 		erf.getTimeSpan().setDuration(1.0);
+		rps = ReturnPeriod.defaultsForCurveDuration(erf.getTimeSpan());
 		erf.updateForecast();
 		
 		exec = Executors.newFixedThreadPool(getNumThreads());
 		
-		linearXVals = new DiscretizedFunc[periods.length];
-		logXVals = new DiscretizedFunc[periods.length];
-		IMT_Info imtInfo = new IMT_Info();
-		for (int p=0; p<periods.length; p++) {
-			if (periods[p] == 0d) {
-				linearXVals[p] = imtInfo.getDefaultHazardCurve(PGA_Param.NAME);
-			} else {
-				Preconditions.checkState(periods[p] > 0d);
-				linearXVals[p] = imtInfo.getDefaultHazardCurve(SA_Param.NAME);
-			}
-			logXVals[p] = new ArbitrarilyDiscretizedFunc();
-			for (Point2D pt : linearXVals[p])
-				logXVals[p].set(Math.log(pt.getX()), 0d);
-		}
 	}
 
 	@Override
@@ -276,26 +261,24 @@ public class MPJ_WrapperHazardCalc extends MPJTaskCalculator {
 		debug("DONE "+batch.length+" curves");
 	}
 	
-	private ArrayDeque<ScalarIMR> gmpeDeque;
+	private ArrayDeque<Map<TectonicRegionType, ScalarIMR>> gmmsDeque;
 	
-	private synchronized ScalarIMR checkOutGMPE() {
-		if (gmpeDeque == null)
-			gmpeDeque = new ArrayDeque<>();
+	private synchronized Map<TectonicRegionType, ScalarIMR> checkOutGMMs() {
+		if (gmmsDeque == null)
+			gmmsDeque = new ArrayDeque<>();
 		
-		ScalarIMR gmpe;
-		if (gmpeDeque.isEmpty()) {
-			gmpe = gmpeRef.instance(null);
+		Map<TectonicRegionType, ScalarIMR> gmms;
+		if (gmmsDeque.isEmpty()) {
+			gmms = FaultSysHazardCalcSettings.getGmmInstances(gmmSuppliers);
 		} else {
-			gmpe = gmpeDeque.pop();
+			gmms = gmmsDeque.pop();
 		}
 		
-		gmpe.setParamDefaults();
-		
-		return gmpe;
+		return gmms;
 	}
 	
-	private synchronized void checkInGMPE(ScalarIMR gmpe) {
-		gmpeDeque.push(gmpe);
+	private synchronized void checkInGMMs(Map<TectonicRegionType, ScalarIMR> gmms) {
+		gmmsDeque.push(gmms);
 	}
 	
 	private ArrayDeque<HazardCurveCalculator> calcDeque;
@@ -306,9 +289,8 @@ public class MPJ_WrapperHazardCalc extends MPJTaskCalculator {
 		
 		HazardCurveCalculator calc;
 		if (calcDeque.isEmpty()) {
-			calc = new HazardCurveCalculator();
-			
-			calc.setMaxSourceDistance(maxDistance);
+			calc = new HazardCurveCalculator(sourceFilters);
+			calc.setPointSourceOptimizationsEnabled(pointSourceOptimizations);
 		} else {
 			calc = calcDeque.pop();
 		}
@@ -337,19 +319,15 @@ public class MPJ_WrapperHazardCalc extends MPJTaskCalculator {
 			if (canSkipSite(site)) {
 				curves = new DiscretizedFunc[periods.length];
 				for (int p=0; p<periods.length; p++) {
-					DiscretizedFunc curve = linearXVals[p].deepClone();
-					for (int i=0; i<curve.size(); i++)
-						curve.set(i, 0d);
-					
-					curves[p] = curve;
+					curves[p] = xValManager.initLinearCurve(periods[p]);
 				}
 				return this;
 			}
 			
-			ScalarIMR gmpe = checkOutGMPE();
+			Map<TectonicRegionType, ScalarIMR> gmms = checkOutGMMs();
 			HazardCurveCalculator calc = checkOutCurveCalc();
 			
-			site.addParameterList(gmpe.getSiteParams());
+			site.addParameterList(FaultSysHazardCalcSettings.getDefaultSiteParams(gmms));
 			
 			ExternalGridProvERF gridProvERF = null;
 			if (externalGridProv != null)
@@ -358,36 +336,25 @@ public class MPJ_WrapperHazardCalc extends MPJTaskCalculator {
 			curves = new DiscretizedFunc[periods.length];
 			
 			for (int p=0; p<periods.length; p++) {
-				DiscretizedFunc logCurve = logXVals[p].deepClone();
+				DiscretizedFunc logCurve = xValManager.initLogCurve(periods[p]);
+				FaultSysHazardCalcSettings.setIMforPeriod(gmms, periods[p]);
 				
-				if (periods[p] == 0d) {
-					gmpe.setIntensityMeasure(PGA_Param.NAME);
-				} else {
-					Preconditions.checkState(periods[p] > 0d);
-					gmpe.setIntensityMeasure(SA_Param.NAME);
-					SA_Param.setPeriodInSA_Param(gmpe.getIntensityMeasure(), periods[p]);
-				}
-				
-				calc.getHazardCurve(logCurve, site, gmpe, erf);
+				calc.getHazardCurve(logCurve, site, gmms, erf);
 				
 				if (externalGridProv != null) {
 					// calc separately
-					DiscretizedFunc gridCurve = logXVals[p].deepClone();
-					calc.getHazardCurve(gridCurve, site, gmpe, gridProvERF);
+					DiscretizedFunc gridCurve = xValManager.initLogCurve(periods[p]);
+					calc.getHazardCurve(gridCurve, site, gmms, gridProvERF);
 					
 					// add it in
 					for (int i=0; i<gridCurve.size(); i++)
 						logCurve.set(i, 1d - (1d-gridCurve.getY(i)) * (1d-logCurve.getY(i)));
 				}
 				
-				DiscretizedFunc curve = linearXVals[p].deepClone();
-				for (int i=0; i<curve.size(); i++)
-					curve.set(i, logCurve.getY(i));
-				
-				curves[p] = curve;
+				curves[p] = xValManager.remapToLinear(logCurve, periods[p]);
 			}
 			
-			checkInGMPE(gmpe);
+			checkInGMMs(gmms);
 			checkInCurveCalc(calc);
 			
 			return this;
@@ -395,21 +362,7 @@ public class MPJ_WrapperHazardCalc extends MPJTaskCalculator {
 	}
 	
 	private boolean canSkipSite(Site site) {
-		if (externalGridProv != null) {
-			Location siteLoc = site.getLocation();
-			GriddedRegion gridSourceReg = externalGridProv.getGriddedRegion();
-			if (gridSourceReg.contains(siteLoc) ||
-					gridSourceReg.distanceToLocation(siteLoc) <= skipMaxSiteDist)
-				return false;
-		}
-		
-		for (int sourceID=0; sourceID<erf.getNumSources(); sourceID++) {
-			ProbEqkSource source = erf.getSource(sourceID);
-			if (source.getMinDistance(site) < skipMaxSiteDist)
-				return false;
-		}
-		
-		return true;
+		return SolHazardMapCalc.shouldSkipSite(site, siteSkipSourceFilters, erf, erf.getNumSources(), externalGridProv);
 	}
 	
 	private class ExternalGridProvERF extends AbstractERF {
@@ -460,6 +413,10 @@ public class MPJ_WrapperHazardCalc extends MPJTaskCalculator {
 			// merge them
 			
 			List<String> zipFileNames = new ArrayList<>();
+			HazardCurveMetadata curveMetadata = new HazardCurveMetadata(erf.getTimeSpan());
+			File metadataFile = new File(outputDir, HazardCurveMetadata.FILE_NAME);
+			curveMetadata.write(metadataFile);
+			zipFileNames.add(metadataFile.getName());
 			
 			for (int p=0; p<periods.length; p++) {
 				DiscretizedFunc[] perCurves = new DiscretizedFunc[gridRegion.getNodeCount()];
@@ -555,6 +512,7 @@ public class MPJ_WrapperHazardCalc extends MPJTaskCalculator {
 	
 	public static Options createOptions() {
 		Options ops = MPJTaskCalculator.createOptions();
+		FaultSysHazardCalcSettings.addCommonOptions(ops, true);
 		
 		ops.addRequiredOption("id", "input-dir", true, "Path to inputs directory");
 		ops.addRequiredOption("od", "output-dir", true, "Path to output directory");
@@ -564,9 +522,6 @@ public class MPJ_WrapperHazardCalc extends MPJTaskCalculator {
 				+ "calculation.");
 		ops.addOption("of", "output-file", true, "Path to output zip file. Default will be based on the output directory");
 		ops.addOption("sp", "grid-spacing", true, "Grid spacing in decimal degrees. Default: "+(float)GRID_SPACING_DEFAULT);
-		ops.addOption("md", "max-distance", true, "Maximum source-site distance in km. Default: "+(float)MAX_DIST_DEFAULT);
-		ops.addOption("smd", "skip-max-distance", true, "Skip sites with no source-site distances below this value, in km. "
-				+ "Default: "+(float)SKIP_MAX_DIST_DEFAULT);
 		ops.addOption("fo", "faults-only", false, "Flag to disable model gridded seismicity sources.");
 		ops.addOption("gs", "gridded-seis", true, "Gridded seismicity option. One of "
 				+FaultSysTools.enumOptions(IncludeBackgroundOption.class)+". Default: "+GRID_SEIS_DEFAULT.name());
@@ -576,9 +531,6 @@ public class MPJ_WrapperHazardCalc extends MPJTaskCalculator {
 		ops.addOption("egp", "external-grid-prov", true, "Path to external grid source provider to use for hazard "
 				+ "calculations. Can be either a fault system solution, or a zip file containing just a grid source "
 				+ "provider. Implies --faults-only.");
-		ops.addOption("gm", "gmpe", true, "Sets GMPE. Note that this will be overriden if the Logic Tree "
-				+ "supplies GMPE choices. Default: "+GMPE_DEFAULT.name());
-		ops.addOption("p", "periods", true, "Calculation period(s). Mutliple can be comma separated");
 		
 		return ops;
 	}
