@@ -87,6 +87,7 @@ public class TD_BA_CalcScriptWriter {
 		gmpes.put(TectonicRegionType.SUBDUCTION_INTERFACE, AttenRelRef.USGS_NSHM23_INTERFACE);
 		gmpes.put(TectonicRegionType.SUBDUCTION_SLAB, AttenRelRef.USGS_NSHM23_INTRASLAB);
 		
+		boolean useRupMFDs = false;
 		Double maxDist = null; // use TRT defaults
 		boolean nshmpIMLs = true;
 
@@ -118,7 +119,7 @@ public class TD_BA_CalcScriptWriter {
 					.vs30(760d)
 					.maxDistance(maxDist)
 					.setUseNSHMP_IMLs(nshmpIMLs)
-					.useRupMFDs(false)
+					.useRupMFDs(useRupMFDs)
 					.durationYears(durationYears);
 			if (timeDependent)
 				hazardBuilder.probabilityModel(probabilityModel).startYear(startYear);
