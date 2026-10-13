@@ -142,9 +142,15 @@ public class ComparisonPageGen {
 //		File inputDir = new File(fssDir, "2026_08_01-nshm23-hazard_validation-WUS-origRakes-origNGAW2-maxDist300-nshmpIMLs");
 //		File inputSolFile = new File(nshm23Dir, "results_WUS_FM_v3_branch_averaged_gridded_simplified_revised2026.zip");
 		
-		File inputDir = new File(fssDir, "2026_10_02-nshm23-td_erf-WUS-Cascadia-time_indep-1yr");
+//		File inputDir = new File(fssDir, "2026_10_02-nshm23-td_erf-WUS-Cascadia-time_indep-1yr");
+		File inputDir = new File(fssDir, "2026_10_09-nshm23-td_erf-WUS-Cascadia-ALL-time_indep-1yr");
 		File inputSolFile = new File(nshm23Dir, "nshm23-wus-ba-hist_dole.zip");
 		boolean rupMFDs = false;
+		
+//		File inputDir = new File(fssDir, "2026_10_08-nshm23-wrapped-wus-hazard-0.1deg");
+//		File inputSolFile = new File(nshm23Dir, "nshm23-wus-ba-hist_dole.zip");
+//		boolean rupMFDs = false;
+//		bgOps = EnumSet.of(IncludeBackgroundOption.INCLUDE);
 
 		File compDirActiveSub = new File("/home/kevin/OpenSHA/nshm23/nshmp-haz-models/ext_hazard_calcs/"
 				+ "conus_2023.R2-no_gmm_region-by_source-active_subduction-vs760-0p1-20260515-95ae7e82fbb85d");
