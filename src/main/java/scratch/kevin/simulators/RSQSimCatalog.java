@@ -836,7 +836,10 @@ public class RSQSimCatalog implements XMLSaveable {
 		BRUCE_6711("rundir6711", "Bruce 6711", "Bruce Shaw", cal(2025, 11, 20),
 				"RoughSystem, nstrands=32, alphaRough=.02, iseed=45, deltax=.57km, sigma0=100, bdeep=.013 bshallow=.003, "
 				+ "alpha=0.1, hload=hst=3, nfhigh=2.0, nflow=0.5, dynamic, fromRemote loaded",
-				11, 'N');
+				11, 'N'),
+		BRUCE_1061("rundir1061", "Bruce 1061", "Bruce Shaw", cal(2026, 10, 13),
+				"WUS_2km_1mmdyAll , N[0.5, 2], b=.006, fracArea=0.8",
+				NSHM23_FaultModels.WUS_FM_v3, NSHM23_DeformationModels.AVERAGE),;
 		
 		
 		private String dirName;
@@ -3502,7 +3505,8 @@ public class RSQSimCatalog implements XMLSaveable {
 		Arrays.sort(cats, new CatEnumDateComparator());
 		// new catalogs
 //		GregorianCalendar minDate = cal(2021, 10, 1);
-		GregorianCalendar minDate = cal(2025, 9, 1);
+//		GregorianCalendar minDate = cal(2025, 9, 1);
+		GregorianCalendar minDate = cal(2026, 9, 1);
 		for (Catalogs cat : cats) {
 		// specific catalog
 //		GregorianCalendar minDate = cal(2000, 1, 1);
