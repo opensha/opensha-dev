@@ -17,10 +17,11 @@ import org.opensha.sha.earthquake.faultSysSolution.FaultSystemSolution;
 import org.opensha.sha.earthquake.faultSysSolution.modules.GridSourceList;
 import org.opensha.sha.earthquake.faultSysSolution.modules.GridSourceList.GriddedRupture;
 import org.opensha.sha.earthquake.faultSysSolution.modules.GridSourceList.GriddedRuptureProperties;
-import org.opensha.sha.earthquake.faultSysSolution.modules.GridSourceList.GriddedRupturePropertiesBuilder;
 import org.opensha.sha.earthquake.faultSysSolution.modules.GridSourceList.GriddedRupturePropertiesCache;
 import org.opensha.sha.earthquake.faultSysSolution.modules.RupSetTectonicRegimes;
 import org.opensha.sha.earthquake.param.IncludeBackgroundOption;
+import org.opensha.sha.earthquake.rupForecastImpl.nshm23.gridded.NSHM23_SingleRegionGridSourceProvider.NSHM23GridRupDimensions;
+import org.opensha.sha.earthquake.rupForecastImpl.nshm23.gridded.NSHM23_SingleRegionGridSourceProvider.NSHM23_WUS_FiniteRuptureConverter;
 import org.opensha.sha.faultSurface.ApproxEvenlyGriddedSurface;
 import org.opensha.sha.faultSurface.FaultSection;
 import org.opensha.sha.faultSurface.GeoJSONFaultSection;
@@ -583,18 +584,19 @@ public class Cascadia_FSS_creator {
 			for (ProbEqkRupture rup : source) {
 				RuptureSurface surf = rup.getRuptureSurface();
 				Location myLoc = ((NshmSurface)surf).centroid();
-				double depth = surf.getAveRupTopDepth();
-				double depth2 = surf.getAveRupBottomDepth();
-				GriddedRuptureProperties props = new GriddedRupturePropertiesBuilder()
-						.dip(surf.getAveDip())
-						.hypocentralDepth(0.5*(depth + depth2))
-						.upperDepth(depth).lowerDepth(depth2)
-						.length(0d) // true point source
-						.magnitude(rup.getMag())
-						.rake(rup.getAveRake())
-						.tectonicRegionType(TectonicRegionType.SUBDUCTION_SLAB)
-						.build();
-				props = cache.getCached(props);
+				double upperDepth = surf.getAveRupTopDepth();
+				NSHM23GridRupDimensions dims = NSHM23_WUS_FiniteRuptureConverter.getSlabDimensions(
+						rup.getMag(), upperDepth);
+				Preconditions.checkState((float)surf.getAveDip() == (float)dims.dip(),
+						"Unexpected NSHM23 slab dip: %s != %s", surf.getAveDip(), dims.dip());
+				Preconditions.checkState((float)surf.getAveWidth() == (float)dims.width(),
+						"Unexpected NSHM23 slab width: %s != %s", surf.getAveWidth(), dims.width());
+				Preconditions.checkState((float)surf.getAveRupBottomDepth() == (float)dims.lowerDepth(),
+						"Unexpected NSHM23 slab lower depth: %s != %s", surf.getAveRupBottomDepth(), dims.lowerDepth());
+				Preconditions.checkState((float)rup.getAveRake() == 0f,
+						"Unexpected NSHM23 slab rake: %s", rup.getAveRake());
+				GriddedRuptureProperties props = NSHM23_WUS_FiniteRuptureConverter.getSlabRuptureProperties(
+						rup.getMag(), upperDepth, cache);
 				GriddedRupture gridRup = new GriddedRupture(locIndex, loc, props, rup.getMeanAnnualRate(1d));
 				rups.add(gridRup);
 //				System.out.println("\tRup at location "+myLoc);
