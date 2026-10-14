@@ -41,8 +41,8 @@ import org.opensha.sha.earthquake.rupForecastImpl.nshm27.NSHM27_InvConfigFactory
 import org.opensha.sha.earthquake.rupForecastImpl.nshm27.logicTree.NSHM27_InterfaceHingedBValue;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm27.logicTree.NSHM27_InterfaceObsSeisDMAdjustment;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm27.logicTree.NSHM27_LogicTree;
-import org.opensha.sha.earthquake.rupForecastImpl.nshm27.logicTree.NSHM27_SeisClassificationMethod;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm27.logicTree.NSHM27_SeisRateModel;
+import org.opensha.sha.earthquake.rupForecastImpl.nshm27.logicTree.NSHM27_SeisRateModelEpoch;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm27.util.NSHM27_RegionLoader.NSHM27_SeismicityRegions;
 import org.opensha.sha.util.TectonicRegionType;
 
@@ -161,7 +161,7 @@ public class BValDistFigure {
 			densityEach = extrapolateWeight/(extrapolatedBranches.size()*hingedHist.getDelta());
 			for (LogicTreeBranch<LogicTreeNode> branch : extrapolatedBranches) {
 				double b = ((PureGR)branch.requireValue(NSHM27_SeisRateModel.class).getRateRecord(
-						seisReg, branch.requireValue(NSHM27_SeisClassificationMethod.class), TectonicRegionType.SUBDUCTION_INTERFACE)).b;
+						seisReg, branch.requireValue(NSHM27_SeisRateModelEpoch.class), TectonicRegionType.SUBDUCTION_INTERFACE)).b;
 				int index = extrapHist.getClosestXIndex(b);
 				extrapHist.add(index, densityEach);
 			}

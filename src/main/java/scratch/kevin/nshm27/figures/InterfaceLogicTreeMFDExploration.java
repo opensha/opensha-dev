@@ -56,8 +56,10 @@ import org.opensha.sha.earthquake.rupForecastImpl.nshm27.logicTree.NSHM27_Interf
 import org.opensha.sha.earthquake.rupForecastImpl.nshm27.logicTree.NSHM27_InterfaceMinSubSects;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm27.logicTree.NSHM27_InterfaceObsSeisDMAdjustment;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm27.logicTree.NSHM27_LogicTree;
-import org.opensha.sha.earthquake.rupForecastImpl.nshm27.logicTree.NSHM27_SeisClassificationMethod;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm27.logicTree.NSHM27_SeisRateModel;
+import org.opensha.sha.earthquake.rupForecastImpl.nshm27.logicTree.NSHM27_SeisRateModelBranch;
+import org.opensha.sha.earthquake.rupForecastImpl.nshm27.logicTree.NSHM27_SeisRateModelEpoch;
+import org.opensha.sha.earthquake.rupForecastImpl.nshm27.logicTree.NSHM27_SeisRateModelEpochCatalog;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm27.logicTree.NSHM27_InterfaceHingedBValue.CombinedSampledType;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm27.util.NSHM27_RegionLoader.NSHM27_SeismicityRegions;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_SubductionScalingRelationships;
@@ -121,11 +123,6 @@ public class InterfaceLogicTreeMFDExploration {
 		
 		double[] lhSamples = new LatinHypercubePointSetGenerator(new Random(12345l)).generate(1000, 1).getDimensionValues(0);
 		
-		WeightedList<NSHM27_SeisClassificationMethod> classificationChoices = new WeightedList<>();
-		for (NSHM27_SeisClassificationMethod classification : NSHM27_SeisClassificationMethod.values())
-			if (classification.getNodeWeight() > 0d)
-				classificationChoices.add(classification, classification.getNodeWeight());
-		List<NSHM27_SeisClassificationMethod> classificationSamples = classificationChoices.sampleEvenly(samples, new Random(12345l));
 		LogicTreeLevel<?> rateLevel = sampledBranch.getLevel(sampledBranch.getLevelTypeIndex(NSHM27_SeisRateModel.class));
 		((RandomLevel<?, ?>)rateLevel).build(lhSamples);
 		List<? extends LogicTreeNode> rateModelSamples = rateLevel.getNodes();
@@ -153,12 +150,19 @@ public class InterfaceLogicTreeMFDExploration {
 		Range rateRange = new Range(1e-5, 1e0);
 		
 		List<String> avgStrings = new ArrayList<>();
+		
+		NSHM27_SeisRateModelEpochCatalog epochCatalog = NSHM27_SeisRateModelEpochCatalog.load(seisReg, trt);
+		WeightedList<NSHM27_SeisRateModelEpoch> epochChoices = new WeightedList<>();
+		for (NSHM27_SeisRateModelEpoch epoch : epochCatalog.getEpochs())
+			epochChoices.add(epoch, epoch.getNodeWeight());
+		List<NSHM27_SeisRateModelEpoch> epochSamples = epochChoices.sampleEvenly(samples, new Random(12345l));
 
 		IncrementalMagFreqDist obsMFD = null;
 		EvenlyDiscretizedFunc obsCmlMFD = null;
 		if (includeObs) {
-			NSHM27_SeisRateModel rateModel = branch.requireValue(NSHM27_SeisRateModel.class);
-			obsMFD = rateModel.build(seisReg, branch.requireValue(NSHM27_SeisClassificationMethod.class), trt, refMFD, defaultMmax);
+//			NSHM27_SeisRateModelBranch rateModel = branch.requireValue(NSHM27_SeisRateModelBranch.class);
+//			obsMFD = rateModel.build(seisReg, branch.requireValue(NSHM27_SeisClassificationMethod.class), trt, refMFD, defaultMmax);
+			obsMFD = NSHM27_SeisRateModelBranch.loadMixtureRateModel(seisReg, trt).buildPreferred(refMFD, defaultMmax);
 			obsMFD.setName("Observed (interface)");
 			System.out.println("Observed rate M>5: "+obsMFD.getCumRate(obsMFD.getClosestXIndex(5.01)));
 			System.out.println("Observed rate M>6: "+obsMFD.getCumRate(obsMFD.getClosestXIndex(6.01)));
@@ -172,7 +176,7 @@ public class InterfaceLogicTreeMFDExploration {
 		EvenlyDiscretizedFunc obsTotalCmlMFD = null;
 		if (includeTotalObs) {
 			NSHM27_SeisRateModel rateModel = branch.requireValue(NSHM27_SeisRateModel.class);
-			obsTotalMFD = rateModel.build(seisReg, branch.requireValue(NSHM27_SeisClassificationMethod.class), null, refMFD, defaultMmax);
+			obsTotalMFD = NSHM27_SeisRateModelBranch.loadMixtureRateModel(seisReg, null).buildPreferred(refMFD, defaultMmax);
 			obsTotalMFD.setName("Observed (total)");
 			System.out.println("Observed total rate M>5: "+obsTotalMFD.getCumRate(obsTotalMFD.getClosestXIndex(5.01)));
 			System.out.println("Observed total rate M>6: "+obsTotalMFD.getCumRate(obsTotalMFD.getClosestXIndex(6.01)));
@@ -268,12 +272,12 @@ public class InterfaceLogicTreeMFDExploration {
 				Preconditions.checkState(sampledNodes.size() == samples);
 				for (int n=0; n<samples; n++) {
 					LogicTreeNode node = sampledNodes.get(n);
-					LogicTreeNode classNode = classificationSamples.get(n);
+					LogicTreeNode epochNode = epochSamples.get(n);
 					LogicTreeNode rateNode = rateModelSamples.get(n);
 					Preconditions.checkNotNull(rateNode);
 					mfdFutures.add(CompletableFuture.supplyAsync(()->{
 						LogicTreeBranch<LogicTreeNode> myBranch2 = myBranch.copy();
-						myBranch2.setValue(classNode);
+						myBranch2.setValue(epochNode);
 						myBranch2.setValue(l, node);
 						if (doRateSamples)
 							myBranch2.setValue(rateNode);
@@ -577,7 +581,7 @@ public class InterfaceLogicTreeMFDExploration {
 		if (branch.hasValue(NSHM27_InterfaceObsSeisDMAdjustment.EXTRAPOLATE))
 			b = ((PureGR)branch.requireValue(NSHM27_SeisRateModel.class).getRateRecord(
 					branch.requireValue(NSHM27_InterfaceFaultModels.class).getSeismicityRegion(),
-					branch.requireValue(NSHM27_SeisClassificationMethod.class), TectonicRegionType.SUBDUCTION_INTERFACE)).b;
+					branch.requireValue(NSHM27_SeisRateModelEpoch.class), TectonicRegionType.SUBDUCTION_INTERFACE)).b;
 		Preconditions.checkState(Double.isFinite(b));
 		
 		SectSlipRates slipRates = rupSet.requireModule(SectSlipRates.class);

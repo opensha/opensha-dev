@@ -6,6 +6,7 @@ import java.awt.Color;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -37,8 +38,9 @@ import org.opensha.sha.earthquake.faultSysSolution.util.FaultSysTools;
 import org.opensha.sha.earthquake.nshmp.seismicity.SeismicityRateFileLoader.PureGR;
 import org.opensha.sha.earthquake.param.IncludeBackgroundOption;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm27.logicTree.NSHM27_DeclusteringAlgorithms;
-import org.opensha.sha.earthquake.rupForecastImpl.nshm27.logicTree.NSHM27_SeisClassificationMethod;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm27.logicTree.NSHM27_SeisRateModelBranch;
+import org.opensha.sha.earthquake.rupForecastImpl.nshm27.logicTree.NSHM27_SeisRateModelEpoch;
+import org.opensha.sha.earthquake.rupForecastImpl.nshm27.logicTree.NSHM27_SeisRateModelEpochCatalog;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm27.logicTree.NSHM27_SeisRateModelSamples;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm27.logicTree.NSHM27_SeisSmoothingAlgorithms;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm27.util.NSHM27_RegionLoader;
@@ -52,6 +54,7 @@ import org.opensha.sha.magdist.SummedMagFreqDist;
 import org.opensha.sha.util.TectonicRegionType;
 
 import com.google.common.base.Preconditions;
+import com.google.common.primitives.Doubles;
 
 import net.mahdilamb.colormap.Colors;
 import oracle.net.aso.i;
@@ -209,8 +212,7 @@ public class CombinedMFDsFigure {
 								if (interfaceOnly && trt != TectonicRegionType.SUBDUCTION_INTERFACE)
 									continue;
 								
-								PureGR rateModel = (PureGR)NSHM27_SeisRateModelBranch.PREFFERRED.getRateRecord(
-										seisReg, NSHM27_SeisClassificationMethod.AVERAGE, trt);
+								PureGR rateModel = (PureGR)NSHM27_SeisRateModelBranch.loadMixtureRateModel(seisReg, trt).getMeanRecord();
 								if (m1 < 0)
 									m1 = rateModel.M1;
 								else
@@ -218,10 +220,10 @@ public class CombinedMFDsFigure {
 								
 								GriddedGeoDataSet pdf;
 								if (trt == TectonicRegionType.SUBDUCTION_SLAB)
-									pdf = NSHM27_SeisPDF_Loader.load3D(seisReg, NSHM27_SeisClassificationMethod.AVERAGE,
+									pdf = NSHM27_SeisPDF_Loader.load3D(seisReg,
 											trt, NSHM27_DeclusteringAlgorithms.AVERAGE, NSHM27_SeisSmoothingAlgorithms.AVERAGE).sum2D();
 								else
-									pdf = NSHM27_SeisPDF_Loader.load2D(seisReg, NSHM27_SeisClassificationMethod.AVERAGE,
+									pdf = NSHM27_SeisPDF_Loader.load2D(seisReg,
 											trt, NSHM27_DeclusteringAlgorithms.AVERAGE, NSHM27_SeisSmoothingAlgorithms.AVERAGE);
 								
 								double fractInRegion = 0d;
@@ -239,38 +241,27 @@ public class CombinedMFDsFigure {
 						
 						if (includeObs) {
 							List<PureGR> samples = new ArrayList<>();
-							samples.addAll(NSHM27_SeisRateModelSamples.loadOrigSamples(seisReg, NSHM27_SeisClassificationMethod.PROFACE, targetTRT));
-							int numProface = samples.size();
-							samples.addAll(NSHM27_SeisRateModelSamples.loadOrigSamples(seisReg, NSHM27_SeisClassificationMethod.PROSLAB, targetTRT));
-							int numProslab = samples.size() - numProface;
-							double weightProface = NSHM27_SeisClassificationMethod.PROFACE.getNodeWeight();
-							double weightProslab = NSHM27_SeisClassificationMethod.PROSLAB.getNodeWeight();
-							if ((float)(weightProface+weightProslab) != 1f) {
-								double sum = weightProface + weightProslab;
-								weightProface /= sum;
-								weightProslab /= sum;
+							List<Double> weights = new ArrayList<>();
+							NSHM27_SeisRateModelEpochCatalog epochCatalog = NSHM27_SeisRateModelEpochCatalog.load(seisReg, targetTRT);
+							double epochWeightSum = 0d;
+							for (NSHM27_SeisRateModelEpoch epoch : epochCatalog.getEpochs()) {
+								List<PureGR> mySamples = NSHM27_SeisRateModelSamples.loadOrigSamples(seisReg, epoch, targetTRT);
+								double weight = epoch.getNodeWeight();
+								epochWeightSum += weight;
+								double weightEach = weight/mySamples.size();
+								weights.addAll(Collections.nCopies(mySamples.size(), weightEach));
 							}
-							double[] weights = new double[samples.size()];
-							double weightProfaceEach = weightProface/(double)numProface;
-							double weightProslabEach = weightProslab/(double)numProslab;
-							for (int i=0; i<numProface; i++)
-								weights[i] = weightProfaceEach;
-							for (int i=numProface; i<samples.size(); i++)
-								weights[i] = weightProslabEach;
-							double weightSum = StatUtils.sum(weights);
-							Preconditions.checkState((float)weightSum == 1f, "Bad weightSum=%s for proface=%s (%s), proslab=%s (%s)",
-									(float)weightSum, weightProfaceEach, numProface, weightProslabEach, numProslab);
+							if ((float)epochWeightSum != 1f) {
+								double scalar = 1d/epochWeightSum;
+								for (int i=0; i<weights.size(); i++)
+									weights.set(i, weights.get(i)*scalar);
+							}
+							double[] weightsArray = Doubles.toArray(weights);
 							double[][] incrVals = new double[refMFD.size()][samples.size()];
 							double[][] cmlVals = new double[refMFD.size()][samples.size()];
 							double obsB = 0d;
 							IncrementalMagFreqDist obsIncrMean = new IncrementalMagFreqDist(refMFD.getMinX(), refMFD.getMaxX(), refMFD.size());
 							EvenlyDiscretizedFunc obsCmlMean = obsIncrMean.getCumRateDistWithOffset();
-							double obsProfaceB = 0d;
-							IncrementalMagFreqDist obsProfaceIncrMean = new IncrementalMagFreqDist(refMFD.getMinX(), refMFD.getMaxX(), refMFD.size());
-							EvenlyDiscretizedFunc obsProfaceCmlMean = obsIncrMean.getCumRateDistWithOffset();
-							double obsProslabB = 0d;
-							IncrementalMagFreqDist obsProslabIncrMean = new IncrementalMagFreqDist(refMFD.getMinX(), refMFD.getMaxX(), refMFD.size());
-							EvenlyDiscretizedFunc obsProslabCmlMean = obsIncrMean.getCumRateDistWithOffset();
 							for (int s=0; s<samples.size(); s++) {
 								PureGR sample = samples.get(s);
 								GutenbergRichterMagFreqDist gr = new GutenbergRichterMagFreqDist(refMFD.getMinX(), refMFD.size(), refMFD.getDelta());
@@ -284,34 +275,18 @@ public class CombinedMFDsFigure {
 								
 								EvenlyDiscretizedFunc cml = gr.getCumRateDistWithOffset();
 								
-								obsB += sample.b * weights[s];
-								if (s < numProface)
-									obsProfaceB += sample.b * weights[s];
-								else
-									obsProslabB += sample.b * weights[s];
+								obsB += sample.b * weightsArray[s];
 								
 								for (int m=0; m<refMFD.size(); m++) {
 									double incrRate = gr.getY(m);
 									double cmlRate = cml.getY(m);
-									obsIncrMean.set(m, Math.fma(weights[s], incrRate, obsIncrMean.getY(m)));
-									obsCmlMean.set(m, Math.fma(weights[s], cmlRate, obsCmlMean.getY(m)));
-									if (s < numProface) {
-										obsProfaceIncrMean.set(m, Math.fma(weights[s], incrRate, obsProfaceIncrMean.getY(m)));
-										obsProfaceCmlMean.set(m, Math.fma(weights[s], cmlRate, obsProfaceCmlMean.getY(m)));							
-									} else {
-										obsProslabIncrMean.set(m, Math.fma(weights[s], incrRate, obsProslabIncrMean.getY(m)));
-										obsProslabCmlMean.set(m, Math.fma(weights[s], cmlRate, obsProslabCmlMean.getY(m)));
-									}
+									obsIncrMean.set(m, Math.fma(weightsArray[s], incrRate, obsIncrMean.getY(m)));
+									obsCmlMean.set(m, Math.fma(weightsArray[s], cmlRate, obsCmlMean.getY(m)));
 									incrVals[m][s] = incrRate;
 									cmlVals[m][s] = cmlRate;
 								}
 							}
-							obsProfaceB /= weightProface;
-							obsProfaceIncrMean.scale(1d/weightProface);
-							obsProfaceCmlMean.scale(1d/weightProface);
-							obsProslabB /= weightProslab;
-							obsProslabIncrMean.scale(1d/weightProslab);
-							obsProslabCmlMean.scale(1d/weightProslab);
+							
 							
 							if (!interfaceOnly) {
 								fullObsMean = obsIncrMean;
@@ -323,8 +298,8 @@ public class CombinedMFDsFigure {
 							EvenlyDiscretizedFunc obsCmlLow = obsIncrLow.getCumRateDistWithOffset();
 							EvenlyDiscretizedFunc obsCmlHigh = obsIncrHigh.getCumRateDistWithOffset();
 							for (int m=0; m<refMFD.size(); m++) {
-								LightFixedXFunc incrPDF = ArbDiscrEmpiricalDistFunc.calcQuickNormCDF(incrVals[m], weights);
-								LightFixedXFunc cmlPDF = ArbDiscrEmpiricalDistFunc.calcQuickNormCDF(cmlVals[m], weights);
+								LightFixedXFunc incrPDF = ArbDiscrEmpiricalDistFunc.calcQuickNormCDF(incrVals[m], weightsArray);
+								LightFixedXFunc cmlPDF = ArbDiscrEmpiricalDistFunc.calcQuickNormCDF(cmlVals[m], weightsArray);
 								obsIncrLow.set(m, ArbDiscrEmpiricalDistFunc.calcFractileFromNormCDF(incrPDF, 0.025));
 								obsIncrHigh.set(m, ArbDiscrEmpiricalDistFunc.calcFractileFromNormCDF(incrPDF, 0.975));
 								obsCmlLow.set(m, ArbDiscrEmpiricalDistFunc.calcFractileFromNormCDF(cmlPDF, 0.025));
@@ -390,24 +365,6 @@ public class CombinedMFDsFigure {
 							chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 2f, OBS_RATE_COLOR));
 							
 							if (interfaceOnly) {
-								// proface and proslab means separately
-//								IncrementalMagFreqDist obsProfaceIncrMean = NSHM27_SeisRateModelBranch.PREFFERRED.build(
-//										seisReg, NSHM27_SeisClassificationMethod.PROFACE, targetTRT, refMFD, refMFD.getMaxX());
-//								IncrementalMagFreqDist obsProslabIncrMean = NSHM27_SeisRateModelBranch.PREFFERRED.build(
-//										seisReg, NSHM27_SeisClassificationMethod.PROSLAB, targetTRT, refMFD, refMFD.getMaxX());
-								
-								obsProfaceIncrMean.setName("Observed pro-face mean");
-								incrFuncs.add(obsProfaceIncrMean);
-								obsProfaceCmlMean.setName(obsProfaceIncrMean.getName());
-								cmlFuncs.add(obsProfaceCmlMean);
-								chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1.5f, Colors.tab_lightpurple));
-								
-								obsProslabIncrMean.setName("Observed pro-slab mean");
-								incrFuncs.add(obsProslabIncrMean);
-								obsProslabCmlMean.setName(obsProslabIncrMean.getName());
-								cmlFuncs.add(obsProslabCmlMean);
-								chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1.5f, Colors.tab_lightaqua));
-								
 								fullObsMean.setName("Observed total mean");
 								incrFuncs.add(fullObsMean);
 								fullObsMeanCml.setName(fullObsMean.getName());
