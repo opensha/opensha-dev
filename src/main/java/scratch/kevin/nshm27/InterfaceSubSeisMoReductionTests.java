@@ -48,7 +48,6 @@ public class InterfaceSubSeisMoReductionTests {
 		NSHM27_InterfaceDeformationModels dm = branch.requireValue(NSHM27_InterfaceDeformationModels.class);
 
 		NSHM27_SeismicityRegions reg = fm.getSeismicityRegion();
-		File pdfBaseDir = new File("/home/kevin/OpenSHA/nshm26/data/spatial_seis_pdfs/"+reg.name().toLowerCase()+"/2026_03_09-v1_2D/INTERFACE");
 		
 		System.out.println("Branch: "+branch+"; reg="+reg);
 		
@@ -72,7 +71,7 @@ public class InterfaceSubSeisMoReductionTests {
 			sectOutlines[s] = new Region(sectSurfs[s].getPerimeter(), BorderType.MERCATOR_LINEAR);
 		}
 		
-		GriddedGeoDataSet pdf = NSHM27_SeisPDF_Loader.load2D(pdfBaseDir, reg, decluster, smooth);
+		GriddedGeoDataSet pdf = NSHM27_SeisPDF_Loader.load2D(reg, TectonicRegionType.SUBDUCTION_INTERFACE, decluster, smooth);
 		
 		InterfaceGridAssociations assoc = new InterfaceGridAssociations(sects, pdf.getRegion());
 		double sumMapped = 0d;
