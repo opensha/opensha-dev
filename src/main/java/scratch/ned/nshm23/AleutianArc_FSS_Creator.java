@@ -521,8 +521,12 @@ public class AleutianArc_FSS_Creator {
 
 	public static void main(String[] args) {
 //		String nshmModelDirPath = "/Users/field/nshm-haz_data/nshm-alaska-main_Jan10_2024/"; // old & not longer works
-
 		String nshmModelDirPath = "/Users/field/nshm-haz_data/nshm-alaska-3.1-maint/";
+		// Peter prefers NARROW over WIDE
+		getFaultSystemSolution(new File(nshmModelDirPath), FaultModelEnum.GEOLOGIC_NARROW);
+		
+		System.exit(0);
+
 
 //		ArrayList<GeoJSONFaultSection> sectList = getFaultSectionList(nshmModelDirPath, FaultModelEnum.ALL);
 //		for(GeoJSONFaultSection fltSect:sectList) {
