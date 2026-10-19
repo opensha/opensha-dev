@@ -86,7 +86,6 @@ public class CEUS_FSS_creator {
 		 map.put(3062,0.5);	//	more recent;	SSCn (NMN-L: north, extended)
 		 map.put(3071,0.5);	//	more recent;	New Madrid - SSCn (Reelfoot, north)
 		 map.put(3073,0.5);	//	more recent;	SSCn (RFT-L: Reelfoot, extended)
-		 map.put(3610,0.5); //  more recent; 	Meers (USGS)
 		 return map;
 	 }
 	 
@@ -121,7 +120,6 @@ public class CEUS_FSS_creator {
 		 map.put(3043,0.5);  // outdated;	New Madrid - USGS (east)
 		 map.put(2181,0.5);  // outdated;	Cheraw (SSCn)
 		 map.put(3805,0.4);	//	lower wt;	Eastern Rift Margin (South) (meeman-shelby)
-		 map.put(3611,0.5); //  outdated; 	Meers (SSCn, cluster-out)		doesn't extend to include DOLE paleo site
 		 return map;
 	 }
 
@@ -163,7 +161,6 @@ public class CEUS_FSS_creator {
 		list.add(getFaultSection(new File(nshmModelDir, "stable-crust/fault/MO/New Madrid/features/New Madrid - USGS (west, north).geojson")));
 		list.add(getFaultSection(new File(nshmModelDir, "stable-crust/fault/MO/New Madrid/features/New Madrid - USGS (west, south).geojson")));
 		list.add(getFaultSection(new File(nshmModelDir, "stable-crust/fault/OK/Meers/features/Meers.geojson")));
-		list.add(getFaultSection(new File(nshmModelDir, "stable-crust/fault/OK/Meers/features/Meers (SSCn).geojson")));
 		list.add(getFaultSection(new File(nshmModelDir, "stable-crust/fault/TN/Eastern Rift Margin (North)/features/eastern-rift-margin-north.geojson")));
 		list.add(getFaultSection(new File(nshmModelDir, "stable-crust/fault/TN/Eastern Rift Margin (South)/features/crittenden-county.geojson")));
 		list.add(getFaultSection(new File(nshmModelDir, "stable-crust/fault/TN/Eastern Rift Margin (South)/features/eastern-rift-margin-south-extension.geojson")));
@@ -1228,7 +1225,8 @@ if(src.getName().equals("Unnamed fault system source")) // temp fix for Peters I
 	
 	public static void main(String[] args) {
 		
-		String nshmModelDirPath = "/Users/field/nshm-haz_data/nshm-conus-6.1.2/";
+//		String nshmModelDirPath = "/Users/field/nshm-haz_data/nshm-conus-6.1.2/";
+		String nshmModelDirPath = "/Users/field/nshm-haz_data/nshm-conus-6.2.0/";
 		// previous version of above won't work because hard-coded files changed
 
 		ArrayList<FaultSystemSolution> fssList = getFaultSystemSolutionList(new File(nshmModelDirPath),FaultModelEnum.PREFERRED);

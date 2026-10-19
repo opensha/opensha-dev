@@ -1328,7 +1328,8 @@ public class LongTermTD_2027_Analyses {
 //		listParentSectionsThatContainStringInName("Peninsula",getFullPrefUS27_ERF());
 		
 	
-		generatePreliminaryResults();
+//		generatePreliminaryResults();
+		getFullPrefUS27_ERF();
 		System.exit(0);
 		
 		
