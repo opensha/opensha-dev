@@ -19,7 +19,9 @@ import scratch.ned.nshm23.Cascadia_FSS_creator;
 import scratch.ned.nshm23.FSS_Fetcher2023;
 
 public class TD_FSS_Writer {
-
+	
+	private static final Cascadia_FSS_creator.FaultModelEnum CASCADIA_FM_FOR_COMBINED = Cascadia_FSS_creator.FaultModelEnum.MIDDLE;
+	
 	public static void main(String[] args) throws IOException {
 		ModuleArchive.VERBOSE_DEFAULT = false;
 		File outputDir = new File("/data/kevin/fss_inversions/2026_10-nshm23-td_erf-solutions");
@@ -54,11 +56,13 @@ public class TD_FSS_Writer {
 		System.out.println("Writing CEUS to "+ceusOutput.getAbsolutePath());
 		ceus.write(ceusOutput);
 		
-		FaultSystemSolution conusFull = MergedSolutionCreator.merge(wus, ceus, cascadia);
-		System.out.println(getDOLEstats(conusFull));
-		File conusFullOutput = new File(outputDir, "nshm23-conus-hist_dole.zip");
-		System.out.println("Writing WUS+Cascadia to "+conusFullOutput.getAbsolutePath());
-		conusFull.write(conusFullOutput);
+		if (cascadiaFM == CASCADIA_FM_FOR_COMBINED) {
+			FaultSystemSolution conusFull = MergedSolutionCreator.merge(wus, ceus, cascadia);
+			System.out.println(getDOLEstats(conusFull));
+			File conusFullOutput = new File(outputDir, "nshm23-conus-hist_dole.zip");
+			System.out.println("Writing WUS+Cascadia to "+conusFullOutput.getAbsolutePath());
+			conusFull.write(conusFullOutput);
+		}
 	}
 	
 	public static FaultSystemSolution getWUS() throws IOException {
@@ -71,8 +75,8 @@ public class TD_FSS_Writer {
 	}
 	
 	private static final File MODELS_DIR = new File("/data/kevin/nshm23/nshmp-haz-models");
-	private static final File CONUS_DIR = new File(MODELS_DIR, "nshm-conus-6.1.4");
-//	private static final File CONUS_DIR = new File(MODELS_DIR, "nshm-conus-6.2.0");
+//	private static final File CONUS_DIR = new File(MODELS_DIR, "nshm-conus-6.1.4");
+	private static final File CONUS_DIR = new File(MODELS_DIR, "nshm-conus-6.2.0");
 	
 	public static FaultSystemSolution getCascadia(NshmpHazardModel model) throws IOException {
 		return getCascadia(model, Cascadia_FSS_creator.FaultModelEnum.MIDDLE);
