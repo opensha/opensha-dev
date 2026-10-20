@@ -1229,7 +1229,7 @@ if(src.getName().equals("Unnamed fault system source")) // temp fix for Peters I
 		String nshmModelDirPath = "/Users/field/nshm-haz_data/nshm-conus-6.2.0/";
 		// previous version of above won't work because hard-coded files changed
 
-		ArrayList<FaultSystemSolution> fssList = getFaultSystemSolutionList(new File(nshmModelDirPath),FaultModelEnum.PREFERRED);
+		ArrayList<FaultSystemSolution> fssList = getFaultSystemSolutionList(new File(nshmModelDirPath),FaultModelEnum.BOTH);
 		for(FaultSystemSolution fss:fssList) {
 			int s=0;
 			for(FaultSection sect:fss.getRupSet().getFaultSectionDataList()) {

@@ -355,8 +355,6 @@ public class Cascadia_FSS_creator {
     		if(!parSectID_List.contains(id))
     			throw new RuntimeException("parSectID_List does not contain: "+id);
     	if(D)System.out.println("parSectID_List passed tests");
-
-//		System.exit(0);
 		
 		NshmErf erf = getNshmERF(nshmModel);
 		System.out.println("erf.getNumSources() = "+erf.getNumSources());
@@ -366,33 +364,6 @@ public class Cascadia_FSS_creator {
 			NshmSource src = (NshmSource)erf.getSource(s);
 			int srcID = src.getNSHM_ID();
 			
-		
-			
-//// this was to look at whether surface differences account for a hazard map discrepancy; surfaces compare well; this can be deleted
-//if(srcID==100801) {
-//	Location testLoc = new Location(41.56482, -123.25578);
-//	System.out.println("srcID==100801 AveRupBottomDepth:"+src.getRupture(0).getRuptureSurface().getAveRupBottomDepth());
-//	System.out.println("srcID==100801 AveRupTopDepth:"+src.getRupture(0).getRuptureSurface().getAveRupTopDepth());
-////	System.out.println("srcID==100801 AveDipDirection:"+src.getRupture(0).getRuptureSurface().getAveDipDirection());
-////	System.out.println("srcID==100801 UpperEdge:"+src.getRupture(0).getRuptureSurface().getEvenlyDiscritizedUpperEdge());
-//
-//	for(Location loc:src.getRupture(0).getRuptureSurface().getEvenlyDiscritizedListOfLocsOnSurface())
-//		System.out.println(loc);
-//
-//	System.out.println("\n"+faultSectionList.get(2).getSectionId()+"\n"+faultSectionList.get(2).getApproxGriddedSurface(5., false));
-//
-//	System.out.println(faultSectionList.get(2).getSectionId()+" AveRupTopDepth:"+src.getRupture(0).getRuptureSurface().getAveRupTopDepth());
-//	System.out.println(faultSectionList.get(3).getSectionId()+" AveRupTopDepth:"+src.getRupture(0).getRuptureSurface().getAveRupTopDepth());
-//
-//	double d1 = faultSectionList.get(2).getApproxGriddedSurface(5., false).getDistanceRup(testLoc);
-//	double d2 = src.getRupture(0).getRuptureSurface().getDistanceRup(testLoc);
-//	System.out.println(d1+"\n"+d2);
-//	
-//	
-//	//	System.out.println(faultSectionList.get(3).getSectionId());
-//	System.exit(0);
-//}
-			
 			// Following no longer needed because there are no other sources in ERF
 //			if(CEUS_FSS_creator.isPointSource(src))
 //				numPtSrc+=1;
@@ -401,25 +372,6 @@ public class Cascadia_FSS_creator {
 				if(!srcIDsList.contains(srcID))
 					continue;
 				
-//// HERE		
-////				// unsegmented are NSHM_ID: 100001 & 100101; s= 68 & 75, respectively
-//if(src.getNumRuptures()>10) {
-//	if(src.getNSHM_ID()==100001) // skip this one to get to the 2nd
-//		continue;
-////	System.out.println("SKIPPING "+src.getName());
-////	continue;
-//	System.out.println("r,mag,length, and area for "+s+"\t"+src.getNSHM_ID()+";  "+src.getName());
-//	for(int r=0;r<src.getNumRuptures();r++) {
-//		ProbEqkRupture rup = src.getRupture(r);
-//		System.out.println(r+"\t"+rup.getMag()+"\t"+rup.getRuptureSurface().getAveLength()+"\t"+rup.getRuptureSurface().getArea());
-//	}
-//	Location loc1 = src.getRupture(0).getRuptureSurface().getFirstLocOnUpperEdge();
-//	Location loc2 = src.getRupture(1).getRuptureSurface().getFirstLocOnUpperEdge();
-//
-//	System.out.println(src.getNSHM_ID()+"  floatDist="+LocationUtils.linearDistance(loc1, loc2));
-//	System.exit(0);
-//}
-
 				System.out.println("\t"+s+"\t"+srcID+"\t"+src.getNumRuptures()+"\t"+src.getName()+"\t"+src.getRupture(0).getClass().toString());
 				if(!testSrcIDsList.contains(srcID))
 					testSrcIDsList.add(srcID);
@@ -450,12 +402,6 @@ public class Cascadia_FSS_creator {
 	    for(int s=0;s<erf.getNumSources();s++) {
 	    	NshmSource src = (NshmSource)erf.getSource(s);
 	    	
-// HERE		
-//if(src.getName().contains("unsegmented")) {
-//	System.out.println("SKIPPING "+src.getName());
-//	continue;
-//}
-
 	    	Integer srcID = src.getNSHM_ID();
 	    	// skip if not on the flt mod branch
 			if(!srcIDsList.contains(srcID)) 
@@ -502,7 +448,6 @@ public class Cascadia_FSS_creator {
 		    	System.out.println("\t"+srcID+"\t"+(float)mfd.getMinMagWithNonZeroRate()+"\t"+(float)mfd.getMaxMagWithNonZeroRate()+"\trake="+
 		    	rakeForSrcIdMap.get(srcID)+"\t"+nameForSrcIdMap.get(srcID));
 		    }
-
 	    }
 	    
 	    // change fault IDs to start from 0
@@ -526,8 +471,131 @@ public class Cascadia_FSS_creator {
 	    	translatedSurfListForSrcIdMap.put(srcID, newSectForSrcList);
 	    }
 	    
-	    FaultSystemSolution fss = getFaultSystemSolution(mfdForSrcIdMap, mfdForUnsegmentedSrcIdMap,
-	    		translatedSurfListForSrcIdMap, faultSectionList);
+	    // compute number of ruptures from nonzero rates in MFDs
+	    int numRups = 0;
+	    for(int srcID:mfdForSrcIdMap.keySet()) {
+	    	SummedMagFreqDist mfd = mfdForSrcIdMap.get(srcID);
+	    	for(int i=0;i<mfd.size();i++)
+	    		if(mfd.getY(i) >0)
+	    			numRups += 1;		
+	    }
+	    int firstFloaterRupIndex = numRups;
+//System.out.println("firstFloaterRupIndex="+firstFloaterRupIndex);
+
+	    // Add Floaters
+	    for(int srcID:mfdForUnsegmentedSrcIdMap.keySet()) {
+	    	ArrayList<Integer> sectsForFloatersList = translatedSurfListForSrcIdMap.get(srcID);
+	    	double aveSectLength=0;
+	    	for(int id:sectsForFloatersList) {
+	    		aveSectLength += faultSectionList.get(id).getTraceLength()/sectsForFloatersList.size();
+	    	}
+//System.out.println(aveSectLength);
+	    	SummedMagFreqDist mfd = mfdForUnsegmentedSrcIdMap.get(srcID);
+	    	for(int i=0;i<mfd.size();i++) {
+	    		double rate = mfd.getY(i);
+	    		if(rate >0) {
+	    			double mag = mfd.getX(i);
+	    			double rupLengthKm = Math.pow(10, (mag-4.94)/1.39); // from Peter (Geomatrix Consultants, 1995)
+	    			int numSect = (int)Math.round(rupLengthKm/aveSectLength);
+	    			int numRup=sectsForFloatersList.size() - (numSect-1);
+	    			numRups += numRup;
+//System.out.println("HERE\tmag="+mag+"\trupLengthKm="+rupLengthKm+"\tnumSect="+numSect+"\tnumRup="+numRup+"\tnumRups="+numRups);
+	    		}
+	    	}
+	    }
+	    
+		double[] mags = new double[numRups];
+		double[] rakes = new double[numRups];  // defaults to zero here
+		double[] rupAreas = new double[numRups];
+		double[] rupLengths = new double[numRups];
+		double[] rupRates = new double[numRups];
+	    List<List<Integer>> sectionForRups = new ArrayList<>();
+	    
+	    if(D) System.out.println("numRups="+numRups);
+	    
+	    int r = 0;
+	    for(int srcID:mfdForSrcIdMap.keySet()) {
+	    	ArrayList<Integer> sectForRupList = translatedSurfListForSrcIdMap.get(srcID);
+	    	double lengthKm = 0;
+	    	double area = 0;
+	    	double rake = faultSectionList.get(sectForRupList.get(0)).getAveRake();  // get rake of first section
+	    	for(int id:sectForRupList) {
+	    		lengthKm += faultSectionList.get(id).getTraceLength();
+	    		area += faultSectionList.get(id).getArea(false);
+	    		// check that rake is constant across sections
+	    		double tempRake = faultSectionList.get(id).getAveRake();
+	    		boolean bothNaN = Double.isNaN(tempRake) && Double.isNaN(rake);
+	    		if(!bothNaN)
+	    			if(tempRake != rake)
+	    				if (D) System.out.println("WARNING: Rake changes among sections for srcID="+srcID
+	    					+"\n\t"+tempRake+" for "+faultSectionList.get(id).getName() 
+	    					+ "\n\t"+rake+" for "+faultSectionList.get(sectForRupList.get(0)).getName());
+	    	}
+	    	SummedMagFreqDist mfd = mfdForSrcIdMap.get(srcID);
+	    	for(int i=0;i<mfd.size();i++) {
+	    		double rate = mfd.getY(i);
+	    		if(rate >0) {
+	    			rupRates[r] = rate;
+	    			mags[r] = mfd.getX(i);
+	    			rupAreas[r] = area;
+	    			rakes[r] = rake;
+	    			rupLengths[r] = lengthKm*1e3; // convert to meters
+	    			sectionForRups.add(sectForRupList);
+	    			r += 1;		
+	    		}
+	    	}
+	    }
+	    
+	    // Floaters
+	    for(int srcID:mfdForUnsegmentedSrcIdMap.keySet()) {
+	    	ArrayList<Integer> sectsForFloatersList = translatedSurfListForSrcIdMap.get(srcID);
+	    	double aveSectLength=0, aveSectArea=0;
+	    	for(int id:sectsForFloatersList) {
+	    		aveSectLength += faultSectionList.get(id).getTraceLength()/sectsForFloatersList.size();
+	    		aveSectArea += faultSectionList.get(id).getArea(false)/sectsForFloatersList.size();
+	    	}
+	    	double rake = faultSectionList.get(sectsForFloatersList.get(0)).getAveRake();  // get rake of first section
+	    	SummedMagFreqDist mfd = mfdForUnsegmentedSrcIdMap.get(srcID);
+	    	for(int i=0;i<mfd.size();i++) {
+	    		double rate = mfd.getY(i);
+	    		if(rate >0) {
+	    			double mag = mfd.getX(i);
+	    			double rupLengthKm = Math.pow(10, (mag-4.94)/1.39); // from Peter (Geomatrix Consultants, 1995)
+	    			int numSect = (int)Math.round(rupLengthKm/aveSectLength);
+	    			int numRup = sectsForFloatersList.size() - (numSect-1);
+	    			if(D) System.out.println("FLOATER\tmag="+mag+"\trupLengthKm="+rupLengthKm+"\tnumSect="+numSect+"\tnumRup="+numRup);
+	    			for(int k=0;k<numRup;k++) {
+	    				ArrayList<Integer> sectForFloaterRupList = new ArrayList<Integer>();
+	    				for(int n=0;n<numSect;n++)
+	    					sectForFloaterRupList.add(sectsForFloatersList.get(k+n));
+		    	    	mags[r] = mag;
+		    			rupRates[r] = rate/numRup;
+		    			rupAreas[r] = numSect*aveSectArea;
+		    			rakes[r] = rake;
+		    			rupLengths[r] = numSect*aveSectLength*1e3; // convert to meters
+		    			sectionForRups.add(sectForFloaterRupList);	
+		    			if(D) {
+		    				String temp = "";
+		    				for(int n: sectForFloaterRupList)
+		    					temp+=n+",";
+		    				System.out.println("FLOATER SECTIONS: "+r+"\t"+temp);		    				
+		    			}
+		    			r+=1;
+	    			}
+	    		}
+	    	}
+	    }
+	    
+	    FaultSystemRupSet rupSet = new FaultSystemRupSet(
+	    		faultSectionList,
+				sectionForRups,
+				mags,
+				rakes,
+				rupAreas,
+				rupLengths); 
+	    
+	    FaultSystemSolution fss= new FaultSystemSolution(rupSet, rupRates);
+	    fss.setInfoString("Cascadia Fault System Solution");
 	    
 //	    Set tectonic region type
 	    TectonicRegionType[] trForRupArray = new TectonicRegionType[fss.getRupSet().getNumRuptures()];
@@ -549,13 +617,14 @@ public class Cascadia_FSS_creator {
 	    		fssTotalMomentRate += MagUtils.magToMoment(mag)*rate;
 	    		int iMag = fssTotalMFD.getClosestXIndex(mag);
 	    		List<Integer> sectsForRupList = fss.getRupSet().getSectionsIndicesForRup(rup);
-	    		if(rup<109) // this excludes floaters
+	    		if(rup<firstFloaterRupIndex){// 109) // this excludes floaters
 	    			for(int i:sectsForRupList) {
 	    				if(!sectMfdMapFSS.keySet().contains(i)) {
 	    					sectMfdMapFSS.put(i, getBlankMFD());
 	    				}
 	    				sectMfdMapFSS.get(i).add(iMag, rate);
 	    			}
+	    		} 
 	    		fssTotalMFD.add(iMag, rate);
 	    	}
 	    	
@@ -575,7 +644,7 @@ public class Cascadia_FSS_creator {
 		    	// skip if not on the flt mod branch
 				if(!srcIDsList.contains(srcID)) 
 					continue;
-		    	for(int r=0;r<src.getNumRuptures();r++) {
+		    	for(r=0;r<src.getNumRuptures();r++) {
 		    		double mag = src.getRupture(r).getMag();
 		    		int iMag = erfTotalMFD.getClosestXIndex(mag);
 		    		double rate = src.getRupture(r).getMeanAnnualRate(1.0)*rateWt;  // rate approx equal to prob
@@ -710,140 +779,6 @@ public class Cascadia_FSS_creator {
 	
 	
 	
-	/* This assumes fault sections have incremental IDs starting at 0.  Rupture lengths 
-	 * and areas are computed from fault sections provided.
-	 * @param mfdForSrcIdMap
-	 * @param mfdForUnsegmentedSrcIdMap
-	 * @param surfListForSrcIdMap
-	 * @return
-	 */
-	private static FaultSystemSolution getFaultSystemSolution(HashMap<Integer, SummedMagFreqDist> mfdForSrcIdMap, 
-			HashMap<Integer, SummedMagFreqDist> mfdForUnsegmentedSrcIdMap,
-			HashMap<Integer, ArrayList<Integer>> surfListForSrcIdMap, 
-			ArrayList<GeoJSONFaultSection> faultSectionData) {
-
-	    // compute number of ruptures from nonzero rates in MFDs
-	    int numRups = 0;
-	    for(int srcID:mfdForSrcIdMap.keySet()) {
-	    	SummedMagFreqDist mfd = mfdForSrcIdMap.get(srcID);
-	    	for(int i=0;i<mfd.size();i++)
-	    		if(mfd.getY(i) >0)
-	    			numRups += 1;		
-	    }
-	    // Add Floaters
-	    for(int srcID:mfdForUnsegmentedSrcIdMap.keySet()) {
-	    	ArrayList<Integer> sectsForFloatersList = surfListForSrcIdMap.get(srcID);
-	    	double aveSectLength=0;
-	    	for(int id:sectsForFloatersList) {
-	    		aveSectLength += faultSectionData.get(id).getTraceLength()/sectsForFloatersList.size();
-	    	}
-System.out.println(aveSectLength);
-	    	SummedMagFreqDist mfd = mfdForUnsegmentedSrcIdMap.get(srcID);
-	    	for(int i=0;i<mfd.size();i++) {
-	    		double rate = mfd.getY(i);
-	    		if(rate >0) {
-	    			double mag = mfd.getX(i);
-	    			double rupLengthKm = Math.pow(10, (mag-4.92)/1.4);
-	    			int numSect = (int)Math.round(rupLengthKm/aveSectLength);
-	    			int numRup=sectsForFloatersList.size() - (numSect-1);
-	    			numRups += numRup;
-System.out.println("HERE\tmag="+mag+"\trupLengthKm="+rupLengthKm+"\tnumSect="+numSect+"\tnumRup="+numRup+"\tnumRups="+numRups);
-	    		}
-	    	}
-	    }
-	    
-		double[] mags = new double[numRups];
-		double[] rakes = new double[numRups];  // defaults to zero here
-		double[] rupAreas = new double[numRups];
-		double[] rupLengths = new double[numRups];
-		double[] rupRates = new double[numRups];
-	    List<List<Integer>> sectionForRups = new ArrayList<>();
-	    
-	    if(D) System.out.println("numRups="+numRups);
-	    
-	    int r = 0;
-	    for(int srcID:mfdForSrcIdMap.keySet()) {
-	    	ArrayList<Integer> sectForRupList = surfListForSrcIdMap.get(srcID);
-	    	double lengthKm = 0;
-	    	double area = 0;
-	    	double rake = faultSectionData.get(sectForRupList.get(0)).getAveRake();  // get rake of first section
-	    	for(int id:sectForRupList) {
-	    		lengthKm += faultSectionData.get(id).getTraceLength();
-	    		area += faultSectionData.get(id).getArea(false);
-	    		// check that rake is constant across sections
-	    		double tempRake = faultSectionData.get(id).getAveRake();
-	    		if(tempRake != rake)
-	    			if (D) System.out.println("WARNING: Rake changes among sections for srcID="+srcID
-	    					+"\n\t"+tempRake+" for "+faultSectionData.get(id).getName() 
-	    					+ "\n\t"+rake+" for "+faultSectionData.get(sectForRupList.get(0)).getName());
-	    	}
-	    	SummedMagFreqDist mfd = mfdForSrcIdMap.get(srcID);
-	    	for(int i=0;i<mfd.size();i++) {
-	    		double rate = mfd.getY(i);
-	    		if(rate >0) {
-	    			rupRates[r] = rate;
-	    			mags[r] = mfd.getX(i);
-	    			rupAreas[r] = area;
-	    			rakes[r] = rake;
-	    			rupLengths[r] = lengthKm*1e3; // convert to meters
-	    			sectionForRups.add(sectForRupList);
-	    			r += 1;		
-	    		}
-	    	}
-	    }
-	    
-	    // Floaters
-	    for(int srcID:mfdForUnsegmentedSrcIdMap.keySet()) {
-	    	ArrayList<Integer> sectsForFloatersList = surfListForSrcIdMap.get(srcID);
-	    	double aveSectLength=0, aveSectArea=0;
-	    	for(int id:sectsForFloatersList) {
-	    		aveSectLength += faultSectionData.get(id).getTraceLength()/sectsForFloatersList.size();
-	    		aveSectArea += faultSectionData.get(id).getArea(false)/sectsForFloatersList.size();
-	    	}
-	    	double rake = faultSectionData.get(sectsForFloatersList.get(0)).getAveRake();  // get rake of first section
-	    	SummedMagFreqDist mfd = mfdForUnsegmentedSrcIdMap.get(srcID);
-	    	for(int i=0;i<mfd.size();i++) {
-	    		double rate = mfd.getY(i);
-	    		if(rate >0) {
-	    			double mag = mfd.getX(i);
-	    			double rupLengthKm = Math.pow(10, (mag-4.92)/1.4);
-	    			int numSect = (int)Math.round(rupLengthKm/aveSectLength);
-	    			int numRup = sectsForFloatersList.size() - (numSect-1);
-System.out.println("HERE\tmag="+mag+"\trupLengthKm="+rupLengthKm+"\tnumSect="+numSect+"\tnumRup="+numRup);
-	    			for(int k=0;k<numRup;k++) {
-	    				ArrayList<Integer> sectForFloaterRupList = new ArrayList<Integer>();
-	    				for(int n=0;n<numSect;n++)
-	    					sectForFloaterRupList.add(sectsForFloatersList.get(k+n));
-		    	    	mags[r] = mag;
-		    			rupRates[r] = rate/numRup;
-		    			rupAreas[r] = numSect*aveSectArea;
-		    			rakes[r] = rake;
-		    			rupLengths[r] = numSect*aveSectLength*1e3; // convert to meters
-		    			sectionForRups.add(sectForFloaterRupList);	
-String temp = "";
-for(int n: sectForFloaterRupList)
-	temp+=n+",";
-System.out.println("HERE: "+r+"\t"+temp);
-
-		    			r+=1;
-	    			}
-	    		}
-	    	}
-	    }
-	    
-	    FaultSystemRupSet rupSet = new FaultSystemRupSet(
-				faultSectionData,
-				sectionForRups,
-				mags,
-				rakes,
-				rupAreas,
-				rupLengths); 
-	    
-	    FaultSystemSolution fss= new FaultSystemSolution(rupSet, rupRates);
-	    fss.setInfoString("Cascadia Fault System Solution");
-	    return fss;
-	}
-
 	
 
 
@@ -851,7 +786,7 @@ System.out.println("HERE: "+r+"\t"+temp);
 //		String nshmModelDirPath = "/Users/field/nshm-haz_data/nshm-conus-6.1.2/";
 		String nshmModelDirPath = "/Users/field/nshm-haz_data/nshm-conus-6.2.0/";
 		
-		getFaultSystemSolution(nshmModelDirPath, FaultModelEnum.MIDDLE);
+		getFaultSystemSolution(nshmModelDirPath, FaultModelEnum.ALL);
 		
 		System.exit(0);
 		
