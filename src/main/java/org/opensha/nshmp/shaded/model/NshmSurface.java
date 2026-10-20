@@ -2,9 +2,11 @@ package org.opensha.nshmp.shaded.model;
 
 import java.util.ListIterator;
 
+import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.opensha.commons.geo.Location;
 import org.opensha.commons.geo.LocationList;
 import org.opensha.commons.geo.LocationUtils;
+import org.opensha.commons.geo.LocationUtils.LocationAverager;
 import org.opensha.commons.geo.LocationVector;
 import org.opensha.commons.geo.Region;
 import org.opensha.sha.faultSurface.FaultTrace;
@@ -16,6 +18,7 @@ import org.opensha.sha.util.TectonicRegionType;
 
 import org.opensha.nshmp.shaded.fault.surface.NshmpDefaultGriddedSurface;
 import org.opensha.nshmp.shaded.fault.surface.NshmpGriddedSurface;
+import org.opensha.nshmp.shaded.geo.NshmpLocation;
 import org.opensha.nshmp.shaded.model.NshmpGridSource.PointSurface;
 import org.opensha.nshmp.shaded.model.NshmpGridSourceFinite.FiniteSurface;
 
@@ -100,7 +103,18 @@ public class NshmSurface implements CacheEnabledSurface {
 	// return nshmp-haz rupture centroid as OpenSHA location for
 	// use in computing min distance to a fault system subsection
 	public Location centroid() {
-		return NshmUtil.toOpenShaLocation(delegate.centroid());
+		try {
+			return NshmUtil.toOpenShaLocation(delegate.centroid());
+		} catch (Exception e) {
+			// centroid doesn't work
+			if (delegate instanceof NshmpGriddedSurface gridSurf) {
+				LocationAverager avg = new LocationAverager();
+				for (NshmpLocation loc : gridSurf.getEvenlyDiscritizedListOfLocsOnSurface())
+					avg.add(NshmUtil.toOpenShaLocation(loc), 1d);
+				return avg.getAverage();
+			}
+			throw ExceptionUtils.asRuntimeException(e);
+		}
 	}
 
 	// OpenSHA RupureSurface interface methods

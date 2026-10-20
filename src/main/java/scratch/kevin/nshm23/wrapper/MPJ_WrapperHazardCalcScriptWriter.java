@@ -27,7 +27,7 @@ import edu.usc.kmilner.mpj.taskDispatch.MPJTaskCalculator;
 public class MPJ_WrapperHazardCalcScriptWriter {
 
 	public static void main(String[] args) throws IOException {
-		File localMainDir = new File("/home/kevin/OpenSHA/UCERF4/batch_inversions");
+		File localMainDir = new File("/data/kevin/fss_inversions/");
 		
 		int nodes = 37;
 		IncludeBackgroundOption griddedOp = IncludeBackgroundOption.INCLUDE;
@@ -35,15 +35,11 @@ public class MPJ_WrapperHazardCalcScriptWriter {
 		boolean active = true;
 		boolean stable = true;
 		
-//		AttenRelRef gmpeRef = AttenRelRef.ASK_2014;
-		AttenRelRef gmpeRef = AttenRelRef.WRAPPED_ASK_2014;
-//		AttenRelRef gmpeRef = AttenRelRef.NGAWest_2014_AVG;
-		
 //		String erfPrefix = "nshm18";
 //		String tagName = "nshm-conus-5.3.0"; // NSHM18
 		
 		String erfPrefix = "nshm23-wrapped";
-		String tagName = "nshm-conus-6.b.4"; // NSHM23 draft
+		String tagName = "nshm-conus-6.2.0"; // NSHM23 R2
 		
 //		String erfPrefix = "nshm23-wrapped-noZone";
 //		String tagName = "nshm-conus-6.0.0-noZone"; // NSHM23 without zone sources
@@ -51,18 +47,18 @@ public class MPJ_WrapperHazardCalcScriptWriter {
 //		String erfPrefix = "nshm23-wrapped-ceusZoneOnly";
 //		String tagName = "nshm-conus-6.0.0-ceusZoneOnly"; // NSHM23 with only zone sources in CEUS (and gridded)
 		
-//		double gridSpacing = 0.1d; int mins = 2000;
-//		String regName = "wus";
-//		Region region = NSHM23_RegionLoader.loadFullConterminousWUS();
+		double gridSpacing = 0.1d; int mins = 2000;
+		String regName = "wus";
+		Region region = NSHM23_RegionLoader.loadFullConterminousWUS();
 		
 //		double gridSpacing = 0.1d; int mins = 2000;
 //		String regName = "ceus";
 //		Region region = NSHM23_RegionLoader.AnalysisRegions.CONUS_EAST.load();
 		
-//		double gridSpacing = 0.2d; int mins = 2000;
-		double gridSpacing = 0.1d; int mins = 4000;
-		String regName = "conus";
-		Region region = NSHM23_RegionLoader.loadFullConterminousUS();
+////		double gridSpacing = 0.2d; int mins = 2000;
+//		double gridSpacing = 0.1d; int mins = 4000;
+//		String regName = "conus";
+//		Region region = NSHM23_RegionLoader.loadFullConterminousUS();
 		
 		String extGridProvPath = null;
 //		String extGridProvPath = "2023_09_01-nshm23_branches-mod_pitas_ddw-NSHM23_v2-CoulombRupSet-DsrUni-TotNuclRate-NoRed-ThreshAvgIterRelGR/"
@@ -76,7 +72,7 @@ public class MPJ_WrapperHazardCalcScriptWriter {
 //				+ "results_NSHM23_v2_CoulombRupSet_branch_averaged_gridded.zip";
 //		erfPrefix += "-grid_src_from_medDM_23"; gridded = true;
 		
-		File remoteMainDir = new File("/project/scec_608/kmilner/nshm23/batch_inversions");
+		File remoteMainDir = new File("/project2/scec_608/kmilner/fss_inversions/");
 		int remoteTotalThreads = 20;
 		int remoteTotalMemGB = 50;
 		String queue = "scec";
@@ -90,7 +86,7 @@ public class MPJ_WrapperHazardCalcScriptWriter {
 		
 		String dirName = new SimpleDateFormat("yyyy_MM_dd").format(new Date());
 		
-		dirName += "-"+erfPrefix+"-"+regName+"-hazard-"+gmpeRef.getShortName().toLowerCase()+"-"+(float)gridSpacing+"deg";
+		dirName += "-"+erfPrefix+"-"+regName+"-hazard-"+(float)gridSpacing+"deg";
 		if (!subduction)
 			dirName += "-noSub";
 		if (!active)
@@ -119,8 +115,7 @@ public class MPJ_WrapperHazardCalcScriptWriter {
 		
 		List<File> classpath = new ArrayList<>();
 		classpath.add(new File(dirPath+"/opensha-dev-all.jar"));
-		if (mpjWrite instanceof NoMPJSingleNodeShellScriptWriter)
-			classpath.add(new File("/project2/scec_608/kmilner/git/opensha/lib/mpj-0.38.jar"));
+		System.err.println("Remember, this actually needs the dev jar; make sure it's updated!");
 		
 		File localReg = new File(localDir, "gridded_region.json");
 		Feature.write(gridReg.toFeature(), localReg);
@@ -149,7 +144,12 @@ public class MPJ_WrapperHazardCalcScriptWriter {
 			argz += " --no-active";
 		if (!stable)
 			argz += " --no-stable";
-		argz += " --gmpe "+gmpeRef.name();
+		argz += " --trt-gmpe ACTIVE_SHALLOW:"+AttenRelRef.USGS_NSHM23_ACTIVE.name();
+		argz += " --trt-gmpe STABLE_SHALLOW:"+AttenRelRef.USGS_NSHM23_STABLE_R2.name();
+		argz += " --trt-gmpe SUBDUCTION_INTERFACE:"+AttenRelRef.USGS_NSHM23_INTERFACE.name();
+		argz += " --trt-gmpe SUBDUCTION_SLAB:"+AttenRelRef.USGS_NSHM23_INTRASLAB.name();
+		argz += " --gmm-sigma-trunc-one-sided 3";
+		argz += " --nshmp-imls";
 		argz += " "+MPJTaskCalculator.argumentBuilder().minDispatch(remoteTotalThreads).build();
 		List<String> script = mpjWrite.buildScript(MPJ_WrapperHazardCalc.class.getName(), argz);
 		

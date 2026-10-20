@@ -35,6 +35,14 @@ public class TD_BA_CalcScriptWriter {
 	public static void main(String[] args) throws IOException {
 		List<String> commonExtraTokens = new ArrayList<>();
 		
+		double tiDurationYears = 1d;
+		double tdDurationYears = 50d;
+		int startYear = 2026;
+		FSS_ProbabilityModels[] probabilityModels = {
+				null, // base, time-independent ERF
+				FSS_ProbabilityModels.NSHM27_BRANCH_AVE
+		};
+		
 		// start with WUS-only
 //		String regToken = "WUS";
 //		Region reg = NSHM23_RegionLoader.loadFullConterminousWUS();
@@ -42,12 +50,20 @@ public class TD_BA_CalcScriptWriter {
 //		String linkFromDir = "2026_10-nshm23-td_erf-solutions";
 //		String solFileName = "nshm23-wus-ba-hist_dole.zip";
 		
-		// start with WUS-only
-		String regToken = "WUS-Cascadia";
+		// start with WUS + Cascadia
+//		String regToken = "WUS-Cascadia";
+//		Region reg = NSHM23_RegionLoader.loadFullConterminousWUS();
+//		double spacing = 0.1;
+//		String linkFromDir = "2026_10-nshm23-td_erf-solutions";
+//		String solFileName = "nshm23-wus-cascadia-middle-hist_dole.zip";
+		
+		// start with WUS + Cascadia
+		String regToken = "WUS-Cascadia-ALL";
 		Region reg = NSHM23_RegionLoader.loadFullConterminousWUS();
 		double spacing = 0.1;
 		String linkFromDir = "2026_10-nshm23-td_erf-solutions";
-		String solFileName = "nshm23-wus-cascadia-middle-hist_dole.zip";
+		String solFileName = "nshm23-wus-cascadia-all-hist_dole.zip";
+		probabilityModels = new FSS_ProbabilityModels[] {null};
 
 		File localMainDir = new File("/home/kevin/OpenSHA/fss_inversions");
 		
@@ -71,6 +87,7 @@ public class TD_BA_CalcScriptWriter {
 		gmpes.put(TectonicRegionType.SUBDUCTION_INTERFACE, AttenRelRef.USGS_NSHM23_INTERFACE);
 		gmpes.put(TectonicRegionType.SUBDUCTION_SLAB, AttenRelRef.USGS_NSHM23_INTRASLAB);
 		
+		boolean useRupMFDs = false;
 		Double maxDist = null; // use TRT defaults
 		boolean nshmpIMLs = true;
 
@@ -83,14 +100,6 @@ public class TD_BA_CalcScriptWriter {
 				.localMainDir(localMainDir)
 				.remoteMainDir(remoteMainDir)
 				.build();
-		
-		double tiDurationYears = 1d;
-		double tdDurationYears = 50d;
-		int startYear = 2026;
-		FSS_ProbabilityModels[] probabilityModels = {
-				null, // base, time-independent ERF
-				FSS_ProbabilityModels.NSHM27_BRANCH_AVE
-		};
 		
 		for (FSS_ProbabilityModels probabilityModel : probabilityModels) {
 			boolean timeDependent = probabilityModel != null;
@@ -110,7 +119,7 @@ public class TD_BA_CalcScriptWriter {
 					.vs30(760d)
 					.maxDistance(maxDist)
 					.setUseNSHMP_IMLs(nshmpIMLs)
-					.useRupMFDs(false)
+					.useRupMFDs(useRupMFDs)
 					.durationYears(durationYears);
 			if (timeDependent)
 				hazardBuilder.probabilityModel(probabilityModel).startYear(startYear);
