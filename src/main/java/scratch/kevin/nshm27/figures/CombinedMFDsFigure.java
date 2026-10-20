@@ -8,9 +8,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.Map;
 
-import org.apache.commons.math3.stat.StatUtils;
 import org.jfree.chart.plot.DatasetRenderingOrder;
 import org.jfree.chart.ui.RectangleAnchor;
 import org.jfree.data.Range;
@@ -28,6 +26,7 @@ import org.opensha.commons.gui.plot.HeadlessGraphPanel;
 import org.opensha.commons.gui.plot.PlotCurveCharacterstics;
 import org.opensha.commons.gui.plot.PlotLineType;
 import org.opensha.commons.gui.plot.PlotSpec;
+import org.opensha.commons.gui.plot.PlotSymbol;
 import org.opensha.commons.gui.plot.PlotUtils;
 import org.opensha.sha.earthquake.faultSysSolution.FaultSystemSolution;
 import org.opensha.sha.earthquake.faultSysSolution.modules.BranchRegionalMFDs;
@@ -35,6 +34,8 @@ import org.opensha.sha.earthquake.faultSysSolution.modules.BranchRegionalMFDs.MF
 import org.opensha.sha.earthquake.faultSysSolution.modules.GridSourceList;
 import org.opensha.sha.earthquake.faultSysSolution.modules.RegionsOfInterest;
 import org.opensha.sha.earthquake.faultSysSolution.util.FaultSysTools;
+import org.opensha.sha.earthquake.nshmp.seismicity.SeismicityRateFileLoader;
+import org.opensha.sha.earthquake.nshmp.seismicity.SeismicityRateFileLoader.Direct;
 import org.opensha.sha.earthquake.nshmp.seismicity.SeismicityRateFileLoader.PureGR;
 import org.opensha.sha.earthquake.param.IncludeBackgroundOption;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm27.logicTree.NSHM27_DeclusteringAlgorithms;
@@ -46,6 +47,7 @@ import org.opensha.sha.earthquake.rupForecastImpl.nshm27.logicTree.NSHM27_SeisRa
 import org.opensha.sha.earthquake.rupForecastImpl.nshm27.logicTree.NSHM27_SeisSmoothingAlgorithms;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm27.util.NSHM27_RegionLoader;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm27.util.NSHM27_SeisPDF_Loader;
+import org.opensha.sha.earthquake.rupForecastImpl.nshm27.util.NSHM27_SeismicityDataFiles;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm27.util.NSHM27_RegionLoader.NSHM27_MapRegions;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm27.util.NSHM27_RegionLoader.NSHM27_SeismicityRegions;
 import org.opensha.sha.faultSurface.FaultSection;
@@ -58,13 +60,13 @@ import com.google.common.base.Preconditions;
 import com.google.common.primitives.Doubles;
 
 import net.mahdilamb.colormap.Colors;
-import oracle.net.aso.i;
 
 public class CombinedMFDsFigure {
 
 	public static void main(String[] args) throws IOException {
 		EvenlyDiscretizedFunc refMFD = FaultSysTools.initEmptyMFD(4.99, 11.99);
 //		Range xRange = new Range(5d, 9.5d);
+//		Range yRange = new Range (1e-6, 3e1);
 		Range xRange = new Range(6d, 9.5d);
 		Range yRange = new Range (1e-6, 1e1);
 		double fullWidth = PlotUtils.DEFAULT_USABLE_PAGE_WIDTH;
@@ -98,7 +100,8 @@ public class CombinedMFDsFigure {
 			csvRIHeader.add("M>"+oDF.format(mag)+" RI");
 		}
 		
-		for (NSHM27_SeismicityRegions seisReg : NSHM27_SeismicityRegions.values()) {
+//		for (NSHM27_SeismicityRegions seisReg : NSHM27_SeismicityRegions.values()) {
+		for (NSHM27_SeismicityRegions seisReg : new NSHM27_SeismicityRegions[] {NSHM27_SeismicityRegions.AMSAM}) {
 			FaultSystemSolution sol = getSolution(seisReg);
 			GridSourceList gridList = sol.requireModule(GridSourceList.class);
 			
@@ -253,16 +256,28 @@ public class CombinedMFDsFigure {
 						if (includeObs) {
 							List<PureGR> samples = new ArrayList<>();
 							List<Double> weights = new ArrayList<>();
-							NSHM27_SeisRateModelEpochCatalog epochCatalog = NSHM27_SeisRateModelEpochCatalog.load(seisReg, targetTRT);
+							NSHM27_SeisRateModelEpochCatalog epochCatalog;
+							
+							if (targetTRT == null)
+								// union
+								epochCatalog = NSHM27_SeisRateModelEpochCatalog.loadUnion(seisReg);
+							else
+								epochCatalog = NSHM27_SeisRateModelEpochCatalog.load(seisReg, targetTRT);
 							double epochWeightSum = 0d;
 							for (NSHM27_SeisRateModelEpoch epoch : epochCatalog.getEpochs()) {
 								for (NSHM27_SeisBValueMethod bMethod : NSHM27_SeisBValueMethod.values()) {
 									double weight = epoch.getNodeWeight() * bMethod.getNodeWeight();
 									if (weight == 0d)
 										continue;
-									List<PureGR> mySamples = NSHM27_SeisRateModelSamples.loadOrigSamples(seisReg, epoch, targetTRT, bMethod);
+									List<PureGR> mySamples;
+									if (targetTRT == null)
+										// union
+										mySamples = NSHM27_SeisRateModelSamples.loadUnionSamples(seisReg, epoch, bMethod);
+									else
+										mySamples = NSHM27_SeisRateModelSamples.loadOrigSamples(seisReg, epoch, targetTRT, bMethod);
 									epochWeightSum += weight;
 									double weightEach = weight/mySamples.size();
+									samples.addAll(mySamples);
 									weights.addAll(Collections.nCopies(mySamples.size(), weightEach));
 								}
 							}
@@ -390,6 +405,35 @@ public class CombinedMFDsFigure {
 							processCSVsWithCml(obsCmlMean, "Observed", csvMags, rateCSV, riCSV);
 							processCSVsWithCml(obsCmlLow, "Observed (2.5 %-ile)", csvMags, rateCSV, riCSV);
 							processCSVsWithCml(obsCmlHigh, "Observed (97.5 %-ile)", csvMags, rateCSV, riCSV);
+							
+							if (!mapRegion) {
+								// add direct rate to the cumulative plots
+								
+								List<Direct> directs;
+								if (targetTRT == null)
+									directs = NSHM27_SeismicityDataFiles.loadUnionDirectRates(seisReg);
+								else
+									directs = NSHM27_SeismicityDataFiles.loadDirectRates(seisReg, targetTRT);
+								Direct direct = SeismicityRateFileLoader.locateMean(directs);
+								EvenlyDiscretizedFunc directFunc = direct.cumulativeDist.deepClone();
+								// clear the extrapolation above the last observation
+								for (int i=directFunc.getClosestXIndex(direct.maxObsCmlMag)+1; i<directFunc.size(); i++)
+									directFunc.set(i, 0d);
+								directFunc.setName("Direct observed");
+								
+								IncrementalMagFreqDist empty = new IncrementalMagFreqDist(0d, 0d, 1);
+								empty.setName(null);
+								incrFuncs.add(empty);
+								cmlFuncs.add(directFunc);
+								chars.add(new PlotCurveCharacterstics(PlotSymbol.FILLED_CIRCLE, 5f, Colors.tab_red.darker()));
+								
+//								// and again on top (which is on bottom)
+//								directFunc = directFunc.deepClone();
+//								directFunc.setName(null);
+//								incrFuncs.add(0, empty);
+//								cmlFuncs.add(0, directFunc);
+//								chars.add(0, new PlotCurveCharacterstics(PlotSymbol.CIRCLE, 5f, Colors.tab_red.darker()));
+							}
 						}
 						
 						// locate uncertainties
