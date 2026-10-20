@@ -19,7 +19,6 @@ import org.opensha.sha.earthquake.rupForecastImpl.nshm27.logicTree.NSHM27_Interf
 import org.opensha.sha.earthquake.rupForecastImpl.nshm27.logicTree.NSHM27_InterfaceHingedBValue;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm27.logicTree.NSHM27_InterfaceHingedBValue.CombinedSampledType;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm27.logicTree.NSHM27_LogicTree;
-import org.opensha.sha.earthquake.rupForecastImpl.nshm27.logicTree.NSHM27_SeisRateModel.EpochDependentGR;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm27.util.NSHM27_RegionLoader.NSHM27_SeismicityRegions;
 import org.opensha.sha.util.TectonicRegionType;
 
@@ -101,8 +100,6 @@ public class ExampleLogicTreeSampleCSVs {
 						Object value = valued.getValue();
 						if (value instanceof FixedFractileSampler fractiles) {
 							line.add((float)fractiles.getFixedFractile()+"");
-						} else if (value instanceof EpochDependentGR gr) {
-							line.add((float)gr.getSampleFractile()+"");
 						} else {
 //							if (!(value instanceof Number))
 //								System.out.println("UNKNOWN value "+value+" of type "+value.getClass().getName()

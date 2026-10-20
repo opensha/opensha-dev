@@ -38,6 +38,7 @@ import org.opensha.sha.earthquake.faultSysSolution.util.FaultSysTools;
 import org.opensha.sha.earthquake.nshmp.seismicity.SeismicityRateFileLoader.PureGR;
 import org.opensha.sha.earthquake.param.IncludeBackgroundOption;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm27.logicTree.NSHM27_DeclusteringAlgorithms;
+import org.opensha.sha.earthquake.rupForecastImpl.nshm27.logicTree.NSHM27_SeisBValueMethod;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm27.logicTree.NSHM27_SeisRateModelBranch;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm27.logicTree.NSHM27_SeisRateModelEpoch;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm27.logicTree.NSHM27_SeisRateModelEpochCatalog;
@@ -212,11 +213,21 @@ public class CombinedMFDsFigure {
 								if (interfaceOnly && trt != TectonicRegionType.SUBDUCTION_INTERFACE)
 									continue;
 								
-								PureGR rateModel = (PureGR)NSHM27_SeisRateModelBranch.loadMixtureRateModel(seisReg, trt).getMeanRecord();
-								if (m1 < 0)
-									m1 = rateModel.M1;
-								else
-									Preconditions.checkState(m1 == rateModel.M1);
+								double rate = 0d;
+								double weightSum = 0d;
+								for (NSHM27_SeisBValueMethod bMethod : NSHM27_SeisBValueMethod.values()) {
+									double weight = bMethod.getNodeWeight();
+									if (weight == 0d)
+										continue;
+									PureGR rateModel = (PureGR)NSHM27_SeisRateModelBranch.loadMixtureRateModel(seisReg, trt, bMethod).getMeanRecord();
+									if (m1 < 0)
+										m1 = rateModel.M1;
+									else
+										Preconditions.checkState(m1 == rateModel.M1);
+									rate += rateModel.rateAboveM1*weight;
+									weightSum += weight;
+								}
+								rate /= weightSum;
 								
 								GriddedGeoDataSet pdf;
 								if (trt == TectonicRegionType.SUBDUCTION_SLAB)
@@ -231,8 +242,8 @@ public class CombinedMFDsFigure {
 									if (reg.contains(pdf.getLocation(i)))
 										fractInRegion += pdf.get(i);
 								
-								totRate += rateModel.rateAboveM1;
-								totRateInRegion += rateModel.rateAboveM1 * fractInRegion; 
+								totRate += rate;
+								totRateInRegion += rate * fractInRegion; 
 							}
 							
 							pdfInRegion = totRateInRegion / totRate;
@@ -245,11 +256,15 @@ public class CombinedMFDsFigure {
 							NSHM27_SeisRateModelEpochCatalog epochCatalog = NSHM27_SeisRateModelEpochCatalog.load(seisReg, targetTRT);
 							double epochWeightSum = 0d;
 							for (NSHM27_SeisRateModelEpoch epoch : epochCatalog.getEpochs()) {
-								List<PureGR> mySamples = NSHM27_SeisRateModelSamples.loadOrigSamples(seisReg, epoch, targetTRT);
-								double weight = epoch.getNodeWeight();
-								epochWeightSum += weight;
-								double weightEach = weight/mySamples.size();
-								weights.addAll(Collections.nCopies(mySamples.size(), weightEach));
+								for (NSHM27_SeisBValueMethod bMethod : NSHM27_SeisBValueMethod.values()) {
+									double weight = epoch.getNodeWeight() * bMethod.getNodeWeight();
+									if (weight == 0d)
+										continue;
+									List<PureGR> mySamples = NSHM27_SeisRateModelSamples.loadOrigSamples(seisReg, epoch, targetTRT, bMethod);
+									epochWeightSum += weight;
+									double weightEach = weight/mySamples.size();
+									weights.addAll(Collections.nCopies(mySamples.size(), weightEach));
+								}
 							}
 							if ((float)epochWeightSum != 1f) {
 								double scalar = 1d/epochWeightSum;

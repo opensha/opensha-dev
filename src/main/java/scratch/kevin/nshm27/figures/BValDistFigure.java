@@ -161,7 +161,7 @@ public class BValDistFigure {
 			densityEach = extrapolateWeight/(extrapolatedBranches.size()*hingedHist.getDelta());
 			for (LogicTreeBranch<LogicTreeNode> branch : extrapolatedBranches) {
 				double b = ((PureGR)branch.requireValue(NSHM27_SeisRateModel.class).getRateRecord(
-						seisReg, branch.requireValue(NSHM27_SeisRateModelEpoch.class), TectonicRegionType.SUBDUCTION_INTERFACE)).b;
+						seisReg, TectonicRegionType.SUBDUCTION_INTERFACE, branch)).b;
 				int index = extrapHist.getClosestXIndex(b);
 				extrapHist.add(index, densityEach);
 			}

@@ -27,6 +27,7 @@ import org.opensha.sha.earthquake.rupForecastImpl.nshm27.logicTree.NSHM27_Declus
 import org.opensha.sha.earthquake.rupForecastImpl.nshm27.logicTree.NSHM27_InterfaceDeformationModels;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm27.logicTree.NSHM27_InterfaceFaultModels;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm27.logicTree.NSHM27_LogicTree;
+import org.opensha.sha.earthquake.rupForecastImpl.nshm27.logicTree.NSHM27_SeisBValueMethod;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm27.logicTree.NSHM27_SeisRateModelBranch;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm27.logicTree.NSHM27_SeisSmoothingAlgorithms;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm27.util.InterfaceGridAssociations;
@@ -103,7 +104,7 @@ public class InterfaceSubSeisMoReductionTests {
 		double[] mMins = {6.55, 7.05, 7.55};
 		for (double mMin : mMins) {
 			IncrementalMagFreqDist seisMFD = NSHM27_SeisRateModelBranch.loadMixtureRateModel(reg,
-					TectonicRegionType.SUBDUCTION_INTERFACE).buildPreferred(refMFD,
+					TectonicRegionType.SUBDUCTION_INTERFACE, NSHM27_SeisBValueMethod.UNION_WIDE).buildPreferred(refMFD,
 					refMFD.getX(refMFD.getClosestXIndex(mMin-0.1)));
 //			System.out.println("Seis MFD for interface Mmin="+mMin+":\n"+seisMFD);
 			double[] impliedMoments = new double[sects.size()];

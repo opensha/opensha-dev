@@ -56,6 +56,7 @@ import org.opensha.sha.earthquake.rupForecastImpl.nshm27.logicTree.NSHM27_Interf
 import org.opensha.sha.earthquake.rupForecastImpl.nshm27.logicTree.NSHM27_InterfaceMinSubSects;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm27.logicTree.NSHM27_InterfaceObsSeisDMAdjustment;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm27.logicTree.NSHM27_LogicTree;
+import org.opensha.sha.earthquake.rupForecastImpl.nshm27.logicTree.NSHM27_SeisBValueMethod;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm27.logicTree.NSHM27_SeisRateModel;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm27.logicTree.NSHM27_SeisRateModelBranch;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm27.logicTree.NSHM27_SeisRateModelEpoch;
@@ -162,7 +163,8 @@ public class InterfaceLogicTreeMFDExploration {
 		if (includeObs) {
 //			NSHM27_SeisRateModelBranch rateModel = branch.requireValue(NSHM27_SeisRateModelBranch.class);
 //			obsMFD = rateModel.build(seisReg, branch.requireValue(NSHM27_SeisClassificationMethod.class), trt, refMFD, defaultMmax);
-			obsMFD = NSHM27_SeisRateModelBranch.loadMixtureRateModel(seisReg, trt).buildPreferred(refMFD, defaultMmax);
+			obsMFD = NSHM27_SeisRateModelBranch.loadMixtureRateModel(seisReg, trt, branch.requireValue(NSHM27_SeisBValueMethod.class))
+					.buildPreferred(refMFD, defaultMmax);
 			obsMFD.setName("Observed (interface)");
 			System.out.println("Observed rate M>5: "+obsMFD.getCumRate(obsMFD.getClosestXIndex(5.01)));
 			System.out.println("Observed rate M>6: "+obsMFD.getCumRate(obsMFD.getClosestXIndex(6.01)));
@@ -176,7 +178,8 @@ public class InterfaceLogicTreeMFDExploration {
 		EvenlyDiscretizedFunc obsTotalCmlMFD = null;
 		if (includeTotalObs) {
 			NSHM27_SeisRateModel rateModel = branch.requireValue(NSHM27_SeisRateModel.class);
-			obsTotalMFD = NSHM27_SeisRateModelBranch.loadMixtureRateModel(seisReg, null).buildPreferred(refMFD, defaultMmax);
+			obsTotalMFD = NSHM27_SeisRateModelBranch.loadUnionMixtureRateModel(seisReg,
+					branch.requireValue(NSHM27_SeisBValueMethod.class)).buildPreferred(refMFD, defaultMmax);
 			obsTotalMFD.setName("Observed (total)");
 			System.out.println("Observed total rate M>5: "+obsTotalMFD.getCumRate(obsTotalMFD.getClosestXIndex(5.01)));
 			System.out.println("Observed total rate M>6: "+obsTotalMFD.getCumRate(obsTotalMFD.getClosestXIndex(6.01)));
@@ -581,7 +584,7 @@ public class InterfaceLogicTreeMFDExploration {
 		if (branch.hasValue(NSHM27_InterfaceObsSeisDMAdjustment.EXTRAPOLATE))
 			b = ((PureGR)branch.requireValue(NSHM27_SeisRateModel.class).getRateRecord(
 					branch.requireValue(NSHM27_InterfaceFaultModels.class).getSeismicityRegion(),
-					branch.requireValue(NSHM27_SeisRateModelEpoch.class), TectonicRegionType.SUBDUCTION_INTERFACE)).b;
+					TectonicRegionType.SUBDUCTION_INTERFACE, branch)).b;
 		Preconditions.checkState(Double.isFinite(b));
 		
 		SectSlipRates slipRates = rupSet.requireModule(SectSlipRates.class);
