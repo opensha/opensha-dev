@@ -1,5 +1,8 @@
 package scratch.kevin.simulators.hazard;
 
+import org.opensha.sha.calc.disaggregation.chart3d.PureJavaDisaggPlotter;
+import org.jfree.chart3d.export.ExportUtils;
+import org.jfree.chart3d.Chart3DPanel;
 import java.awt.Color;
 import java.awt.Font;
 import java.awt.Graphics;
@@ -63,13 +66,11 @@ import org.opensha.commons.mapping.gmt.elements.GMT_CPT_Files;
 import org.opensha.commons.param.ParameterList;
 import org.opensha.commons.util.DataUtils;
 import org.opensha.commons.util.ExceptionUtils;
-import org.opensha.commons.util.FileUtils;
 import org.opensha.commons.util.MarkdownUtils;
 import org.opensha.commons.util.MarkdownUtils.TableBuilder;
 import org.opensha.commons.util.cpt.CPT;
 import org.opensha.sha.calc.HazardCurveCalculator;
 import org.opensha.sha.calc.disaggregation.DisaggregationCalculator;
-import org.opensha.sha.calc.disaggregation.DisaggregationCalculatorAPI;
 import org.opensha.sha.calc.hazardMap.BinaryHazardCurveReader;
 import org.opensha.sha.calc.hazardMap.HazardDataSetLoader;
 import org.opensha.sha.calc.sourceFilters.SourceFilter;
@@ -1303,7 +1304,7 @@ public class HazardMapComparePlotter {
 				public void run() {
 					try {
 						HazardCurveCalculator curveCalc = new HazardCurveCalculator();
-						DisaggregationCalculatorAPI disaggCalc = new DisaggregationCalculator();
+						DisaggregationCalculator disaggCalc = new DisaggregationCalculator();
 						
 						System.out.println("Disaggregating for "+siteName);
 						
@@ -1357,8 +1358,8 @@ public class HazardMapComparePlotter {
 								System.out.println("Done Disaggregating");
 								String metadata = "temp metadata";
 
-								System.out.println("Fetching plot...");
-								String address = disaggCalc.getDisaggregationPlotUsingServlet(metadata);
+								System.out.println("Building plot...");
+								Chart3DPanel chartPanel = PureJavaDisaggPlotter.buildChartPanel(disaggCalc.getDisaggPlotData());
 
 								String meanModeText = disaggCalc.getMeanAndModeInfo();
 								String binDataText = disaggCalc.getBinData();
@@ -1370,11 +1371,9 @@ public class HazardMapComparePlotter {
 
 								File pdfFile = new File(outputFile.getAbsolutePath()+".pdf");
 								File pngFile = new File(outputFile.getAbsolutePath()+".png");
-								DisaggregationPlotViewerWindow.saveAsPDF(
-										address+DisaggregationCalculator.DISAGGREGATION_PLOT_PDF_NAME,
+								DisaggregationPlotViewerWindow.saveAsPDF(chartPanel,
 										pdfFile.getAbsolutePath(), meanModeText, metadataText, binDataText, sourceDataText, null);
-								FileUtils.downloadURL(address+DisaggregationCalculator.DISAGGREGATION_PLOT_PNG_NAME,
-										pngFile);
+								ExportUtils.writeAsPNG(chartPanel.getDrawable(), chartPanel.getWidth(), chartPanel.getHeight(), pngFile);
 								DisaggregationPlotViewerWindow.saveAsTXT(outputFile.getAbsolutePath()+".txt", meanModeText, metadataText,
 										binDataText, sourceDataText, null);
 								
