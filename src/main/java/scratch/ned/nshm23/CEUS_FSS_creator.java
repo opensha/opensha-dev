@@ -1230,16 +1230,16 @@ if(src.getName().equals("Unnamed fault system source")) // temp fix for Peters I
 		// previous version of above won't work because hard-coded files changed
 
 		ArrayList<FaultSystemSolution> fssList = getFaultSystemSolutionList(new File(nshmModelDirPath),FaultModelEnum.BOTH);
-		for(FaultSystemSolution fss:fssList) {
-			int s=0;
-			for(FaultSection sect:fss.getRupSet().getFaultSectionDataList()) {
-				String magString = "Mags: ";
-				for(int r: fss.getRupSet().getRupturesForSection(s))
-					magString += (float)fss.getRupSet().getMagForRup(r)+", ";
-				System.out.println(sect.getSectionId()+"\t"+sect.getParentSectionId()+"\t"+sect.getName()+"\t"+magString);
-				s+=1;
-			}
-		}
+//		for(FaultSystemSolution fss:fssList) {
+//			int s=0;
+//			for(FaultSection sect:fss.getRupSet().getFaultSectionDataList()) {
+//				String magString = "Mags: ";
+//				for(int r: fss.getRupSet().getRupturesForSection(s))
+//					magString += (float)fss.getRupSet().getMagForRup(r)+", ";
+//				System.out.println(sect.getSectionId()+"\t"+sect.getParentSectionId()+"\t"+sect.getName()+"\t"+magString);
+//				s+=1;
+//			}
+//		}
 		
 //	    WC1994_MagLengthRelationship wcMagLength = new WC1994_MagLengthRelationship();
 //	    double mag = 7.15;

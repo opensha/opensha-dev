@@ -789,7 +789,6 @@ public class Cascadia_FSS_creator {
 		String nshmModelDirPath = "/Users/field/nshm-haz_data/nshm-conus-6.2.0/";
 		
 		getFaultSystemSolution(nshmModelDirPath, FaultModelEnum.ALL);
-		
 		System.exit(0);
 		
 		ArrayList<GeoJSONFaultSection> sectList = getFaultSectionList(new File(nshmModelDirPath), FaultModelEnum.ALL);
