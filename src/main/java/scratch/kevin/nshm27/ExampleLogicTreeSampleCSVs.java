@@ -16,8 +16,7 @@ import org.opensha.commons.logicTree.sampling.SamplingMethod;
 import org.opensha.sha.earthquake.faultSysSolution.logicTree.sectDistSampling.SectDistributionSampler.FixedFractileSampler;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.SectionSupraSeisBValues;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm27.logicTree.NSHM27_InterfaceFaultModels;
-import org.opensha.sha.earthquake.rupForecastImpl.nshm27.logicTree.NSHM27_InterfaceHingedBValue;
-import org.opensha.sha.earthquake.rupForecastImpl.nshm27.logicTree.NSHM27_InterfaceHingedBValue.CombinedSampledType;
+import org.opensha.sha.earthquake.rupForecastImpl.nshm27.logicTree.NSHM27_InterfaceMFDModel;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm27.logicTree.NSHM27_LogicTree;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm27.util.NSHM27_RegionLoader.NSHM27_SeismicityRegions;
 import org.opensha.sha.util.TectonicRegionType;
@@ -91,11 +90,12 @@ public class ExampleLogicTreeSampleCSVs {
 				List<String> line = new ArrayList<>(header.size());
 				
 				for (LogicTreeNode node : branch) {
-					if (node instanceof NSHM27_InterfaceHingedBValue.CombinedSampledType combBSample) {
-						if (combBSample.isHinged())
-							line.add(NSHM27_InterfaceHingedBValue.SHORT_NAME);
+					if (node instanceof NSHM27_InterfaceMFDModel.SampledNode mfdSample) {
+						NSHM27_InterfaceMFDModel model = mfdSample.getModel();
+						if (model == NSHM27_InterfaceMFDModel.INDEPENDENT)
+							line.add((float)model.getB(null, null)+"");
 						else
-							line.add((float)combBSample.getB(null, null)+"");
+							line.add(model.getShortName());
 					} else if (node instanceof ValuedLogicTreeNode<?> valued) {
 						Object value = valued.getValue();
 						if (value instanceof FixedFractileSampler fractiles) {

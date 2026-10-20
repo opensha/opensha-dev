@@ -57,7 +57,7 @@ import org.opensha.sha.earthquake.rupForecastImpl.nshm27.logicTree.NSHM27_Interf
 import org.opensha.sha.earthquake.rupForecastImpl.nshm27.logicTree.NSHM27_InterfaceDeformationModels;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm27.logicTree.NSHM27_InterfaceFaultModels;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm27.logicTree.NSHM27_InterfaceMinSubSects;
-import org.opensha.sha.earthquake.rupForecastImpl.nshm27.logicTree.NSHM27_InterfaceObsSeisDMAdjustment;
+import org.opensha.sha.earthquake.rupForecastImpl.nshm27.logicTree.NSHM27_InterfaceSeismicityMomentReduction;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm27.logicTree.NSHM27_LogicTree;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm27.logicTree.NSHM27_SeisRateModelBranch;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm27.util.NSHM27_RegionLoader.NSHM27_SeismicityRegions;
@@ -189,16 +189,16 @@ public class HardcodedInversionFactoryRunner {
 
 //		LogicTreeBranch<LogicTreeNode> branch = NSHM27_LogicTree.buildDefault(
 //				NSHM27_SeismicityRegions.GNMI, TectonicRegionType.SUBDUCTION_INTERFACE, false);
-////		LogicTreeBranch<LogicTreeNode> branch = NSHM27_LogicTree.buildDefault(
-//// 				NSHM27_SeismicityRegions.GNMI, TectonicRegionType.ACTIVE_SHALLOW, false);
-//		dirName += "-gnmi";
-		NSHM27_LogicTree.INTERFACE_B_HINGED_WEIGHT = 1d;
 		LogicTreeBranch<LogicTreeNode> branch = NSHM27_LogicTree.buildDefault(
-				NSHM27_SeismicityRegions.AMSAM, TectonicRegionType.SUBDUCTION_INTERFACE, false);
-		dirName += "-amsam";
+ 				NSHM27_SeismicityRegions.GNMI, TectonicRegionType.ACTIVE_SHALLOW, false);
+		dirName += "-gnmi";
+//		NSHM27_LogicTree.INTERFACE_B_HINGED_WEIGHT = 1d;
+//		LogicTreeBranch<LogicTreeNode> branch = NSHM27_LogicTree.buildDefault(
+//				NSHM27_SeismicityRegions.AMSAM, TectonicRegionType.SUBDUCTION_INTERFACE, false);
+//		dirName += "-amsam";
 
 		if (branch.hasValue(NSHM27_InterfaceFaultModels.class) ) {
-			branch.setValue(NSHM27_InterfaceObsSeisDMAdjustment.NONE);
+			branch.setValue(NSHM27_InterfaceSeismicityMomentReduction.NONE);
 //			branch.setValue(NSHM27_InterfaceObsSeisDMAdjustment.AVERAGE);
 //			branch.setValue(NSHM27_InterfaceObsSeisDMAdjustment.SECTION_SPECIFIC);
 //			branch.setValue(NSHM27_InterfaceObsSeisDMAdjustment.EXTRAPOLATE);

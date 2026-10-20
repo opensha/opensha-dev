@@ -52,16 +52,16 @@ import org.opensha.sha.earthquake.rupForecastImpl.nshm27.NSHM27_InvConfigFactory
 import org.opensha.sha.earthquake.rupForecastImpl.nshm27.logicTree.NSHM27_InterfaceCouplingDepthModels;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm27.logicTree.NSHM27_InterfaceDeformationModels;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm27.logicTree.NSHM27_InterfaceFaultModels;
-import org.opensha.sha.earthquake.rupForecastImpl.nshm27.logicTree.NSHM27_InterfaceHingedBValue;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm27.logicTree.NSHM27_InterfaceMinSubSects;
-import org.opensha.sha.earthquake.rupForecastImpl.nshm27.logicTree.NSHM27_InterfaceObsSeisDMAdjustment;
+import org.opensha.sha.earthquake.rupForecastImpl.nshm27.logicTree.NSHM27_InterfaceSeismicityMomentReduction;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm27.logicTree.NSHM27_LogicTree;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm27.logicTree.NSHM27_SeisBValueMethod;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm27.logicTree.NSHM27_SeisRateModel;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm27.logicTree.NSHM27_SeisRateModelBranch;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm27.logicTree.NSHM27_SeisRateModelEpoch;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm27.logicTree.NSHM27_SeisRateModelEpochCatalog;
-import org.opensha.sha.earthquake.rupForecastImpl.nshm27.logicTree.NSHM27_InterfaceHingedBValue.CombinedSampledType;
+import org.opensha.sha.earthquake.rupForecastImpl.nshm27.logicTree.NSHM27_InterfaceMFDModel;
+import org.opensha.sha.earthquake.rupForecastImpl.nshm27.logicTree.NSHM27_InterfaceMFDModel.SampledNode;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm27.util.NSHM27_RegionLoader.NSHM27_SeismicityRegions;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_SubductionScalingRelationships;
 import org.opensha.sha.faultSurface.FaultSection;
@@ -117,7 +117,8 @@ public class InterfaceLogicTreeMFDExploration {
 				branch.getLevelTypeIndex(NSHM27_InterfaceDeformationModels.Aggregated.class),
 				branch.getLevelTypeIndex(PRVI25_SubductionScalingRelationships.class),
 				branch.getLevelTypeIndex(SectionSupraSeisBValues.class),
-				branch.getLevelTypeIndex(NSHM27_InterfaceObsSeisDMAdjustment.class),
+				branch.getLevelTypeIndex(NSHM27_InterfaceMFDModel.class),
+				branch.getLevelTypeIndex(NSHM27_InterfaceSeismicityMomentReduction.class),
 				branch.getLevelTypeIndex(NSHM27_InterfaceMinSubSects.class),
 				branch.getLevelTypeIndex(MaxRuptureLengthBranchNode.class),
 		};
@@ -434,17 +435,18 @@ public class InterfaceLogicTreeMFDExploration {
 				}
 				
 				if (SectionSupraSeisBValues.class.isAssignableFrom(level.getType())) {
+					System.out.println("TODO: special treatment of the MFD/b-value branch");
 					SummedMagFreqDist avgHingedMFD = new SummedMagFreqDist(refMFD.getMinX(), refMFD.getMaxX(), refMFD.size());
 					SummedMagFreqDist avgSampledMFD = new SummedMagFreqDist(refMFD.getMinX(), refMFD.getMaxX(), refMFD.size());
 					double sumHingedWeight = 0d;
 					double sumSampledWeight = 0d;
 					for (int n=0; n<samples; n++) {
 						LogicTreeNode node = sampledNodes.get(n);
-						Preconditions.checkState(node instanceof CombinedSampledType);
-						CombinedSampledType bNode = (CombinedSampledType)node;
+						Preconditions.checkState(node instanceof SampledNode);
+						SampledNode bNode = (SampledNode)node;
 						IncrementalMagFreqDist mfd = mfdFutures.get(n).join();
 //						System.out.println("b node "+n+": "+node+" ("+node.getClass()+")");
-						if (bNode.isHinged()) {
+						if (bNode.getModel() == NSHM27_InterfaceMFDModel.HINGED) {
 							sumHingedWeight += weightEach;
 							avgHingedMFD.addIncrementalMagFreqDist(mfd, weightEach);
 						} else {
@@ -581,7 +583,7 @@ public class InterfaceLogicTreeMFDExploration {
 		double mMax = refMFD.getX(refMFD.getClosestXIndex(mMaxTrack.getAverage()));
 		
 		double b = branch.requireValue(SectionSupraSeisBValues.class).getB(rupSet, branch);
-		if (branch.hasValue(NSHM27_InterfaceObsSeisDMAdjustment.EXTRAPOLATE))
+		if (NSHM27_InterfaceMFDModel.isExtrapolated(branch))
 			b = ((PureGR)branch.requireValue(NSHM27_SeisRateModel.class).getRateRecord(
 					branch.requireValue(NSHM27_InterfaceFaultModels.class).getSeismicityRegion(),
 					TectonicRegionType.SUBDUCTION_INTERFACE, branch)).b;

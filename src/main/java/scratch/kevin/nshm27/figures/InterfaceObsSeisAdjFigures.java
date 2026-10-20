@@ -19,7 +19,7 @@ import org.opensha.sha.earthquake.faultSysSolution.FaultSystemRupSet;
 import org.opensha.sha.earthquake.faultSysSolution.modules.SectSlipRates;
 import org.opensha.sha.earthquake.faultSysSolution.util.FaultSysTools;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm27.NSHM27_InvConfigFactory;
-import org.opensha.sha.earthquake.rupForecastImpl.nshm27.logicTree.NSHM27_InterfaceObsSeisDMAdjustment;
+import org.opensha.sha.earthquake.rupForecastImpl.nshm27.logicTree.NSHM27_InterfaceSeismicityMomentReduction;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm27.logicTree.NSHM27_LogicTree;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm27.util.NSHM27_RegionLoader.NSHM27_SeismicityRegions;
 import org.opensha.sha.util.TectonicRegionType;
@@ -45,7 +45,7 @@ public class InterfaceObsSeisAdjFigures {
 			csv.addLine("Adjustment", "Overall Moment Reduction Factor", "Section-Averaged Reduction Factor",
 					"Maximum Reduction Factor", "Median Reduction Factor", "Average Slip Rate (mm/yr)", "Maximum Slip Rate (mm/yr)");
 			
-			branch.setValue(NSHM27_InterfaceObsSeisDMAdjustment.NONE);
+			branch.setValue(NSHM27_InterfaceSeismicityMomentReduction.NONE);
 			
 			FaultSystemRupSet rs = factory.buildRuptureSet(branch, FaultSysTools.defaultNumThreads());
 			SectSlipRates fullSlips = rs.requireModule(SectSlipRates.class);
@@ -54,9 +54,9 @@ public class InterfaceObsSeisAdjFigures {
 			
 			double fullMoment = fullSlips.calcTotalMomentRate();
 			
-			for (NSHM27_InterfaceObsSeisDMAdjustment adj : NSHM27_InterfaceObsSeisDMAdjustment.values()) {
+			for (NSHM27_InterfaceSeismicityMomentReduction adj : NSHM27_InterfaceSeismicityMomentReduction.values()) {
 				SectSlipRates slips;
-				if (adj == NSHM27_InterfaceObsSeisDMAdjustment.NONE) {
+				if (adj == NSHM27_InterfaceSeismicityMomentReduction.NONE) {
 					slips = fullSlips;
 				} else {
 					branch.setValue(adj);

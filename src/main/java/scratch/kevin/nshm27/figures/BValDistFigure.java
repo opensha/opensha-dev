@@ -8,7 +8,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
 
 import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.apache.commons.statistics.distribution.ContinuousDistribution;
@@ -35,16 +34,15 @@ import org.opensha.commons.util.modules.ModuleContainer;
 import org.opensha.sha.earthquake.faultSysSolution.FaultSystemRupSet;
 import org.opensha.sha.earthquake.faultSysSolution.util.FaultSysTools;
 import org.opensha.sha.earthquake.nshmp.seismicity.SeismicityRateFileLoader.PureGR;
-import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.SectionSupraSeisBValues;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.SectionSupraSeisBValues.DistributionSamplingLevel;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm27.NSHM27_InvConfigFactory;
-import org.opensha.sha.earthquake.rupForecastImpl.nshm27.logicTree.NSHM27_InterfaceHingedBValue;
-import org.opensha.sha.earthquake.rupForecastImpl.nshm27.logicTree.NSHM27_InterfaceObsSeisDMAdjustment;
+import org.opensha.sha.earthquake.rupForecastImpl.nshm27.logicTree.NSHM27_InterfaceMFDModel;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm27.logicTree.NSHM27_LogicTree;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm27.logicTree.NSHM27_SeisRateModel;
-import org.opensha.sha.earthquake.rupForecastImpl.nshm27.logicTree.NSHM27_SeisRateModelEpoch;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm27.util.NSHM27_RegionLoader.NSHM27_SeismicityRegions;
 import org.opensha.sha.util.TectonicRegionType;
+
+import com.google.common.base.Preconditions;
 
 import net.mahdilamb.colormap.Colors;
 
@@ -55,9 +53,9 @@ public class BValDistFigure {
 //		int numSamples = 100;
 //		int numSamples = 1000;
 //		int numSamples = 2000;
-//		int numSamples = 5000;
+		int numSamples = 5000;
 //		int numSamples = 10000;
-		int numSamples = 50000;
+//		int numSamples = 50000;
 //		double binWidth = 0.025;
 		ModuleContainer.VERBOSE_DEFAULT = false;
 		double binWidth = 0.05;
@@ -71,14 +69,10 @@ public class BValDistFigure {
 		extrapColor = ColorUtils.transparent(extrapColor, 200);
 		Color combColor = Colors.tab_lightred;
 		
-		double extrapolateWeight = NSHM27_InterfaceObsSeisDMAdjustment.EXTRAPOLATE.getNodeWeight();
-		double otherWeight = 1d-extrapolateWeight;
-		double hingeWeight = NSHM27_LogicTree.INTERFACE_B_HINGED_WEIGHT;
-		double distWeight = 1d - hingeWeight;
-		hingeWeight *= otherWeight;
-		distWeight *= otherWeight;
-		
-		NSHM27_LogicTree.INTERFACE_B_HINGED_WEIGHT = 1d;
+		double extrapolateWeight = NSHM27_InterfaceMFDModel.EXTRAPOLATED.getNodeWeight();
+		double hingeWeight = NSHM27_InterfaceMFDModel.HINGED.getNodeWeight();
+		double distWeight = NSHM27_InterfaceMFDModel.INDEPENDENT.getNodeWeight();
+		Preconditions.checkState((float)(extrapolateWeight+hingeWeight+distWeight) == 1f);
 		
 		EvenlyDiscretizedFunc bValDiscr = HistogramFunction.getEncompassingHistogram(-1, 2, binWidth);
 		
@@ -91,7 +85,7 @@ public class BValDistFigure {
 			tree.write(new File("/tmp/test_tree_"+seisReg.name()+".json"));
 			ContinuousDistribution dist = NSHM27_LogicTree.getInterfaceBDist(seisReg);
 			DistributionSamplingLevel distLevel = new DistributionSamplingLevel("Dist", "Dist", dist);
-			String distLabel = LogicTreeFigureWriter.getDistString(distLevel);
+			String distLabel = distLevel.getDistributionString();
 			
 			List<XY_DataSet> funcs = new ArrayList<>();
 			List<PlotCurveCharacterstics> chars = new ArrayList<>();
@@ -100,11 +94,23 @@ public class BValDistFigure {
 			
 			List<LogicTreeBranch<LogicTreeNode>> hingedBranches = new ArrayList<>();
 			List<LogicTreeBranch<LogicTreeNode>> extrapolatedBranches = new ArrayList<>();
+			List<LogicTreeBranch<LogicTreeNode>> sampledBranches = new ArrayList<>();
 			for (LogicTreeBranch<LogicTreeNode> branch : tree) {
-				if (branch.hasValue(NSHM27_InterfaceObsSeisDMAdjustment.EXTRAPOLATE))
+				NSHM27_InterfaceMFDModel model = NSHM27_InterfaceMFDModel.getModel(branch);
+				switch (model) {
+				case EXTRAPOLATED:
 					extrapolatedBranches.add(branch);
-				else
+					break;
+				case HINGED:
 					hingedBranches.add(branch);
+					break;
+				case INDEPENDENT:
+					sampledBranches.add(branch);
+					break;
+
+				default:
+					break;
+				}
 			}
 			
 			// hinge samples
@@ -117,7 +123,7 @@ public class BValDistFigure {
 					} catch (IOException e) {
 						throw ExceptionUtils.asRuntimeException(e);
 					}
-					return NSHM27_InterfaceHingedBValue.calcRawInterfaceHingedBValue(rs, branch);
+					return NSHM27_InterfaceMFDModel.calcRawInterfaceHingedBValue(rs, branch);
 				}));
 			}
 			
@@ -141,18 +147,6 @@ public class BValDistFigure {
 				double b = future.join();
 				int index = hingedHist.getClosestXIndex(b);
 				hingedHist.add(index, densityEach);
-			}
-			
-			for (LogicTreeBranch<LogicTreeNode> branch : hingedBranches) {
-				bFutures.add(CompletableFuture.supplyAsync(()->{
-					FaultSystemRupSet rs;
-					try {
-						rs = factory.updateRuptureSetForBranch(genericRS, branch);
-					} catch (IOException e) {
-						throw ExceptionUtils.asRuntimeException(e);
-					}
-					return NSHM27_InterfaceHingedBValue.calcRawInterfaceHingedBValue(rs, branch);
-				}));
 			}
 			
 			EvenlyDiscretizedFunc extrapHist = new EvenlyDiscretizedFunc(

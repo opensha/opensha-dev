@@ -29,7 +29,8 @@ public class LogicTreeFigure {
 		File outputDir = new File(FIGURES_DIR, "logic_trees");
 		Preconditions.checkState(outputDir.exists() || outputDir.mkdir());
 		
-		int samples = 10000;
+//		int samples = 10000;
+		int samples = 8192;
 		boolean useLevelWeights = true;
 		
 		TectonicRegionType[] trts = {TectonicRegionType.SUBDUCTION_INTERFACE, TectonicRegionType.SUBDUCTION_SLAB,

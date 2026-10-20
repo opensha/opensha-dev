@@ -21,8 +21,6 @@ import org.opensha.sha.earthquake.faultSysSolution.logicTree.sectDistSampling.Se
 import org.opensha.sha.earthquake.faultSysSolution.modules.SolutionLogicTree;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm27.logicTree.NSHM27_InterfaceCouplingDepthModels;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm27.logicTree.NSHM27_InterfaceDeformationModels;
-import org.opensha.sha.earthquake.rupForecastImpl.nshm27.logicTree.NSHM27_InterfaceHingedBValue;
-import org.opensha.sha.earthquake.rupForecastImpl.nshm27.logicTree.NSHM27_InterfaceObsSeisDMAdjustment;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm27.util.NSHM27_RegionLoader.NSHM27_SeismicityRegions;
 import org.opensha.sha.faultSurface.FaultSection;
 import org.opensha.sha.util.TectonicRegionType;
@@ -67,8 +65,8 @@ class InterfaceParticipationRateFigures {
 		List<LogicTreeNode> fixedBatchNodes = List.of(
 				NSHM27_InterfaceDeformationModels.Aggregated.HIGH_COUPLING,
 				NSHM27_InterfaceDeformationModels.Aggregated.LOW_COUPLING,
-				NSHM27_InterfaceHingedBValue.HINGED_SINGLE_NODE,
-				NSHM27_InterfaceObsSeisDMAdjustment.EXTRAPOLATE,
+//				NSHM27_InterfaceHingedBValue.HINGED_SINGLE_NODE, // TODO
+//				NSHM27_InterfaceObsSeisDMAdjustment.EXTRAPOLATE, // TODO
 				NSHM27_InterfaceCouplingDepthModels.DEEP_TAPER,
 				NSHM27_InterfaceCouplingDepthModels.DOUBLE_TAPER,
 				NSHM27_InterfaceCouplingDepthModels.NONE);
