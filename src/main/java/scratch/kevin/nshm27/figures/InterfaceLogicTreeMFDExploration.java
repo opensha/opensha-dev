@@ -92,10 +92,11 @@ public class InterfaceLogicTreeMFDExploration {
 
 		LogicTreeBranch<LogicTreeNode> branch = NSHM27_LogicTree.buildDefault(seisReg, trt, false);
 		LogicTreeBranch<LogicTreeNode> sampledBranch = NSHM27_LogicTree.buildDefault(seisReg, trt, true);
+		Preconditions.checkState(sampledBranch.size() == branch.size(), "Can't yet handle missing epoch level in non-sampled branch");
 //		int samples = 50;
 //		int samples = 500;
-//		int samples = 1000;
-		int samples = 10000;
+		int samples = 1000;
+//		int samples = 10000;
 		
 //		boolean skipSampled = true;
 		boolean skipSampled = false;
@@ -123,7 +124,7 @@ public class InterfaceLogicTreeMFDExploration {
 				branch.getLevelTypeIndex(MaxRuptureLengthBranchNode.class),
 		};
 		
-		double[] lhSamples = new LatinHypercubePointSetGenerator(new Random(12345l)).generate(1000, 1).getDimensionValues(0);
+		double[] lhSamples = new LatinHypercubePointSetGenerator(new Random(12345l)).generate(samples, 1).getDimensionValues(0);
 		
 		LogicTreeLevel<?> rateLevel = sampledBranch.getLevel(sampledBranch.getLevelTypeIndex(NSHM27_SeisRateModel.class));
 		((RandomLevel<?, ?>)rateLevel).build(lhSamples);
@@ -268,7 +269,7 @@ public class InterfaceLogicTreeMFDExploration {
 				Preconditions.checkNotNull(rateLevel);
 				LogicTreeBranch<LogicTreeNode> myBranch = new LogicTreeBranch<>(levels, values);
 				((RandomLevel<?, ?>)sampledLevel).build(lhSamples);
-				Preconditions.checkState(sampledLevel.getNodes().size() == samples);
+				Preconditions.checkState(sampledLevel.getNodes().size() == samples, "%s != %s", sampledLevel.getNodes().size(), samples);
 				double weightEach = 1d/samples;
 				SummedMagFreqDist avgMFD = new SummedMagFreqDist(refMFD.getMinX(), refMFD.getMaxX(), refMFD.size());
 				List<CompletableFuture<IncrementalMagFreqDist>> mfdFutures = new ArrayList<>(samples);
@@ -281,7 +282,8 @@ public class InterfaceLogicTreeMFDExploration {
 					Preconditions.checkNotNull(rateNode);
 					mfdFutures.add(CompletableFuture.supplyAsync(()->{
 						LogicTreeBranch<LogicTreeNode> myBranch2 = myBranch.copy();
-						myBranch2.setValue(epochNode);
+						if (myBranch2.getLevelTypeIndex(NSHM27_SeisRateModelEpoch.class) >= 0)
+							myBranch2.setValue(epochNode);
 						myBranch2.setValue(l, node);
 						if (doRateSamples)
 							myBranch2.setValue(rateNode);

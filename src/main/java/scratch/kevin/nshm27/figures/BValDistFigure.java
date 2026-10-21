@@ -50,12 +50,13 @@ public class BValDistFigure {
 
 	public static void main(String[] args) throws IOException {
 		System.setProperty("java.util.concurrent.ForkJoinPool.common.parallelism", FaultSysTools.defaultNumThreads()+"");
+		SamplingMethod method = SamplingMethod.PAIRWISE_OPTIMIZED_LATIN_HYPERCUBE;
 //		int numSamples = 100;
 //		int numSamples = 1000;
 //		int numSamples = 2000;
-		int numSamples = 5000;
+//		int numSamples = 5000;
 //		int numSamples = 10000;
-//		int numSamples = 50000;
+		int numSamples = 50000;
 //		double binWidth = 0.025;
 		ModuleContainer.VERBOSE_DEFAULT = false;
 		double binWidth = 0.05;
@@ -80,8 +81,7 @@ public class BValDistFigure {
 		
 		for (NSHM27_SeismicityRegions seisReg : NSHM27_SeismicityRegions.values()) {
 			LogicTree<LogicTreeNode> tree = NSHM27_LogicTree.buildLogicTree(seisReg,
-					TectonicRegionType.SUBDUCTION_INTERFACE, numSamples, true,
-					SamplingMethod.PAIRWISE_OPTIMIZED_LATIN_HYPERCUBE);
+					TectonicRegionType.SUBDUCTION_INTERFACE, numSamples, true, method);
 			tree.write(new File("/tmp/test_tree_"+seisReg.name()+".json"));
 			ContinuousDistribution dist = NSHM27_LogicTree.getInterfaceBDist(seisReg);
 			DistributionSamplingLevel distLevel = new DistributionSamplingLevel("Dist", "Dist", dist);

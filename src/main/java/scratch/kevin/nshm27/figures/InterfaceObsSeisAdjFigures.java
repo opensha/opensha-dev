@@ -19,6 +19,7 @@ import org.opensha.sha.earthquake.faultSysSolution.FaultSystemRupSet;
 import org.opensha.sha.earthquake.faultSysSolution.modules.SectSlipRates;
 import org.opensha.sha.earthquake.faultSysSolution.util.FaultSysTools;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm27.NSHM27_InvConfigFactory;
+import org.opensha.sha.earthquake.rupForecastImpl.nshm27.logicTree.NSHM27_InterfaceMFDModel;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm27.logicTree.NSHM27_InterfaceSeismicityMomentReduction;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm27.logicTree.NSHM27_LogicTree;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm27.util.NSHM27_RegionLoader.NSHM27_SeismicityRegions;
@@ -88,6 +89,34 @@ public class InterfaceObsSeisAdjFigures {
 						twoDF.format(slipTrack.getAverage()),
 						twoDF.format(slipTrack.getMax()));
 			}
+			
+			// now do extrapolated
+			branch.setValue(NSHM27_InterfaceMFDModel.EXTRAPOLATED);
+			SectSlipRates slips = NSHM27_InterfaceMFDModel.applyExtrapolatedSlipRateScaling(rs, branch);
+			MinMaxAveTracker slipTrack = new MinMaxAveTracker();
+			
+			double branchMoment = slips.calcTotalMomentRate();
+			
+			double[] factors = new double[slips.size()];
+			for (int s=0; s<slips.size(); s++) {
+				double fullSlip = fullSlips.getSlipRate(s);
+				double redSlip = slips.getSlipRate(s);
+				factors[s] = (fullSlip - redSlip)/fullSlip;
+				slipTrack.addValue(slips.getSlipRate(s)*1e3);
+			}
+			
+			mapMaker.plotSectScalars(factors, redCPT, "Slip-deficit rate reduction factor");
+			
+			mapMaker.plot(outputDir, seisReg.name()+"_"+NSHM27_InterfaceMFDModel.EXTRAPOLATED.name(), NSHM27_InterfaceMFDModel.EXTRAPOLATED.getShortName());
+			
+			double overall = (fullMoment - branchMoment)/fullMoment;
+			csv.addLine(NSHM27_InterfaceMFDModel.EXTRAPOLATED.getShortName(),
+					twoDF.format(overall),
+					twoDF.format(StatUtils.mean(factors)),
+					twoDF.format(StatUtils.max(factors)),
+					twoDF.format(DataUtils.median(factors)),
+					twoDF.format(slipTrack.getAverage()),
+					twoDF.format(slipTrack.getMax()));
 			
 			csv.writeToFile(new File(outputDir, seisReg.name()+"_factors.csv"));
 		}

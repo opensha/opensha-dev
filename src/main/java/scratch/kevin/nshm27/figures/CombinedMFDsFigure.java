@@ -100,8 +100,8 @@ public class CombinedMFDsFigure {
 			csvRIHeader.add("M>"+oDF.format(mag)+" RI");
 		}
 		
-//		for (NSHM27_SeismicityRegions seisReg : NSHM27_SeismicityRegions.values()) {
-		for (NSHM27_SeismicityRegions seisReg : new NSHM27_SeismicityRegions[] {NSHM27_SeismicityRegions.AMSAM}) {
+		for (NSHM27_SeismicityRegions seisReg : NSHM27_SeismicityRegions.values()) {
+//		for (NSHM27_SeismicityRegions seisReg : new NSHM27_SeismicityRegions[] {NSHM27_SeismicityRegions.AMSAM}) {
 			FaultSystemSolution sol = getSolution(seisReg);
 			GridSourceList gridList = sol.requireModule(GridSourceList.class);
 			
@@ -461,7 +461,7 @@ public class CombinedMFDsFigure {
 						processCSVsWithCml(cmlFractiles[0], "Total (minimum)", csvMags, rateCSV, riCSV);
 						processCSVsWithCml(cmlFractiles[1], "Total (2.5 %-ile)", csvMags, rateCSV, riCSV);
 						processCSVsWithCml(cmlFractiles[2], "Total (16 %-ile)", csvMags, rateCSV, riCSV);
-						processCSVsWithCml(cmlFractiles[5], "Total (50 %-ile)", csvMags, rateCSV, riCSV);
+						processCSVsWithCml(cmlFractiles[3], "Total (50 %-ile)", csvMags, rateCSV, riCSV);
 						processCSVsWithCml(cmlFractiles[4], "Total (84 %-ile)", csvMags, rateCSV, riCSV);
 						processCSVsWithCml(cmlFractiles[5], "Total (97.5 %-ile)", csvMags, rateCSV, riCSV);
 						processCSVsWithCml(cmlFractiles[6], "Total (maximum)", csvMags, rateCSV, riCSV);
