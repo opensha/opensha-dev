@@ -164,7 +164,12 @@ public class LaTeXUtils {
 	private static final DecimalFormat percentDF = new DecimalFormat("0.##########%");
 	
 	public static String numberAsPercent(Number number, int decimalPlaces) {
-		return numberExpFormatFixedDecimal(number, decimalPlaces)+LATEX_ESCAPE_MAP.get('%');
+		String ret;
+		if (decimalPlaces == 0)
+			ret = (int)Math.round(number.doubleValue())+"";
+		else
+			ret = numberExpFormatFixedDecimal(number, decimalPlaces);
+		return ret+LATEX_ESCAPE_MAP.get('%');
 	}
 	
 	public static String numberAsOrdinal(int n) {
