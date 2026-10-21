@@ -142,9 +142,13 @@ public class ComparisonPageGen {
 //		File inputDir = new File(fssDir, "2026_08_01-nshm23-hazard_validation-WUS-origRakes-origNGAW2-maxDist300-nshmpIMLs");
 //		File inputSolFile = new File(nshm23Dir, "results_WUS_FM_v3_branch_averaged_gridded_simplified_revised2026.zip");
 		
-//		File inputDir = new File(fssDir, "2026_10_02-nshm23-td_erf-WUS-Cascadia-time_indep-1yr");
-		File inputDir = new File(fssDir, "2026_10_09-nshm23-td_erf-WUS-Cascadia-ALL-time_indep-1yr");
-		File inputSolFile = new File(nshm23Dir, "nshm23-wus-ba-hist_dole.zip");
+//		File inputDir = new File(fssDir, "2026_10_21-nshm23-td_erf-WUS-Cascadia-time_indep-1yr");
+////		File inputDir = new File(fssDir, "2026_10_21-nshm23-td_erf-WUS-Cascadia-ALL-time_indep-1yr");
+//		File inputSolFile = new File(nshm23Dir, "nshm23-wus-ba-hist_dole.zip");
+//		boolean rupMFDs = false;
+		
+		File inputDir = new File(fssDir, "2026_10_21-nshm23-td_erf-CONUS-time_indep-1yr");
+		File inputSolFile = new File(nshm23Dir, "nshm23-conus-hist_dole.zip");
 		boolean rupMFDs = false;
 		
 //		File inputDir = new File(fssDir, "2026_10_08-nshm23-wrapped-wus-hazard-0.1deg");
@@ -159,8 +163,8 @@ public class ComparisonPageGen {
 				+ "conus_2023.R2-no_gmm_region-by_source-stable-vs760-0p1-20260515-ea28700aef6c6f");
 		File outputDir = new File(inputDir, "nshmp_haz_comparisons_"+imtDir);
 		
-		File modelDir = new File("/data/kevin/nshm23/nshmp-haz-models/nshm-conus-6.1.3");
-//		File modelDir = new File("/data/kevin/nshm23/nshmp-haz-models/nshm-conus-6.2.0");
+//		File modelDir = new File("/data/kevin/nshm23/nshmp-haz-models/nshm-conus-6.1.3");
+		File modelDir = new File("/data/kevin/nshm23/nshmp-haz-models/nshm-conus-6.2.0");
 		
 		boolean doWrapperCalc = false;
 		
@@ -196,8 +200,10 @@ public class ComparisonPageGen {
 		// Nevada-ish
 //		zoomReg = new Region(new Location(35, -121), new Location(43, -113));
 		
-		// Cascadia
-		zoomReg = new Region(new Location(37, -125), new Location(49, -115));
+		if (inputDir.getName().contains("Cascadia")) {
+			// Cascadia
+			zoomReg = new Region(new Location(37, -125), new Location(49, -115));
+		}
 		
 		SourceFilterManager sourceFilters = new SourceFilterManager(SourceFilters.TRT_DIST_CUTOFFS);
 //		SourceFilterManager sourceFilters = new SourceFilterManager(SourceFilters.FIXED_DIST_CUTOFF);
