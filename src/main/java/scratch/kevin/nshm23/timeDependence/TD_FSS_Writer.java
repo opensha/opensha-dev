@@ -34,10 +34,10 @@ public class TD_FSS_Writer {
 		
 		NshmpHazardModel conusModel = NshmpHazardModel.load(CONUS_DIR.toPath());
 		
-//		Cascadia_FSS_creator.FaultModelEnum cascadiaFM = Cascadia_FSS_creator.FaultModelEnum.MIDDLE;
-//		String cascadiaPrefix = "cascadia-middle";
-		Cascadia_FSS_creator.FaultModelEnum cascadiaFM = Cascadia_FSS_creator.FaultModelEnum.ALL;
-		String cascadiaPrefix = "cascadia-all";
+		Cascadia_FSS_creator.FaultModelEnum cascadiaFM = Cascadia_FSS_creator.FaultModelEnum.MIDDLE;
+		String cascadiaPrefix = "cascadia-middle";
+//		Cascadia_FSS_creator.FaultModelEnum cascadiaFM = Cascadia_FSS_creator.FaultModelEnum.ALL;
+//		String cascadiaPrefix = "cascadia-all";
 		FaultSystemSolution cascadia = getCascadia(conusModel, cascadiaFM);
 		System.out.println(getDOLEstats(cascadia));
 		File cascadiaOutput = new File(outputDir, "nshm23-"+cascadiaPrefix+"-hist_dole.zip");

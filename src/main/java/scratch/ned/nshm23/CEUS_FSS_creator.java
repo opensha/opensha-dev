@@ -13,6 +13,7 @@ import java.util.List;
 import java.util.Set;
 
 import org.apache.commons.lang3.exception.ExceptionUtils;
+import org.apache.commons.numbers.core.Precision;
 import org.opensha.commons.calc.magScalingRelations.magScalingRelImpl.WC1994_MagLengthRelationship;
 import org.opensha.commons.eq.MagUtils;
 import org.opensha.commons.geo.GriddedRegion;
@@ -30,6 +31,8 @@ import org.opensha.sha.earthquake.faultSysSolution.modules.GridSourceList.Gridde
 import org.opensha.sha.earthquake.faultSysSolution.modules.GridSourceList.GriddedRupturePropertiesBuilder;
 import org.opensha.sha.earthquake.faultSysSolution.modules.GridSourceList.GriddedRupturePropertiesCache;
 import org.opensha.sha.earthquake.param.IncludeBackgroundOption;
+import org.opensha.sha.earthquake.rupForecastImpl.nshm23.gridded.NSHM23_SingleRegionGridSourceProvider.NSHM23GridRupDimensions;
+import org.opensha.sha.earthquake.rupForecastImpl.nshm23.gridded.NSHM23_SingleRegionGridSourceProvider.NSHM23_WUS_FiniteRuptureConverter;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.util.NSHM23_RegionLoader.SeismicityRegions;
 import org.opensha.sha.faultSurface.FaultSection;
 import org.opensha.sha.faultSurface.GeoJSONFaultSection;
@@ -161,11 +164,11 @@ public class CEUS_FSS_creator {
 		list.add(getFaultSection(new File(nshmModelDir, "stable-crust/fault/MO/New Madrid/features/New Madrid - USGS (west, north).geojson")));
 		list.add(getFaultSection(new File(nshmModelDir, "stable-crust/fault/MO/New Madrid/features/New Madrid - USGS (west, south).geojson")));
 		list.add(getFaultSection(new File(nshmModelDir, "stable-crust/fault/OK/Meers/features/Meers.geojson")));
-		list.add(getFaultSection(new File(nshmModelDir, "stable-crust/fault/TN/Eastern Rift Margin (North)/features/eastern-rift-margin-north.geojson")));
-		list.add(getFaultSection(new File(nshmModelDir, "stable-crust/fault/TN/Eastern Rift Margin (South)/features/crittenden-county.geojson")));
-		list.add(getFaultSection(new File(nshmModelDir, "stable-crust/fault/TN/Eastern Rift Margin (South)/features/eastern-rift-margin-south-extension.geojson")));
-		list.add(getFaultSection(new File(nshmModelDir, "stable-crust/fault/TN/Eastern Rift Margin (South)/features/eastern-rift-margin-south.geojson")));
-		list.add(getFaultSection(new File(nshmModelDir, "stable-crust/fault/TN/Eastern Rift Margin (South)/features/meeman-shelby.geojson")));
+		list.add(getFaultSection(new File(nshmModelDir, "stable-crust/fault/TN/Eastern Rift Margin (north)/features/eastern-rift-margin-north.geojson")));
+		list.add(getFaultSection(new File(nshmModelDir, "stable-crust/fault/TN/Eastern Rift Margin (south)/features/crittenden-county.geojson")));
+		list.add(getFaultSection(new File(nshmModelDir, "stable-crust/fault/TN/Eastern Rift Margin (south)/features/eastern-rift-margin-south-extension.geojson")));
+		list.add(getFaultSection(new File(nshmModelDir, "stable-crust/fault/TN/Eastern Rift Margin (south)/features/eastern-rift-margin-south.geojson")));
+		list.add(getFaultSection(new File(nshmModelDir, "stable-crust/fault/TN/Eastern Rift Margin (south)/features/meeman-shelby.geojson")));
 		return list;
 	}
 	
@@ -680,7 +683,7 @@ public class CEUS_FSS_creator {
 		
 		// add gridded 
 		try {
-			bigFSS.setGridSourceProvider(buildSlabGridSources(hazardModel));
+			bigFSS.setGridSourceProvider(buildGridSources(hazardModel));
 		} catch (IOException e) {
 			throw ExceptionUtils.asRuntimeException(e);
 		}
@@ -1107,7 +1110,7 @@ if(src.getName().equals("Unnamed fault system source")) // temp fix for Peters I
 
 	}
 	
-	public static GridSourceList buildSlabGridSources(NshmpHazardModel model) throws IOException {
+	public static GridSourceList buildGridSources(NshmpHazardModel model) throws IOException {
 		NshmErf erf = getNshmGriddedERF(model);
 		GriddedRegion ceusReg = new GriddedRegion(SeismicityRegions.CONUS_EAST.load(), 0.1, GriddedRegion.ANCHOR_0_0);
 		GriddedRegion wusReg = new GriddedRegion(SeismicityRegions.CONUS_WEST.load(), 0.1, GriddedRegion.ANCHOR_0_0);
@@ -1131,22 +1134,29 @@ if(src.getName().equals("Unnamed fault system source")) // temp fix for Peters I
 			Preconditions.checkState(locIndex < 0 || wusIndex < 0);
 			Preconditions.checkState(locIndex >= 0 || wusIndex >= 0);
 			
+			boolean debug = numRups < 50;
+			
 			if (locIndex > 0) {
-				System.out.println("Source "+sourceIndex+" Location: "+loc+" locIndex="+locIndex);
+				if (debug) System.out.println("Source "+sourceIndex+" Location: "+loc+" locIndex="+locIndex);
 				List<GriddedRupture> rups = ruptureLists.get(locIndex);
 				Preconditions.checkState(source.getTectonicRegionType() == TectonicRegionType.STABLE_SHALLOW);
-				System.out.println("Location: "+loc);
+				if (debug) System.out.println("Location: "+loc);
 				for (ProbEqkRupture rup : source) {
 					RuptureSurface surf = rup.getRuptureSurface();
 					Location myLoc = ((NshmSurface)surf).centroid();
+					// these ruptures don't supply lengths, get it from our builder but check the rest
+					NSHM23GridRupDimensions dims = NSHM23_WUS_FiniteRuptureConverter.getDimensions(
+							TectonicRegionType.STABLE_SHALLOW, rup.getMag(), surf.getAveDip());
 					double depth = surf.getAveRupTopDepth();
 					double depth2 = surf.getAveRupBottomDepth();
-					double len = surf.getAveLength();
+					Preconditions.checkState(Precision.equals(depth, dims.upperDepth(), 1e-4));
+					Preconditions.checkState(Precision.equals(depth2, dims.lowerDepth(), 1e-4));
+					Preconditions.checkState(Precision.equals(surf.getAveDip(), dims.dip(), 1e-4));
 					GriddedRuptureProperties props = new GriddedRupturePropertiesBuilder()
 							.dip(surf.getAveDip())
 							.hypocentralDepth(0.5*(depth + depth2))
-							.upperDepth(depth).lowerDepth(depth2)
-							.length(len)
+							.upperDepth(dims.upperDepth()).lowerDepth(dims.lowerDepth())
+							.length(dims.length())
 							.magnitude(rup.getMag())
 							.rake(rup.getAveRake())
 							.tectonicRegionType(TectonicRegionType.STABLE_SHALLOW)
@@ -1155,7 +1165,7 @@ if(src.getName().equals("Unnamed fault system source")) // temp fix for Peters I
 					GriddedRupture gridRup = new GriddedRupture(locIndex, loc, props, rup.getMeanAnnualRate(1d));
 					rups.add(gridRup);
 //					System.out.println("\tRup at location "+myLoc);
-					System.out.println("\t"+gridRup.properties+"; rate="+(float)gridRup.rate);
+					if (debug) System.out.println("\t"+gridRup.properties+"; rate="+(float)gridRup.rate);
 					Preconditions.checkState(myLoc.lat == loc.lat);
 					Preconditions.checkState(myLoc.lon == loc.lon);
 					numRups++;
@@ -1164,7 +1174,7 @@ if(src.getName().equals("Unnamed fault system source")) // temp fix for Peters I
 			sourceIndex++;
 		}
 		System.out.println("Built "+numRups+" stable ruptures for "+ruptureLists.size()+" locations");
-		return new GridSourceList.Precomputed(ceusReg, TectonicRegionType.SUBDUCTION_SLAB, ruptureLists);
+		return new GridSourceList.Precomputed(ceusReg, TectonicRegionType.STABLE_SHALLOW, ruptureLists);
 	}
 	
 	/**
@@ -1177,17 +1187,17 @@ if(src.getName().equals("Unnamed fault system source")) // temp fix for Peters I
 		parseRuptureSetFile(new File(nshmModelDir, "stable-crust/fault/MO/Commerce/2-eq/rupture-set.json"), srcFltSectsMap);
 		parseRuptureSetFile(new File(nshmModelDir, "stable-crust/fault/MO/Commerce/3-eq/rupture-set.json"), srcFltSectsMap);
 		parseRuptureSetFile(new File(nshmModelDir, "stable-crust/fault/OK/Meers/usgs/rupture-set.json"), srcFltSectsMap);
-		parseRuptureSetFile(new File(nshmModelDir, "stable-crust/fault/TN/Eastern Rift Margin (North)/1-eq/rupture-set.json"), srcFltSectsMap);
-		parseRuptureSetFile(new File(nshmModelDir, "stable-crust/fault/TN/Eastern Rift Margin (North)/2-eq/rupture-set.json"), srcFltSectsMap);
+		parseRuptureSetFile(new File(nshmModelDir, "stable-crust/fault/TN/Eastern Rift Margin (north)/1-eq/rupture-set.json"), srcFltSectsMap);
+		parseRuptureSetFile(new File(nshmModelDir, "stable-crust/fault/TN/Eastern Rift Margin (north)/2-eq/rupture-set.json"), srcFltSectsMap);
 		parseRuptureSetFile(new File(nshmModelDir, "stable-crust/fault/CO/Cheraw/sscn/recurrence-rate/rupture-set.json"), srcFltSectsMap);
 		parseRuptureSetFile(new File(nshmModelDir, "stable-crust/fault/OK/Meers/sscn/cluster-in/rupture-set.json"), srcFltSectsMap);
 		parseRuptureSetFile(new File(nshmModelDir, "stable-crust/fault/OK/Meers/sscn/cluster-out/rupture-set.json"), srcFltSectsMap);
-		parseRuptureSetFile(new File(nshmModelDir, "stable-crust/fault/TN/Eastern Rift Margin (South)/crittenden-co/2-eq/rupture-set.json"), srcFltSectsMap);
-		parseRuptureSetFile(new File(nshmModelDir, "stable-crust/fault/TN/Eastern Rift Margin (South)/crittenden-co/3-eq/rupture-set.json"), srcFltSectsMap);
-		parseRuptureSetFile(new File(nshmModelDir, "stable-crust/fault/TN/Eastern Rift Margin (South)/crittenden-co/4-eq/rupture-set.json"), srcFltSectsMap);
-		parseRuptureSetFile(new File(nshmModelDir, "stable-crust/fault/TN/Eastern Rift Margin (South)/meeman-shelby/2-eq/rupture-set.json"), srcFltSectsMap);
-		parseRuptureSetFile(new File(nshmModelDir, "stable-crust/fault/TN/Eastern Rift Margin (South)/meeman-shelby/3-eq/rupture-set.json"), srcFltSectsMap);
-		parseRuptureSetFile(new File(nshmModelDir, "stable-crust/fault/TN/Eastern Rift Margin (South)/meeman-shelby/4-eq/rupture-set.json"), srcFltSectsMap);
+		parseRuptureSetFile(new File(nshmModelDir, "stable-crust/fault/TN/Eastern Rift Margin (south)/crittenden-co/2-eq/rupture-set.json"), srcFltSectsMap);
+		parseRuptureSetFile(new File(nshmModelDir, "stable-crust/fault/TN/Eastern Rift Margin (south)/crittenden-co/3-eq/rupture-set.json"), srcFltSectsMap);
+		parseRuptureSetFile(new File(nshmModelDir, "stable-crust/fault/TN/Eastern Rift Margin (south)/crittenden-co/4-eq/rupture-set.json"), srcFltSectsMap);
+		parseRuptureSetFile(new File(nshmModelDir, "stable-crust/fault/TN/Eastern Rift Margin (south)/meeman-shelby/2-eq/rupture-set.json"), srcFltSectsMap);
+		parseRuptureSetFile(new File(nshmModelDir, "stable-crust/fault/TN/Eastern Rift Margin (south)/meeman-shelby/3-eq/rupture-set.json"), srcFltSectsMap);
+		parseRuptureSetFile(new File(nshmModelDir, "stable-crust/fault/TN/Eastern Rift Margin (south)/meeman-shelby/4-eq/rupture-set.json"), srcFltSectsMap);
 		parseRuptureSetFile(new File(nshmModelDir, "stable-crust/fault/CO/Cheraw/sscn/slip-rate/full-rupture/rupture-set.json"), srcFltSectsMap);
 		parseRuptureSetFile(new File(nshmModelDir, "stable-crust/fault/CO/Cheraw/sscn/slip-rate/partial-rupture/rupture-set.json"), srcFltSectsMap);
 		parseRuptureSetFile(new File(nshmModelDir, "stable-crust/fault/MO/New Madrid/sscn/cluster-out/reelfoot-extended/rupture-set.json"), srcFltSectsMap);

@@ -57,13 +57,20 @@ public class TD_BA_CalcScriptWriter {
 //		String linkFromDir = "2026_10-nshm23-td_erf-solutions";
 //		String solFileName = "nshm23-wus-cascadia-middle-hist_dole.zip";
 		
-		// start with WUS + Cascadia
-		String regToken = "WUS-Cascadia-ALL";
-		Region reg = NSHM23_RegionLoader.loadFullConterminousWUS();
+		// WUS + Cascadia (all), no TD
+//		String regToken = "WUS-Cascadia-ALL";
+//		Region reg = NSHM23_RegionLoader.loadFullConterminousWUS();
+//		double spacing = 0.1;
+//		String linkFromDir = "2026_10-nshm23-td_erf-solutions";
+//		String solFileName = "nshm23-wus-cascadia-all-hist_dole.zip";
+//		probabilityModels = new FSS_ProbabilityModels[] {null};
+		
+		// full CONUS
+		String regToken = "CONUS";
+		Region reg = NSHM23_RegionLoader.loadFullConterminousUS();
 		double spacing = 0.1;
 		String linkFromDir = "2026_10-nshm23-td_erf-solutions";
-		String solFileName = "nshm23-wus-cascadia-all-hist_dole.zip";
-		probabilityModels = new FSS_ProbabilityModels[] {null};
+		String solFileName = "nshm23-conus-hist_dole.zip";
 
 		File localMainDir = new File("/home/kevin/OpenSHA/fss_inversions");
 		
