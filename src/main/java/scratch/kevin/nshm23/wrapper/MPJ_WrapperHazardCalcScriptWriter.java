@@ -47,18 +47,18 @@ public class MPJ_WrapperHazardCalcScriptWriter {
 //		String erfPrefix = "nshm23-wrapped-ceusZoneOnly";
 //		String tagName = "nshm-conus-6.0.0-ceusZoneOnly"; // NSHM23 with only zone sources in CEUS (and gridded)
 		
-		double gridSpacing = 0.1d; int mins = 2000;
-		String regName = "wus";
-		Region region = NSHM23_RegionLoader.loadFullConterminousWUS();
+//		double gridSpacing = 0.1d; int mins = 2000;
+//		String regName = "wus";
+//		Region region = NSHM23_RegionLoader.loadFullConterminousWUS();
 		
 //		double gridSpacing = 0.1d; int mins = 2000;
 //		String regName = "ceus";
 //		Region region = NSHM23_RegionLoader.AnalysisRegions.CONUS_EAST.load();
 		
-////		double gridSpacing = 0.2d; int mins = 2000;
-//		double gridSpacing = 0.1d; int mins = 4000;
-//		String regName = "conus";
-//		Region region = NSHM23_RegionLoader.loadFullConterminousUS();
+//		double gridSpacing = 0.2d; int mins = 2000;
+		double gridSpacing = 0.1d; int mins = 4000;
+		String regName = "conus";
+		Region region = NSHM23_RegionLoader.loadFullConterminousUS();
 		
 		String extGridProvPath = null;
 //		String extGridProvPath = "2023_09_01-nshm23_branches-mod_pitas_ddw-NSHM23_v2-CoulombRupSet-DsrUni-TotNuclRate-NoRed-ThreshAvgIterRelGR/"
@@ -149,6 +149,7 @@ public class MPJ_WrapperHazardCalcScriptWriter {
 		argz += " --trt-gmpe SUBDUCTION_INTERFACE:"+AttenRelRef.USGS_NSHM23_INTERFACE.name();
 		argz += " --trt-gmpe SUBDUCTION_SLAB:"+AttenRelRef.USGS_NSHM23_INTRASLAB.name();
 		argz += " --gmm-sigma-trunc-one-sided 3";
+		argz += " --supersample-quick";
 		argz += " --nshmp-imls";
 		argz += " "+MPJTaskCalculator.argumentBuilder().minDispatch(remoteTotalThreads).build();
 		List<String> script = mpjWrite.buildScript(MPJ_WrapperHazardCalc.class.getName(), argz);

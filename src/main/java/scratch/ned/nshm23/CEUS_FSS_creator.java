@@ -1136,7 +1136,7 @@ if(src.getName().equals("Unnamed fault system source")) // temp fix for Peters I
 			
 			boolean debug = numRups < 50;
 			
-			if (locIndex > 0) {
+			if (locIndex >= 0) {
 				if (debug) System.out.println("Source "+sourceIndex+" Location: "+loc+" locIndex="+locIndex);
 				List<GriddedRupture> rups = ruptureLists.get(locIndex);
 				Preconditions.checkState(source.getTectonicRegionType() == TectonicRegionType.STABLE_SHALLOW);
