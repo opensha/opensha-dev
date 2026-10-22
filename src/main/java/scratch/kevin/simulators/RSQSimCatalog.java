@@ -842,6 +842,9 @@ public class RSQSimCatalog implements XMLSaveable {
 				NSHM23_FaultModels.WUS_FM_v3, NSHM23_DeformationModels.AVERAGE),
 		BRUCE_11081("rundir11081", "Bruce 11081", "Bruce Shaw", cal(2026, 10, 13),
 				"WUS_2km_1mmdyAll , N[0.5, 2], b=.006, fracArea=0",
+				NSHM23_FaultModels.WUS_FM_v3, NSHM23_DeformationModels.AVERAGE),
+		BRUCE_11082("rundir11082", "Bruce 11082", "Bruce Shaw", cal(2026, 10, 20),
+				"WUS_2km_1mmdyAll , N[0.9, 1.1], b=.006, fracArea=0",
 				NSHM23_FaultModels.WUS_FM_v3, NSHM23_DeformationModels.AVERAGE),;
 		
 		
