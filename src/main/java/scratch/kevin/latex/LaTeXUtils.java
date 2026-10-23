@@ -24,6 +24,8 @@ import org.opensha.commons.util.FileUtils;
 import com.google.common.base.Preconditions;
 import com.google.common.io.Files;
 
+import cern.colt.Arrays;
+
 public class LaTeXUtils {
 
 	private static final String VAR_PREFIX = "dynval";
@@ -850,10 +852,13 @@ public class LaTeXUtils {
 	}
 	
 	public static void reorganizeFiguresForSSA(File inputTexFile, File outputDir) throws IOException {
+		reorganizeFiguresForSSA(inputTexFile, inputTexFile.getParentFile(), outputDir);
+	}
+	
+	public static void reorganizeFiguresForSSA(File inputTexFile, File inputDir, File outputDir) throws IOException {
 		Preconditions.checkState(outputDir.exists() || outputDir.mkdir(),
 				"Output dir doesn't exist and could not be created: %s", outputDir.getAbsolutePath());
 		
-		File inputDir = inputTexFile.getParentFile();
 		File outputTexFile = new File(outputDir, inputTexFile.getName());
 		
 		List<String> lines = Files.readLines(inputTexFile, Charset.defaultCharset());
@@ -915,7 +920,8 @@ public class LaTeXUtils {
 						figInFile = new File(inputDir, path+"."+extensions[i]);
 					}
 					Preconditions.checkState(figInFile.exists(),
-							"Figure input file not found: %s. Also tried these extensions: %s", path, extensions);
+							"Figure input file not found: %s. Also tried these extensions: %s.\n\tinputDir: %s",
+							path, Arrays.toString(extensions), inputDir.getAbsolutePath());
 					String outName = "figure_"+numDF.format(curFigNum);
 					if (readingSubfigure) {
 						if (subfigHasCaption) {
@@ -1031,7 +1037,9 @@ public class LaTeXUtils {
 		
 //		File submitDir = new File(mainBranch, "submission/v1_internal_review");
 //		File submitDir = new File(mainBranch, "submission/v2_srl_initial");
-		File submitDir = new File(mainBranch, "submission/v3_usgs_approval");
+//		File submitDir = new File(mainBranch, "submission/v3_usgs_approval");
+		File submitDir = new File(mainBranch, "submission/v4_srl_final");
+		Preconditions.checkState(submitDir.exists() || submitDir.mkdir());
 		
 //		File initialBranch = new File(prviDir, "initial-bssa-submission");
 //		File refDir = initialBranch;
@@ -1055,16 +1063,15 @@ public class LaTeXUtils {
 //		System.out.println("============================");
 		lines = embedDynvalIncludes(lines, refDir);
 		lines = embedCommands(lines, true);
-//		lines = embedBibliography(lines, new File(refDir, "refs_compiled.bbl"));
+//		lines = embedBibliography(lines, new File(submitDir, "main.bbl"));
 //		lines = embedFigpanelFigures(lines, refDir, figpanelDir, textWidth);
 		
 		writeTex(lines, outputFile);
 		
-//		File ssaOutputDir = new File(new File(mainBranch, "submission"), "final-bssa-submission");
-////		File ssaOutputDir = new File(prviDir, "final-bssa-submission-tests");
+//		File ssaOutputDir = new File(submitDir, "reorganized_for_submission");
 //		Preconditions.checkState(ssaOutputDir.exists() || ssaOutputDir.mkdir(),
 //				"SSA output dir doesn't exist and could not be created: %s", ssaOutputDir.getAbsolutePath());
-//		reorganizeFiguresForSSA(outputFile, ssaOutputDir);
+//		reorganizeFiguresForSSA(outputFile, refDir, ssaOutputDir);
 //		// rename from embedded to just main
 //		Files.move(new File(ssaOutputDir, outputFile.getName()), new File(ssaOutputDir, inputFile.getName()));
 	}
