@@ -117,7 +117,7 @@ public class MPJ_WrapperHazardCalcScriptWriter {
 		classpath.add(new File(dirPath+"/opensha-dev-all.jar"));
 		System.err.println("Remember, this actually needs the dev jar; make sure it's updated!");
 		
-		File localReg = new File(localDir, "gridded_region.json");
+		File localReg = new File(localDir, "gridded_region.geojson");
 		Feature.write(gridReg.toFeature(), localReg);
 		
 		mpjWrite.setClasspath(classpath);

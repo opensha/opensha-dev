@@ -147,14 +147,15 @@ public class ComparisonPageGen {
 //		File inputSolFile = new File(nshm23Dir, "nshm23-wus-ba-hist_dole.zip");
 //		boolean rupMFDs = false;
 		
-		File inputDir = new File(fssDir, "2026_10_21-nshm23-td_erf-CONUS-time_indep-1yr");
-		File inputSolFile = new File(nshm23Dir, "nshm23-conus-hist_dole.zip");
-		boolean rupMFDs = false;
+//		File inputDir = new File(fssDir, "2026_10_21-nshm23-td_erf-CONUS-time_indep-1yr");
+//		File inputSolFile = new File(nshm23Dir, "nshm23-conus-hist_dole.zip");
+//		boolean rupMFDs = false;
 		
 //		File inputDir = new File(fssDir, "2026_10_08-nshm23-wrapped-wus-hazard-0.1deg");
-//		File inputSolFile = new File(nshm23Dir, "nshm23-wus-ba-hist_dole.zip");
-//		boolean rupMFDs = false;
-//		bgOps = EnumSet.of(IncludeBackgroundOption.INCLUDE);
+		File inputDir = new File(fssDir, "2026_10_22-nshm23-wrapped-conus-hazard-0.1deg");
+		File inputSolFile = new File(nshm23Dir, "nshm23-wus-ba-hist_dole.zip");
+		boolean rupMFDs = false;
+		bgOps = EnumSet.of(IncludeBackgroundOption.INCLUDE);
 
 		File compDirActiveSub = new File("/home/kevin/OpenSHA/nshm23/nshmp-haz-models/ext_hazard_calcs/"
 				+ "conus_2023.R2-no_gmm_region-by_source-active_subduction-vs760-0p1-20260515-95ae7e82fbb85d");
