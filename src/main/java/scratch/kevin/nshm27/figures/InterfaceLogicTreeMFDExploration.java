@@ -21,6 +21,7 @@ import org.opensha.commons.data.function.ArbitrarilyDiscretizedFunc;
 import org.opensha.commons.data.function.DiscretizedFunc;
 import org.opensha.commons.data.function.EvenlyDiscretizedFunc;
 import org.opensha.commons.data.function.LightFixedXFunc;
+import org.opensha.commons.data.sampling.PointSet;
 import org.opensha.commons.data.sampling.generator.LatinHypercubePointSetGenerator;
 import org.opensha.commons.data.uncertainty.UncertainArbDiscFunc;
 import org.opensha.commons.data.uncertainty.UncertainBoundedIncrMagFreqDist;
@@ -39,6 +40,7 @@ import org.opensha.commons.util.DataUtils.MinMaxAveTracker;
 import org.opensha.commons.util.cpt.CPT;
 import org.opensha.commons.util.modules.ModuleContainer;
 import org.opensha.sha.earthquake.faultSysSolution.FaultSystemRupSet;
+import org.opensha.sha.earthquake.faultSysSolution.RupSetDeformationModel;
 import org.opensha.sha.earthquake.faultSysSolution.logicTree.sectDistSampling.SectDistributionSampler.FixedFractileSampler;
 import org.opensha.sha.earthquake.faultSysSolution.modules.ClusterRuptures;
 import org.opensha.sha.earthquake.faultSysSolution.modules.FaultGridAssociations;
@@ -89,13 +91,70 @@ public class InterfaceLogicTreeMFDExploration {
 
 		boolean includeObs = true;
 		boolean includeTotalObs = true;
+//		boolean doRateSamples = true;
+		boolean doRateSamples = false;
+		
+		NSHM27_SeisRateModelEpochCatalog epochCatalog = doRateSamples ? NSHM27_SeisRateModelEpochCatalog.load(seisReg, trt) : null;
 
 		LogicTreeBranch<LogicTreeNode> branch = NSHM27_LogicTree.buildDefault(seisReg, trt, false);
 		LogicTreeBranch<LogicTreeNode> sampledBranch = NSHM27_LogicTree.buildDefault(seisReg, trt, true);
+		if (sampledBranch.size() == branch.size()+1) {
+			if (doRateSamples) {
+				List<LogicTreeLevel<? extends LogicTreeNode>> levels = new ArrayList<>();
+				List<LogicTreeNode> values = new ArrayList<>();
+				// add empty level for epoch to unsampled
+				int targetLevel = sampledBranch.getLevelTypeIndex(NSHM27_SeisRateModelEpoch.class);
+				Preconditions.checkState(targetLevel >= 0);
+				for (int l=0; l<branch.size(); l++) {
+					if (l == targetLevel) {
+						// add in the epoch level
+						levels.add(new NSHM27_SeisRateModelEpoch.Level(epochCatalog));
+						values.add(null);
+					}
+					levels.add(branch.getLevel(l));
+					values.add(branch.getValue(l));
+				}
+				branch = new LogicTreeBranch<>(levels, values);
+			} else {
+				// remove level for epoch from sampled and switch rate model to rate model branch
+				int targetEpochLevel = sampledBranch.getLevelTypeIndex(NSHM27_SeisRateModelEpoch.class);
+				int targetRateLevel = sampledBranch.getLevelTypeIndex(NSHM27_SeisRateModel.class);
+				int sourceRateLevel = branch.getLevelTypeIndex(NSHM27_SeisRateModel.class);
+				Preconditions.checkState(targetEpochLevel >= 0);
+				Preconditions.checkState(targetRateLevel >= 0);
+				Preconditions.checkState(sourceRateLevel >= 0);
+				List<LogicTreeLevel<? extends LogicTreeNode>> levels = new ArrayList<>();
+				List<LogicTreeNode> values = new ArrayList<>();
+				for (int l=0; l<sampledBranch.size(); l++) {
+					if (l == targetEpochLevel) {
+						// skip the epoch level
+						levels.add(null);
+						values.add(null);
+					} else if (l == targetRateLevel) {
+						// replace with fixed rate model branch
+						levels.add(branch.getLevel(sourceRateLevel));
+						values.add(branch.getValue(sourceRateLevel));
+					} else {
+						levels.add(sampledBranch.getLevel(l));
+						values.add(sampledBranch.getValue(l));
+					}
+				}
+				// remove the null
+				for (int i=levels.size(); --i>=0;) {
+					if (levels.get(i) == null) {
+						levels.remove(i);
+						values.remove(i);
+					}
+				}
+				sampledBranch = new LogicTreeBranch<>(levels, values);
+			}
+		}
 		Preconditions.checkState(sampledBranch.size() == branch.size(), "Can't yet handle missing epoch level in non-sampled branch");
 //		int samples = 50;
+//		int samples = 100;
 //		int samples = 500;
-		int samples = 1000;
+//		int samples = 1000;
+		int samples = 5000;
 //		int samples = 10000;
 		
 //		boolean skipSampled = true;
@@ -117,18 +176,13 @@ public class InterfaceLogicTreeMFDExploration {
 				branch.getLevelTypeIndex(NSHM27_InterfaceCouplingDepthModels.class),
 				branch.getLevelTypeIndex(NSHM27_InterfaceDeformationModels.Aggregated.class),
 				branch.getLevelTypeIndex(PRVI25_SubductionScalingRelationships.class),
-				branch.getLevelTypeIndex(SectionSupraSeisBValues.class),
 				branch.getLevelTypeIndex(NSHM27_InterfaceMFDModel.class),
 				branch.getLevelTypeIndex(NSHM27_InterfaceSeismicityMomentReduction.class),
 				branch.getLevelTypeIndex(NSHM27_InterfaceMinSubSects.class),
 				branch.getLevelTypeIndex(MaxRuptureLengthBranchNode.class),
 		};
 		
-		double[] lhSamples = new LatinHypercubePointSetGenerator(new Random(12345l)).generate(samples, 1).getDimensionValues(0);
-		
-		LogicTreeLevel<?> rateLevel = sampledBranch.getLevel(sampledBranch.getLevelTypeIndex(NSHM27_SeisRateModel.class));
-		((RandomLevel<?, ?>)rateLevel).build(lhSamples);
-		List<? extends LogicTreeNode> rateModelSamples = rateLevel.getNodes();
+		PointSet lhSamples = new LatinHypercubePointSetGenerator(new Random(12345l)).generate(samples, branch.size());
 		
 		NSHM27_InvConfigFactory factory = new NSHM27_InvConfigFactory();
 		FaultSystemRupSet rupSet = factory.buildRuptureSet(branch, FaultSysTools.defaultNumThreads());
@@ -154,11 +208,19 @@ public class InterfaceLogicTreeMFDExploration {
 		
 		List<String> avgStrings = new ArrayList<>();
 		
-		NSHM27_SeisRateModelEpochCatalog epochCatalog = NSHM27_SeisRateModelEpochCatalog.load(seisReg, trt);
-		WeightedList<NSHM27_SeisRateModelEpoch> epochChoices = new WeightedList<>();
-		for (NSHM27_SeisRateModelEpoch epoch : epochCatalog.getEpochs())
-			epochChoices.add(epoch, epoch.getNodeWeight());
-		List<NSHM27_SeisRateModelEpoch> epochSamples = epochChoices.sampleEvenly(samples, new Random(12345l));
+		List<NSHM27_SeisRateModelEpoch> epochSamples = null;
+		List<? extends LogicTreeNode> rateModelSamples = null;
+		int rateIndex = sampledBranch.getLevelTypeIndex(NSHM27_SeisRateModel.class);
+		LogicTreeLevel<?> rateLevel = sampledBranch.getLevel(rateIndex);
+		if (doRateSamples) {
+			WeightedList<NSHM27_SeisRateModelEpoch> epochChoices = new WeightedList<>();
+			for (NSHM27_SeisRateModelEpoch epoch : epochCatalog.getEpochs())
+				epochChoices.add(epoch, epoch.getNodeWeight());
+			epochSamples = epochChoices.sampleEvenly(samples, new Random(12345l));
+			
+			((RandomLevel<?, ?>)rateLevel).build(lhSamples.getDimensionValues(rateIndex));
+			rateModelSamples = rateLevel.getNodes();
+		}
 
 		IncrementalMagFreqDist obsMFD = null;
 		EvenlyDiscretizedFunc obsCmlMFD = null;
@@ -251,24 +313,34 @@ public class InterfaceLogicTreeMFDExploration {
 					System.out.println("Skipping sampling this time");
 					continue;
 				}
-				boolean doRateSamples = SectionSupraSeisBValues.class.isAssignableFrom(sampledLevel.getType());
+//				boolean doRateSamples = SectionSupraSeisBValues.class.isAssignableFrom(sampledLevel.getType())
+//						|| RupSetDeformationModel.class.isAssignableFrom(sampledLevel.getType());
 				List<LogicTreeLevel<? extends LogicTreeNode>> levels = new ArrayList<>();
 				List<LogicTreeNode> values = new ArrayList<>();
+				List<LogicTreeLevel<? extends LogicTreeNode>> levelsNoRateSample = new ArrayList<>();
+				List<LogicTreeNode> valuesNoRateSample = new ArrayList<>();
 				for (int i=0; i<branch.size(); i++) {
 					if (i == l) {
 						levels.add(sampledLevel);
 						values.add(null);
+						levelsNoRateSample.add(sampledLevel);
+						valuesNoRateSample.add(null);
 					} else if (doRateSamples && branch.getValue(i) instanceof NSHM27_SeisRateModel) {
 						levels.add(rateLevel);
 						values.add(null);
+						levelsNoRateSample.add(branch.getLevel(i));
+						valuesNoRateSample.add(branch.getValue(i));
 					} else {
 						levels.add(branch.getLevel(i));
 						values.add(branch.getValue(i));
+						levelsNoRateSample.add(branch.getLevel(i));
+						valuesNoRateSample.add(branch.getValue(i));
 					}
 				}
 				Preconditions.checkNotNull(rateLevel);
 				LogicTreeBranch<LogicTreeNode> myBranch = new LogicTreeBranch<>(levels, values);
-				((RandomLevel<?, ?>)sampledLevel).build(lhSamples);
+				LogicTreeBranch<LogicTreeNode> myBranchNoRateSamples = new LogicTreeBranch<>(levelsNoRateSample, valuesNoRateSample);
+				((RandomLevel<?, ?>)sampledLevel).build(lhSamples.getDimensionValues(l));
 				Preconditions.checkState(sampledLevel.getNodes().size() == samples, "%s != %s", sampledLevel.getNodes().size(), samples);
 				double weightEach = 1d/samples;
 				SummedMagFreqDist avgMFD = new SummedMagFreqDist(refMFD.getMinX(), refMFD.getMaxX(), refMFD.size());
@@ -277,16 +349,20 @@ public class InterfaceLogicTreeMFDExploration {
 				Preconditions.checkState(sampledNodes.size() == samples);
 				for (int n=0; n<samples; n++) {
 					LogicTreeNode node = sampledNodes.get(n);
-					LogicTreeNode epochNode = epochSamples.get(n);
-					LogicTreeNode rateNode = rateModelSamples.get(n);
-					Preconditions.checkNotNull(rateNode);
+					LogicTreeBranch<LogicTreeNode> myBranch2 = myBranch.copy();
+					if (doRateSamples) {
+						LogicTreeNode epochNode = epochSamples.get(n);
+						Preconditions.checkNotNull(epochNode);
+						myBranch2.setValue(epochNode);
+						LogicTreeNode rateNode = rateModelSamples.get(n);
+						Preconditions.checkNotNull(rateNode);
+						myBranch2.setValue(rateNode);
+					}
+					myBranch2.setValue(l, node);
+					if (n < 100)
+						System.out.println("Sampled branch "+n+": "+myBranch2+"\trateModel="+
+								((NSHM27_SeisRateModel)myBranch2.getValue(rateIndex)).getRateRecord(seisReg, trt, myBranch2));
 					mfdFutures.add(CompletableFuture.supplyAsync(()->{
-						LogicTreeBranch<LogicTreeNode> myBranch2 = myBranch.copy();
-						if (myBranch2.getLevelTypeIndex(NSHM27_SeisRateModelEpoch.class) >= 0)
-							myBranch2.setValue(epochNode);
-						myBranch2.setValue(l, node);
-						if (doRateSamples)
-							myBranch2.setValue(rateNode);
 						try {
 							return calculateMFD(factory, rupSet, myBranch2, refMFD, assoc);
 						} catch (IOException e) {
@@ -352,7 +428,7 @@ public class InterfaceLogicTreeMFDExploration {
 				if (NSHM27_InterfaceDeformationModels.class.isAssignableFrom(sampledLevel.getType())) {
 					// expand extrema to actual bounds
 					FixedFractileSampler fixedMin = new FixedFractileSampler(NSHM27_InterfaceDeformationModels.MIN_DM_FRACTILE);
-					LogicTreeBranch<LogicTreeNode> myBranch2 = myBranch.copy();
+					LogicTreeBranch<LogicTreeNode> myBranch2 = myBranchNoRateSamples.copy();
 					myBranch2.setValue(l, new NSHM27_InterfaceDeformationModels("Lower", "Lower", "Lower", 0d, fixedMin));
 					incrFractiles[0] = calculateMFD(factory, rupSet, myBranch2, refMFD, assoc);
 					cmlFractiles[0] = incrFractiles[0].getCumRateDistWithOffset();
@@ -428,7 +504,7 @@ public class InterfaceLogicTreeMFDExploration {
 					
 					fixedValueLevel.setValue(origFixedValue);
 					branch.setValue(l, fixedValueLevel.getNodes().get(0));
-				} else {
+				} else if (!(defaultValue instanceof SectionSupraSeisBValues)) {
 					IncrementalMagFreqDist baseline = defaultMFD.deepClone();
 					baseline.setName(defaultValue.getName());
 					incrFuncs.add(baseline);
@@ -440,8 +516,10 @@ public class InterfaceLogicTreeMFDExploration {
 					System.out.println("TODO: special treatment of the MFD/b-value branch");
 					SummedMagFreqDist avgHingedMFD = new SummedMagFreqDist(refMFD.getMinX(), refMFD.getMaxX(), refMFD.size());
 					SummedMagFreqDist avgSampledMFD = new SummedMagFreqDist(refMFD.getMinX(), refMFD.getMaxX(), refMFD.size());
+					SummedMagFreqDist avgExtrapolatedMFD = new SummedMagFreqDist(refMFD.getMinX(), refMFD.getMaxX(), refMFD.size());
 					double sumHingedWeight = 0d;
 					double sumSampledWeight = 0d;
+					double sumExtrapolatedWeight = 0d;
 					for (int n=0; n<samples; n++) {
 						LogicTreeNode node = sampledNodes.get(n);
 						Preconditions.checkState(node instanceof SampledNode);
@@ -451,6 +529,9 @@ public class InterfaceLogicTreeMFDExploration {
 						if (bNode.getModel() == NSHM27_InterfaceMFDModel.HINGED) {
 							sumHingedWeight += weightEach;
 							avgHingedMFD.addIncrementalMagFreqDist(mfd, weightEach);
+						} else if (bNode.getModel() == NSHM27_InterfaceMFDModel.EXTRAPOLATED) {
+							sumExtrapolatedWeight += weightEach;
+							avgExtrapolatedMFD.addIncrementalMagFreqDist(mfd, weightEach);
 						} else {
 							sumSampledWeight += weightEach;
 							avgSampledMFD.addIncrementalMagFreqDist(mfd, weightEach);
@@ -458,8 +539,9 @@ public class InterfaceLogicTreeMFDExploration {
 					}
 					avgHingedMFD.scale(1d/sumHingedWeight);
 					avgSampledMFD.scale(1d/sumSampledWeight);
+					avgExtrapolatedMFD.scale(1d/sumExtrapolatedWeight);
 					
-					avgHingedMFD.setName("Average hinged b");
+					avgHingedMFD.setName(doRateSamples ? "Average hinged b" : "Hinged b");
 					incrFuncs.add(avgHingedMFD);
 					cmlFuncs.add(avgHingedMFD.getCumRateDistWithOffset());
 					chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 4f, Colors.tab_orange));
@@ -468,6 +550,11 @@ public class InterfaceLogicTreeMFDExploration {
 					incrFuncs.add(avgSampledMFD);
 					cmlFuncs.add(avgSampledMFD.getCumRateDistWithOffset());
 					chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 4f, Colors.tab_green));
+					
+					avgExtrapolatedMFD.setName(doRateSamples ? "Average extrapolated" : "Extrapolated");
+					incrFuncs.add(avgExtrapolatedMFD);
+					cmlFuncs.add(avgExtrapolatedMFD.getCumRateDistWithOffset());
+					chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 4f, Colors.tab_red));
 					
 					System.out.println("sumHingedWeight="+sumHingedWeight);
 					System.out.println("sumSampledWeight="+sumSampledWeight);
