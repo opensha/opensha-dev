@@ -112,21 +112,14 @@ public interface ImValueTransformer {
             }
 
             for (int i = 0; i < customImValues.length; i++) {
-
                 double v = customImValues[i];
-
                 if (Double.isNaN(v) || Double.isInfinite(v)) {
                     throw new IllegalArgumentException(
                             "customImValues contains invalid number at index " + i);
                 }
-
-                if (i > 0 && customImValues[i] <= customImValues[i - 1]) {
-                    throw new IllegalArgumentException(
-                            "customImValues must be strictly increasing. " +
-                            "Violation at index " + i +
-                            ": " + customImValues[i - 1] + " >= " + customImValues[i]);
-                }
             }
+
+            NumericUtil.checkMonotonicIM("customImValues", customImValues);
 
             this.customImValues = customImValues.clone();
 
@@ -147,18 +140,18 @@ public interface ImValueTransformer {
 	
 	        return new Result(newIM, newResp);
 	    }
-	
-	    /**
-	     * Placeholder transformer for future resampling logic.
-	     * Currently behaves as identity.
-	     */
-	    class PlaceholderImTransformation implements ImValueTransformer {
-	        @Override
-	        public Result transform(double[] imValues, double[] respValues) {
-	            // TODO: implement optional interpolation (logspace, linspace, fixed points, etc.)
-	            return new Result(imValues.clone(), respValues.clone());
-	        }
-	    }
 	}
+
+    /**
+     * Placeholder transformer for future resampling logic.
+     * Currently behaves as identity.
+     */
+    class PlaceholderImTransformation implements ImValueTransformer {
+        @Override
+        public Result transform(double[] imValues, double[] respValues) {
+            // TODO: implement optional interpolation (logspace, linspace, fixed points, etc.)
+            return new Result(imValues.clone(), respValues.clone());
+        }
+    }
 }
     

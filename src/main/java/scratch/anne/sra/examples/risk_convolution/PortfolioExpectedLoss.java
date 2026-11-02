@@ -23,7 +23,7 @@ import scratch.anne.sra.io.writers.AssetRiskForRuptureWriter;
 import scratch.anne.sra.io.writers.FileFormat;
 import scratch.anne.sra.util.IO;
 import scratch.anne.sra.util.ImValueTransformer;
-import scratch.anne.sra.util.StringUtil;
+import scratch.anne.sra.util.InputParsingUtil;
 
 /**
  * Fully dynamic CSV-driven Expected Loss Portfolio runner with input verification.
@@ -111,7 +111,7 @@ public class PortfolioExpectedLoss {
                 ParseRiskRunParametersCSV.buildHazardParameters(config, erfConfig);
         
         RiskConvolution.IntegrationMethod integrationMethod = ParseRiskRunParametersCSV.parseIntegrationMethod(config.get("integration_method"));
-        double logImStep = StringUtil.parseDoubleOrDefault(config.get("log_im_step"), Double.NaN);
+        double logImStep = InputParsingUtil.parseDoubleOrDefault(config.get("log_im_step"), Double.NaN);
         
 
         // ------------------- 4. Load portfolio -------------------

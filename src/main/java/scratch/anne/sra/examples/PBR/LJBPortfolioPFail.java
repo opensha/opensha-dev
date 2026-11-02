@@ -21,7 +21,7 @@ import scratch.anne.sra.io.readers.FragilityLibraryReader;
 import scratch.anne.sra.io.readers.ParseRiskRunParametersCSV;
 import scratch.anne.sra.io.readers.PortfolioReader;
 import scratch.anne.sra.util.IO;
-import scratch.anne.sra.util.StringUtil;
+import scratch.anne.sra.util.InputParsingUtil;
 
 public class LJBPortfolioPFail {
 
@@ -76,7 +76,7 @@ public class LJBPortfolioPFail {
         // ------------------- 3. prepare hazard and integration parameters ----------------
         HazardParameters hazardParameters = new HazardParameters(
                 config.get("erf_class"),
-                StringUtil.parseDoubleOrDefault(
+                InputParsingUtil.parseDoubleOrDefault(
                         config.get("erf_duration"),
                         1.0
                 ),
@@ -86,7 +86,7 @@ public class LJBPortfolioPFail {
         );
         
         RiskConvolution.IntegrationMethod integrationMethod = ParseRiskRunParametersCSV.parseIntegrationMethod(config.get("integration_method"));
-        double logImStep = StringUtil.parseDoubleOrDefault(config.get("log_im_step"), Double.NaN);
+        double logImStep = InputParsingUtil.parseDoubleOrDefault(config.get("log_im_step"), Double.NaN);
 
         // ------------------- 4. Load portfolio -------------------
         Portfolio<FragilityAsset> basePortfolio =

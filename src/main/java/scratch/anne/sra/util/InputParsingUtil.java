@@ -34,18 +34,6 @@ public class InputParsingUtil {
     }
 
     
-    public static void checkMonotonicIM(String name, double[] imLevels) {
-        double prev = Double.NEGATIVE_INFINITY;
-        for (double im : imLevels) {
-            if (im <= prev) {
-                throw new IllegalArgumentException(
-                        "IM levels for vulnerability '" + name + "' are not strictly increasing: " +
-                                Arrays.toString(imLevels));
-            }
-            prev = im;
-        }
-    }
-    
     /**
      * Cleans a CSV field by trimming whitespace and removing surrounding quotes.
      *
@@ -63,4 +51,12 @@ public class InputParsingUtil {
 
         return s;
     }
+
+
+	public static double parseDoubleOrDefault(String s, double defaultVal) {
+	    if (s == null || s.isBlank()) {
+	        return defaultVal;
+	    }
+	    return Double.parseDouble(s.trim());
+	}
 }

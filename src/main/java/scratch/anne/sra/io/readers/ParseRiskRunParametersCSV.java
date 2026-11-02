@@ -11,7 +11,7 @@ import java.util.Set;
 import scratch.anne.sra.domain.hazard.HazardParameters;
 import scratch.anne.sra.domain.hazard.HazardParameters.HazardMetric;
 import scratch.anne.sra.engine.convolution.RiskConvolution;
-import scratch.anne.sra.util.StringUtil;
+import scratch.anne.sra.util.InputParsingUtil;
 
 public final class ParseRiskRunParametersCSV {
 
@@ -260,7 +260,7 @@ public final class ParseRiskRunParametersCSV {
         }
 
         double erfDuration =
-                StringUtil.parseDoubleOrDefault(
+                InputParsingUtil.parseDoubleOrDefault(
                         config.get("erf_duration"),
                         1.0
                 );

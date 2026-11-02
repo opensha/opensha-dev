@@ -26,7 +26,7 @@ import scratch.anne.sra.io.writers.FileFormat;
 import scratch.anne.sra.io.writers.RuptureResultsExporter;
 import scratch.anne.sra.util.IO;
 import scratch.anne.sra.util.ImValueTransformer;
-import scratch.anne.sra.util.StringUtil;
+import scratch.anne.sra.util.InputParsingUtil;
 
 /**
  * Pipeline stage 1: per-rupture expected annual losses for the true-mean
@@ -108,7 +108,7 @@ public final class PerRuptureEalStage {
 
         RiskConvolution.IntegrationMethod integrationMethod =
                 ParseRiskRunParametersCSV.parseIntegrationMethod(runConfig.get("integration_method"));
-        double logImStep = StringUtil.parseDoubleOrDefault(runConfig.get("log_im_step"), Double.NaN);
+        double logImStep = InputParsingUtil.parseDoubleOrDefault(runConfig.get("log_im_step"), Double.NaN);
 
         // ------------------- 4. Load portfolio -------------------
         System.out.println("Loading portfolio...");

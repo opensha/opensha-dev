@@ -14,6 +14,7 @@ import scratch.anne.sra.domain.structural_response.fragilities.FragilityModel;
 import scratch.anne.sra.domain.structural_response.fragilities.definitions.*;
 import scratch.anne.sra.util.InputParsingUtil;
 import scratch.anne.sra.util.Metadata;
+import scratch.anne.sra.util.NumericUtil;
 import scratch.anne.sra.util.StringUtil;
 import scratch.anne.sra.util.enums.IMT;
 import scratch.anne.sra.util.enums.LimitState;
@@ -186,7 +187,7 @@ public class FragilityLibraryReader {
                                 dsNode.get("probability"),
                                 Object.class));
 
-        InputParsingUtil.checkMonotonicIM(
+        NumericUtil.checkMonotonicIM(
                 compID + ":" + lsName,
                 imLevels);
 

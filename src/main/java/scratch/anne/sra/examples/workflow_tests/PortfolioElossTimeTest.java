@@ -26,7 +26,7 @@ import scratch.anne.sra.io.writers.AssetRiskForRuptureWriter;
 import scratch.anne.sra.io.writers.FileFormat;
 import scratch.anne.sra.util.IO;
 import scratch.anne.sra.util.ImValueTransformer;
-import scratch.anne.sra.util.StringUtil;
+import scratch.anne.sra.util.InputParsingUtil;
 
 public class PortfolioElossTimeTest {
 
@@ -60,7 +60,7 @@ public class PortfolioElossTimeTest {
 
         HazardParameters hazardParameters = new HazardParameters(
                 config.get("erf_class"),
-                StringUtil.parseDoubleOrDefault(config.get("erf_duration"), 1.0),
+                InputParsingUtil.parseDoubleOrDefault(config.get("erf_duration"), 1.0),
                 ParseRiskRunParametersCSV.parseHazardMetric(config.get("hazard_metric")),
                 config.get("gmm"),
                 filterConfig

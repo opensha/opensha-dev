@@ -74,14 +74,6 @@ public class StringUtil {
     }
     
     
-    public static double parseDoubleOrDefault(String s, double defaultVal) {
-        if (s == null || s.isBlank()) {
-            return defaultVal;
-        }
-        return Double.parseDouble(s.trim());
-    }
-    
-    
     /** Canonical string form of a likelihood level, avoiding scientific-notation/formatting drift across runs. */
     public static String formatLikelihood(double level) {
         return new DecimalFormat("0.0###E0").format(level);

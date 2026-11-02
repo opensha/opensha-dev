@@ -18,6 +18,20 @@ public class NumericUtil {
         }
         return logValues;
     }
+
+    /**
+     * Compute exp-transformed values, the inverse of {@link #computeLogValues}.
+     *
+     * @param values input array of log values
+     * @return new array of exp(values)
+     */
+    public static double[] computeExpValues(double[] values) {
+        double[] expValues = new double[values.length];
+        for (int i = 0; i < values.length; i++) {
+            expValues[i] = Math.exp(values[i]);
+        }
+        return expValues;
+    }
     
     
     /** Standard normal CDF (Φ) 
@@ -125,6 +139,24 @@ public class NumericUtil {
         }
     }
     
+    /**
+     * Throws if {@code imLevels} is not strictly increasing.
+     *
+     * @param name label used in the error message (e.g. the model/array's name)
+     * @param imLevels array to check
+     */
+    public static void checkMonotonicIM(String name, double[] imLevels) {
+        double prev = Double.NEGATIVE_INFINITY;
+        for (double im : imLevels) {
+            if (im <= prev) {
+                throw new IllegalArgumentException(
+                        "IM levels for vulnerability '" + name + "' are not strictly increasing: " +
+                                Arrays.toString(imLevels));
+            }
+            prev = im;
+        }
+    }
+
     public static double linearInterpolate(
             double[] x,
             double[] y,

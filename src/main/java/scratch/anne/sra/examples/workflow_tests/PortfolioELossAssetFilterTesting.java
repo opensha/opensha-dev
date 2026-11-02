@@ -20,7 +20,7 @@ import scratch.anne.sra.io.readers.PortfolioReader;
 import scratch.anne.sra.io.readers.VulnerabilityLibraryReader;
 import scratch.anne.sra.io.writers.AssetRiskForRuptureWriter;
 import scratch.anne.sra.util.IO;
-import scratch.anne.sra.util.StringUtil;
+import scratch.anne.sra.util.InputParsingUtil;
 
 
 public class PortfolioELossAssetFilterTesting {
@@ -68,7 +68,7 @@ public class PortfolioELossAssetFilterTesting {
 	    
         HazardParameters hazardParameters = new HazardParameters(
                 config.get("erf_class"),
-                StringUtil.parseDoubleOrDefault(
+                InputParsingUtil.parseDoubleOrDefault(
                         config.get("erf_duration"),
                         1.0
                 ),

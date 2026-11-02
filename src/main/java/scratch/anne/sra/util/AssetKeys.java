@@ -95,11 +95,7 @@ public final class AssetKeys {
 	    		return values;
 	    	}
 	    	else if (domain == ImDomain.LINEAR_IM) {
-	            double[] logValues = new double[values.length];
-	            for (int i = 0; i < values.length; i++) {
-	                logValues[i] = Math.log(values[i]);
-	            }
-	            return logValues;
+	            return NumericUtil.computeLogValues(values);
 	        } else {
 	        	throw new IllegalArgumentException("Unknown ImDomain: " + domain);
 	        }
@@ -113,11 +109,7 @@ public final class AssetKeys {
 	    		return values;
 	    	}
 	    	else if (domain == ImDomain.LOG_IM) {
-	            double[] linearValues = new double[values.length];
-	            for (int i = 0; i < values.length; i++) {
-	                linearValues[i] = Math.exp(values[i]);
-	            }
-	            return linearValues;
+	            return NumericUtil.computeExpValues(values);
 	        } else {
 	        	throw new IllegalArgumentException("Unknown ImDomain: " + domain);
 	        }
