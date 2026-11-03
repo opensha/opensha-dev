@@ -7,6 +7,7 @@ import java.util.Set;
 
 import scratch.anne.sra.domain.asset.vulnerability.VulnerabilityAsset;
 import scratch.anne.sra.domain.hazard.HazardParameters;
+import scratch.anne.sra.domain.hazard.HazardParametersMetadataBuilder;
 import scratch.anne.sra.domain.portfolio.Portfolio;
 import scratch.anne.sra.domain.portfolio.PortfolioMetadataBuilder;
 import scratch.anne.sra.domain.portfolio.portfolio_wrappers.RiskConvolutionPortfolio;
@@ -96,12 +97,6 @@ public final class PerRuptureEalStage {
         IO.verifyFileExists(portfolioCSV, "Portfolio CSV");
         IO.verifyFileExists(vulnLibraryJSON, "Vulnerability JSON");
 
-        // ------------------- 2. output paths -------------------
-        AssetRiskForRuptureWriter assetWriter = config.isKeepAssetLoss()
-                ? new AssetRiskForRuptureWriter(runFolder, config.getAssetEalPerRupTag(),
-                        config.getFRelative(), config.getFAbsolute())
-                : null;
-
         // ------------------- 3. hazard and integration parameters -------------------
         HazardParameters hazardParameters =
                 ParseRiskRunParametersCSV.buildHazardParameters(runConfig, erfConfig);
@@ -130,6 +125,17 @@ public final class PerRuptureEalStage {
         SimpleImResponseLibrary expVulnLib =
                 SimpleImVulnLibraryPreparer.prepare(vulnLib, portfolioVulns, transformer);
 
+        // ------------------- 6b. asset writer, with full provenance -------------------
+        Map<String, String> writerMetadata = new java.util.HashMap<>();
+        writerMetadata.putAll(HazardParametersMetadataBuilder.build(hazardParameters));
+        writerMetadata.putAll(PortfolioMetadataBuilder.build(basePortfolio));
+        writerMetadata.putAll(ResponseModelMetadataBuilder.build(expVulnLib));
+
+        AssetRiskForRuptureWriter assetWriter = config.isKeepAssetLoss()
+                ? new AssetRiskForRuptureWriter(runFolder, config.getAssetEalPerRupTag(),
+                        config.getFRelative(), config.getFAbsolute(), writerMetadata)
+                : null;
+
         // ------------------- 7. PER_RUPTURE convolution only -------------------
         RiskConvolutionPortfolio riskConvolutionPortfolio = new RiskConvolutionPortfolio(basePortfolio, expVulnLib);
 
@@ -149,8 +155,8 @@ public final class PerRuptureEalStage {
         // RiskConvolutionPortfolio.exportRuptureResults), so it can
         // include additional metadata on the portfolio and vulnerabilities.
         Map<String, String> extraMetadata = new java.util.HashMap<>();
-        extraMetadata.putAll(PortfolioMetadataBuilder.build(portfolioCSV, riskConvolutionPortfolio.getTotalPortfolioValue()));
-        extraMetadata.putAll(ResponseModelMetadataBuilder.build(vulnLibraryJSON));
+        extraMetadata.putAll(PortfolioMetadataBuilder.build(riskConvolutionPortfolio));
+        extraMetadata.putAll(ResponseModelMetadataBuilder.build(expVulnLib));
 
         new RuptureResultsExporter().export(
                 riskConvolutionPortfolio.getRuptureResults(), perRuptureEalCsv, FileFormat.CSV, extraMetadata);

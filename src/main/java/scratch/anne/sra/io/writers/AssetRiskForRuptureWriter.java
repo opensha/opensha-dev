@@ -4,7 +4,9 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -18,6 +20,18 @@ import org.apache.parquet.hadoop.metadata.CompressionCodecName;
 import org.apache.parquet.io.LocalOutputFile;
 import org.apache.parquet.io.OutputFile;
 
+/**
+ * Writes per-asset, per-rupture conditional risk to a directory of
+ * Parquet part-files (one per writing thread).
+ *
+ * <p>Every part-file carries the same file-level key-value metadata
+ * (always including {@code fRelative}/{@code fAbsolute}, plus whatever
+ * run-level provenance the caller supplies -- see
+ * {@link #AssetRiskForRuptureWriter(Path, String, double, double, Map)}),
+ * so reading any single part-file's footer metadata (e.g. via pyarrow's
+ * {@code read_metadata(path).metadata}) is enough to recover it -- no
+ * need to merge metadata across the directory.</p>
+ */
 public final class AssetRiskForRuptureWriter implements AutoCloseable {
 
     /** Fraction of site&IM asset value — write if loss exceeds this proportion of local exposure */
@@ -28,6 +42,9 @@ public final class AssetRiskForRuptureWriter implements AutoCloseable {
 
     private final double fRelative;
     private final double fAbsolute;
+
+    /** fRelative/fAbsolute plus any caller-supplied provenance, written into every part-file's footer. */
+    private final Map<String, String> extraMetadata;
 
     private final Schema schema = new Schema.Parser().parse("""
             {
@@ -52,12 +69,29 @@ public final class AssetRiskForRuptureWriter implements AutoCloseable {
     private final AtomicInteger threadCounter = new AtomicInteger(0);
     private final ConcurrentHashMap<Long, Integer> threadIndex = new ConcurrentHashMap<>();
 
-    /** Full constructor */
+    /**
+     * Full constructor.
+     *
+     * @param extraMetadata run-level provenance to write into every
+     *        part-file's footer metadata alongside {@code fRelative}/
+     *        {@code fAbsolute} (e.g. {@link scratch.anne.sra.domain.hazard.HazardParametersMetadataBuilder}/
+     *        {@link scratch.anne.sra.domain.portfolio.PortfolioMetadataBuilder}/
+     *        {@link scratch.anne.sra.domain.structural_response.ResponseModelMetadataBuilder}'s
+     *        output, merged together by the caller). Every key and
+     *        value must be a {@code String} (Parquet's own
+     *        requirement); pass {@code Map.of()} for none.
+     */
     public AssetRiskForRuptureWriter(Path outputDir, String fileTag,
-                                     double fRelative, double fAbsolute) throws IOException {
+                                     double fRelative, double fAbsolute,
+                                     Map<String, String> extraMetadata) throws IOException {
         this.fRelative = fRelative;
         this.fAbsolute = fAbsolute;
         this.parquetDir = outputDir.resolve(fileTag);
+
+        Map<String, String> meta = new HashMap<>(extraMetadata != null ? extraMetadata : Map.of());
+        meta.put("fRelative", String.valueOf(fRelative));
+        meta.put("fAbsolute", String.valueOf(fAbsolute));
+        this.extraMetadata = meta;
 
         if (Files.exists(parquetDir)) {
             try (var stream = Files.walk(parquetDir)) {
@@ -81,9 +115,15 @@ public final class AssetRiskForRuptureWriter implements AutoCloseable {
         Files.createDirectories(parquetDir);
     }
 
-    /** Default thresholds */
+    /** No extra provenance beyond fRelative/fAbsolute. */
+    public AssetRiskForRuptureWriter(Path outputDir, String fileTag,
+                                     double fRelative, double fAbsolute) throws IOException {
+        this(outputDir, fileTag, fRelative, fAbsolute, Map.of());
+    }
+
+    /** Default thresholds, no extra provenance. */
     public AssetRiskForRuptureWriter(Path outputDir, String fileTag) throws IOException {
-        this(outputDir, fileTag, DEFAULT_F_RELATIVE, DEFAULT_F_ABSOLUTE);
+        this(outputDir, fileTag, DEFAULT_F_RELATIVE, DEFAULT_F_ABSOLUTE, Map.of());
     }
 
     /**
@@ -154,6 +194,7 @@ public final class AssetRiskForRuptureWriter implements AutoCloseable {
                         .withSchema(schema)
                         .withCompressionCodec(CompressionCodecName.SNAPPY)
                         .withWriteMode(ParquetFileWriter.Mode.OVERWRITE)
+                        .withExtraMetaData(extraMetadata)
                         .build();
             } catch (IOException e) {
                 throw new RuntimeException(e);

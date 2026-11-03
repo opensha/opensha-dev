@@ -6,10 +6,13 @@ import java.util.Map;
 
 import scratch.anne.sra.domain.asset.vulnerability.VulnerabilityAsset;
 import scratch.anne.sra.domain.hazard.HazardParameters;
+import scratch.anne.sra.domain.hazard.HazardParametersMetadataBuilder;
 import scratch.anne.sra.domain.portfolio.Portfolio;
+import scratch.anne.sra.domain.portfolio.PortfolioMetadataBuilder;
 import scratch.anne.sra.domain.portfolio.portfolio_wrappers.RiskConvolutionPortfolio;
 import scratch.anne.sra.domain.portfolio.portfolio_wrappers.RiskConvolutionPortfolio.ConvolutionMode;
 import scratch.anne.sra.domain.structural_response.ResponseModelLibrary;
+import scratch.anne.sra.domain.structural_response.ResponseModelMetadataBuilder;
 import scratch.anne.sra.domain.structural_response.SimpleImResponseLibrary;
 import scratch.anne.sra.domain.structural_response.vulnerabilities.SimpleImVulnLibraryPreparer;
 import scratch.anne.sra.domain.structural_response.vulnerabilities.VulnerabilityModel;
@@ -97,14 +100,19 @@ public class PortfolioELossAssetFilterTesting {
                 SimpleImVulnLibraryPreparer.prepare(vulnLib, basePortfolio.getResponseModelNames());
 	    
 	    // --------------------------------------------------
-        
+
+        Map<String, String> writerMetadata = new java.util.HashMap<>();
+        writerMetadata.putAll(HazardParametersMetadataBuilder.build(hazardParameters));
+        writerMetadata.putAll(PortfolioMetadataBuilder.build(basePortfolio));
+        writerMetadata.putAll(ResponseModelMetadataBuilder.build(expVulnLib));
+
         for (double fRel : fRelativeGrid) {
             for (double fAbs : fAbsoluteGrid) {
             	String fileName = String.format("%s_fRel-%s_fAbs-%s", fileTag, sciTag(fRel), sciTag(fAbs));
             	Path outputCSV = runFolder.resolve(fileName + ".csv");
             	
             	if (!Files.exists(outputCSV)) {
-	            	AssetRiskForRuptureWriter assetWriter = new AssetRiskForRuptureWriter(runFolder, fileName, fRel, fAbs);
+	            	AssetRiskForRuptureWriter assetWriter = new AssetRiskForRuptureWriter(runFolder, fileName, fRel, fAbs, writerMetadata);
 	            	
 	            	RiskConvolutionPortfolio riskConvolutionPortfolio = new RiskConvolutionPortfolio(basePortfolio, expVulnLib);
 	            	

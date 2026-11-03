@@ -5,11 +5,14 @@ import java.util.*;
 
 import scratch.anne.sra.domain.asset.vulnerability.VulnerabilityAsset;
 import scratch.anne.sra.domain.hazard.HazardParameters;
+import scratch.anne.sra.domain.hazard.HazardParametersMetadataBuilder;
 import scratch.anne.sra.domain.portfolio.Portfolio;
+import scratch.anne.sra.domain.portfolio.PortfolioMetadataBuilder;
 import scratch.anne.sra.domain.portfolio.portfolio_wrappers.ExpectedLossPortfolioAggregator;
 import scratch.anne.sra.domain.portfolio.portfolio_wrappers.RiskConvolutionPortfolio;
 import scratch.anne.sra.domain.portfolio.portfolio_wrappers.RiskConvolutionPortfolio.ConvolutionMode;
 import scratch.anne.sra.domain.structural_response.ResponseModelLibrary;
+import scratch.anne.sra.domain.structural_response.ResponseModelMetadataBuilder;
 import scratch.anne.sra.domain.structural_response.SimpleImResponseLibrary;
 import scratch.anne.sra.domain.structural_response.vulnerabilities.SimpleImVulnLibraryPreparer;
 import scratch.anne.sra.domain.structural_response.vulnerabilities.VulnerabilityModel;
@@ -101,11 +104,6 @@ public class PortfolioExpectedLoss {
                 ? runFolder.resolve(fileTag + "_hazard-list.json")
                 : null;
         
-        AssetRiskForRuptureWriter assetWriter = keepAssetLoss
-        		? new AssetRiskForRuptureWriter(runFolder, fileTag + "_asset-eal-per-rup",fRelative,fAbsolute)
-        		: null;
-
-        
         // ------------------- 3. prepare hazard and integration parameters ----------------
         HazardParameters hazardParameters =
                 ParseRiskRunParametersCSV.buildHazardParameters(config, erfConfig);
@@ -133,6 +131,16 @@ public class PortfolioExpectedLoss {
                 : new ImValueTransformer.LogInterpTransformation(logImStep);
         SimpleImResponseLibrary expVulnLib =
                 SimpleImVulnLibraryPreparer.prepare(vulnLib, portfolioVulns, transformer);
+
+        // ------------------- 6b. asset writer, with full provenance -------------------
+        Map<String, String> writerMetadata = new HashMap<>();
+        writerMetadata.putAll(HazardParametersMetadataBuilder.build(hazardParameters));
+        writerMetadata.putAll(PortfolioMetadataBuilder.build(basePortfolio));
+        writerMetadata.putAll(ResponseModelMetadataBuilder.build(expVulnLib));
+
+        AssetRiskForRuptureWriter assetWriter = keepAssetLoss
+        		? new AssetRiskForRuptureWriter(runFolder, fileTag + "_asset-eal-per-rup", fRelative, fAbsolute, writerMetadata)
+        		: null;
 
         for (ConvolutionMode convolutionMode : convolutionModes) {
 	        if (convolutionMode == ConvolutionMode.FULL_HCURVE) {

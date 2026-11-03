@@ -6,11 +6,14 @@ import java.util.stream.Collectors;
 
 import scratch.anne.sra.domain.asset.vulnerability.VulnerabilityAsset;
 import scratch.anne.sra.domain.hazard.HazardParameters;
+import scratch.anne.sra.domain.hazard.HazardParametersMetadataBuilder;
 import scratch.anne.sra.domain.portfolio.Portfolio;
+import scratch.anne.sra.domain.portfolio.PortfolioMetadataBuilder;
 import scratch.anne.sra.domain.portfolio.portfolio_wrappers.ExpectedLossPortfolioAggregator;
 import scratch.anne.sra.domain.portfolio.portfolio_wrappers.RiskConvolutionPortfolio;
 import scratch.anne.sra.domain.portfolio.portfolio_wrappers.RiskConvolutionPortfolio.ConvolutionMode;
 import scratch.anne.sra.domain.structural_response.ResponseModelLibrary;
+import scratch.anne.sra.domain.structural_response.ResponseModelMetadataBuilder;
 import scratch.anne.sra.domain.structural_response.SimpleImResponseLibrary;
 import scratch.anne.sra.domain.structural_response.vulnerabilities.SimpleImVulnLibraryPreparer;
 import scratch.anne.sra.domain.structural_response.vulnerabilities.VulnerabilityModel;
@@ -79,6 +82,11 @@ public class PortfolioElossTimeTest {
                         new ImValueTransformer.NoImTransformation()
                 );
 
+        Map<String, String> writerMetadata = new HashMap<>();
+        writerMetadata.putAll(HazardParametersMetadataBuilder.build(hazardParameters));
+        writerMetadata.putAll(PortfolioMetadataBuilder.build(basePortfolio));
+        writerMetadata.putAll(ResponseModelMetadataBuilder.build(expVulnLib));
+
         int nTimes = 10;
 
         // summary CSV — append if exists, write header only if new
@@ -135,7 +143,7 @@ public class PortfolioElossTimeTest {
                             ? new AssetRiskForRuptureWriter(
                                     runFolder,
                                     fileTag + "_asset-risk-per-rup_" + method,
-                                    fRelative, fAbsolute)
+                                    fRelative, fAbsolute, writerMetadata)
                             : null;
 
                     RiskConvolutionPortfolio portfolio = new RiskConvolutionPortfolio(basePortfolio, expVulnLib);
