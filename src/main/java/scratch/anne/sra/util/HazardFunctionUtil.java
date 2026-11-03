@@ -2,6 +2,7 @@ package scratch.anne.sra.util;
 
 import org.opensha.commons.data.function.DiscretizedFunc;
 
+/** Helpers for converting an OpenSHA {@link DiscretizedFunc} hazard curve to a plain array aligned with a response model's IM values. */
 public class HazardFunctionUtil {
 	
     /**

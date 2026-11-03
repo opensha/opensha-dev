@@ -8,6 +8,11 @@ import scratch.anne.sra.util.StringUtil;
 import scratch.anne.sra.util.enums.IMT;
 import scratch.anne.sra.util.enums.LimitState;
 
+/**
+ * Fluent builder for a {@link FragilityModel}: set the component ID,
+ * IMT, and primary limit state, then add one or more limit states
+ * ({@link #lognormal} or {@link #discrete}) before calling {@link #build()}.
+ */
 public class FragilityBuilder {
 
     private final String compID;

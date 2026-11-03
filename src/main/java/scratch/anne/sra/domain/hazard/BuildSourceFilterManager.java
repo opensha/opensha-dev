@@ -9,6 +9,12 @@ import org.opensha.sha.calc.sourceFilters.SourceFilterManager;
 import org.opensha.sha.calc.sourceFilters.SourceFilters;
 import org.opensha.sha.calc.sourceFilters.params.SourceFiltersParam;
 
+/**
+ * Builds a {@link SourceFilterManager} from a flat {@code key -> value}
+ * filter config (e.g. {@code max_distance}, {@code min_mag}), as parsed
+ * from a run-parameters CSV by
+ * {@link scratch.anne.sra.io.readers.ParseRiskRunParametersCSV#extractSourceFilterConfig}.
+ */
 public class BuildSourceFilterManager {
 
     private final List<SourceFilters> enabledFilters = new ArrayList<>();

@@ -1,5 +1,9 @@
 package scratch.anne.sra.domain.structural_response.fragilities.definitions;
 
+/**
+ * A fragility curve defined by explicit (IM level, probability) points,
+ * as opposed to a parametric form like {@link LognormalFragilityDefinition}.
+ */
 public class DiscreteFragilityDefinition implements FragilityDefinition {
 
     private final double[] imLevels;

@@ -1,5 +1,11 @@
 package scratch.anne.sra.engine.convolution;
 
+/**
+ * Result of one {@link RiskConvolution#compute()} call: the overall
+ * risk value plus its per-IM-bin disaggregated contribution, from which
+ * a cumulative disaggregation can be derived on demand via
+ * {@link #getDisaggCumulative()}.
+ */
 public class ConvolutionResult {
 
 	private final double[] imls;

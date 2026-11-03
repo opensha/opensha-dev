@@ -8,6 +8,13 @@ import scratch.anne.sra.util.StringUtil;
 import scratch.anne.sra.util.enums.IMT;
 import scratch.anne.sra.util.enums.LimitState;
 
+/**
+ * A named fragility response model: one component ID and IMT, with one
+ * {@link LimitStateFragility} per limit state it defines (e.g. SLIGHT
+ * through COLLAPSE). {@link #getPrimaryLimitState()} picks out the
+ * single limit state used when the model is prepared for convolution
+ * (see {@link SimpleImFragilityLibraryPreparer}).
+ */
 public class FragilityModel implements NamedResponseModel {
 
     private final String name;

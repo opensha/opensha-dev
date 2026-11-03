@@ -3,6 +3,7 @@ package scratch.anne.sra.util;
 import java.util.Arrays;
 import java.util.List;
 
+/** Small parsing helpers for config/CSV/JSON input values (strings to doubles, numeric arrays, delimited lists). */
 public class InputParsingUtil {
 	
     public static double parseDoubleOrThrow(String s) {

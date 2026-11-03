@@ -2,6 +2,11 @@ package scratch.anne.sra.domain.structural_response.fragilities.definitions;
 
 import scratch.anne.sra.util.NumericUtil;
 
+/**
+ * A fragility curve defined parametrically by a lognormal distribution
+ * (median, beta), as opposed to explicit points like
+ * {@link DiscreteFragilityDefinition}.
+ */
 public class LognormalFragilityDefinition implements FragilityDefinition {
 
     private final double median;

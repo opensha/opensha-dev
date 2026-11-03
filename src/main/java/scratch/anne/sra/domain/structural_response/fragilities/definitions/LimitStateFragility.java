@@ -2,6 +2,12 @@ package scratch.anne.sra.domain.structural_response.fragilities.definitions;
 
 import scratch.anne.sra.util.enums.LimitState;
 
+/**
+ * Pairs a {@link LimitState} (e.g. SLIGHT, COLLAPSE) with the
+ * {@link FragilityDefinition} describing that limit state's exceedance
+ * curve. One {@link FragilityModel} holds a list of these, one per
+ * limit state it defines.
+ */
 public class LimitStateFragility {
 
     private final LimitState limitState;
