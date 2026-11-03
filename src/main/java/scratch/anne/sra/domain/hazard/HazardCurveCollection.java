@@ -4,7 +4,7 @@ import java.nio.file.Path;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
-import scratch.anne.sra.domain.hazard.HazardParameters.HazardMetricType;
+import scratch.anne.sra.util.enums.HazardMetricType;
 import scratch.anne.sra.io.writers.HazardCurvesExporter;
 import scratch.anne.sra.util.AssetKeys.ImKey;
 import scratch.anne.sra.util.AssetKeys.SiteKey;

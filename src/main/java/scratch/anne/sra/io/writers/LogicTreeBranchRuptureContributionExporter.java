@@ -68,7 +68,7 @@ public final class LogicTreeBranchRuptureContributionExporter implements AutoClo
             {
               "type": "record",
               "name": "BranchRuptureContribution",
-              "namespace": "scratch.anne.risk_system_vb",
+              "namespace": "scratch.anne.sra",
               "fields": [
                 {"name": "branchIndex", "type": "int"},
                 {"name": "sourceId",    "type": "int"},

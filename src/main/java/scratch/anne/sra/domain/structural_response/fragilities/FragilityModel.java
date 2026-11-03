@@ -35,7 +35,7 @@ public class FragilityModel implements NamedResponseModel {
         this.limitStates = List.copyOf(limitStates);
         
         if (primaryLs != null && limitStates.stream().noneMatch(ls -> ls.getLimitState() == primaryLs)) {
-            throw new IllegalArgumentException("Primary limit state must exist in lamageStates list");
+            throw new IllegalArgumentException("Primary limit state must exist in limitStates list");
         }
         this.primaryLs = primaryLs;
 
@@ -52,12 +52,7 @@ public class FragilityModel implements NamedResponseModel {
     }
 
     private void validate() {
-
-        if (imt == IMT.SA && period == null)
-            throw new IllegalStateException("SA requires a period");
-
-        if (imt != IMT.SA && period != null)
-            throw new IllegalStateException("Only SA can have a period");
+        NamedResponseModel.validateImtPeriod(imt, period);
     }
 
     public List<LimitStateFragility> getLimitStateFragilities() {

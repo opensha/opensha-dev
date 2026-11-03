@@ -3,6 +3,15 @@ package scratch.anne.sra.domain.asset.fragility;
 import scratch.anne.sra.domain.asset.RiskConvolutionAsset;
 import scratch.anne.sra.engine.convolution.ConvolutionResult;
 
+/**
+ * A {@link FragilityAsset} wrapped for risk convolution, exposing the
+ * resulting probability of failure (damage-state exceedance) once
+ * {@link #setRiskConvolutionResult} has been called.
+ *
+ * <p>Also the input to {@link PBRSurvivalAsset}, which derives
+ * multi-year survival probability from this asset's annual probability
+ * of failure.</p>
+ */
 public class FailureProbabilityAsset extends RiskConvolutionAsset{
 
     private final FragilityAsset asset;

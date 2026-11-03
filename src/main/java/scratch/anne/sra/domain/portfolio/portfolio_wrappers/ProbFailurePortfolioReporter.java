@@ -65,23 +65,23 @@ public final class ProbFailurePortfolioReporter
     }
 
     @Override
-    public Set<String> getAssetIDs() {
+    public Set<Integer> getAssetIDs() {
         return base.getAssetIDs();
     }
 
     @Override
-    public FailureProbabilityAsset getAssetByID(String assetID) {
+    public FailureProbabilityAsset getAssetByID(int assetID) {
         return (FailureProbabilityAsset) base.getAssetByID(assetID);
     }
     
     @Override
     public AssetType getAssetType() {
-    	// risk convolution portofolio already confirm homogeneity
+    	// risk convolution portfolio already confirmed homogeneity
     	return assets.get(0).getAssetType();
     }
     
     public RiskMetricType getRiskMetricType() {
-    	// risk convolution portofolio already confirm homogeneity
+    	// risk convolution portfolio already confirmed homogeneity
     	return assets.get(0).getRiskMetricType();
     }
 
@@ -222,7 +222,7 @@ public final class ProbFailurePortfolioReporter
             for (FailureProbabilityAsset a : assets) {
 
                 pw.printf(
-                        "\"%s\",%.6f,%.6f,%.0f,\"%s\"",
+                        "%d,%.6f,%.6f,%.0f,\"%s\"",
                         a.getAssetID(),
                         a.getLatitude(),
                         a.getLongitude(),
@@ -282,7 +282,7 @@ public final class ProbFailurePortfolioReporter
     
     /** Prints a summary of portfolio probabilities of failure including per-asset detail. */
     public void printSummary() {
-        System.out.println("----- ELossPortfolio Summary -----");
+        System.out.println("----- ProbFailurePortfolio Summary -----");
         System.out.printf("Total assets: %d%n", assets.size());
     }
 

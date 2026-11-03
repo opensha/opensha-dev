@@ -92,7 +92,7 @@ public final class PseudoLossCurveExporter implements AutoCloseable {
             {
               "type": "record",
               "name": "PseudoLossCurveRow",
-              "namespace": "scratch.anne.risk_system_vb",
+              "namespace": "scratch.anne.sra",
               "fields": [
                 {"name": "branchIndex",         "type": "int"},
                 {"name": "rank",                "type": "int"},

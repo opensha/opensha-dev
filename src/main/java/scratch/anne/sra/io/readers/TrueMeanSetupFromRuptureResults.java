@@ -14,6 +14,7 @@ import com.google.common.collect.Table;
 import scratch.anne.sra.domain.hazard.HazardParameters;
 import scratch.anne.sra.domain.portfolio.PortfolioMetadataBuilder;
 import scratch.anne.sra.domain.structural_response.ResponseModelMetadataBuilder;
+import scratch.anne.sra.util.enums.HazardMetric;
 
 import org.opensha.sha.earthquake.faultSysSolution.FaultSystemSolution;
 import org.opensha.sha.earthquake.faultSysSolution.erf.BaseFaultSystemSolutionERF;
@@ -123,8 +124,8 @@ public final class TrueMeanSetupFromRuptureResults {
 
         String erfName = require(raw, "erfName", exportedCsv);
         double erfDuration = Double.parseDouble(require(raw, "erfDuration", exportedCsv));
-        HazardParameters.HazardMetric hazardMetric =
-                HazardParameters.HazardMetric.valueOf(require(raw, "hazardMetric", exportedCsv));
+        HazardMetric hazardMetric =
+                HazardMetric.valueOf(require(raw, "hazardMetric", exportedCsv));
         String gmmName = require(raw, "gmmName", exportedCsv);
 
         String solutionFileStr = raw.get("solutionFile");

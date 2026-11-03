@@ -59,4 +59,36 @@ public class InputParsingUtil {
 	    }
 	    return Double.parseDouble(s.trim());
 	}
+
+    /**
+     * Parses a delimited list of doubles from a config value, e.g.
+     * {@code "[0.1, 0.2; 0.3]"} or {@code 0.1,0.2,0.3} -- tolerates
+     * optional surrounding quotes/brackets and either comma or
+     * semicolon separators.
+     *
+     * @param value raw config value; null/blank returns an empty list
+     */
+    public static List<Double> parseDoubleList(String value) {
+
+        if (value == null || value.isBlank())
+            return List.of();
+
+        // strip surrounding quotes FIRST
+        value = value.trim();
+
+        if ((value.startsWith("\"") && value.endsWith("\"")) ||
+            (value.startsWith("'") && value.endsWith("'"))) {
+            value = value.substring(1, value.length() - 1);
+        }
+
+        // remove brackets
+        value = value.replace("[", "")
+                     .replace("]", "");
+
+        return Arrays.stream(value.split("[,;]"))
+                .map(String::trim)
+                .filter(s -> !s.isEmpty())
+                .map(Double::parseDouble)
+                .toList();
+    }
 }

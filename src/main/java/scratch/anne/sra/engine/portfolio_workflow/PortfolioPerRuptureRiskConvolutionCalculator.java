@@ -122,7 +122,7 @@ public class PortfolioPerRuptureRiskConvolutionCalculator {
             AssetRiskForRuptureWriter assetWriter
     ) {
         this(portfolio, responseLib, hazardParameters,
-                RiskConvolution.IntegrationMethod.CLOSED_FORM,
+                RiskConvolution.DEFAULT_METHOD,
                 assetWriter);
     }
     
@@ -133,7 +133,7 @@ public class PortfolioPerRuptureRiskConvolutionCalculator {
             HazardParameters hazardParameters
     ) {
         this(portfolio, responseLib, hazardParameters,
-                RiskConvolution.IntegrationMethod.CLOSED_FORM,
+                RiskConvolution.DEFAULT_METHOD,
                 null);
     }
 
@@ -284,13 +284,11 @@ public class PortfolioPerRuptureRiskConvolutionCalculator {
                                         double assetLossForRupture = vulnAsset.getValue() * riskCalc.compute().getRisk();
                                         ruptureResults.accumulateRuptureLoss(new RuptureKey(sourceID, ruptureID), assetLossForRupture);
                                         if (thresholdedAssetWriter) {
-                                        	//TODO remove Int conversion once getAssetID type is fixed
-                                            assetLosses.put(Integer.parseInt(asset.getAssetID()), assetLossForRupture);
+                                            assetLosses.put(asset.getAssetID(), assetLossForRupture);
                                         }
                                     } else {
                                         // not expected loss — always write, no threshold
-                                    	//TODO remove Int conversion once getAssetID type is fixed
-                                        assetWriter.write(Integer.parseInt(asset.getAssetID()), sourceID, ruptureID, riskCalc.compute().getRisk());
+                                        assetWriter.write(asset.getAssetID(), sourceID, ruptureID, riskCalc.compute().getRisk());
                                     }
                                 }
 

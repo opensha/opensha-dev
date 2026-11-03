@@ -19,7 +19,7 @@ public class FragilityAsset extends AbstractAsset {
      * @param responseModel   name of response model
      * @param extraFields any extra grouping fields
      */
-    public FragilityAsset(String assetID, double lat, double lon, double vs30,
+    public FragilityAsset(int assetID, double lat, double lon, double vs30,
                               String responseModel, Map<String, String> extraFields) {
         super(assetID, lat, lon, vs30, responseModel, extraFields, AssetType.FRAGILITY);
     }
@@ -31,10 +31,18 @@ public class FragilityAsset extends AbstractAsset {
      * @param row      CSV row values
      * @param colIndex mapping from column name to index
      * @return new FragilityAsset instance
+     * @throws IllegalArgumentException if assetID is not a valid integer
      */
     public static FragilityAsset fromCSV(String[] row, Map<String,Integer> colIndex) {
 
-        String id = row[colIndex.get("assetID")];
+        String rawId = row[colIndex.get("assetID")];
+        int id;
+        try {
+            id = Integer.parseInt(rawId.trim());
+        } catch (NumberFormatException e) {
+            throw new IllegalArgumentException(
+                    "assetID must be an integer, found: \"" + rawId + "\"", e);
+        }
         double lat = Double.parseDouble(row[colIndex.get("lat")]);
         double lon = Double.parseDouble(row[colIndex.get("lon")]);
         double vs30 = Double.parseDouble(row[colIndex.get("vs30")]);
@@ -53,6 +61,6 @@ public class FragilityAsset extends AbstractAsset {
 
     @Override
     public String toString() {
-        return String.format("FragilityAsset[id=%s, model=%s]", assetID, responseModel);
+        return String.format("FragilityAsset[id=%d, model=%s]", assetID, responseModel);
     }
 }

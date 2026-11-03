@@ -84,7 +84,7 @@ public class PortfolioRiskConvolutionCalculator {
             HazardParameters hazardParameters
     ) {
         this(portfolio, responseLib, hazardParameters,
-                RiskConvolution.IntegrationMethod.CLOSED_FORM);
+                RiskConvolution.DEFAULT_METHOD);
     }
 
     /** hazard and risk calculation loops */

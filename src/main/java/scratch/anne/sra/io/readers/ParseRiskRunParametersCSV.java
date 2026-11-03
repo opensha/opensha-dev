@@ -9,7 +9,7 @@ import java.util.Map;
 import java.util.Set;
 
 import scratch.anne.sra.domain.hazard.HazardParameters;
-import scratch.anne.sra.domain.hazard.HazardParameters.HazardMetric;
+import scratch.anne.sra.util.enums.HazardMetric;
 import scratch.anne.sra.engine.convolution.RiskConvolution;
 import scratch.anne.sra.util.InputParsingUtil;
 
@@ -310,7 +310,7 @@ public final class ParseRiskRunParametersCSV {
 
     public static RiskConvolution.IntegrationMethod parseIntegrationMethod(String s) {
         if (s == null || s.isBlank()) {
-            return RiskConvolution.IntegrationMethod.CLOSED_FORM;
+            return RiskConvolution.DEFAULT_METHOD;
         }
 
         return RiskConvolution.IntegrationMethod.valueOf(s.trim().toUpperCase());

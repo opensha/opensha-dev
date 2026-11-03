@@ -16,7 +16,7 @@ import scratch.anne.sra.domain.structural_response.fragilities.SimpleImFragility
 import scratch.anne.sra.domain.structural_response.fragilities.SimpleImFragilityLibraryPreparer.PrepareSpec;
 import scratch.anne.sra.engine.convolution.RiskConvolution;
 import scratch.anne.sra.engine.portfolio_workflow.PortfolioRiskConvolutionCalculator;
-import scratch.anne.sra.io.InputConfigUtil;
+import scratch.anne.sra.util.InputParsingUtil;
 import scratch.anne.sra.io.readers.FragilityLibraryReader;
 import scratch.anne.sra.io.readers.ParseRiskRunParametersCSV;
 import scratch.anne.sra.io.readers.PortfolioReader;
@@ -66,7 +66,7 @@ public class LJBPortfolioPFail {
                 : null;
         
         List<Double> probabilityTargets =
-                InputConfigUtil.parseDoubleList(config.get("probability_targets"));
+                InputParsingUtil.parseDoubleList(config.get("probability_targets"));
         if (probabilityTargets.isEmpty()) {
             throw new IllegalArgumentException(
                 "Config missing 'probability_targets'");

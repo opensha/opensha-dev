@@ -27,6 +27,16 @@ public class RiskConvolution {
 
     public enum IntegrationMethod { RIEMANN, CLOSED_FORM }
 
+    /**
+     * System-wide default integration method, used whenever a caller
+     * passes {@code null}/omits a method -- here, in every constructor
+     * below, and in every other class that needs a "nothing specified"
+     * fallback (e.g. {@code ParseRiskRunParametersCSV#parseIntegrationMethod},
+     * {@code PortfolioRiskConvolutionCalculator}'s no-method constructor).
+     * Change this single line to change the default everywhere.
+     */
+    public static final IntegrationMethod DEFAULT_METHOD = IntegrationMethod.RIEMANN;
+
     private final SimpleImResponseInterface response;  // prepared response (includes imEdges, respEdges, respMid, etc.)
     private double[] hazardValues;           // either rate or probability of exceedance, at response's imEdges
                                             // can also be null, if hazard will be supplied as .compute(hazard)
@@ -48,7 +58,7 @@ public class RiskConvolution {
         }
         this.response = response;
         this.hazardValues = (hazard != null) ? hazard : null;
-        this.method = (method != null) ? method : IntegrationMethod.RIEMANN;
+        this.method = (method != null) ? method : DEFAULT_METHOD;
     }
 
     /**
@@ -74,7 +84,7 @@ public class RiskConvolution {
     public RiskConvolution(SimpleImResponseInterface response, DiscretizedFunc hazardFunc, IntegrationMethod method) {
         this.response = response;
         this.hazardValues = HazardFunctionUtil.convertHazFuncToArray(hazardFunc, response.getImValues());
-        this.method = (method != null) ? method : IntegrationMethod.RIEMANN;
+        this.method = (method != null) ? method : DEFAULT_METHOD;
     }
 
     /**
@@ -103,7 +113,7 @@ public class RiskConvolution {
         }
         this.response = new SimpleImResponseFunction(imls, fim);
         this.hazardValues = hazard;
-        this.method = (method != null) ? method : IntegrationMethod.RIEMANN;
+        this.method = (method != null) ? method : DEFAULT_METHOD;
     }
 
     /**
@@ -129,7 +139,7 @@ public class RiskConvolution {
     public RiskConvolution(SimpleImResponseInterface response, IntegrationMethod method) {
         this.response = response;
         this.hazardValues = null;
-        this.method = (method != null) ? method : IntegrationMethod.RIEMANN;
+        this.method = (method != null) ? method : DEFAULT_METHOD;
     }
     
     /**
@@ -142,7 +152,7 @@ public class RiskConvolution {
     public RiskConvolution(SimpleImResponseInterface response) {
         this.response = response;
         this.hazardValues = null;
-        this.method = null;
+        this.method = DEFAULT_METHOD;
     }
     
     /**
@@ -169,7 +179,7 @@ public class RiskConvolution {
     public RiskConvolution(double[] imls, double[] fim) {
         this.response = new SimpleImResponseFunction(imls, fim);
         this.hazardValues = null;
-        this.method = null;
+        this.method = DEFAULT_METHOD;
     }
 
  // -------------------- Compute Overloads --------------------
@@ -203,11 +213,10 @@ public class RiskConvolution {
      * Shared internal computation, chooses method based on this.method
      */
     private ConvolutionResult computeInternal(double[] hazardValues) {
-        if (method == IntegrationMethod.RIEMANN) {
-            return computeRiemann(hazardValues);
-        } else {
-            return computeClosedForm(hazardValues);
-        }
+        return switch (method) {
+            case RIEMANN -> computeRiemann(hazardValues);
+            case CLOSED_FORM -> computeClosedForm(hazardValues);
+        };
     }
     
     // ---------------------- Core Riemann Integration ----------------------

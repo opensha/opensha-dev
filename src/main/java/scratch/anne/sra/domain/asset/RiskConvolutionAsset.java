@@ -5,12 +5,22 @@ import java.util.Map;
 import scratch.anne.sra.engine.convolution.ConvolutionResult;
 import scratch.anne.sra.util.AssetKeys.ImKey;
 
+/**
+ * Base class for assets projected into a {@code RiskConvolutionPortfolio}
+ * for calculation.
+ *
+ * <p>Unlike {@link AbstractAsset}, a {@code RiskConvolutionAsset} carries
+ * the {@link ImKey} it was convolved against and a slot for the resulting
+ * {@link ConvolutionResult}, plus the {@link RiskMetricType} that
+ * determines which result it exposes (expected loss, failure probability,
+ * or PBR survival).</p>
+ */
 public abstract class RiskConvolutionAsset extends AbstractAsset {
 	
 	private RiskMetricType riskMetricType;
 
     protected RiskConvolutionAsset(
-            String assetID,
+            int assetID,
             double lat,
             double lon,
             double vs30,

@@ -10,7 +10,7 @@ import java.util.stream.Collectors;
 
 import scratch.anne.sra.domain.asset.vulnerability.VulnerabilityAsset;
 import scratch.anne.sra.domain.hazard.HazardParameters;
-import scratch.anne.sra.domain.hazard.HazardParameters.HazardMetric;
+import scratch.anne.sra.util.enums.HazardMetric;
 import scratch.anne.sra.domain.portfolio.Portfolio;
 import scratch.anne.sra.domain.portfolio.portfolio_wrappers.ExpectedLossPortfolioAggregator;
 import scratch.anne.sra.domain.portfolio.portfolio_wrappers.RiskConvolutionPortfolio;

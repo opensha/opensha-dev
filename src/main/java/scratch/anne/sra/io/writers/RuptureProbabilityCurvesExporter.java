@@ -156,11 +156,6 @@ public final class RuptureProbabilityCurvesExporter {
     }
 
     private void writeParam(BufferedWriter writer, String param, String value) {
-        try {
-            writer.write(param + "," + value);
-            writer.newLine();
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
+        CsvParamWriter.writeParam(writer, param, value);
     }
 }

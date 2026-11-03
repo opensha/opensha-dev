@@ -27,7 +27,7 @@ public final class RuptureResultsExporter {
             {
               "type": "record",
               "name": "RuptureResult",
-              "namespace": "scratch.anne.risk_system_vb",
+              "namespace": "scratch.anne.sra",
               "fields": [
                 {"name": "sourceId",             "type": "int"},
                 {"name": "fltSysRupIndex",       "type": ["null", "int"], "default": null},
@@ -190,11 +190,6 @@ public final class RuptureResultsExporter {
     }
 
     private void writeParam(BufferedWriter writer, String param, String value) {
-        try {
-            writer.write(param + "," + value);
-            writer.newLine();
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
+        CsvParamWriter.writeParam(writer, param, value);
     }
 }

@@ -7,32 +7,13 @@ import java.util.Objects;
 import org.opensha.sha.imr.AttenRelRef;
 import org.opensha.sha.calc.sourceFilters.SourceFilterManager;
 
+import scratch.anne.sra.util.enums.HazardMetric;
+import scratch.anne.sra.util.enums.HazardMetricType;
+
 /**
  * Immutable metadata describing how a hazard field was generated.
  */
 public final class HazardParameters {
-
-	public enum HazardMetricType {
-	    EXCEEDANCE,
-	    OCCURRENCE
-	}
-
-	public enum HazardMetric {
-	    RATE_EXCEEDANCE(HazardMetricType.EXCEEDANCE),
-	    PROBABILITY_EXCEEDANCE(HazardMetricType.EXCEEDANCE),
-	    RATE_OCCURENCE(HazardMetricType.OCCURRENCE),
-	    PROBABILITY_OCCURENCE(HazardMetricType.OCCURRENCE);
-
-	    private final HazardMetricType metricType;
-
-	    HazardMetric(HazardMetricType metricType) {
-	        this.metricType = metricType;
-	    }
-
-	    public HazardMetricType getHazardMetricType() {
-	        return metricType;
-	    }
-	}
 
     private final String erfName;
     private final double erfDuration;

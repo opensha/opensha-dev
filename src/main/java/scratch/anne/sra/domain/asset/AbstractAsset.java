@@ -13,8 +13,7 @@ import java.util.Objects;
  */
 public abstract class AbstractAsset {
 
-	//TODO change assetID to int across project
-    protected final String assetID;
+    protected final int assetID;
     protected final AssetType assetType;
     protected final double lat;
     protected final double lon;
@@ -23,15 +22,14 @@ public abstract class AbstractAsset {
     protected final Map<String, String> additionalFields;
 
     /**
-     * @param assetID     Asset identifier (non-null)
+     * @param assetID     Asset identifier
      * @param lat         Latitude
      * @param lon         Longitude
      * @param vs30        Site vs30 value
      * @param responseModel  Identifier for a vulnerability or fragility
      * @param additionalFields Map of additional CSV fields (nullable)
      */
-    protected AbstractAsset(String assetID, double lat, double lon, double vs30, String responseModel, Map<String, String> additionalFields, AssetType assetType) {
-        if (assetID == null) throw new IllegalArgumentException("Asset id must be non-null");
+    protected AbstractAsset(int assetID, double lat, double lon, double vs30, String responseModel, Map<String, String> additionalFields, AssetType assetType) {
         if (responseModel == null) throw new IllegalArgumentException("Response model must be non-null");
         this.assetID = assetID;
         this.lat = lat;
@@ -43,7 +41,7 @@ public abstract class AbstractAsset {
         this.assetType = Objects.requireNonNull(assetType);
     }
 
-    public String getAssetID() { return assetID; }
+    public int getAssetID() { return assetID; }
     public double getLatitude() { return lat; }
     public double getLongitude() { return lon; }
     public double getVs30() { return vs30; }
@@ -63,7 +61,7 @@ public abstract class AbstractAsset {
 
     @Override
     public String toString() {
-        return String.format("Asset[id=%s, lat=%.5f, lon=%.5f, vs30=%.1f, responseModel=%s]", assetID, lat, lon, vs30, responseModel);
+        return String.format("Asset[id=%d, lat=%.5f, lon=%.5f, vs30=%.1f, responseModel=%s]", assetID, lat, lon, vs30, responseModel);
     }
     
     public enum AssetType {

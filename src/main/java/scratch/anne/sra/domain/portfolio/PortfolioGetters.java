@@ -19,13 +19,15 @@ public interface PortfolioGetters<T extends AbstractAsset> {
     List<T> getAssets();
 
     /** All asset IDs. */
-    Set<String> getAssetIDs();
+    Set<Integer> getAssetIDs();
 
     /** Lookup single asset by ID. */
-    T getAssetByID(String assetID);
+    T getAssetByID(int assetID);
     
+    /** The asset type (vulnerability or fragility) shared by every asset. */
     AssetType getAssetType();
 
+    /** Number of assets. */
     int size();
 
 
@@ -50,7 +52,7 @@ public interface PortfolioGetters<T extends AbstractAsset> {
     // Response Models
     // =========================================================
 
-    /** Names of response models used by assets. */
+    /** Names of response models (vulnerability/fragility) used by assets. */
     Set<String> getResponseModelNames();
 
 
@@ -83,5 +85,6 @@ public interface PortfolioGetters<T extends AbstractAsset> {
     // Metadata
     // =========================================================
 
+    /** Portfolio-level reproducibility/source metadata. */
     Metadata getMetadata();
 }

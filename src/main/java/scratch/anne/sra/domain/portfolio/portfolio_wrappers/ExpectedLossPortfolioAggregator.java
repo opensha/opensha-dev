@@ -65,23 +65,23 @@ public final class ExpectedLossPortfolioAggregator
     }
 
     @Override
-    public Set<String> getAssetIDs() {
+    public Set<Integer> getAssetIDs() {
         return base.getAssetIDs();
     }
 
     @Override
-    public ExpectedLossAsset getAssetByID(String assetID) {
+    public ExpectedLossAsset getAssetByID(int assetID) {
         return (ExpectedLossAsset) base.getAssetByID(assetID);
     }
     
     @Override
     public AssetType getAssetType() {
-    	// risk convolution portofolio already confirm homogeneity
+    	// risk convolution portfolio already confirmed homogeneity
     	return assets.get(0).getAssetType();
     }
     
     public RiskMetricType getRiskMetricType() {
-    	// risk convolution portofolio already confirm homogeneity
+    	// risk convolution portfolio already confirmed homogeneity
     	return assets.get(0).getRiskMetricType();
     }
 
@@ -278,7 +278,7 @@ public final class ExpectedLossPortfolioAggregator
             for (ExpectedLossAsset a : assets) {
 
                 pw.printf(
-                        "\"%s\",%.6f,%.6f,%.0f,%.6f,\"%s\"",
+                        "%d,%.6f,%.6f,%.0f,%.6f,\"%s\"",
                         a.getAssetID(),
                         a.getLatitude(),
                         a.getLongitude(),

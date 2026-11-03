@@ -26,7 +26,8 @@ import scratch.anne.sra.domain.asset.AbstractAsset;
 import scratch.anne.sra.domain.hazard.HazardCurve;
 import scratch.anne.sra.domain.hazard.HazardParameters;
 import scratch.anne.sra.domain.hazard.RuptureKey;
-import scratch.anne.sra.domain.hazard.HazardParameters.HazardMetricType;
+import scratch.anne.sra.util.enums.HazardMetricType;
+import scratch.anne.sra.util.enums.HazardMetric;
 import scratch.anne.sra.util.AssetKeys.ImKey;
 import scratch.anne.sra.util.AssetKeys.SiteKey;
 import scratch.anne.sra.util.StringUtil.ImtPeriod;
@@ -108,7 +109,7 @@ public final class RuptureProbabilityCurveCollection {
             );
         }
 
-        if (hazardParameters.getHazardMetric() != HazardParameters.HazardMetric.RATE_EXCEEDANCE) {
+        if (hazardParameters.getHazardMetric() != HazardMetric.RATE_EXCEEDANCE) {
             throw new IllegalArgumentException(
                 "RuptureProbabilityCurveCollection currently only supports RATE_EXCEEDANCE, but got: "
                 + hazardParameters.getHazardMetric()

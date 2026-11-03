@@ -17,7 +17,7 @@ import scratch.anne.sra.domain.asset.fragility.FragilityAsset;
 import scratch.anne.sra.domain.asset.fragility.PBRSurvivalAsset;
 import scratch.anne.sra.domain.hazard.AssetHazardCurve;
 import scratch.anne.sra.domain.hazard.HazardParameters;
-import scratch.anne.sra.domain.hazard.HazardParameters.HazardMetric;
+import scratch.anne.sra.util.enums.HazardMetric;
 import scratch.anne.sra.domain.portfolio.Portfolio;
 import scratch.anne.sra.domain.portfolio.portfolio_wrappers.PBRSurvivalPortfolioReporter;
 import scratch.anne.sra.domain.portfolio.portfolio_wrappers.RiskConvolutionPortfolio;
@@ -362,7 +362,7 @@ public class PBRAppUI extends JFrame {
             @Override
             protected Void doInBackground() throws Exception {
 
-                String assetID = "GUI_Asset";
+                int assetID = 0;
                 String fragilityID = "GUI_Fragility";
                 
                 setStage(Stage.PARSING_INPUTS);

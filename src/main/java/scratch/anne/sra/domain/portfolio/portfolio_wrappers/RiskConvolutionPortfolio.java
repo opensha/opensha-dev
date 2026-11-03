@@ -45,7 +45,7 @@ public final class RiskConvolutionPortfolio implements PortfolioGetters<RiskConv
     // ---------------------------------------------------------------------
 
     private final List<RiskConvolutionAsset> assets;
-    private final Map<String, RiskConvolutionAsset> assetsById;
+    private final Map<Integer, RiskConvolutionAsset> assetsById;
     private final AssetType assetType;
     private final RiskMetricType riskMetricType;
 
@@ -143,7 +143,7 @@ public final class RiskConvolutionPortfolio implements PortfolioGetters<RiskConv
         // -----------------------------------------------------------------
         // Index: asset ID
         // -----------------------------------------------------------------
-        Map<String, RiskConvolutionAsset> idMap = new LinkedHashMap<>();
+        Map<Integer, RiskConvolutionAsset> idMap = new LinkedHashMap<>();
         for (RiskConvolutionAsset a : assets) {
             idMap.put(a.getAssetID(), a);
         }
@@ -266,7 +266,7 @@ public final class RiskConvolutionPortfolio implements PortfolioGetters<RiskConv
     }
 
     @Override
-    public Set<String> getAssetIDs() {
+    public Set<Integer> getAssetIDs() {
         return assetsById.keySet();
     }
     
@@ -280,7 +280,7 @@ public final class RiskConvolutionPortfolio implements PortfolioGetters<RiskConv
     }
 
     @Override
-    public RiskConvolutionAsset getAssetByID(String id) {
+    public RiskConvolutionAsset getAssetByID(int id) {
         return assetsById.get(id);
     }
 
@@ -413,7 +413,7 @@ public final class RiskConvolutionPortfolio implements PortfolioGetters<RiskConv
     }
 
     
-    public AssetHazardCurve getHazardForAsset(String id) {
+    public AssetHazardCurve getHazardForAsset(int id) {
 
         RiskConvolutionAsset asset = assetsById.get(id);
 

@@ -29,7 +29,7 @@ public class Portfolio<T extends AbstractAsset> implements PortfolioGetters<T> {
     // ------------------------------------------------------------------------
 
     private final List<T> assets;
-    private final Map<String, T> assetMap;
+    private final Map<Integer, T> assetMap;
     
     private final AssetType assetType;
 
@@ -159,7 +159,7 @@ public class Portfolio<T extends AbstractAsset> implements PortfolioGetters<T> {
     }
 
     @Override
-    public Set<String> getAssetIDs() {
+    public Set<Integer> getAssetIDs() {
         return assetMap.keySet();
     }
     
@@ -170,7 +170,7 @@ public class Portfolio<T extends AbstractAsset> implements PortfolioGetters<T> {
     
 
     @Override
-    public T getAssetByID(String assetID) {
+    public T getAssetByID(int assetID) {
         T asset = assetMap.get(assetID);
         if (asset == null) {
             throw new NoSuchElementException("No asset with ID: " + assetID);

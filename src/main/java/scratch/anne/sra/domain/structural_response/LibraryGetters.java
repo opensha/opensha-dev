@@ -6,16 +6,21 @@ import java.util.Set;
 import scratch.anne.sra.util.Metadata;
 import scratch.anne.sra.util.enums.IMT;
 
+/**
+ * Common read access for a library of {@link NamedResponseModel}s
+ * (e.g. {@code ResponseModelLibrary}, {@code SimpleImResponseLibrary}),
+ * by name or by intensity measure type.
+ */
 public interface LibraryGetters<T extends NamedResponseModel> {
     List<T> getModels();				// all models
     Set<String> getModelNames();		// all model names
-    T getModelByName(String name);		// single model
+    T getModelByName(String name);		// single model, throws/null if absent (see implementation)
     
-    Set<IMT> getIMTs();         
-    List<T> getByIMT(IMT imt); 
-    Set<String> getIMTStrings();               
-    List<T> getByIMTString(String imtString);  
+    Set<IMT> getIMTs();         		// distinct IMTs across all models
+    List<T> getByIMT(IMT imt); 			// models with the given IMT
+    Set<String> getIMTStrings();       // distinct IMT strings (e.g. "SA(1.0)")
+    List<T> getByIMTString(String imtString);  // models with the given IMT string
 
     Metadata getMetadata();             // library metadata
-    int size();
+    int size();							// number of models
 }

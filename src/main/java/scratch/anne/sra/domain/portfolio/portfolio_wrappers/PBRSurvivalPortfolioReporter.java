@@ -75,25 +75,25 @@ public final class PBRSurvivalPortfolioReporter
     }
 
     @Override
-    public Set<String> getAssetIDs() {
+    public Set<Integer> getAssetIDs() {
         return base.getAssetIDs();
     }
     
     @Override
     public AssetType getAssetType() {
-    	// risk convolution portofolio already confirm homogeneity
+    	// risk convolution portfolio already confirmed homogeneity
     	return assets.get(0).getAssetType();
     }
     
     public RiskMetricType getRiskMetricType() {
-    	// risk convolution portofolio already confirm homogeneity
+    	// risk convolution portfolio already confirmed homogeneity
     	return assets.get(0).getRiskMetricType();
     }
 
     @Override
-    public PBRSurvivalAsset getAssetByID(String id) {
+    public PBRSurvivalAsset getAssetByID(int id) {
         return assets.stream()
-                .filter(a -> a.getAssetID().equals(id))
+                .filter(a -> a.getAssetID() == id)
                 .findFirst()
                 .orElse(null);
     }
@@ -219,7 +219,7 @@ public final class PBRSurvivalPortfolioReporter
             for (PBRSurvivalAsset a : assets) {
 
                 pw.printf(
-                        "\"%s\",%.6f,%.6f,%.0f,\"%s\"",
+                        "%d,%.6f,%.6f,%.0f,\"%s\"",
                         a.getAssetID(),
                         a.getLatitude(),
                         a.getLongitude(),

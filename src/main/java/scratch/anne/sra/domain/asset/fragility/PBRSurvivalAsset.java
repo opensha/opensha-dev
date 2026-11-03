@@ -3,6 +3,19 @@ package scratch.anne.sra.domain.asset.fragility;
 import scratch.anne.sra.domain.asset.RiskConvolutionAsset;
 import scratch.anne.sra.engine.convolution.ConvolutionResult;
 
+/**
+ * Derives multi-year survival probability for a precarious balanced
+ * rock (PBR), from a {@link FailureProbabilityAsset}'s annual probability
+ * of failure and the rock's age.
+ *
+ * <p>PBRs that have stood for a known age without toppling constrain the
+ * annual failure probability: surviving {@code age} years at a constant
+ * annual probability {@code p} implies survival probability
+ * {@code (1-p)^age} ({@link #getProbabilityOfSurvival()}). Conversely,
+ * {@link #getHazardAdjustment} answers the inverse question -- by what
+ * factor would {@code p} need to scale for the probability of survival
+ * over {@code age} years to equal a given target?</p>
+ */
 public class PBRSurvivalAsset extends RiskConvolutionAsset {
 
     private final FailureProbabilityAsset base;
@@ -50,7 +63,7 @@ public class PBRSurvivalAsset extends RiskConvolutionAsset {
         return annualProbabilityOfFailure;
     }
 
-    public double getAge() {return age;}
+    public int getAge() {return age;}
 
     public double getProbabilityOfSurvival() {
     	// (1 - annual_p)^T, using a more computationally stable form than Math.pow(1-p, T)
