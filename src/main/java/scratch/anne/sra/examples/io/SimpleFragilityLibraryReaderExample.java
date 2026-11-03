@@ -25,7 +25,7 @@ public class SimpleFragilityLibraryReaderExample {
             // =========================================================
 
             Path resourceFolder = Path.of(
-                    "C:/Users/ahulsey/git/opensha-dev/src/main/resources/scratch/anne/risk_system_vb"
+                    "C:/Users/ahulsey/git/opensha-dev/src/main/resources/scratch/anne/sra/mini"
             );
 
             Path fragLibraryJSON = resourceFolder.resolve("fragilities.json");

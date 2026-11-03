@@ -1,0 +1,33 @@
+{
+  "Fragility_A": {
+    "description": "description",
+    "comments": "Lognormal fragility example",
+    "primaryLS": "Collapse",
+    "imt": "PGA",
+    "limitStates": {
+      "Slight": { "type": "lognormal", "median": 0.08, "beta": 0.4 },
+      "Collapse": { "type": "lognormal", "median": 0.11, "beta": 0.5 }
+    }
+  },
+  "Fragility_B": {
+    "description": "description",
+    "comments": "Discrete fragility example",
+    "primaryLS": null,
+    "imt": "SA(1.0)",
+    "limitStates": {
+      "Slight": { "type": "discrete", "imLevels": [0.04, 0.06, 0.08], "probability": [0.1, 0.5, 0.9] },
+      "Collapse": { "type": "discrete", "imLevels": [0.05, 0.07, 0.1], "probability": [0.2, 0.6, 0.95] }
+    }
+  },
+  "Fragility_C": {
+    "description": "Mixed fragility component",
+    "comments": "DS1 lognormal, DS2 discrete, DS3 lognormal",
+    "primaryLS": "Topple",
+    "imt": "SA(0.3)",
+    "limitStates": {
+      "Slight": { "type": "lognormal", "median": 0.07, "beta": 0.35 },
+      "Collapse": { "type": "discrete", "imLevels": [0.05, 0.08, 0.1], "probability": [0.2, 0.5, 0.9] },
+      "Topple": { "type": "lognormal", "median": 0.12, "beta": 0.45 }
+    }
+  }
+}

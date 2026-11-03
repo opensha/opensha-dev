@@ -13,9 +13,9 @@ public class PortfolioReaderExample {
     public static void main(String[] args) {
         try {
             // --- Example CSV files ---
-        	Path resourceFolder = Path.of("C:/Users/ahulsey/git/opensha-dev/src/main/resources/scratch/anne/risk_system_vb");
-            Path vulnPortfolioCSV = resourceFolder.resolve("p366-portfolio_Porter-vuln_SHORT.csv");
-            Path fragPortfolioCSV = resourceFolder.resolve("p366-portfolio_placeholder-fragility_SHORT.csv");
+        	Path resourceFolder = Path.of("C:/Users/ahulsey/git/opensha-dev/src/main/resources/scratch/anne/sra/");
+            Path vulnPortfolioCSV = resourceFolder.resolve("P366_Porter-vulns/p366-portfolio_Porter-vuln_SHORT.csv");
+            Path fragPortfolioCSV = resourceFolder.resolve("mini/p366-portfolio_placeholder-fragility_SHORT.csv");
             
 
             // --- Read a portfolio of VulnerabilityAssets ---

@@ -25,7 +25,7 @@ public class LJB1_reader {
             // =========================================================
 
             Path resourceFolder = Path.of(
-                    "C:/Users/ahulsey/git/opensha-dev/src/main/resources/scratch/anne/risk_system_vb/PBR"
+                    "C:/Users/ahulsey/git/opensha-dev/src/main/resources/scratch/anne/sra/PBR"
             );
 
             Path fragLibraryJSON = resourceFolder.resolve("LJB1_fragility.json");
