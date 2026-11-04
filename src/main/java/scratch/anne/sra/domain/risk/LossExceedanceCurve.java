@@ -1,7 +1,9 @@
-package scratch.anne.sra.domain.hazard;
+package scratch.anne.sra.domain.risk;
 
 import java.util.ArrayList;
 import java.util.List;
+
+import scratch.anne.sra.domain.hazard.RuptureKey;
 
 /**
  * A finished loss-exceedance curve: parallel arrays of loss threshold

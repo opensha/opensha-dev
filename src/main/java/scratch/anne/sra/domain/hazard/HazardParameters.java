@@ -8,7 +8,7 @@ import org.opensha.sha.imr.AttenRelRef;
 import org.opensha.sha.calc.sourceFilters.SourceFilterManager;
 
 import scratch.anne.sra.util.enums.HazardMetric;
-import scratch.anne.sra.util.enums.HazardMetricType;
+import scratch.anne.sra.util.enums.HazardMetric.HazardMetricType;
 
 /**
  * Immutable metadata describing how a hazard field was generated.

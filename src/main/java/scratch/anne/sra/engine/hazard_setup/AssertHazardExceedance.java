@@ -1,7 +1,7 @@
 package scratch.anne.sra.engine.hazard_setup;
 
 import scratch.anne.sra.util.enums.HazardMetric;
-import scratch.anne.sra.util.enums.HazardMetricType;
+import scratch.anne.sra.util.enums.HazardMetric.HazardMetricType;
 
 /**
  * Validation-only guard requiring an exceedance hazard metric (rate or

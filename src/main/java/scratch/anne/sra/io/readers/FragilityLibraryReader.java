@@ -104,7 +104,7 @@ public class FragilityLibraryReader {
     }
 
     private static FragilityModel loadComponentFromJson(String compID, JsonObject compNode) {
-    	//TODO add description and comments option to fragiliy model
+    	//TODO add description and comments option to fragility model
         String description = compNode.has("description") ? compNode.get("description").getAsString() : "";
         String comments = compNode.has("comments") ? compNode.get("comments").getAsString() : "";
      

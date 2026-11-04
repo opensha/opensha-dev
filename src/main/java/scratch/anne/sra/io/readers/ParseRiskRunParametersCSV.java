@@ -13,6 +13,21 @@ import scratch.anne.sra.util.enums.HazardMetric;
 import scratch.anne.sra.engine.convolution.RiskConvolution;
 import scratch.anne.sra.util.InputParsingUtil;
 
+/**
+ * Parses the {@code key,value} run-parameters CSV (typically
+ * {@code input.csv}) that drives a risk-convolution run, and the
+ * optional {@code erf_config.csv} it may point to for a solution-file
+ * -based ERF.
+ *
+ * <p>{@link #loadConfig} does the generic two-column CSV parsing,
+ * reused for both files. {@link #buildHazardParameters} resolves which
+ * ERF-construction route to take (self-constructing class name vs.
+ * solution-file route) and assembles the resulting {@link HazardParameters}.
+ * {@link #extractSourceFilterConfig} pulls out the non-reserved entries
+ * for {@code SourceFilterManager} configuration. The remaining
+ * {@code parseX} methods convert individual string values (hazard
+ * metric, integration method) into their enum/typed form.</p>
+ */
 public final class ParseRiskRunParametersCSV {
 
     private ParseRiskRunParametersCSV() {}

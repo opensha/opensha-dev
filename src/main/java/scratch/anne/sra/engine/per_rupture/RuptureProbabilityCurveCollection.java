@@ -24,7 +24,7 @@ import scratch.anne.sra.domain.hazard.HazardParameters;
 import scratch.anne.sra.domain.hazard.RuptureKey;
 import scratch.anne.sra.engine.hazard_setup.GmmImtSetter;
 import scratch.anne.sra.engine.hazard_setup.SiteBuilder;
-import scratch.anne.sra.util.enums.HazardMetricType;
+import scratch.anne.sra.util.enums.HazardMetric.HazardMetricType;
 import scratch.anne.sra.util.enums.HazardMetric;
 import scratch.anne.sra.util.AssetKeys.ImKey;
 import scratch.anne.sra.util.AssetKeys.SiteKey;

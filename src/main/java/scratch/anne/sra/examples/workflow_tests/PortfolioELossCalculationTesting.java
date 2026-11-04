@@ -26,9 +26,27 @@ import scratch.anne.sra.engine.portfolio_workflow.PortfolioRiskConvolutionCalcul
 import scratch.anne.sra.io.readers.ParseRiskRunParametersCSV;
 import scratch.anne.sra.io.readers.PortfolioReader;
 import scratch.anne.sra.io.readers.VulnerabilityLibraryReader;
-import scratch.anne.sra.util.IO;
+import scratch.anne.sra.util.InputParsingUtil;
 
 
+/**
+ * Sensitivity check: runs a portfolio's expected-loss calculation across
+ * every combination of ERF duration, hazard metric, integration method,
+ * and convolution mode, appending each combination's total expected
+ * loss to {@code sensitivity_summary.csv} in the run folder.
+ *
+ * <p>Column headers in that CSV are generic ({@code Variable1}..
+ * {@code Variable4}, {@code totalValue}) with headroom for more
+ * variables than the 4 currently swept, though none are currently
+ * planned.</p>
+ *
+ * <p><b>Choice point -- edit before running:</b> {@code erfDurations}/
+ * {@code hazardMetrics}/{@code integrationMethods}/{@code convolutionModes}
+ * select which values of each dimension are swept (alternatives
+ * commented out above the active ones); {@code baseFolder}/
+ * {@code inputFolder} select which run folder's {@code common_input.csv}
+ * supplies the portfolio/vulnerability library/ERF class/GMM.</p>
+ */
 public class PortfolioELossCalculationTesting {
 	
 	public static void main(String[] args) throws Exception {
@@ -67,8 +85,8 @@ public class PortfolioELossCalculationTesting {
         Path portfolioCSV = Path.of(config.get("portfolio_csv"));
         Path vulnLibraryJSON = Path.of(config.get("vuln_library_json"));
 
-        IO.verifyFileExists(portfolioCSV, "Portfolio CSV");
-        IO.verifyFileExists(vulnLibraryJSON, "Vulnerability JSON");
+        InputParsingUtil.verifyFileExists(portfolioCSV, "Portfolio CSV");
+        InputParsingUtil.verifyFileExists(vulnLibraryJSON, "Vulnerability JSON");
         
         Portfolio<VulnerabilityAsset> basePortfolio =
                 PortfolioReader.readCSV(portfolioCSV, VulnerabilityAsset.class);

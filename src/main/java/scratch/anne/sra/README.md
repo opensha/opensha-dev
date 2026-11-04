@@ -4,7 +4,7 @@ Regional portfolio seismic-risk assessment within the OpenSHA ecosystem,
 with direct integration into the full hazard logic tree and support for
 time-dependence.
 
-The library convolves OpenSHA hazard with structural-response models
+The library incorporates OpenSHA hazard with structural-response models
 (vulnerability or fragility) to produce expected loss and loss-exceedance
 results, from single portfolio runs up to full logic-tree ensembles.
 

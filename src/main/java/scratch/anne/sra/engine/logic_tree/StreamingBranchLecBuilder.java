@@ -11,19 +11,24 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
-import scratch.anne.sra.domain.hazard.LossExceedanceCurve;
 import scratch.anne.sra.domain.hazard.RuptureKey;
+import scratch.anne.sra.domain.risk.LossExceedanceCurve;
 
 /**
- * DuckDB-backed twin of StreamingBranchLecBuilder. Same contract, same
- * contiguity enforcement -- only the row source differs (a vectorized
- * SQL read via DuckDB-JDBC instead of AvroParquetReader/GenericRecord).
+ * Streams a logic tree's branch rupture-contribution Parquet file
+ * (branchIndex, sourceId, ruptureId, rate) via a vectorized DuckDB-JDBC
+ * read, accumulating each branch's discrete-rank loss-exceedance curve
+ * (via {@link LecAccumulation#discreteRank}) and handing it to a
+ * {@link BranchCurveConsumer} as soon as that branch's rows are
+ * complete -- without holding the whole file in memory at once.
  *
- * <p>Requires an explicit ORDER BY branchIndex in the query so rows
- * arrive grouped, matching the same contiguous-by-branch assumption
- * StreamingBranchLecBuilder relies on -- DuckDB does not guarantee row
- * order from read_parquet() without one, even though the file itself
- * was written in branch order.</p>
+ * <p>Requires an explicit {@code ORDER BY branchIndex} in the query so
+ * rows arrive grouped by branch; DuckDB does not guarantee row order
+ * from {@code read_parquet()} without one, even though the file itself
+ * was written in branch order. If a branch's rows turn out not to be
+ * contiguous (a branch index reappears after its rows were already
+ * flushed to the consumer), {@link NonContiguousBranchException} is
+ * thrown rather than silently producing an incomplete curve.</p>
  */
 public final class StreamingBranchLecBuilder {
 	
@@ -33,6 +38,8 @@ public final class StreamingBranchLecBuilder {
 	}
 
     public static final class NonContiguousBranchException extends RuntimeException {
+        private static final long serialVersionUID = 1L;
+
         public NonContiguousBranchException(int branchIndex) {
             super("branchIndex " + branchIndex + " reappeared after already being flushed -- "
                     + "contributions for this branch are not contiguous in the query result.");

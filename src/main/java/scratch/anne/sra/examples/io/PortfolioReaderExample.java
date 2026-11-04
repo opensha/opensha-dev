@@ -8,6 +8,14 @@ import scratch.anne.sra.domain.portfolio.*;
 import scratch.anne.sra.io.readers.PortfolioReader;
 import scratch.anne.sra.util.AssetKeys;
 
+/**
+ * Demonstrates reading a portfolio CSV into a typed {@link Portfolio}
+ * for both asset kinds this codebase supports -- {@link VulnerabilityAsset}
+ * and {@link FragilityAsset} -- via {@link PortfolioReader#readCSV}, then
+ * inspecting the result: metadata, size, additional fields, site
+ * groupings, and a sample of individual assets.
+ *
+ */
 public class PortfolioReaderExample {
 
     public static void main(String[] args) {

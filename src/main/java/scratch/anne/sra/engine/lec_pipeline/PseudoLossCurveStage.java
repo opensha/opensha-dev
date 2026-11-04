@@ -8,8 +8,8 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 
-import scratch.anne.sra.domain.hazard.LossExceedanceCurve;
 import scratch.anne.sra.domain.hazard.RuptureKey;
+import scratch.anne.sra.domain.risk.LossExceedanceCurve;
 import scratch.anne.sra.engine.logic_tree.StreamingBranchLecBuilder;
 import scratch.anne.sra.io.readers.ParquetMetadataReader;
 import scratch.anne.sra.io.readers.RuptureLossLookupReader;

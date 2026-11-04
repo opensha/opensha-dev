@@ -25,7 +25,6 @@ import scratch.anne.sra.io.readers.VulnerabilityLibraryReader;
 import scratch.anne.sra.io.writers.AssetRiskForRuptureWriter;
 import scratch.anne.sra.io.writers.FileFormat;
 import scratch.anne.sra.io.writers.RuptureResultsExporter;
-import scratch.anne.sra.util.IO;
 import scratch.anne.sra.util.ImValueTransformer;
 import scratch.anne.sra.util.InputParsingUtil;
 
@@ -94,8 +93,8 @@ public final class PerRuptureEalStage {
         Path portfolioCSV = Path.of(runConfig.get("portfolio_csv"));
         Path vulnLibraryJSON = Path.of(runConfig.get("vuln_library_json"));
 
-        IO.verifyFileExists(portfolioCSV, "Portfolio CSV");
-        IO.verifyFileExists(vulnLibraryJSON, "Vulnerability JSON");
+        InputParsingUtil.verifyFileExists(portfolioCSV, "Portfolio CSV");
+        InputParsingUtil.verifyFileExists(vulnLibraryJSON, "Vulnerability JSON");
 
         // ------------------- 3. hazard and integration parameters -------------------
         HazardParameters hazardParameters =

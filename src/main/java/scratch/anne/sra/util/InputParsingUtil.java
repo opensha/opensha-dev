@@ -1,11 +1,22 @@
 package scratch.anne.sra.util;
 
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.List;
 
 /** Small parsing helpers for config/CSV/JSON input values (strings to doubles, numeric arrays, delimited lists). */
 public class InputParsingUtil {
-	
+
+    /**
+     * @throws IllegalArgumentException if no file exists at {@code path}
+     */
+    public static void verifyFileExists(Path path, String description) {
+        if (!Files.exists(path)) {
+            throw new IllegalArgumentException(description + " does not exist: " + path);
+        }
+    }
+
     public static double parseDoubleOrThrow(String s) {
         if (s == null || s.isEmpty()) {
             throw new IllegalArgumentException("Expected numeric value but found empty string");

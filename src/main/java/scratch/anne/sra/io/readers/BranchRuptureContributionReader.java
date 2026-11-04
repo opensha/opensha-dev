@@ -12,6 +12,16 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * Reads back the per-branch, per-rupture (loss, rate) contribution
+ * Parquet file written by {@code LogicTreeBranchRuptureContributionExporter}
+ * -- the one frozen artifact every downstream LEC accumulation strategy
+ * (discrete-rank curves, lognormal-COV smearing, etc.) replays against.
+ *
+ * <p>{@link #readAll} returns full rows with rupture identity intact;
+ * {@link #readGroupedByBranch} drops identity and groups by branch,
+ * the shape {@code LecAccumulationStrategy} actually needs.</p>
+ */
 public final class BranchRuptureContributionReader {
 
     private BranchRuptureContributionReader() {}

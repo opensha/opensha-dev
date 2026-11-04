@@ -23,15 +23,34 @@ import scratch.anne.sra.io.readers.ParseRiskRunParametersCSV;
 import scratch.anne.sra.io.readers.PortfolioReader;
 import scratch.anne.sra.io.readers.VulnerabilityLibraryReader;
 import scratch.anne.sra.io.writers.AssetRiskForRuptureWriter;
-import scratch.anne.sra.io.writers.FileFormat;
-import scratch.anne.sra.util.IO;
 import scratch.anne.sra.util.ImValueTransformer;
 import scratch.anne.sra.util.InputParsingUtil;
 
 /**
- * Fully dynamic CSV-driven Expected Loss Portfolio runner with input verification.
+ * Fully dynamic CSV-driven Expected Loss Portfolio runner with input
+ * verification. Reads a run folder's {@code input.csv} (and optional
+ * {@code erf_config.csv}), convolves the portfolio against hazard in
+ * one or both convolution modes, and writes the corresponding outputs
+ * (full per-asset, aggregated, and/or per-rupture CSVs; optionally a
+ * hazard JSON and a thresholded per-asset-per-rupture Parquet export).
+ *
+ * <p><b>Choice points -- edit these before running:</b></p>
+ * <ul>
+ *   <li>{@code baseFolder}/{@code inputFolder} select which run
+ *       folder's {@code input.csv} drives the run (several alternatives
+ *       are commented out above the active one).</li>
+ *   <li>{@code convolutionModes} selects which {@link ConvolutionMode}(s)
+ *       to run -- {@code FULL_HCURVE}, {@code PER_RUPTURE}, or both
+ *       (alternatives commented out above the active one).</li>
+ *   <li>{@code writeHazard} toggles writing the hazard JSON
+ *       ({@code FULL_HCURVE} mode only).</li>
+ *   <li>{@code keepAssetLoss}/{@code fRelative}/{@code fAbsolute}
+ *       control the optional thresholded per-asset-per-rupture Parquet
+ *       writer ({@code PER_RUPTURE} mode only) -- see
+ *       {@link AssetRiskForRuptureWriter#writeThresholdValue}.</li>
+ * </ul>
  */
-public class PortfolioExpectedLoss {
+public class PortfolioExpectedLossExample {
 		
 //	public static Path baseFolder = Path.of("C:\\Users\\ahulsey\\OneDrive - DOI\\Desktop\\Research\\BERM\\results\\EAL\\rate\\riemann\\porter_vulns");
 //	public static Path inputFolder = Path.of("PorterVulns_vs-360");
@@ -72,9 +91,6 @@ public class PortfolioExpectedLoss {
         Map<String, String> config =
                 ParseRiskRunParametersCSV.loadConfig(configCSV);
 
-        Map<String, String> filterConfig =
-                ParseRiskRunParametersCSV.extractSourceFilterConfig(config);
-
         // erf_config.csv is optional -- returns ErfConfig.EMPTY if absent,
         // meaning the ERF self-constructs from input.csv's erf_class with
         // no extra parameters, exactly as before this file existed.
@@ -92,8 +108,8 @@ public class PortfolioExpectedLoss {
         Path portfolioCSV = Path.of(config.get("portfolio_csv"));
         Path vulnLibraryJSON = Path.of(config.get("vuln_library_json"));
 
-        IO.verifyFileExists(portfolioCSV, "Portfolio CSV");
-        IO.verifyFileExists(vulnLibraryJSON, "Vulnerability JSON");
+        InputParsingUtil.verifyFileExists(portfolioCSV, "Portfolio CSV");
+        InputParsingUtil.verifyFileExists(vulnLibraryJSON, "Vulnerability JSON");
 
         // ------------------- 2. create output paths inside run folder -------------------
         String fileTag = config.getOrDefault("file_tag", runFolder.getFileName().toString());

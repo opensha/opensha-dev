@@ -14,6 +14,23 @@ import scratch.anne.sra.util.AssetKeys.ImKey;
 import scratch.anne.sra.util.AssetKeys.ImKey.ImDomain;
 import scratch.anne.sra.util.NumericUtil.ImArrayParam;
 
+/**
+ * Demonstrates reading a {@link FragilityModel} library via
+ * {@link FragilityLibraryReader#readLibrary} and preparing it into a
+ * {@link SimpleImResponseLibrary} via {@link SimpleImFragilityLibraryPreparer},
+ * then inspecting the prepared library: printing every model's
+ * response table, grouping by {@link ImKey}, and looking up by name.
+ *
+ * <p><b>Choice points -- edit these before running:</b></p>
+ * <ul>
+ *   <li>STEP 1: {@code filePath} selects JSON vs. CSV input
+ *       ({@code fragLibraryJSON}/{@code fragLibraryCSV}).</li>
+ *   <li>STEP 4: {@code spec} selects which {@code PrepareSpec} is used --
+ *       {@code defaultSpec} (no filtering/resampling), {@code generatedSpec}
+ *       (filtered + log-spaced IM resampling), or {@code customImSpec}
+ *       (filtered + an explicit custom IM grid).</li>
+ * </ul>
+ */
 public class SimpleFragilityLibraryReaderExample {
 
     public static void main(String[] args) {

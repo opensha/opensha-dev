@@ -9,7 +9,7 @@ import org.opensha.sha.earthquake.faultSysSolution.erf.BaseFaultSystemSolutionER
 
 import scratch.anne.sra.domain.hazard.HazardParameters;
 import scratch.anne.sra.domain.hazard.RuptureKey;
-import scratch.anne.sra.util.enums.HazardMetricType;
+import scratch.anne.sra.util.enums.HazardMetric.HazardMetricType;
 
 /**
  * Per-rupture expected-loss results for an entire ERF.

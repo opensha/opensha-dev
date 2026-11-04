@@ -2,8 +2,6 @@ package scratch.anne.sra.engine.convolution;
 
 import org.opensha.commons.data.function.DiscretizedFunc;
 
-import scratch.anne.sra.util.HazardFunctionUtil;
-
 /**
  * Simple risk convolution integral, for a given hazard and a simple response given hazard function (e.g., a vulnerability or fragility).
  * <p>
@@ -83,7 +81,7 @@ public class RiskConvolution {
      */
     public RiskConvolution(SimpleImResponseInterface response, DiscretizedFunc hazardFunc, IntegrationMethod method) {
         this.response = response;
-        this.hazardValues = HazardFunctionUtil.convertHazFuncToArray(hazardFunc, response.getImValues());
+        this.hazardValues = convertHazFuncToArray(hazardFunc, response.getImValues());
         this.method = (method != null) ? method : DEFAULT_METHOD;
     }
 
@@ -203,7 +201,7 @@ public class RiskConvolution {
 
     /** Provide hazard as DiscretizedFunc (checks IMs) */
     public ConvolutionResult compute(DiscretizedFunc hazardFunc) {
-        this.hazardValues = HazardFunctionUtil.convertHazFuncToArray(hazardFunc, response.getImValues());
+        this.hazardValues = convertHazFuncToArray(hazardFunc, response.getImValues());
         return computeInternal(hazardValues);
     }
     
@@ -217,6 +215,56 @@ public class RiskConvolution {
             case RIEMANN -> computeRiemann(hazardValues);
             case CLOSED_FORM -> computeClosedForm(hazardValues);
         };
+    }
+
+    /**
+     * Converts a hazard function to a plain array, ensuring IMs match.
+     * Tolerates hazardFunc X-values being either linear or log(IM).
+     *
+     * @param hazardFunc hazard curve (x = IM or log(IM), y = hazard)
+     * @param respIMs    response model's linear IM values
+     */
+    private static double[] convertHazFuncToArray(DiscretizedFunc hazardFunc, double[] respIMs) {
+
+        if (hazardFunc.size() != respIMs.length) {
+            throw new IllegalArgumentException(
+                "Hazard function size does not match vulnerability IM length");
+        }
+
+        int n = respIMs.length;
+        double[] hazardValues = new double[n];
+
+        // First pass: determine if X matches linear or log(IM)
+        boolean matchesLinear = true;
+        boolean matchesLog = true;
+
+        for (int i = 0; i < n; i++) {
+            double x = hazardFunc.getX(i);
+
+            if (x != respIMs[i]) {
+                matchesLinear = false;
+            }
+
+            if (x != Math.log(respIMs[i])) {
+                matchesLog = false;
+            }
+
+            if (!matchesLinear && !matchesLog) {
+                throw new IllegalArgumentException(
+                    String.format(
+                        "IM values do not match at index %d: vuln IM=%f, hazard IM=%f",
+                        i, respIMs[i], x
+                    )
+                );
+            }
+        }
+
+        // Second pass: retrieve Y-values (no transformation needed)
+        for (int i = 0; i < n; i++) {
+            hazardValues[i] = hazardFunc.getY(i);
+        }
+
+        return hazardValues;
     }
     
     // ---------------------- Core Riemann Integration ----------------------

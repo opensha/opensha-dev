@@ -1,5 +1,9 @@
 package scratch.anne.sra.util.enums;
 
+/**
+ * Enum defining fragility limit states, including the relationship between them.
+ * Ordered limit states occur in sequence. Competing are mutually exclusive.
+ */
 public enum LimitState {
 
     SLIGHT(LimitStateType.ORDERED),
@@ -27,5 +31,13 @@ public enum LimitState {
 
     public boolean isCompeting() {
         return limitStateType == LimitStateType.COMPETING;
+    }
+    
+    /**
+     * Determines how the limit state participates in fragility calculations.
+     */
+    public enum LimitStateType {
+        ORDERED,     // Part of a cumulative sequence (P(DS ≥ i))
+        COMPETING    // Independent failure mode, mutually exclusive
     }
 }

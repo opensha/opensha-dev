@@ -16,13 +16,25 @@ import scratch.anne.sra.domain.structural_response.fragilities.SimpleImFragility
 import scratch.anne.sra.domain.structural_response.fragilities.SimpleImFragilityLibraryPreparer.PrepareSpec;
 import scratch.anne.sra.engine.convolution.RiskConvolution;
 import scratch.anne.sra.engine.portfolio_workflow.PortfolioRiskConvolutionCalculator;
-import scratch.anne.sra.util.InputParsingUtil;
 import scratch.anne.sra.io.readers.FragilityLibraryReader;
 import scratch.anne.sra.io.readers.ParseRiskRunParametersCSV;
 import scratch.anne.sra.io.readers.PortfolioReader;
-import scratch.anne.sra.util.IO;
 import scratch.anne.sra.util.InputParsingUtil;
 
+/**
+ * Runs the full PBR survival-probability workflow for a run folder's
+ * {@code input.csv}: reads the fragility-asset portfolio and fragility
+ * library it points to, convolves against hazard ({@code FULL_HCURVE}
+ * mode), then reports probability-of-survival and hazard-adjustment
+ * results via {@link PBRSurvivalPortfolioReporter}.
+ *
+ * <p><b>Choice point -- edit before running:</b> {@code baseFolder}/
+ * {@code inputFolder} select which run folder's {@code input.csv}
+ * drives the run -- both are hardcoded to one specific local path.
+ * Everything else (portfolio/fragility file locations, hazard
+ * parameters, integration method, probability targets) is read from
+ * that folder's {@code input.csv}, not chosen in this file.</p>
+ */
 public class LJBPortfolioPFail {
 
     public static void main(String[] args) throws Exception {
@@ -55,8 +67,8 @@ public class LJBPortfolioPFail {
         Path portfolioCSV = Path.of(config.get("portfolio_csv"));
         Path fragLibraryJSON = Path.of(config.get("fragility_library_json"));
 
-        IO.verifyFileExists(portfolioCSV, "Portfolio CSV");
-        IO.verifyFileExists(fragLibraryJSON, "Fragility JSON");
+        InputParsingUtil.verifyFileExists(portfolioCSV, "Portfolio CSV");
+        InputParsingUtil.verifyFileExists(fragLibraryJSON, "Fragility JSON");
 
         // ------------------- 2. create output paths inside run folder -------------------
         String fileTag = config.getOrDefault("file_tag", runFolder.getFileName().toString());

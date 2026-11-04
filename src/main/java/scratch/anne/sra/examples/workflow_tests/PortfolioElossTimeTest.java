@@ -2,7 +2,6 @@ package scratch.anne.sra.examples.workflow_tests;
 
 import java.nio.file.*;
 import java.util.*;
-import java.util.stream.Collectors;
 
 import scratch.anne.sra.domain.asset.vulnerability.VulnerabilityAsset;
 import scratch.anne.sra.domain.hazard.HazardParameters;
@@ -17,20 +16,33 @@ import scratch.anne.sra.domain.structural_response.ResponseModelMetadataBuilder;
 import scratch.anne.sra.domain.structural_response.SimpleImResponseLibrary;
 import scratch.anne.sra.domain.structural_response.vulnerabilities.SimpleImVulnLibraryPreparer;
 import scratch.anne.sra.domain.structural_response.vulnerabilities.VulnerabilityModel;
-import scratch.anne.sra.engine.convolution.RiskConvolution;
 import scratch.anne.sra.engine.convolution.RiskConvolution.IntegrationMethod;
-import scratch.anne.sra.engine.per_rupture.RuptureLossResultsCollection;
 import scratch.anne.sra.engine.portfolio_workflow.PortfolioPerRuptureRiskConvolutionCalculator;
 import scratch.anne.sra.engine.portfolio_workflow.PortfolioRiskConvolutionCalculator;
 import scratch.anne.sra.io.readers.ParseRiskRunParametersCSV;
 import scratch.anne.sra.io.readers.PortfolioReader;
 import scratch.anne.sra.io.readers.VulnerabilityLibraryReader;
 import scratch.anne.sra.io.writers.AssetRiskForRuptureWriter;
-import scratch.anne.sra.io.writers.FileFormat;
-import scratch.anne.sra.util.IO;
 import scratch.anne.sra.util.ImValueTransformer;
 import scratch.anne.sra.util.InputParsingUtil;
 
+/**
+ * Timing benchmark: runs a portfolio's expected-loss calculation
+ * {@code nTimes} times across {@code FULL_HCURVE} x
+ * {@code {CLOSED_FORM, RIEMANN}} and {@code PER_RUPTURE} x
+ * {@code {CLOSED_FORM, RIEMANN}} x {@code {no asset loss, with asset
+ * loss}}, appending each run's elapsed time and total loss to
+ * {@code <fileTag>_method_comparison.csv} -- a measurement tool, not a
+ * correctness check (total loss should already be stable; this times
+ * how long each method/mode combination takes).
+ *
+ * <p><b>Choice point -- edit before running:</b> {@code baseFolder}/
+ * {@code inputFolder} select which run folder's {@code input.csv}
+ * drives the run; {@code nTimes} controls how many repetitions are
+ * timed; {@code writeHazard}/{@code fRelative}/{@code fAbsolute}
+ * control the optional per-asset Parquet writer used in the
+ * {@code PER_RUPTURE} + "with asset loss" case.</p>
+ */
 public class PortfolioElossTimeTest {
 
     public static Path baseFolder = Path.of("C:\\Users\\ahulsey\\OneDrive - DOI\\Desktop\\Research\\openSRA\\software architecture\\my_scratch\\conversion to Java project\\BERM_test-outputs\\_vb\\csv_inputs");
@@ -56,8 +68,8 @@ public class PortfolioElossTimeTest {
 
         Path portfolioCSV     = Path.of(config.get("portfolio_csv"));
         Path vulnLibraryJSON  = Path.of(config.get("vuln_library_json"));
-        IO.verifyFileExists(portfolioCSV,    "Portfolio CSV");
-        IO.verifyFileExists(vulnLibraryJSON, "Vulnerability JSON");
+        InputParsingUtil.verifyFileExists(portfolioCSV,    "Portfolio CSV");
+        InputParsingUtil.verifyFileExists(vulnLibraryJSON, "Vulnerability JSON");
 
         String fileTag = config.getOrDefault("file_tag", runFolder.getFileName().toString());
 

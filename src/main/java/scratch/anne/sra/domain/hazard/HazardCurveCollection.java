@@ -4,11 +4,23 @@ import java.nio.file.Path;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
-import scratch.anne.sra.util.enums.HazardMetricType;
+import scratch.anne.sra.util.enums.HazardMetric.HazardMetricType;
 import scratch.anne.sra.io.writers.HazardCurvesExporter;
 import scratch.anne.sra.util.AssetKeys.ImKey;
 import scratch.anne.sra.util.AssetKeys.SiteKey;
 
+/**
+ * A thread-safe, build-then-freeze collection of {@link HazardCurve}s,
+ * one per (site, IM) pair, for a single {@link HazardParameters} run.
+ *
+ * <p>Populated concurrently via {@link #put} during the hazard-curve
+ * loop (e.g. {@code PortfolioRiskConvolutionCalculator}'s per-site/IM
+ * parallel computation), then {@link #freeze}'d once the loop
+ * completes so the result is safe to read without further locking.
+ * Requires an {@code EXCEEDANCE} hazard metric type, same as
+ * {@link scratch.anne.sra.engine.per_rupture.RuptureLossResultsCollection}/
+ * {@link scratch.anne.sra.engine.per_rupture.RuptureProbabilityCurveCollection}.</p>
+ */
 public final class HazardCurveCollection {
 
     // ------------------------------------------------------------

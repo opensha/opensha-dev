@@ -132,7 +132,7 @@ public final class AssetRiskForRuptureWriter implements AutoCloseable {
      * 
      * Takes the maximum of the relative and absolute thresholds.
      * Setting either to 0 makes it relevant (everything would be written for it)
-     * Setting fAbsolute too low could remove whole census tracts that don't
+     * Setting fAbsolute too high could remove whole census tracts that don't
      * have that much total value
      */
     public double writeThresholdValue(double siteImAssetValue, double totalPortfolioValue) {

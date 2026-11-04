@@ -23,8 +23,8 @@ import org.apache.parquet.hadoop.metadata.CompressionCodecName;
 import org.apache.parquet.io.LocalOutputFile;
 import org.apache.parquet.io.OutputFile;
 
-import scratch.anne.sra.domain.hazard.LossExceedanceCurve;
 import scratch.anne.sra.domain.hazard.RuptureKey;
+import scratch.anne.sra.domain.risk.LossExceedanceCurve;
 import scratch.anne.sra.io.readers.RuptureLossLookupReader.RuptureAttributes;
 
 /**

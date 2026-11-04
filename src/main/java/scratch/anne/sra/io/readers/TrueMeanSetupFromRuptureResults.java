@@ -205,7 +205,6 @@ public final class TrueMeanSetupFromRuptureResults {
         // setSolution(...) inside ErfBuilder.
         FaultSystemSolution trueMeanSol = trueMeanERF.getSolution();
 
-        // --- Mirrors TrueMeanERFDemo lines ~44-51 ---
         // The pre-filter mag cutoff applied to meanGridList is assumed to
         // match griddedPointSourceMagCutoff (the same cutoff ErfBuilder
         // applies to the ERF's own GriddedSeismicitySettings), rather than

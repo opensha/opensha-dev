@@ -16,12 +16,29 @@ import scratch.anne.sra.engine.per_rupture.RuptureProbabilityCurveCollection;
 import scratch.anne.sra.io.readers.ParseRiskRunParametersCSV;
 import scratch.anne.sra.io.readers.PortfolioReader;
 import scratch.anne.sra.io.writers.RuptureProbabilityCurvesExporter;
-import scratch.anne.sra.util.IO;
+import scratch.anne.sra.util.InputParsingUtil;
 import scratch.anne.sra.util.NumericUtil;
 import scratch.anne.sra.util.AssetKeys.ImKey;
 import scratch.anne.sra.util.AssetKeys.ImKey.ImDomain;
 
 
+/**
+ * For up to {@code nAssets} assets in a run folder's portfolio, builds
+ * the shared ERF/GMM once and computes each asset's per-rupture
+ * conditional exceedance-probability curves via
+ * {@link RuptureProbabilityCurveCollection#fromERF}, writing one CSV
+ * per asset via {@link RuptureProbabilityCurvesExporter}.
+ *
+ * <p><b>Choice points -- edit before running:</b></p>
+ * <ul>
+ *   <li>{@code baseFolder}/{@code inputFolder} select which run
+ *       folder's {@code input.csv} (and portfolio it points to) drives
+ *       the run.</li>
+ *   <li>{@code nAssets} caps how many portfolio assets are processed.</li>
+ *   <li>{@code imt}/{@code imMin}/{@code imMax}/{@code logImStep}
+ *       define the IM grid each asset's curves are evaluated at.</li>
+ * </ul>
+ */
 public class PerRuptureProbabilityCurvesExampleCalc {
 
     public static Path baseFolder = Path.of("C:\\Users\\ahulsey\\OneDrive - DOI\\Desktop\\Research\\openSRA\\software architecture\\my_scratch\\conversion to Java project\\BERM_test-outputs\\_vb\\csv_inputs\\tests\\disagg");
@@ -53,7 +70,7 @@ public class PerRuptureProbabilityCurvesExampleCalc {
 
         // ------------------- 1. Resolve input files -------------------
         Path portfolioCSV = Path.of(config.get("portfolio_csv"));
-        IO.verifyFileExists(portfolioCSV, "Portfolio CSV");
+        InputParsingUtil.verifyFileExists(portfolioCSV, "Portfolio CSV");
 
         // ------------------- 2. output paths -------------------
         String fileTag = config.getOrDefault("file_tag", runFolder.getFileName().toString());

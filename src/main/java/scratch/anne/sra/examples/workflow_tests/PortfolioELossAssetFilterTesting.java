@@ -22,10 +22,24 @@ import scratch.anne.sra.io.readers.ParseRiskRunParametersCSV;
 import scratch.anne.sra.io.readers.PortfolioReader;
 import scratch.anne.sra.io.readers.VulnerabilityLibraryReader;
 import scratch.anne.sra.io.writers.AssetRiskForRuptureWriter;
-import scratch.anne.sra.util.IO;
 import scratch.anne.sra.util.InputParsingUtil;
 
 
+/**
+ * Parameter sweep: runs the {@code PER_RUPTURE} per-asset Parquet
+ * export across every combination of {@code fRelativeGrid} x
+ * {@code fAbsoluteGrid} threshold values (see
+ * {@link AssetRiskForRuptureWriter#writeThresholdValue}), skipping any
+ * combination whose output CSV already exists -- lets you explore how
+ * the asset-write threshold affects output size/content without
+ * recomputing combinations you've already run.
+ *
+ * <p><b>Choice point -- edit before running:</b> {@code fRelativeGrid}/
+ * {@code fAbsoluteGrid} select which threshold combinations are swept
+ * (several alternative grids are commented out above the active ones);
+ * {@code baseFolder}/{@code inputFolder} select which run folder's
+ * {@code common_input.csv} drives the run.</p>
+ */
 public class PortfolioELossAssetFilterTesting {
 	
 	public static void main(String[] args) throws Exception {
@@ -87,8 +101,8 @@ public class PortfolioELossAssetFilterTesting {
         Path portfolioCSV = Path.of(config.get("portfolio_csv"));
         Path vulnLibraryJSON = Path.of(config.get("vuln_library_json"));
 
-        IO.verifyFileExists(portfolioCSV, "Portfolio CSV");
-        IO.verifyFileExists(vulnLibraryJSON, "Vulnerability JSON");
+        InputParsingUtil.verifyFileExists(portfolioCSV, "Portfolio CSV");
+        InputParsingUtil.verifyFileExists(vulnLibraryJSON, "Vulnerability JSON");
         
         Portfolio<VulnerabilityAsset> basePortfolio =
                 PortfolioReader.readCSV(portfolioCSV, VulnerabilityAsset.class);

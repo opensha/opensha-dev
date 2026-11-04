@@ -14,6 +14,21 @@ import scratch.anne.sra.util.AssetKeys.ImKey;
 import scratch.anne.sra.util.AssetKeys.ImKey.ImDomain;
 import scratch.anne.sra.util.NumericUtil.ImArrayParam;
 
+/**
+ * Demonstrates reading the PBR LJB1 fragility (via
+ * {@link FragilityLibraryReader#readLibrary}) and preparing it into a
+ * {@link SimpleImResponseLibrary} via {@link SimpleImFragilityLibraryPreparer},
+ * then inspecting the prepared library the same way as
+ * {@code SimpleFragilityLibraryReaderExample}.
+ *
+ * <p><b>Choice point -- edit before running:</b> STEP 4's {@code spec}
+ * selects which {@code PrepareSpec} is used -- {@code defaultSpec} (no
+ * filtering/resampling), {@code generatedSpec} (log-spaced IM
+ * resampling), or {@code customImSpec} (the exact IM values Devin
+ * McPhillips provided for this fragility, recreated explicitly since
+ * {@code LJB1_fragility.json} only stores the inferred lognormal fit,
+ * not these original points).</p>
+ */
 public class LJB1_reader {
 
     public static void main(String[] args) {
@@ -29,10 +44,9 @@ public class LJB1_reader {
             );
 
             Path fragLibraryJSON = resourceFolder.resolve("LJB1_fragility.json");
-            Path fragLibraryCSV  = resourceFolder.resolve("LJB1_fragility.csv"); // not yet created
 
             // Choose input format
-            Path filePath = fragLibraryJSON; // or fragLibraryCSV
+            Path filePath = fragLibraryJSON;
 
             // =========================================================
             // STEP 2: READ FRAGILITY MODEL LIBRARY
@@ -76,6 +90,9 @@ public class LJB1_reader {
                     )
                     .build();
             
+            // these are the im values given by Devin McPhilips for the example fragility
+            // the LJB1_fragility.json only contains the inferred lognormal distribution
+            // so this array will recreate the actual values he provided
             PrepareSpec customImSpec = PrepareSpec.builder()
                     .filterNames(portfolioFragilities)
                     .selectedLS("Topple")

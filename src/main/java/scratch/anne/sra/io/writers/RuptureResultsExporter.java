@@ -21,6 +21,21 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Map;
 
+/**
+ * Writes a {@link RuptureLossResultsCollection} to CSV or Parquet, one
+ * row per rupture (sourceId, fltSysRupIndex, ruptureId, magnitude,
+ * likelihood, ruptureLoss, lossContribution, relativeContribution).
+ *
+ * <p>Both formats carry the same file-level provenance metadata: the
+ * standard {@code HazardParameters} fields (via
+ * {@link HazardParametersMetadataBuilder}) plus {@code totalExpectedLoss},
+ * merged with whatever {@code extraMetadata} the caller supplies (e.g.
+ * portfolio/response-model provenance -- see
+ * {@link scratch.anne.sra.domain.portfolio.PortfolioMetadataBuilder}/
+ * {@link scratch.anne.sra.domain.structural_response.ResponseModelMetadataBuilder}).
+ * For CSV this is a leading {@code # HazardParameters} key,value block;
+ * for Parquet it's the file's own footer key-value metadata.</p>
+ */
 public final class RuptureResultsExporter {
 
     private static final Schema SCHEMA = new Schema.Parser().parse("""

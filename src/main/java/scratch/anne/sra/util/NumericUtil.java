@@ -78,6 +78,26 @@ public class NumericUtil {
 
         return logArray;
     }
+
+    /**
+     * {@code n} points evenly spaced in log10-space between {@code 10^startExp}
+     * and {@code 10^endExp} (inclusive), analogous to numpy's {@code logspace}.
+     *
+     * <p>Complementary to {@link #distributeLogSpacedValues}: that method
+     * takes a fixed step size and derives how many points fit; this one
+     * takes a fixed point count and derives the step.</p>
+     *
+     * @param startExp log10 of the first value
+     * @param endExp   log10 of the last value
+     * @param n        number of points
+     */
+    public static double[] logspace(double startExp, double endExp, int n) {
+        double[] result = new double[n];
+        double step = (endExp - startExp) / (n - 1);
+        for (int i = 0; i < n; i++)
+            result[i] = Math.pow(10, startExp + i * step);
+        return result;
+    }
     
     
     /**
@@ -157,6 +177,12 @@ public class NumericUtil {
         }
     }
 
+    /**
+     * Interpolate with below and above x range set as y[0] and y[n-1]
+     * 
+     * This extrapolating behavior is different than a similar
+     * class available at {@link org.opensha.commons.util.Interpolate} 
+     */
     public static double linearInterpolate(
             double[] x,
             double[] y,

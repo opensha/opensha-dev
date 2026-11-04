@@ -7,8 +7,8 @@ import java.util.Objects;
 import org.opensha.commons.data.function.ArbitrarilyDiscretizedFunc;
 import org.opensha.commons.data.function.DiscretizedFunc;
 
-import scratch.anne.sra.domain.hazard.LossExceedanceCurve;
 import scratch.anne.sra.domain.hazard.RuptureKey;
+import scratch.anne.sra.domain.risk.LossExceedanceCurve;
 import scratch.kevin.ucerf3.eal.LossCOV_Model;
 
 public final class LecAccumulation {

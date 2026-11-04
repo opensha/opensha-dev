@@ -12,6 +12,13 @@ import scratch.anne.sra.domain.hazard.HazardCurveCollection;
 import scratch.anne.sra.util.AssetKeys.ImKey;
 import scratch.anne.sra.util.AssetKeys.SiteKey;
 
+/**
+ * Writes a {@link HazardCurveCollection} to a newline-delimited JSON
+ * file: a first line with the collection's {@code HazardParameters}
+ * (via {@code collection.getParameters()}), followed by one JSON object
+ * per (site, IMT) hazard curve -- lat/lon/vs30, IMT, linear IM values,
+ * and the hazard array.
+ */
 public final class HazardCurvesExporter {
 
     private final Gson gson = new GsonBuilder().create();
