@@ -387,7 +387,6 @@ public final class RuptureLossResultsCollection {
 
         // for both rate and probability, total loss is the sum of (likelihood * conditional loss)
         // the difference is handled in the rupture likelihood, not in the combination equation
-        //TODO confirm whether prob_exc is appropriate for per-rupture
 
         double total = 0.0;
 

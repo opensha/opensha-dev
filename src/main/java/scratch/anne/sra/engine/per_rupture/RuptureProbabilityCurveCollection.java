@@ -1,7 +1,6 @@
 package scratch.anne.sra.engine.per_rupture;
 
 import java.lang.reflect.InvocationTargetException;
-import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -9,8 +8,6 @@ import java.util.Map;
 import org.opensha.commons.data.Site;
 import org.opensha.commons.data.function.ArbitrarilyDiscretizedFunc;
 import org.opensha.commons.data.function.DiscretizedFunc;
-import org.opensha.commons.geo.Location;
-import org.opensha.commons.param.Parameter;
 import org.opensha.sha.calc.HazardCurveCalculator;
 import org.opensha.sha.calc.sourceFilters.SourceFilter;
 import org.opensha.sha.calc.sourceFilters.SourceFilterManager;
@@ -20,18 +17,18 @@ import org.opensha.sha.earthquake.ProbEqkRupture;
 import org.opensha.sha.earthquake.ProbEqkSource;
 import org.opensha.sha.imr.AttenRelRef;
 import org.opensha.sha.imr.ScalarIMR;
-import org.opensha.sha.imr.param.IntensityMeasureParams.PeriodParam;
 
 import scratch.anne.sra.domain.asset.AbstractAsset;
 import scratch.anne.sra.domain.hazard.HazardCurve;
 import scratch.anne.sra.domain.hazard.HazardParameters;
 import scratch.anne.sra.domain.hazard.RuptureKey;
+import scratch.anne.sra.engine.hazard_setup.GmmImtSetter;
+import scratch.anne.sra.engine.hazard_setup.SiteBuilder;
 import scratch.anne.sra.util.enums.HazardMetricType;
 import scratch.anne.sra.util.enums.HazardMetric;
 import scratch.anne.sra.util.AssetKeys.ImKey;
 import scratch.anne.sra.util.AssetKeys.SiteKey;
 import scratch.anne.sra.util.StringUtil.ImtPeriod;
-import scratch.anne.sra.util.enums.IMT;
 
 import org.opensha.sha.faultSurface.RuptureSurface;
 import org.opensha.sha.faultSurface.PointSurface;
@@ -381,33 +378,12 @@ public final class RuptureProbabilityCurveCollection {
         // ----------------- Site setup -----------------
         SiteKey siteKey = new SiteKey(asset.getLatitude(), asset.getLongitude(), asset.getVs30());
 
-        Site site = new Site(new Location(asset.getLatitude(), asset.getLongitude()));
-        for (Parameter<?> p : gmm.getSiteParams())
-            site.addParameter((Parameter<?>) p.clone());
-        @SuppressWarnings("unchecked")
-        Parameter<Double> siteVs30 = (Parameter<Double>) site.getParameter("Vs30");
-        siteVs30.setValue(asset.getVs30());
+        Site site = SiteBuilder.fromSiteKey(siteKey, gmm);
 
         gmm.setSite(site);
 
         ImtPeriod imt = imKey.getImtPeriod();
-        gmm.setIntensityMeasure(imt.imt.name());
-
-        if (imt.imt == IMT.SA) {
-            // snap to nearest valid period, same workaround as the portfolio workflow
-            //TODO find better solution for invalid gmm periods
-            @SuppressWarnings("unchecked")
-            Parameter<Double> p = (Parameter<Double>) gmm.getParameter(PeriodParam.NAME);
-            var constraint =
-                    (org.opensha.commons.param.constraint.impl.DoubleDiscreteConstraint)
-                            p.getConstraint();
-            double requested = imt.period;
-            double allowed =
-                    constraint.getAllowedDoubles().stream()
-                            .min(Comparator.comparing(d -> Math.abs(d - requested)))
-                            .orElseThrow();
-            p.setValue(allowed);
-        }
+        GmmImtSetter.setImt(gmm, imt);
 
         DiscretizedFunc hazFunc = new ArbitrarilyDiscretizedFunc();
         for (double x : imKey.getLogValues())
@@ -476,22 +452,9 @@ public final class RuptureProbabilityCurveCollection {
 
                 gmm.getExceedProbabilities(rupture, hazFunc);
 
-                // no-op switch retained for parity with the portfolio workflow: the curve is
-                // always the conditional exceedance probability regardless of hazard metric;
-                // rate vs. probability is handled entirely in the likelihood above
-                switch (hazardParameters.getHazardMetric()) {
-                    case PROBABILITY_EXCEEDANCE:
-                        // already correct
-                        break;
-                    case RATE_EXCEEDANCE:
-                        // also uses the conditional exceedance probability;
-                        // rate vs probability is addressed in the rupture likelihood, not here
-                        break;
-                    default:
-                        throw new IllegalArgumentException(
-                                "Hazard metric not supported: " + hazardParameters.getHazardMetric()
-                        );
-                }
+                // the curve is always the conditional exceedance probability
+                // regardless of hazard metric; rate vs. probability is
+                // handled entirely in the likelihood above.
 
                 double[] hazardVals = new double[hazFunc.size()];
                 for (int i = 0; i < hazardVals.length; i++)

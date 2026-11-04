@@ -3,13 +3,10 @@ package scratch.anne.sra.engine.portfolio_workflow;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.lang.reflect.InvocationTargetException;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 
-import org.opensha.commons.geo.Location;
 import org.opensha.commons.data.Site;
-import org.opensha.commons.param.Parameter;
 import org.opensha.commons.data.function.DiscretizedFunc;
 import org.opensha.commons.data.function.ArbitrarilyDiscretizedFunc;
 import org.opensha.sha.calc.HazardCurveCalculator;
@@ -17,7 +14,6 @@ import org.opensha.sha.calc.sourceFilters.SourceFilterManager;
 import org.opensha.sha.earthquake.AbstractERF;
 import org.opensha.sha.imr.AttenRelRef;
 import org.opensha.sha.imr.ScalarIMR;
-import org.opensha.sha.imr.param.IntensityMeasureParams.PeriodParam;
 
 import scratch.anne.sra.domain.asset.RiskConvolutionAsset;
 import scratch.anne.sra.domain.hazard.ErfBuilder;
@@ -28,10 +24,12 @@ import scratch.anne.sra.domain.portfolio.portfolio_wrappers.RiskConvolutionPortf
 import scratch.anne.sra.domain.portfolio.portfolio_wrappers.RiskConvolutionPortfolio.ConvolutionMode;
 import scratch.anne.sra.domain.structural_response.SimpleImResponseLibrary;
 import scratch.anne.sra.engine.convolution.RiskConvolution;
+import scratch.anne.sra.engine.hazard_setup.GmmImtSetter;
+import scratch.anne.sra.engine.hazard_setup.AssertHazardExceedance;
+import scratch.anne.sra.engine.hazard_setup.SiteBuilder;
 import scratch.anne.sra.util.AssetKeys.ImKey;
 import scratch.anne.sra.util.AssetKeys.SiteKey;
 import scratch.anne.sra.util.StringUtil.ImtPeriod;
-import scratch.anne.sra.util.enums.IMT;
 
 /**
  * Portfolio workflow:
@@ -68,8 +66,9 @@ public class PortfolioRiskConvolutionCalculator {
         this.responseLib = responseLib;
         this.hazardParameters = hazardParameters;
         this.integrationMethod = integrationMethod;
-                
-       
+
+        AssertHazardExceedance.require(hazardParameters.getHazardMetric());
+
     	this.erf = ErfBuilder.build(hazardParameters);
 
     	this.filterManager = hazardParameters.buildSourceManager();
@@ -112,19 +111,7 @@ public class PortfolioRiskConvolutionCalculator {
         List<Site> sites = new ArrayList<>();
 
         for (SiteKey siteKey : siteKeys) {
-
-            Site site = new Site(new Location(siteKey.getLat(), siteKey.getLon()));
-
-            for (Parameter<?> p : baseGmm.getSiteParams())
-                site.addParameter((Parameter<?>) p.clone());
-
-            @SuppressWarnings("unchecked")
-            Parameter<Double> gmmVs30 =
-                    (Parameter<Double>) site.getParameter("Vs30");
-
-            gmmVs30.setValue(siteKey.getVs30());
-
-            sites.add(site);
+            sites.add(SiteBuilder.fromSiteKey(siteKey, baseGmm));
         }
 
         List<CompletableFuture<Void>> futures = new ArrayList<>();
@@ -157,32 +144,7 @@ public class PortfolioRiskConvolutionCalculator {
                     for (ImKey imKey : portfolio.getImKeysBySite(siteKey)) {
 
                         ImtPeriod imt = imKey.getImtPeriod();
-                        gmm.setIntensityMeasure(imt.imt.name());
-
-                        if (imt.imt == IMT.SA) {
-                        	@SuppressWarnings("unchecked")
-//                            gmm.getParameter(PeriodParam.NAME)
-//                                    .setValue(imt.period);
-                        
-                        	// work around for invalid period value
-                        	// snap to nearest valid value
-                        	//TODO find better solution for invalid gmm periods
-                        	Parameter<Double> p =
-                        	    (Parameter<Double>) gmm.getParameter(PeriodParam.NAME);
-
-                        	var constraint =
-                        	    (org.opensha.commons.param.constraint.impl.DoubleDiscreteConstraint)
-                        	        p.getConstraint();
-
-                        	double requested = imt.period;
-
-                        	double allowed =
-                        	    constraint.getAllowedDoubles().stream()
-                        	        .min(Comparator.comparing(d -> Math.abs(d - requested)))
-                        	        .orElseThrow();
-
-                        	p.setValue(allowed);
-                        }
+                        GmmImtSetter.setImt(gmm, imt);
 
                         DiscretizedFunc hazFunc =
                                 new ArbitrarilyDiscretizedFunc();
@@ -193,22 +155,11 @@ public class PortfolioRiskConvolutionCalculator {
                         
                         hazFunc = calc.getHazardCurve(hazFunc, site, gmm, erf);
 
-                        switch (hazardParameters.getHazardMetric()) {
-
-                            case PROBABILITY_EXCEEDANCE:
-                                // already correct
-                                break;
-
-                            case RATE_EXCEEDANCE:
-                                // average rate over full ERF duration (not annualized)
-                                hazFunc = calc.getAnnualizedRates(hazFunc, 1.0);
-                                break;
-
-                            default:
-                                throw new IllegalArgumentException(
-                                    "Hazard metric not supported for risk convolution class: " + hazardParameters.getHazardMetric()
-                                );
+                        if (hazardParameters.getHazardMetric() == scratch.anne.sra.util.enums.HazardMetric.RATE_EXCEEDANCE) {
+                            // average rate over full ERF duration (not annualized)
+                            hazFunc = calc.getAnnualizedRates(hazFunc, 1.0);
                         }
+                        // else PROBABILITY_EXCEEDANCE: already correct
                         
                         double[] hazard = new double[hazFunc.size()];
                         for (int j = 0; j < hazard.length; j++)
