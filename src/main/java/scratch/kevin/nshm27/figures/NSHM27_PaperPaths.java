@@ -21,10 +21,11 @@ public class NSHM27_PaperPaths {
 	
 	public static final File INV_DIR = new File("/home/kevin/OpenSHA/fss_inversions/");
 	
-	public static final String MODEL_DATE = "2026_10_20";
+	public static final String MODEL_DATE = "2026_10_24";
+	public static final String MODEL_SAMPLE_SUFFIX = "8192samples-sobol_scrambled";
 	
-	public static final File AMSAM_SOL_DIR = new File(INV_DIR, MODEL_DATE+"-nshm27-AMSAM-1024samples-sobol_scrambled");
-	public static final File GNMI_SOL_DIR = new File(INV_DIR, MODEL_DATE+"-nshm27-GNMI-1024samples-sobol_scrambled");
+	public static final File AMSAM_SOL_DIR = new File(INV_DIR, MODEL_DATE+"-nshm27-AMSAM-"+MODEL_SAMPLE_SUFFIX);
+	public static final File GNMI_SOL_DIR = new File(INV_DIR, MODEL_DATE+"-nshm27-GNMI-"+MODEL_SAMPLE_SUFFIX);
 	
 	public static File getSolDir(NSHM27_SeismicityRegions seisReg) {
 		return switch (seisReg) {
