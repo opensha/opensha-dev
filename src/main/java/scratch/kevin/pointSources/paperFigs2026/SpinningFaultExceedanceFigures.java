@@ -697,6 +697,17 @@ public class SpinningFaultExceedanceFigures {
 					percentileStr(calcPercentiles(centeredDists, nshmDistsFW, true, null)))+"\n");
 			texFW.write(LaTeXUtils.defineValueCommand(distTexPrefix+"NSHMJBUncenteredPercentile",
 					percentileStr(calcPercentiles(uncenteredDists, nshmDistsFW, true, null)))+"\n");
+			
+			MinMaxAveTracker jbCenteredRange = calcJBRange(centeredDists);
+			MinMaxAveTracker rupCenteredRange = calcRupRange(centeredDists);
+			MinMaxAveTracker jbUncenteredRange = calcJBRange(uncenteredDists);
+			MinMaxAveTracker rupUncenteredRange = calcRupRange(uncenteredDists);
+			
+			texFW.write(LaTeXUtils.defineValueCommand(distTexPrefix+"NSHMJBCenteredPercentageIncrease",
+					LaTeXUtils.numberAsPercent(100d*(nshmDistsFW.getDistanceJB()-jbCenteredRange.getAverage())/jbCenteredRange.getAverage(), 0))+"\n");
+			texFW.write(LaTeXUtils.defineValueCommand(distTexPrefix+"NSHMJBUncenteredPercentageIncrease",
+					LaTeXUtils.numberAsPercent(100d*(nshmDistsFW.getDistanceJB()-jbUncenteredRange.getAverage())/jbUncenteredRange.getAverage(), 0))+"\n");
+			
 			if (mech != FocalMech.STRIKE_SLIP) {
 				distAnns.add("NSHM23 Rjb="+oneDF.format(nshmDistsFW.getDistanceJB())
 						+", RrupFW="+oneDF.format(nshmDistsFW.getDistanceRup())
@@ -704,14 +715,29 @@ public class SpinningFaultExceedanceFigures {
 				texFW.write(LaTeXUtils.defineValueCommand(distTexPrefix+"NSHMJB", oneDF.format(nshmDistsFW.getDistanceJB()))+"\n");
 				texFW.write(LaTeXUtils.defineValueCommand(distTexPrefix+"NSHMRupFW", oneDF.format(nshmDistsFW.getDistanceRup()))+"\n");
 				texFW.write(LaTeXUtils.defineValueCommand(distTexPrefix+"NSHMRupHW", oneDF.format(nshmDistsHW.getDistanceRup()))+"\n");
+				
+				MinMaxAveTracker rupCenteredRangeFW = calcRupRange(centeredDists, false);
+				MinMaxAveTracker rupCenteredRangeHW = calcRupRange(centeredDists, true);
+				MinMaxAveTracker rupUnenteredRangeFW = calcRupRange(uncenteredDists, false);
+				MinMaxAveTracker rupUnenteredRangeHW = calcRupRange(uncenteredDists, true);
+				
 				texFW.write(LaTeXUtils.defineValueCommand(distTexPrefix+"NSHMRupFWCenteredPercentile",
 						percentileStr(calcPercentiles(centeredDists, nshmDistsFW, false, false)))+"\n");
 				texFW.write(LaTeXUtils.defineValueCommand(distTexPrefix+"NSHMRupFWUncenteredPercentile",
 						percentileStr(calcPercentiles(uncenteredDists, nshmDistsFW, false, false)))+"\n");
+				texFW.write(LaTeXUtils.defineValueCommand(distTexPrefix+"NSHMRupFWCenteredPercentageIncrease",
+						LaTeXUtils.numberAsPercent(100d*(nshmDistsFW.getDistanceRup()-rupCenteredRangeFW.getAverage())/rupCenteredRangeFW.getAverage(), 0))+"\n");
+				texFW.write(LaTeXUtils.defineValueCommand(distTexPrefix+"NSHMRupFWUncenteredPercentageIncrease",
+						LaTeXUtils.numberAsPercent(100d*(nshmDistsFW.getDistanceRup()-rupUnenteredRangeFW.getAverage())/rupUnenteredRangeFW.getAverage(), 0))+"\n");
+				
 				texFW.write(LaTeXUtils.defineValueCommand(distTexPrefix+"NSHMRupHWCenteredPercentile",
 						percentileStr(calcPercentiles(centeredDists, nshmDistsHW, false, true)))+"\n");
 				texFW.write(LaTeXUtils.defineValueCommand(distTexPrefix+"NSHMRupHWUncenteredPercentile",
 						percentileStr(calcPercentiles(uncenteredDists, nshmDistsHW, false, true)))+"\n");
+				texFW.write(LaTeXUtils.defineValueCommand(distTexPrefix+"NSHMRupHWCenteredPercentageIncrease",
+						LaTeXUtils.numberAsPercent(100d*(nshmDistsHW.getDistanceRup()-rupCenteredRangeHW.getAverage())/rupCenteredRangeHW.getAverage(), 0))+"\n");
+				texFW.write(LaTeXUtils.defineValueCommand(distTexPrefix+"NSHMRupHWUncenteredPercentageIncrease",
+						LaTeXUtils.numberAsPercent(100d*(nshmDistsHW.getDistanceRup()-rupUnenteredRangeHW.getAverage())/rupUnenteredRangeHW.getAverage(), 0))+"\n");
 			} else {
 				distAnns.add("NSHM23 Rjb="+oneDF.format(nshmDistsFW.getDistanceJB())
 						+", Rrup="+oneDF.format(nshmDistsFW.getDistanceRup()));
@@ -722,11 +748,6 @@ public class SpinningFaultExceedanceFigures {
 				texFW.write(LaTeXUtils.defineValueCommand(distTexPrefix+"NSHMRupUncenteredPercentile",
 						percentileStr(calcPercentiles(uncenteredDists, nshmDistsFW, false, null)))+"\n");
 			}
-			
-			MinMaxAveTracker jbCenteredRange = calcJBRange(centeredDists);
-			MinMaxAveTracker rupCenteredRange = calcRupRange(centeredDists);
-			MinMaxAveTracker jbUncenteredRange = calcJBRange(uncenteredDists);
-			MinMaxAveTracker rupUncenteredRange = calcRupRange(uncenteredDists);
 			
 			rangeTexDefine(texFW, distTexPrefix+"CenteredJB", jbCenteredRange);
 			rangeTexDefine(texFW, distTexPrefix+"CenteredRup", rupCenteredRange);
@@ -1252,7 +1273,7 @@ public class SpinningFaultExceedanceFigures {
 //					varChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 2f, sortables[s].color));
 				}
 				
-				PlotSpec varPlot = new PlotSpec(varPlotFuncs, varChars, null, sortPlot.getXAxisLabel(), "COV");
+				PlotSpec varPlot = new PlotSpec(varPlotFuncs, varChars, null, sortPlot.getXAxisLabel(), "CV");
 				
 				/*
 				 * Bin histogram plot

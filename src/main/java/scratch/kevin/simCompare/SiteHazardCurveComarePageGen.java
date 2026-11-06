@@ -1,5 +1,8 @@
 package scratch.kevin.simCompare;
 
+import org.opensha.sha.calc.disaggregation.chart3d.PureJavaDisaggPlotter;
+import org.jfree.chart3d.export.ExportUtils;
+import org.jfree.chart3d.Chart3DPanel;
 import java.awt.geom.Point2D;
 import java.io.File;
 import java.io.IOException;
@@ -27,7 +30,6 @@ import org.opensha.commons.param.impl.DoubleParameter;
 import org.opensha.commons.util.ExceptionUtils;
 import org.opensha.commons.util.FileUtils;
 import org.opensha.sha.calc.disaggregation.DisaggregationCalculator;
-import org.opensha.sha.calc.disaggregation.DisaggregationCalculatorAPI;
 import org.opensha.sha.calc.hazardMap.HazardDataSetLoader;
 import org.opensha.sha.calc.sourceFilters.SourceFilter;
 import org.opensha.sha.calc.sourceFilters.params.SourceFiltersParam;
@@ -818,22 +820,6 @@ public abstract class SiteHazardCurveComarePageGen<E> {
 		}
 	}
 	
-	private static long prevDisaggMillis;
-	private synchronized static void checkSleepDisagg() {
-		long curTime = System.currentTimeMillis();
-		long diff = curTime - prevDisaggMillis;
-		if (diff < 100) {
-			try {
-				long sleepTime = 100 - diff;
-				System.out.println("Sleeping for "+sleepTime+" milliseconds");
-				Thread.sleep(sleepTime);
-			} catch (InterruptedException e) {
-				e.printStackTrace();
-			}
-		}
-		prevDisaggMillis = curTime;
-	}
-	
 	private class DisaggCalc {
 		private final ParameterList disaggParams;
 		private final List<SourceFilter> sourceFilters;
@@ -849,7 +835,7 @@ public abstract class SiteHazardCurveComarePageGen<E> {
 
 		private final double maxZAxis = Double.NaN;
 		
-		private DisaggregationCalculatorAPI disaggCalc;
+		private DisaggregationCalculator disaggCalc;
 		
 		public DisaggCalc(double minMag) {
 			this.minMag = minMag;
@@ -873,10 +859,8 @@ public abstract class SiteHazardCurveComarePageGen<E> {
 			System.out.println("Done Disaggregating");
 			String metadata = "temp metadata";
 
-			System.out.println("Fetching plot...");
-			String address;
-			checkSleepDisagg();
-			address = disaggCalc.getDisaggregationPlotUsingServlet(metadata);
+			System.out.println("Building plot...");
+			Chart3DPanel chartPanel = PureJavaDisaggPlotter.buildChartPanel(disaggCalc.getDisaggPlotData());
 
 //			String meanModeText = disaggCalc.getMeanAndModeInfo();
 //			String binDataText = disaggCalc.getBinData();
@@ -888,11 +872,9 @@ public abstract class SiteHazardCurveComarePageGen<E> {
 
 			File pngFile = new File(outputFile.getAbsolutePath()+".png");
 //			File pdfFile = new File(outputFile.getAbsolutePath()+".pdf");
-//			DisaggregationPlotViewerWindow.saveAsPDF(
-//					address+DisaggregationCalculator.DISAGGREGATION_PLOT_PDF_NAME,
+//			DisaggregationPlotViewerWindow.saveAsPDF(chartPanel,
 //					pdfFile.getAbsolutePath(), meanModeText, metadataText, binDataText, sourceDataText);
-			FileUtils.downloadURL(address+DisaggregationCalculator.DISAGGREGATION_PLOT_PNG_NAME,
-					pngFile);
+			ExportUtils.writeAsPNG(chartPanel.getDrawable(), chartPanel.getWidth(), chartPanel.getHeight(), pngFile);
 //			DisaggregationPlotViewerWindow.saveAsTXT(outputFile.getAbsolutePath()+".txt", meanModeText, metadataText,
 //					binDataText, sourceDataText);
 			return pngFile;
