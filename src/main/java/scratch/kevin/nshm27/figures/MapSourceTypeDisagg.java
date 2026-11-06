@@ -96,26 +96,27 @@ public class MapSourceTypeDisagg {
 	}
 
 	private static void plotRegion(NSHM27_SeismicityRegions seisReg, int vs30) throws IOException {
-		String inversionName = NSHM27_PaperPaths.getSolDir(seisReg).getName();
-		File combinedDir = new File(INV_DIR, inversionName+"-ba_hazard-vs"+vs30);
+		File solDir = NSHM27_PaperPaths.getSolDir(seisReg);
+		String inversionName = solDir.getName();
+		File baHazardDir = new File(INV_DIR, inversionName+"-ba_hazard-vs"+vs30);
 		EnumMap<SourceType, File> sourceDirs = new EnumMap<>(SourceType.class);
 		for (SourceType type : SourceType.values())
 			sourceDirs.put(type, new File(INV_DIR,
 					inversionName+"-ba_hazard-"+type.directoryToken+"-vs"+vs30));
 
-		File regionFile = new File(combinedDir, "gridded_region.geojson");
+		File regionFile = new File(baHazardDir, "gridded_region.geojson");
 		Preconditions.checkState(regionFile.exists(), "Missing gridded region: %s", regionFile.getAbsolutePath());
 		GriddedRegion gridReg = GriddedRegion.fromFeature(Feature.read(regionFile));
 		System.out.println("Plotting "+seisReg+" on "+gridReg.getNodeCount()+" nodes at "
 				+(float)gridReg.getSpacing()+" degree spacing");
 
-		File reportDir = new File(combinedDir, "hazard_map_disagg");
+		File reportDir = new File(solDir, "hazard_map_disagg_vs"+vs30);
 		Preconditions.checkState(reportDir.exists() || reportDir.mkdir(), "Couldn't create %s", reportDir);
 		File resourcesDir = new File(reportDir, "resources");
 		Preconditions.checkState(resourcesDir.exists() || resourcesDir.mkdir(), "Couldn't create %s", resourcesDir);
 
-		GriddedGeoDataSet[][] referenceMaps = loadReferenceMaps(combinedDir, gridReg);
-		GriddedGeoDataSet[][] totalRates = loadExceedanceRates(combinedDir, gridReg, referenceMaps);
+		GriddedGeoDataSet[][] referenceMaps = loadReferenceMaps(baHazardDir, gridReg);
+		GriddedGeoDataSet[][] totalRates = loadExceedanceRates(baHazardDir, gridReg, referenceMaps);
 		EnumMap<SourceType, GriddedGeoDataSet[][]> sourceRates = new EnumMap<>(SourceType.class);
 		for (SourceType type : SourceType.values())
 			sourceRates.put(type, loadExceedanceRates(sourceDirs.get(type), gridReg, referenceMaps));
