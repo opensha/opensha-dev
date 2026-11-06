@@ -349,40 +349,56 @@ public class MapSourceTypeDisagg {
 
 	public static GriddedGeoDataSet buildLandMask(GriddedRegion gridReg) {
 		GriddedGeoDataSet mask = new GriddedGeoDataSet(gridReg);
-		for (XY_DataSet outline : PoliticalBoundariesData.loadDefaultOutlines(gridReg)) {
+		double latDelta = Math.max(MASK_DELTA, gridReg.getLatSpacing()*0.5);
+		double lonDelta = Math.max(MASK_DELTA, gridReg.getLonSpacing()*0.5);
+		XY_DataSet[] outlines = PoliticalBoundariesData.loadDefaultOutlines(gridReg);
+		List<Region> outlineRegions = new ArrayList<>();
+		for (XY_DataSet outline : outlines) {
+			if (outline.getMaxY() < gridReg.getMinLat()-latDelta
+					|| outline.getMinY() > gridReg.getMaxLat()+latDelta
+					|| outline.getMaxX() < gridReg.getMinLon()-lonDelta
+					|| outline.getMinX() > gridReg.getMaxLon()+lonDelta)
+				continue;
 			LocationList border = new LocationList();
 			for (Point2D point : outline)
 				border.add(new Location(point.getY(), point.getX()));
+//			System.out.println("Masking for region with "+border.size()+" pts:\n"+border);
 			Region region = new Region(border, BorderType.MERCATOR_LINEAR);
-			double latDelta = Math.max(MASK_DELTA, gridReg.getLatSpacing()*0.5);
-			double lonDelta = Math.max(MASK_DELTA, gridReg.getLonSpacing()*0.5);
-			for (int i=0; i<gridReg.getNodeCount(); i++) {
-				if (mask.get(i) == 1d)
-					continue;
-				Location center = gridReg.getLocation(i);
-				GriddedRegion microGrid = new GriddedRegion(
-						new Location(center.lat-latDelta, center.lon-lonDelta),
-						new Location(center.lat+latDelta, center.lon+lonDelta),
-						MASK_DELTA/10d, center);
-				LocationList testLocations = new LocationList(microGrid.getNodeCount()+1);
-				testLocations.add(center);
-				testLocations.addAll(microGrid.getNodeList());
-//				Location[] testLocations = {
-//						center,
-//						new Location(center.lat+latDelta, center.lon+lonDelta),
-//						new Location(center.lat+latDelta, center.lon-lonDelta),
-//						new Location(center.lat-latDelta, center.lon+lonDelta),
-//						new Location(center.lat-latDelta, center.lon-lonDelta)
-//				};
-				for (Location location : testLocations) {
+			outlineRegions.add(region);
+		}
+		int numInside = 0;
+		for (int i=0; i<gridReg.getNodeCount(); i++) {
+			Location center = gridReg.getLocation(i);
+			GriddedRegion microGrid = new GriddedRegion(
+					new Location(center.lat-latDelta, center.lon-lonDelta),
+					new Location(center.lat+latDelta, center.lon+lonDelta),
+					MASK_DELTA/10d, center);
+			LocationList testLocations = new LocationList(microGrid.getNodeCount()+1);
+			testLocations.add(center);
+			testLocations.addAll(microGrid.getNodeList());
+//			Location[] testLocations = {
+//					center,
+//					new Location(center.lat+latDelta, center.lon+lonDelta),
+//					new Location(center.lat+latDelta, center.lon-lonDelta),
+//					new Location(center.lat-latDelta, center.lon+lonDelta),
+//					new Location(center.lat-latDelta, center.lon-lonDelta)
+//			};
+			boolean anyInside = false;
+			for (Location location : testLocations) {
+				for (Region region : outlineRegions) {
 					if (region.contains(location)) {
-						mask.set(i, 1d);
+						anyInside = true;
 						break;
 					}
 				}
+				if (anyInside) {
+					mask.set(i, 1d);
+					numInside++;
+					break;
+				}
 			}
 		}
-		System.out.println("Land mask kept "+(float)(100d*mask.getSumZ()/gridReg.getNodeCount())+"% of nodes");
+		System.out.println("Land mask kept "+numInside+"/"+gridReg.getNodeCount()+" nodes ("+(float)(100d*mask.getSumZ()/gridReg.getNodeCount())+"%)");
 		return mask;
 	}
 }
