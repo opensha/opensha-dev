@@ -1284,6 +1284,11 @@ public class LongTermTD_Simulator {
 			readSectTimeSinceLastEventFromFile(inputTimeSinceLastMillisFileName, currentTimeMillis, dateOfLastForSect);
 			for(int s=0; s<dateOfLastForSect.length;s++)
 				probModel.setSectDOLE(s, dateOfLastForSect[s]);
+			// now save a copy to avoid problems if the original changes
+			File dataFile1 = new File(resultsDir, "inputTimeSinceLastCopy.txt");
+			File dataFile2 = new File(inputTimeSinceLastMillisFileName);
+			if(!dataFile1.toString().equals(dataFile2.toString()))
+				writeSectTimeSinceLastEventToFile(resultsDir, "inputTimeSinceLastCopy.txt", currentTimeMillis, dateOfLastForSect);
 		}
 
 		// remove date of last event if Poisson - this not neccessary?
@@ -1338,17 +1343,16 @@ public class LongTermTD_Simulator {
 					probGainForFaultSystemSource[s] = probModel.getProbabilityGain(fltSysRupIndex, currentTimeMillis, simDuration);
 // HACK RIGHT HERE
 //probGainForFaultSystemSource[s] /= 1.15;
-
+					
 				}
 
 				// now update totalRate and ruptureSampler (for all rups since start time changed)
-//				for(int n=0; n<erf.getTotNumRupsFromFaultSystem();n++) {
 				for(int n=0; n<erf.getTotNumRups();n++) {
 					double probGain = probGainForFaultSystemSource[erf.getSrcIndexForNthRup(n)];
 					aveGainAtTime += probGain;
 					double newRate = longTermRateOfNthRups[n] * probGain;	// applied as a rate gain
 					nthRupRandomSampler.set(n, newRate);
-				}
+				}				
 				
 				totalRateAtTime = nthRupRandomSampler.getSumOfY_vals();
 				aveGainAtTime /= erf.getNumFaultSystemSources();
@@ -1363,6 +1367,7 @@ public class LongTermTD_Simulator {
 					maxAveGainAtTimeYr = currentYear;
 				}
 			}
+			
 			
 			// Try sampling an event time
 			double timeToNextInYrs;
@@ -1557,6 +1562,20 @@ public class LongTermTD_Simulator {
 		FaultSystemRupSet fltSysRupSet = fltSysSolution.getRupSet();
 		int numRupsInFaultSystem = fltSysRupSet.getNumRuptures();
 		int numSections = fltSysRupSet.getNumSections();
+		RupSetTectonicRegimes tectonicRegimes = fltSysRupSet.getModule(RupSetTectonicRegimes.class);
+		if(tectonicRegimes==null)
+			throw new RuntimeException("RupSetTectonicRegimes cannot be null");
+		
+		// make list of different tectonic regimes
+		ArrayList<TectonicRegionType> tectRegTypeList = new ArrayList<TectonicRegionType>();
+		for(int s=0;s<erf.getNumSources();s++) {
+			TectonicRegionType trt = erf.getSource(s).getTectonicRegionType();
+			if(!tectRegTypeList.contains(trt)) {
+//				System.out.println(trt);
+				tectRegTypeList.add(trt);
+			}
+		}		
+
 		
 		double[] longTermPartRateForSectArray = probModel.getSectLongTermPartRates(); // this is a duplicate
 		double[] sectionArea = fltSysRupSet.getAreaForAllSections();
@@ -1649,9 +1668,6 @@ public class LongTermTD_Simulator {
 		// this is for storing section normalized RIs
 		ArrayList<Double> normalizedSectRecurIntervals = new ArrayList<Double>();
 		ArrayList<Double> normalizedSubductionSectRIs = new ArrayList<Double>();
-		RupSetTectonicRegimes tectonicRegimes = fltSysRupSet.getModule(RupSetTectonicRegimes.class);
-		if(tectonicRegimes==null)
-			throw new RuntimeException("RupSetTectonicRegimes cannot be null");
 
 		// Norm RIs at paleo sites
 		PaleoseismicConstraintData paleoDataMod = erf.getSolution().getRupSet().getModule(PaleoseismicConstraintData.class);
@@ -1699,6 +1715,17 @@ public class LongTermTD_Simulator {
 		tempString += "\ntotal rate >= 6.7 = "+(float)targetMFD.getCumRate(6.75);
 		tempString += "\ntotal MoRate = "+(float)origTotMoRate;
 		targetMFD.setInfo(tempString);	
+		// for each tectonic regime
+		HashMap<TectonicRegionType,SummedMagFreqDist> targetMFD_tectRegMap = new HashMap<TectonicRegionType,SummedMagFreqDist>();
+		for(TectonicRegionType trt : tectRegTypeList) {
+			SummedMagFreqDist mfd = ERF_Calculator.getTotalMFD_ForERF(erf, 5.05, 9.95, 50, true, trt);
+			mfd.setName("Target MFD for "+trt);
+			tempString = "total rate = "+(float)mfd.getTotalIncrRate();
+			tempString += "\ntotal rate >= 6.7 = "+(float)mfd.getCumRate(6.75);
+			mfd.setInfo(tempString);	
+			targetMFD_tectRegMap.put(trt, mfd);
+		}
+				
 		
 		// get HashMap of parent name from parent ID
 		HashMap<Integer,String> parentNameFromID_Map = FaultSysSolERF_Calc.getParentSectNameFromID_Map(erf);
@@ -1724,6 +1751,11 @@ public class LongTermTD_Simulator {
 		// MFD & MoRate for simulation
 		SummedMagFreqDist simMFD = new SummedMagFreqDist(5.05,9.95,50);
 		double simMoRate = 0;
+		HashMap<TectonicRegionType,SummedMagFreqDist> simMFD_tectRegMap = new HashMap<TectonicRegionType,SummedMagFreqDist>();
+		for(TectonicRegionType trt : tectRegTypeList) {
+			simMFD_tectRegMap.put(trt, new SummedMagFreqDist(5.05,9.95,50));
+		}
+
 		
 		// make HashMap of simulated parent participation MFDs
 		HashMap<Integer,SummedMagFreqDist> parentSimPartMFD_FromID_Map = new HashMap<Integer,SummedMagFreqDist>();
@@ -1831,6 +1863,7 @@ public class LongTermTD_Simulator {
 				obsRupRateArray[nthRup] += 1;
 				numSimulatedRups+=1;
 				simMFD.addResampledMagRate(rupMag, 1.0, true);
+				simMFD_tectRegMap.get(tectonicRegimes.get(fltSystRupIndex)).addResampledMagRate(rupMag, 1.0, true);
 				simMoRate += MagUtils.magToMoment(rupMag);
 				
 				// add to parent participation MFDs
@@ -1968,6 +2001,11 @@ public class LongTermTD_Simulator {
 		double moRateRatio = simMoRate/origTotMoRate;
 		infoString2 += "\ntotal MoRate = "+(float)simMoRate+" (ratio="+(float)moRateRatio+")";
 		simMFD.setInfo(infoString2);
+		
+		for(TectonicRegionType trt :simMFD_tectRegMap.keySet()) {
+			simMFD_tectRegMap.get(trt).scale(1.0/numYears);
+			simMFD_tectRegMap.get(trt).setName("Simulated MFD for "+trt);
+		}
 
 //		infoString += "\n\nSimulationStats:\n";
 //		infoString += "totRate\tratio\ttotRateM>=6.7\tratio\ttotMoRate\tratio\twtAveMFD_Ratio\n";
@@ -2031,6 +2069,25 @@ public class LongTermTD_Simulator {
 			maxConfMFD.set(i,simMFD.getY(i)*(1.0+2.0*normStdom));
 		}
 		ProbModelsPlottingUtils.writeMFD_ComprisonPlot(targetMFD, simMFD, minConfMFD, maxConfMFD, plotsDir);
+		
+		// MFDs for tectonic regions
+		for(TectonicRegionType trt :simMFD_tectRegMap.keySet()) {
+			SummedMagFreqDist mfd = simMFD_tectRegMap.get(trt);
+			minConfMFD = new EvenlyDiscretizedFunc(targetMFD.getMinX(),targetMFD.getMaxX(),targetMFD.size());
+			maxConfMFD = new EvenlyDiscretizedFunc(targetMFD.getMinX(),targetMFD.getMaxX(),targetMFD.size());
+			minConfMFD.setName("minConfMFD");
+			minConfMFD.setInfo("95% confidence bound based on stdom");
+			maxConfMFD.setName("maxConfMFD");
+			maxConfMFD.setInfo("95% confidence bound based on stdom");
+			for(int i=0;i<mfd.size();i++) {
+				double numObs = mfd.getY(i)*numYears;
+				double normStdom = 1.0/Math.sqrt(numObs); // assuming Poisson (COV=1)
+				minConfMFD.set(i,mfd.getY(i)*(1.0-2.0*normStdom));
+				maxConfMFD.set(i,mfd.getY(i)*(1.0+2.0*normStdom));
+			}
+			ProbModelsPlottingUtils.writeMFD_ComprisonPlot(targetMFD_tectRegMap.get(trt), mfd, minConfMFD, maxConfMFD, plotsDir, trt);
+		}
+
 
 		// make parent section MFD plots
 		File parSectMFD_PlotsDir = new File(plotsDir, "parentSectionMFD_Plots");

@@ -714,7 +714,7 @@ public class Cascadia_FSS_creator {
 		    System.out.println("ERF versus fss tests passed!!");
 	    }   
 	    
-	    fss.setGridSourceProvider(buildSlabGridSources(nshmModel));
+//	    fss.setGridSourceProvider(buildSlabGridSources(nshmModel));
 
 		return fss;
 	}
