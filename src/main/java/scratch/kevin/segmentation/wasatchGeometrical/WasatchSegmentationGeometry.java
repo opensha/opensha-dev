@@ -116,7 +116,7 @@ public class WasatchSegmentationGeometry {
 				+"Maximum perpendicular deviation: "+geometry.getMaxPerpendicularDeviationDegrees()+" degrees\n"
 				+"Internal subsection boundaries: "+internal+"; bend transitions retained: "+bends+"\n"
 				+"Inter-parent candidate pairs: "+(all.size()-internal)+" (closest trace distance <= 15 km)\n"
-				+"Geometry only: no gap/stepover feature classification, probabilities, or inversion configuration changes.\n"
+				+"Exploratory geometry and probability diagnostics; inversion configuration remains separate.\n"
 				+"Geometry and bends use FaultTrace.getStrikeDirection(); traces must be consistently oriented. Axial differences are included for orientation review.\n"
 				+"CSV/GeoJSON include five connector alternatives per candidate; missing connectors are explicit in CSV.\n"
 				+"Maps: gray=closest trace, orange=closest ends, purple=exact perpendicular, red=overlap stepover, brown dashed=facing ends.\n";
@@ -125,9 +125,11 @@ public class WasatchSegmentationGeometry {
 		description += "GeoJSON contains one trace per subsection with its own properties; pair measurements are attached to connector features.\n";
 		description += "Pair maps show subsection endpoint-strike axes (blue/green dashed), their bisector (cyan dashed), and a right-angle marker.\n";
 		description += "Virginia Street overview and individual pair maps include its internal boundary and all nearby Wasatch subsection pairs within the 15 km candidate cutoff.\n";
-		description += "Gap pair maps decompose the facing-end connector: cyan=along-strike gap, brown dotted=across-strike offset.\n"
+		description += "Probability CSVs and connector GeoJSON properties include both draft coefficient sets.\n"
+				+"Non-overlapping pairs multiply gap and lateral-offset probabilities; qualifying bends multiply all applicable distance terms.\n"
+				+"Gap pair maps decompose the facing-end connector: cyan=along-strike gap, brown dotted=across-strike offset.\n"
 				+"Facing ends are selected by projected position, not nearest map-view distance. Interior projection extrema on folded traces are flagged separately.\n"
-				+"Facing-end gap/offset are measurements; applying gap and/or offset probabilities remains a separate decision.\n";
+				+"Ambiguous between-parent geometry is flagged; it is not assigned a neutral probability.\n";
 		description += "Strike comparison CSV: FaultTrace.getAveStrike() versus getStrikeDirection(); geometry uses getStrikeDirection().\n"
 				+"Maximum absolute difference: "+maxStrikeDifference+" degrees.\n";
 		Files.writeString(new File(outputDir, "README.txt").toPath(), description, StandardCharsets.UTF_8);
@@ -155,6 +157,7 @@ public class WasatchSegmentationGeometry {
 		StringBuilder index = new StringBuilder("# "+prefix.replace('_', ' ')+" diagnostics\n\n");
 		index.append("[Overview](").append(new File(outputDir, prefix+".png").getAbsolutePath()).append(") | ")
 				.append("[Measurements](").append(new File(outputDir, prefix+".csv").getAbsolutePath()).append(") | ")
+				.append("[Probabilities](").append(new File(outputDir, prefix+"_probabilities.csv").getAbsolutePath()).append(") | ")
 				.append("[GeoJSON](").append(new File(outputDir, prefix+".geojson").getAbsolutePath()).append(")\n\n")
 				.append("Subsection IDs refer to the geometry described in README.txt. Nearby pairs use a 15 km closest-trace cutoff.\n\n")
 				.append("| Detailed plot | First subsection | Second subsection | Projected relation |\n")
@@ -177,6 +180,8 @@ public class WasatchSegmentationGeometry {
 			List<Measurements> measurements, boolean showStrikeGuides) throws Exception {
 		if (measurements.isEmpty()) return;
 		FaultTraceSegmentationGeometryDiagnostics.write(new File(outputDir, prefix+".csv"),
+				new File(outputDir, prefix+".geojson"), measurements);
+		WasatchSegmentationProbabilityDiagnostics.write(new File(outputDir, prefix+"_probabilities.csv"),
 				new File(outputDir, prefix+".geojson"), measurements);
 		Set<Integer> usedIDs = new HashSet<>();
 		for (Measurements m : measurements) { usedIDs.add(m.first.sectionID); usedIDs.add(m.second.sectionID); }
