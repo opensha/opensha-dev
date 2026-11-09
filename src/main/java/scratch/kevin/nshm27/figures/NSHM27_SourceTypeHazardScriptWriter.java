@@ -75,9 +75,9 @@ public class NSHM27_SourceTypeHazardScriptWriter {
 			// for Kevin's convenience within eclipse
 			System.err.println("No command line arguments, using hardcoded defaults; use --help to see available options instead.");
 			
-//			NSHM27_SeismicityRegions region = NSHM27_SeismicityRegions.AMSAM;
-			NSHM27_SeismicityRegions region = NSHM27_SeismicityRegions.GNMI;
-			String inputName = "2026_10_24-nshm27-"+region.name()+"-8192samples-sobol_scrambled";
+			NSHM27_SeismicityRegions region = NSHM27_SeismicityRegions.AMSAM;
+//			NSHM27_SeismicityRegions region = NSHM27_SeismicityRegions.GNMI;
+			String inputName = "2026_11_06-nshm27-"+region.name()+"-8192samples-sobol_scrambled";
 			args = new String[] {
 					"--region", region.name(),
 					"--input-dir-name", inputName,
