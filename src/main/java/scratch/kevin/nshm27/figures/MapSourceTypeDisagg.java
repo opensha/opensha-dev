@@ -79,12 +79,15 @@ public class MapSourceTypeDisagg {
 		if (args.length == 0) {
 			// for Kevin's convenience within eclipse
 			System.err.println("No command line arguments, using hardcoded defaults.");
-			NSHM27_SeismicityRegions region = NSHM27_SeismicityRegions.AMSAM;
-//			NSHM27_SeismicityRegions region = NSHM27_SeismicityRegions.GNMI;
-			int[] vs30s = { 760 };
-//			int[] vs30s = { 260, 760 };
-			for (int vs30 : vs30s)
-				plotRegion(region, vs30);
+			NSHM27_SeismicityRegions[] regions = {
+					NSHM27_SeismicityRegions.AMSAM,
+					NSHM27_SeismicityRegions.GNMI,
+			};
+//			int[] vs30s = { 760 };
+			int[] vs30s = { 760, 260 };
+			for (NSHM27_SeismicityRegions region : regions)
+				for (int vs30 : vs30s)
+					plotRegion(region, vs30);
 			return;
 		}
 
@@ -107,7 +110,7 @@ public class MapSourceTypeDisagg {
 		File regionFile = new File(baHazardDir, "gridded_region.geojson");
 		Preconditions.checkState(regionFile.exists(), "Missing gridded region: %s", regionFile.getAbsolutePath());
 		GriddedRegion gridReg = GriddedRegion.fromFeature(Feature.read(regionFile));
-		System.out.println("Plotting "+seisReg+" on "+gridReg.getNodeCount()+" nodes at "
+		System.out.println("Plotting "+seisReg+" with vs30="+vs30+" on "+gridReg.getNodeCount()+" nodes at "
 				+(float)gridReg.getSpacing()+" degree spacing");
 
 		File reportDir = new File(solDir, "hazard_map_disagg_vs"+vs30);
