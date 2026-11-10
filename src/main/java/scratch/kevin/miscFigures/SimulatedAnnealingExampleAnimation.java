@@ -33,6 +33,7 @@ import org.opensha.commons.gui.plot.PlotCurveCharacterstics;
 import org.opensha.commons.gui.plot.PlotLineType;
 import org.opensha.commons.gui.plot.PlotSpec;
 import org.opensha.commons.gui.plot.PlotUtils;
+import org.opensha.commons.util.ColorUtils;
 import org.opensha.sha.earthquake.faultSysSolution.FaultSystemRupSet;
 import org.opensha.sha.earthquake.faultSysSolution.FaultSystemSolution;
 import org.opensha.sha.earthquake.faultSysSolution.RupSetScalingRelationship;
@@ -225,7 +226,7 @@ public class SimulatedAnnealingExampleAnimation {
 	private static Color TARGET_COLOR = Color.GRAY;
 	private static Color SOL_COLOR = Color.BLACK;
 	private static float LINE_THICKNESS = 4f;
-	private static Color UNCERT_COLOR = new Color(Color.CYAN.getRed(), Color.CYAN.getGreen(), Color.CYAN.getBlue(), 100);
+	private static Color UNCERT_COLOR = ColorUtils.transparent(Color.CYAN, 100);
 	private static boolean PLOT_UNCERT = false;
 	
 	private static PlotSpec buildSlipPlot(FaultSystemRupSet rupSet,

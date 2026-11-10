@@ -15,6 +15,7 @@ import java.util.zip.ZipFile;
 import org.jfree.chart.plot.DatasetRenderingOrder;
 import org.jfree.chart.ui.RectangleAnchor;
 import org.jfree.data.Range;
+import org.opensha.commons.util.ColorUtils;
 import org.opensha.commons.data.function.DiscretizedFunc;
 import org.opensha.commons.data.function.EvenlyDiscretizedFunc;
 import org.opensha.commons.data.uncertainty.UncertainArbDiscFunc;
@@ -455,7 +456,7 @@ public class MultiRunSummaryCompare {
 						
 						incrFuncs.add(sigmaIncrBounds);
 						chars.add(new PlotCurveCharacterstics(PlotLineType.SHADED_UNCERTAIN, 1f,
-								new Color(color.getRed(), color.getGreen(), color.getBlue(), 60)));
+								ColorUtils.transparent(color, 60)));
 					}
 				}
 			}

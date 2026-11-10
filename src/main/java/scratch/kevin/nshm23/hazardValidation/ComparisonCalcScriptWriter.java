@@ -61,7 +61,7 @@ public class ComparisonCalcScriptWriter {
 		
 		Map<TectonicRegionType, AttenRelRef> gmpes = new EnumMap<>(TectonicRegionType.class);
 		gmpes.put(TectonicRegionType.ACTIVE_SHALLOW, AttenRelRef.USGS_NSHM23_ACTIVE);
-		gmpes.put(TectonicRegionType.STABLE_SHALLOW, AttenRelRef.USGS_NSHM23_STABLE);
+		gmpes.put(TectonicRegionType.STABLE_SHALLOW, AttenRelRef.USGS_NSHM23_STABLE_R2);
 		
 		extraTokens.add("origNGAW2");
 		gmpes.put(TectonicRegionType.ACTIVE_SHALLOW, AttenRelRef.NGAWest_2014_AVG_NOIDRISS);

@@ -33,8 +33,8 @@ import org.opensha.commons.logicTree.LogicTree;
 import org.opensha.commons.logicTree.LogicTreeBranch;
 import org.opensha.commons.logicTree.LogicTreeLevel;
 import org.opensha.commons.logicTree.LogicTreeLevel.RandomlyGeneratedLevel;
-import org.opensha.commons.logicTree.LogicTreeLevel.SamplingMethod;
 import org.opensha.commons.logicTree.LogicTreeNode.RandomlyGeneratedNode;
+import org.opensha.commons.logicTree.sampling.SamplingMethod;
 import org.opensha.commons.logicTree.LogicTreeNode;
 import org.opensha.commons.util.ClassUtils;
 import org.opensha.sha.earthquake.faultSysSolution.RupSetFaultModel;
@@ -886,8 +886,9 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 			
 			List<List<? extends RandomlyGeneratedNode>> levelNodes = new ArrayList<>();
 			for (RandomlyGeneratedLevel<?> level : individualRandomLevels) {
-				level.build(rand.nextLong(), numBranches);
+//				level.build(rand.nextLong(), numBranches);
 				levelNodes.add(level.getNodes());
+				throw new IllegalStateException("Need to revive if needed");
 			}
 			
 			List<LogicTreeBranch<LogicTreeNode>> modBranches = new ArrayList<>();

@@ -13,6 +13,7 @@ import org.jfree.chart.ui.RectangleAnchor;
 import org.jfree.data.Range;
 import org.apache.commons.statistics.distribution.ContinuousDistribution.Sampler;
 import org.apache.commons.statistics.distribution.NormalDistribution;
+import org.opensha.commons.util.ColorUtils;
 import org.opensha.commons.data.function.ArbitrarilyDiscretizedFunc;
 import org.opensha.commons.data.function.DiscretizedFunc;
 import org.opensha.commons.data.function.EvenlyDiscretizedFunc;
@@ -104,7 +105,7 @@ public class SamplerTest {
 		chars.add(new PlotCurveCharacterstics(PlotLineType.HISTOGRAM, 1f, Color.BLACK));
 		
 		Color corrHistColor = Colors.tab_orange;
-		corrHistColor = new Color(corrHistColor.getRed(), corrHistColor.getGreen(), corrHistColor.getBlue(), 127);
+		corrHistColor = ColorUtils.transparent(corrHistColor, 127);
 		hist2.setName("Corrected Rejection Sampler");
 		funcs.add(hist2);
 		chars.add(new PlotCurveCharacterstics(PlotLineType.HISTOGRAM, 1f, corrHistColor));

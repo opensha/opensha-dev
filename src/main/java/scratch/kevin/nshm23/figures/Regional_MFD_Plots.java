@@ -24,6 +24,7 @@ import java.util.concurrent.Future;
 
 import org.jfree.chart.ui.RectangleAnchor;
 import org.jfree.data.Range;
+import org.opensha.commons.util.ColorUtils;
 import org.opensha.commons.data.CSVFile;
 import org.opensha.commons.data.function.EvenlyDiscretizedFunc;
 import org.opensha.commons.data.function.XY_DataSet;
@@ -399,7 +400,7 @@ class Regional_MFD_Plots {
 			
 			incrFuncs.add(dataForBounds);
 			incrChars.add(new PlotCurveCharacterstics(PlotLineType.SHADED_UNCERTAIN, 1f,
-					new Color(obsColor.getRed(), obsColor.getGreen(), obsColor.getBlue(), 60)));
+					ColorUtils.transparent(obsColor, 60)));
 			
 			EvenlyDiscretizedFunc upperCumulative = getCmlAsFakeIncr(dataBounds.getUpper());
 			EvenlyDiscretizedFunc lowerCumulative = getCmlAsFakeIncr(dataBounds.getLower());
@@ -413,7 +414,7 @@ class Regional_MFD_Plots {
 			cmlBounded.setName(dataBounds.getBoundName());
 			cmlFuncs.add(cmlBounded);
 			cmlChars.add(new PlotCurveCharacterstics(PlotLineType.SHADED_UNCERTAIN, 1f,
-					new Color(obsColor.getRed(), obsColor.getGreen(), obsColor.getBlue(), 60)));
+					ColorUtils.transparent(obsColor, 60)));
 		}
 		
 		Preconditions.checkState(incrFuncs.size() == cmlFuncs.size());

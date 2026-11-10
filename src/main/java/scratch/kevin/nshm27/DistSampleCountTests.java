@@ -5,6 +5,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Random;
 
 import org.apache.commons.statistics.distribution.ContinuousDistribution;
 import org.apache.commons.statistics.distribution.TruncatedNormalDistribution;
@@ -46,12 +47,16 @@ public class DistSampleCountTests {
 //		ContinuousDistribution dist = UniformContinuousDistribution.of(1000d, 1500d);
 //		int precisionScale = 2;
 		
-		int samples = 10000;
+		int numSamples = 10000;
 		
 		ContinuousDistributionSampledLevel level = new ContinuousDistributionSampledLevel(
 				"Test level", "Level", dist, precisionScale, "Node ", "Node", "Node");
 		
-		level.build(123456789l, samples);
+		double[] samples = new double[numSamples];
+		Random r = new Random(123456789l);
+		for (int i=0; i<numSamples; i++)
+			samples[i] = r.nextDouble();
+		level.build(samples);
 				
 		MinMaxAveTracker track = new MinMaxAveTracker();
 		for (SimpleValuedNode<Double> node : level.getNodes())
@@ -66,7 +71,7 @@ public class DistSampleCountTests {
 		for (SimpleValuedNode<Double> node : level.getNodes())
 			hist.add(hist.getClosestXIndex(node.getValue()), 1d);
 		
-		hist.scale(1d/(samples*hist.getDelta()));
+		hist.scale(1d/(numSamples*hist.getDelta()));
 		
 		EvenlyDiscretizedFunc pdfDensity = new EvenlyDiscretizedFunc(track.getMin()-0.5*delta, track.getMax()+0.5*delta, 1000);
 		

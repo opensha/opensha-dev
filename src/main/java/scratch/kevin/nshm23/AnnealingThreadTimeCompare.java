@@ -16,6 +16,7 @@ import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 
 import org.jfree.data.Range;
+import org.opensha.commons.util.ColorUtils;
 import org.opensha.commons.data.CSVFile;
 import org.opensha.commons.data.function.ArbitrarilyDiscretizedFunc;
 import org.opensha.commons.data.function.DiscretizedFunc;
@@ -221,7 +222,7 @@ public class AnnealingThreadTimeCompare {
 							func.setName("Sub="+oDF.format(subVal));
 							
 							Color color = subDeltaColors.get(subVal);
-							color = new Color(color.getRed(), color.getGreen(), color.getBlue());
+							color = ColorUtils.transparent(color, 255);
 							
 							subFuncs.add(func);
 							subChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 3f, color));
@@ -239,7 +240,7 @@ public class AnnealingThreadTimeCompare {
 							func.setName("Avg="+oDF.format(avgVal));
 							
 							Color color = avgDeltaColors.get(avgVal);
-							color = new Color(color.getRed(), color.getGreen(), color.getBlue());
+							color = ColorUtils.transparent(color, 255);
 							
 							avgFuncs.add(func);
 							avgChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 3f, color));
@@ -390,7 +391,7 @@ public class AnnealingThreadTimeCompare {
 		Map<Double, Color> ret = new HashMap<>();
 		for (int i=0; i<vals.size(); i++) {
 			Color color = rainbow.getColor((float)i);
-			color = new Color(color.getRed(), color.getGreen(), color.getBlue(), 127);
+			color = ColorUtils.transparent(color, 127);
 			ret.put(vals.get(i), color);
 		}
 		return ret;

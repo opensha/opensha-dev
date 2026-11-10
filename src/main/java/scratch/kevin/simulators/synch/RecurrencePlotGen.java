@@ -39,6 +39,7 @@ import org.opensha.commons.gui.plot.PlotUtils;
 import org.opensha.commons.gui.plot.jfreechart.xyzPlot.XYZPlotSpec;
 import org.opensha.commons.mapping.gmt.elements.GMT_CPT_Files;
 import org.opensha.commons.util.ComparablePairing;
+import org.opensha.commons.util.ColorUtils;
 import org.opensha.commons.util.DataUtils.MinMaxAveTracker;
 import org.opensha.commons.util.FileUtils;
 import org.opensha.commons.util.cpt.CPT;
@@ -306,8 +307,8 @@ public class RecurrencePlotGen {
 		
 		// saturate
 		for (CPTVal v : cpt) {
-			v.minColor = saturate(v.minColor);
-			v.maxColor = saturate(v.maxColor);
+			v.minColor = ColorUtils.saturate(v.minColor, 2);
+			v.maxColor = ColorUtils.saturate(v.maxColor, 2);
 		}
 		cpt.setAboveMaxColor(cpt.getMaxColor());
 		
@@ -321,22 +322,6 @@ public class RecurrencePlotGen {
 		cpt.add(0, new CPTVal(0f, Color.BLACK, (float)threshold, Color.BLACK));
 		
 		return cpt;
-	}
-	
-	private static Color saturate(Color c) {
-		int r = c.getRed();
-		int g = c.getGreen();
-		int b = c.getBlue();
-		
-		int saturationSteps = 2;
-		
-		for (int i=0; i<saturationSteps; i++) {
-			r = (int)(0.5d*(r + 255d)+0.5);
-			g = (int)(0.5d*(g + 255d)+0.5);
-			b = (int)(0.5d*(b + 255d)+0.5);
-		}
-		
-		return new Color(r, g, b);
 	}
 	
 	private static boolean plot_rotated_preserve_min = true;

@@ -17,6 +17,7 @@ import org.opensha.commons.logicTree.LogicTreeNode;
 import org.opensha.commons.logicTree.LogicTreeNode.RandomlyGeneratedNode;
 import org.opensha.commons.logicTree.LogicTreeNode.SimpleValuedNode;
 import org.opensha.commons.logicTree.LogicTreeNode.ValuedLogicTreeNode;
+import org.opensha.commons.logicTree.sampling.SamplingMethod;
 import org.opensha.commons.util.DataUtils.MinMaxAveTracker;
 
 import com.google.common.base.Preconditions;
@@ -27,9 +28,14 @@ public class UpdatedRandTreeSerialzationTests {
 		List<LogicTree<LogicTreeNode>> inTrees = new ArrayList<>();
 		
 		inTrees.add(LogicTree.read(new File("/home/kevin/OpenSHA/nshm23/batch_inversions/2025_01_17-prvi25_crustal_branches-dmSample10x/logic_tree.json")));
+		
+		double[] samples = new double[1000];
+		Random r = new Random(12345l);
+		for (int i=0; i<samples.length; i++)
+			samples[i] = r.nextDouble();
 
 		TestValuedLevel testValLevel = new TestValuedLevel();
-		testValLevel.build(12345l, 1000);
+		testValLevel.build(samples);
 		inTrees.add(LogicTree.buildExhaustive(List.of(testValLevel), true));
 		
 		ContinuousDistribution dist = TruncatedNormalDistribution.of(1d, 0.1, 0.7, 1.3);
@@ -42,7 +48,7 @@ public class UpdatedRandTreeSerialzationTests {
 		System.out.println("Dist mean: "+dist.getMean());
 		System.out.println("Dist bounds: "+dist.getSupportLowerBound()+", "+dist.getSupportUpperBound());
 		TestDistLevel testDistLevel = new TestDistLevel(dist);
-		testDistLevel.build(12345l, 1000);
+		testDistLevel.build(samples);
 		inTrees.add(LogicTree.buildExhaustive(List.of(testDistLevel), true));
 		
 		LogicTree<?> lastTree = inTrees.get(inTrees.size()-1);
@@ -118,14 +124,13 @@ public class UpdatedRandTreeSerialzationTests {
 		}
 
 		@Override
-		protected void doBuild(long seed, int numNodes, SamplingMethod samplingMethod, double weightEach) {
-			Random rand = new Random(seed);
-			super.build(()->rand.nextDouble(), numNodes, weightEach);
+		public Class<? extends Double> getValueType() {
+			return Double.class;
 		}
 
 		@Override
-		public Class<? extends Double> getValueType() {
-			return Double.class;
+		protected void doBuild(double[] unitSamples, double weightEach) {
+			super.build(unitSamples, D->D, weightEach);
 		}
 		
 	}

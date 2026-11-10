@@ -18,6 +18,7 @@ import org.jfree.chart.plot.DatasetRenderingOrder;
 import org.jfree.chart.ui.RectangleAnchor;
 import org.jfree.chart.ui.TextAnchor;
 import org.jfree.data.Range;
+import org.opensha.commons.util.ColorUtils;
 import org.opensha.commons.data.Site;
 import org.opensha.commons.data.WeightedList;
 import org.opensha.commons.data.WeightedValue;
@@ -566,7 +567,7 @@ public class DippingFaultTests {
 						name = "Finite";
 //						histColor = Colors.tab_lightorange;
 						lineColor = Colors.tab_orange;
-						histColor = new Color(lineColor.getRed(), lineColor.getGreen(), lineColor.getBlue(), 127);
+						histColor = ColorUtils.transparent(lineColor, 127);
 						scatterColorHW = Colors.tab_orange;
 						scatterColorFW = Colors.tab_lightorange;
 						scatterSymbol = PlotSymbol.BOLD_CROSS;
@@ -576,7 +577,7 @@ public class DippingFaultTests {
 						name = "Point Sources";
 //						histColor = Colors.tab_lightblue;
 						lineColor = Colors.tab_blue;
-						histColor = new Color(lineColor.getRed(), lineColor.getGreen(), lineColor.getBlue(), 127);
+						histColor = ColorUtils.transparent(lineColor, 127);
 						scatterColorHW = Colors.tab_blue;
 						scatterColorFW = Colors.tab_lightblue;
 						scatterSymbol = PlotSymbol.BOLD_X;

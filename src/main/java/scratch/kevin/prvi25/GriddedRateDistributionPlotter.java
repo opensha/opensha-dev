@@ -15,6 +15,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.jfree.chart.ui.RectangleAnchor;
 import org.jfree.data.Range;
+import org.opensha.commons.util.ColorUtils;
 import org.opensha.commons.data.function.ArbDiscrEmpiricalDistFunc;
 import org.opensha.commons.data.function.DiscretizedFunc;
 import org.opensha.commons.data.function.EvenlyDiscretizedFunc;
@@ -82,8 +83,8 @@ public class GriddedRateDistributionPlotter {
 		int transAlpha = 60;
 		Color randColor = Colors.tab_orange;
 		Color threeBranchColor = Colors.tab_blue;
-		Color randAlphaColor = new Color(randColor.getRed(), randColor.getGreen(), randColor.getBlue(), transAlpha);
-		Color threeBranchAlphaColor = new Color(threeBranchColor.getRed(), threeBranchColor.getGreen(), threeBranchColor.getBlue(), transAlpha);
+		Color randAlphaColor = ColorUtils.transparent(randColor, transAlpha);
+		Color threeBranchAlphaColor = ColorUtils.transparent(threeBranchColor, transAlpha);
 		Color indvColor = new Color(0, 0, 0, 20);
 		PlotCurveCharacterstics indvChar = new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, indvColor);
 		

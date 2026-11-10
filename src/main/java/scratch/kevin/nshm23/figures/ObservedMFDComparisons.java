@@ -9,6 +9,7 @@ import java.util.List;
 
 import org.jfree.chart.ui.RectangleAnchor;
 import org.jfree.data.Range;
+import org.opensha.commons.util.ColorUtils;
 import org.opensha.commons.data.CSVFile;
 import org.opensha.commons.data.function.DiscretizedFunc;
 import org.opensha.commons.data.function.EvenlyDiscretizedFunc;
@@ -126,7 +127,7 @@ public class ObservedMFDComparisons {
 		String topLink = "*[(top)](#table-of-contents)*";
 		
 		Color estColor = new Color(125, 80, 145); // "indigo"
-		Color estTransColor = new Color(estColor.getRed(), estColor.getGreen(), estColor.getBlue(), 60);
+		Color estTransColor = ColorUtils.transparent(estColor, 60);
 		
 		List<LogicTreeLevel<?>> levels = new ArrayList<>();
 		levels.add(null);

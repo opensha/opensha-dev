@@ -10,6 +10,7 @@ import java.util.Random;
 import org.jfree.chart.ui.RectangleAnchor;
 import org.jfree.chart.ui.RectangleEdge;
 import org.jfree.data.Range;
+import org.opensha.commons.util.ColorUtils;
 import org.opensha.commons.data.function.ArbDiscrEmpiricalDistFunc;
 import org.opensha.commons.data.function.ArbitrarilyDiscretizedFunc;
 import org.opensha.commons.data.function.DiscretizedFunc;
@@ -159,7 +160,7 @@ public class DefModelSampleLineIntegralsPlot {
 //				Color distColor = Colors.tab_red;
 				Color distColor = Colors.tab_grey;
 				Color origColor = Colors.tab_green;
-				Color transColor = new Color(distColor.getRed(), distColor.getGreen(), distColor.getBlue(), 60);
+				Color transColor = ColorUtils.transparent(distColor, 60);
 				PlotCurveCharacterstics minMaxChar = new PlotCurveCharacterstics(PlotLineType.SHADED_UNCERTAIN, 1f, transColor);
 				
 				funcs.add(bounds);

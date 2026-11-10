@@ -9,6 +9,7 @@ import java.util.List;
 
 import org.jfree.chart.plot.DatasetRenderingOrder;
 import org.jfree.data.Range;
+import org.opensha.commons.util.ColorUtils;
 import org.opensha.commons.data.CSVFile;
 import org.opensha.commons.data.function.ArbDiscrEmpiricalDistFunc;
 import org.opensha.commons.data.function.DiscretizedFunc;
@@ -98,7 +99,7 @@ public class MagExceedProbFigure {
 			double duration = durations[d];
 			Color color = colors[d];
 			
-			Color transColor = new Color(color.getRed(), color.getGreen(), color.getBlue(), 40);
+			Color transColor = ColorUtils.transparent(color, 40);
 			
 			EvenlyDiscretizedFunc mean = new EvenlyDiscretizedFunc(refCmlFunc.getMinX(), refCmlFunc.size(), refCmlFunc.getDelta());
 			EvenlyDiscretizedFunc median = new EvenlyDiscretizedFunc(refCmlFunc.getMinX(), refCmlFunc.size(), refCmlFunc.getDelta());

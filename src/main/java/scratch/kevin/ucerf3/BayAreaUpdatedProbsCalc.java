@@ -6,6 +6,7 @@ import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.BitSet;
 import java.util.Collections;
+import java.util.GregorianCalendar;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -30,34 +31,36 @@ import org.opensha.sha.faultSurface.FaultSection;
 
 import com.google.common.base.Preconditions;
 
+import cern.colt.Arrays;
 import scratch.UCERF3.analysis.FaultSysSolutionERF_Calc;
 import scratch.UCERF3.erf.FaultSystemSolutionERF;
 import scratch.UCERF3.erf.mean.MeanUCERF3;
 import scratch.UCERF3.erf.mean.MeanUCERF3.Presets;
+import scratch.UCERF3.erf.utils.ProbabilityModelsCalc;
 
 public class BayAreaUpdatedProbsCalc {
 	
 	static Map<String, List<Integer>> loadFaultParentSectMappings() {
 		Map<String, List<Integer>> map = new HashMap<>();
 		
-//		map.put("San Andreas", List.of(654, 655, 657, 658));
-//		map.put("Hayward-Rodgers Creek", List.of(637, 638, 639, 651));
-//		map.put("Calaveras", List.of(601, 602, 603, 621));
-//		map.put("Concord", List.of(635, 636, 711, 713, 2, 622, 623, 640, 677));
-//		map.put("San Gregorio", List.of(660, 661));
-//		map.put("Maacama", List.of(644));
+		map.put("San Andreas", List.of(654, 655, 657, 658));
+		map.put("Hayward-Rodgers Creek", List.of(637, 638, 639, 651));
+		map.put("Calaveras", List.of(601, 602, 603, 621));
+		map.put("Concord", List.of(635, 636, 711, 713, 2, 622, 623, 640, 677));
+		map.put("San Gregorio", List.of(660, 661));
+		map.put("Maacama", List.of(644));
 		// these aren't bay area, but from Ruth's 8/15/24 e-mail
-		map.put("SAF Creeping", List.of(658));
-		map.put("SAF Parkfield", List.of(32));
-		map.put("Imperial", List.of(97));
-		map.put("Superstition Hills", List.of(98));
-		map.put("S. SAF", List.of(285, 300, 287, 286, 301, 282, 283, 284, 295));
+//		map.put("SAF Creeping", List.of(658));
+//		map.put("SAF Parkfield", List.of(32));
+//		map.put("Imperial", List.of(97));
+//		map.put("Superstition Hills", List.of(98));
+//		map.put("S. SAF", List.of(285, 300, 287, 286, 301, 282, 283, 284, 295));
 		
 		return map;
 	}
 
 	public static void main(String[] args) throws IOException {
-		int year = 2024;
+		int year = 2026;
 //		int year = 2014;
 		int duration = 30;
 		
@@ -74,10 +77,12 @@ public class BayAreaUpdatedProbsCalc {
 		MeanUCERF3 erf = new MeanUCERF3();
 		erf.setPreset(presets[0]);
 		
-//		String regName = "Bay Area Region";
-//		Region reg = new CaliforniaRegions.SF_BOX();
-		String regName = null;
-		Region reg = null;
+		String regName = "Bay Area Region";
+		Region reg = new CaliforniaRegions.SF_BOX();
+		boolean clipFaultsToReg = true;
+//		String regName = null;
+//		Region reg = null;
+//		boolean clipFaultsToReg = false;
 		Map<String, List<Integer>> faultIDs = loadFaultParentSectMappings();
 		
 		List<String> faultsSorted = new ArrayList<>();
@@ -87,12 +92,18 @@ public class BayAreaUpdatedProbsCalc {
 		Map<String, double[]> faultProbs = new HashMap<>();
 		for (String faultName : faultsSorted)
 			faultProbs.put(faultName, new double[minMags.length]);
-		double[] regProbs = reg == null ? new double[minMags.length] : null;
+		double[] regProbs = reg == null ? null : new double[minMags.length];
 		
 		DecimalFormat pDF = new DecimalFormat("0.00%");
 		
 		MagDependentAperiodicityOptions[] covs = {MagDependentAperiodicityOptions.HIGH_VALUES,
 				MagDependentAperiodicityOptions.MID_VALUES, MagDependentAperiodicityOptions.LOW_VALUES, null};
+		
+		Map<String, double[]> faultRIs = new HashMap<>();
+		Map<String, Map<Long, Integer>> faultDateLasts = new HashMap<>();
+		Map<String, int[]> faultYears = new HashMap<>();
+		for (String faultName : faultsSorted)
+			faultRIs.put(faultName, new double[presets.length]);
 		
 		for (int p=0; p<presets.length; p++) {
 			erf.setPreset(presets[p]);
@@ -118,10 +129,45 @@ public class BayAreaUpdatedProbsCalc {
 				FaultSystemSolution sol = erf.getSolution();
 				FaultSystemRupSet rupSet = sol.getRupSet();
 				
+				if (c == 0) {
+					for (String faultName : faultsSorted) {
+						HashSet<Integer> parents = new HashSet<>(faultIDs.get(faultName));
+						double sumRIs = 0d;
+						int numSects = 0;
+						Map<Long, Integer> dateLasts = new HashMap<>();
+						for (int s=0; s<rupSet.getNumSections(); s++) {
+							FaultSection sect = rupSet.getFaultSectionData(s);
+							if (parents.contains(sect.getParentSectionId())) {
+								double ri = 1d / sol.calcTotParticRateForSect(s);
+								sumRIs += ri;
+								numSects++;
+								long dateLast = sect.getDateOfLastEvent();
+								if (dateLast > Long.MIN_VALUE) {
+									if (dateLasts.containsKey(dateLast))
+										dateLasts.put(dateLast, dateLasts.get(dateLast)+1);
+									else
+										dateLasts.put(dateLast, 1);
+								}
+							}
+						}
+						double avgRI = sumRIs/numSects;
+						faultRIs.get(faultName)[p] = avgRI;
+						if (!dateLasts.isEmpty())
+							faultDateLasts.put(faultName, dateLasts);
+					}
+				}
+				
 				// make sure all faults exist
 				HashSet<Integer> parentIDs = new HashSet<>();
-				for (FaultSection sect : rupSet.getFaultSectionDataList())
-					parentIDs.add(sect.getParentSectionId());
+				Map<Integer, List<Integer>> parentSubSectIDs = new HashMap<>();
+				// Match the legacy fact sheet: keep ruptures that touch a subsection with a trace point in the region.
+				for (FaultSection sect : rupSet.getFaultSectionDataList()) {
+					if (!clipFaultsToReg || reg == null || sect.getFaultTrace().stream().anyMatch(reg::contains)) {
+						parentIDs.add(sect.getParentSectionId());
+						parentSubSectIDs.computeIfAbsent(sect.getParentSectionId(), k -> new ArrayList<>())
+								.add(sect.getSectionId());
+					}
+				}
 				
 				List<BitSet> faultRupMappings = new ArrayList<>();
 				
@@ -142,10 +188,12 @@ public class BayAreaUpdatedProbsCalc {
 					faultRupProbs.add(myFaultProbs);
 					for (int parentID : faultIDs.get(faultName)) {
 						if (parentIDs.contains(parentID)) {
-							for (int rupIndex : rupSet.getRupturesForParentSection(parentID))
+							for (int subSectID : parentSubSectIDs.get(parentID))
+								for (int rupIndex : rupSet.getRupturesForSection(subSectID))
 								rupMappings.set(rupIndex);
 						} else {
-							System.err.println("WARNING: "+faultName+" parent "+parentID+" doesn't exist for "+presets[p]);
+							System.err.println("WARNING: "+faultName+" parent "+parentID
+									+" doesn't exist or has no subsections in the region for "+presets[p]);
 						}
 					}
 				}
@@ -241,6 +289,74 @@ public class BayAreaUpdatedProbsCalc {
 		}
 		
 		csv.writeToFile(new File(outputDir, "probs_"+year+"_"+duration+"yr.csv"));
+		
+		csv = new CSVFile<>(false);
+		
+		header = new ArrayList<>();
+		header.add("");
+		header.add("Avg. RI (yrs)");
+		header.add("Avg. Time-Since-Last (yrs)");
+		header.add("Avg. Date of Last (yr)");
+		header.add("DOLE 1");
+		header.add("DOLE 1 Count");
+		header.add("...");
+		header.add("...");
+		header.add("DOLE N");
+		header.add("DOLE N Count");
+		csv.addLine(header);
+		
+		DecimalFormat yearDF = new DecimalFormat("0.0");
+		
+		// fault RIs and NTs
+		GregorianCalendar cal = new GregorianCalendar();
+		cal.clear();
+		cal.set(GregorianCalendar.YEAR, year);
+		long startMillis = cal.getTimeInMillis();
+		System.out.println("Start millis: "+startMillis);
+		
+		for (String faultName : faultsSorted) {
+			List<String> line = new ArrayList<>();
+			line.add(faultName);
+			double[] ris = faultRIs.get(faultName);
+			double avgRI = StatUtils.mean(ris);
+			System.out.println(faultName+" RIs:\t"+Arrays.toString(ris)+" = "+(float)avgRI);
+			line.add(yearDF.format(avgRI));
+			
+			Map<Long, Integer> dateLasts = faultDateLasts.get(faultName);
+			if (dateLasts == null) {
+				line.add("N/A");
+				line.add("N/A");
+			} else {
+				double sumTS = 0d;
+				double sumYRs = 0d;
+				int count = 0;
+				List<Integer> years = new ArrayList<>();
+				List<Integer> yearCounts = new ArrayList<>();
+				for (long dateLast : dateLasts.keySet()) {
+					long millisSince = startMillis - dateLast;
+					double timeSince = (double)millisSince / ProbabilityModelsCalc.MILLISEC_PER_YEAR;
+					int myCount = dateLasts.get(dateLast);
+					sumTS += timeSince*myCount;
+					count += myCount;
+					GregorianCalendar cal2 = new GregorianCalendar();
+					cal2.clear();
+					cal2.setTimeInMillis(dateLast);
+					int myYear = cal2.get(GregorianCalendar.YEAR)+1;
+					years.add(myYear);
+					yearCounts.add(myCount);
+					sumYRs += myYear*myCount;
+				}
+				line.add(yearDF.format(sumTS/count));
+				line.add(yearDF.format(sumYRs/count));
+				for (int y=0; y<years.size(); y++) {
+					line.add(years.get(y)+"");
+					line.add(yearCounts.get(y)+"");
+				}
+			}
+			csv.addLine(line);
+		}
+		
+		csv.writeToFile(new File(outputDir, "ris_"+year+".csv"));
 	}
 
 }

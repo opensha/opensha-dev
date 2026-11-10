@@ -24,6 +24,7 @@ import org.opensha.commons.gui.plot.PlotSpec;
 import org.opensha.commons.gui.plot.PlotSymbol;
 import org.opensha.commons.gui.plot.PlotUtils;
 import org.opensha.commons.mapping.PoliticalBoundariesData;
+import org.opensha.commons.util.ColorUtils;
 import org.opensha.commons.util.FaultUtils;
 import org.opensha.commons.util.Interpolate;
 import org.opensha.commons.util.cpt.CPT;
@@ -221,7 +222,7 @@ public class SCECStatewide {
 								color = Color.WHITE;
 							} else {
 								weight = (dist-minSaturateDist)/(maxPlotDist-minSaturateDist);
-								color = blend(Color.WHITE, color, weight);
+								color = ColorUtils.blend(color, Color.WHITE, weight);
 							}
 //							Preconditions.checkState(weight >= 0d && weight <= 1d, "Bad weight: %s", weight);
 //							color = new Color(color.getRed(), color.getGreen(), color.getBlue(), (int)(255d*weight));
@@ -229,7 +230,7 @@ public class SCECStatewide {
 //						int alpha = cpt.getColor((float)distScalar).getAlpha();
 ////						color = new Color(color.getRed(), color.getGreen(), color.getBlue(), alpha);
 //						double weight = (double)alpha
-//						color = blend(scecRed, color, alpha)
+//						color = ColorUtils.blend(color, scecRed, alpha)
 					}
 					chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, (float)thickness, color));
 				}
@@ -325,11 +326,4 @@ public class SCECStatewide {
 		PlotUtils.writePlots(outputDir, prefix, gp, 1200, true, true, true, false);
 	}
 	
-	private static Color blend(Color c1, Color c2, double weight) {
-		float r = (float)((weight*c1.getRed() + (1d-weight)*c2.getRed())/255d);
-		float g = (float)((weight*c1.getGreen() + (1d-weight)*c2.getGreen())/255d);
-		float b = (float)((weight*c1.getBlue() + (1d-weight)*c2.getBlue())/255d);
-		return new Color(r, g, b);
-	}
-
 }

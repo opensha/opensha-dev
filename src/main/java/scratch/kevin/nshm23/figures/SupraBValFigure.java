@@ -11,6 +11,7 @@ import java.util.List;
 import org.jfree.chart.annotations.XYTextAnnotation;
 import org.jfree.chart.ui.TextAnchor;
 import org.jfree.data.Range;
+import org.opensha.commons.util.ColorUtils;
 import org.opensha.commons.calc.FaultMomentCalc;
 import org.opensha.commons.data.function.ArbitrarilyDiscretizedFunc;
 import org.opensha.commons.data.function.DefaultXY_DataSet;
@@ -230,10 +231,10 @@ class SupraBValFigure {
 		grPlusCharXY2.set(transBCrossover, totRateGR2);
 		funcs.add(grPlusCharXY1);
 		chars.add(new PlotCurveCharacterstics(PlotLineType.DOTTED, 2f,
-				new Color(darkGreen.getRed(), darkGreen.getGreen(), darkGreen.getBlue(), 120)));
+				ColorUtils.transparent(darkGreen, 120)));
 		funcs.add(grPlusCharXY2);
 		chars.add(new PlotCurveCharacterstics(PlotLineType.DOTTED, 2f,
-				new Color(brightGreen.getRed(), brightGreen.getGreen(), brightGreen.getBlue(), 120)));
+				ColorUtils.transparent(brightGreen, 120)));
 		DefaultXY_DataSet grDot1 = new DefaultXY_DataSet();
 		grDot1.set(grB1, totRateGR1);
 		DefaultXY_DataSet grDot2 = new DefaultXY_DataSet();

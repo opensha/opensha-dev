@@ -24,6 +24,7 @@ import org.opensha.commons.gui.plot.PlotLineType;
 import org.opensha.commons.gui.plot.PlotSpec;
 import org.opensha.commons.gui.plot.PlotUtils;
 import org.opensha.commons.mapping.gmt.elements.GMT_CPT_Files;
+import org.opensha.commons.util.ColorUtils;
 import org.opensha.commons.util.cpt.CPT;
 import org.opensha.sha.earthquake.ProbEqkRupture;
 import org.opensha.sha.earthquake.ProbEqkSource;
@@ -146,7 +147,7 @@ public class InvCDF_RJBTableWriter {
 						highlightFuncs.add(dist);
 						highlightChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 5f, color));
 					} else {
-						color = new Color((255+color.getRed())/2, (255+color.getGreen())/2, (255+color.getBlue())/2);
+						color = ColorUtils.saturate(color, 1);
 						funcs.add(dist);
 						chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1.5f, color));
 					}

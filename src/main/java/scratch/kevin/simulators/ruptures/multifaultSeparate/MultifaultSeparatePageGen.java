@@ -16,6 +16,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
 import org.jfree.data.Range;
+import org.opensha.commons.util.ColorUtils;
 import org.opensha.commons.data.CSVFile;
 import org.opensha.commons.data.Site;
 import org.opensha.commons.data.function.DefaultXY_DataSet;
@@ -516,7 +517,7 @@ public class MultifaultSeparatePageGen {
 		
 		String title = Double.isFinite(period) ? oDF.format(period)+"s SA" : "All Periods";
 
-		color = new Color(color.getRed(), color.getGreen(), color.getBlue(), 80);
+		color = ColorUtils.transparent(color, 80);
 		
 		for (boolean log : new boolean[] {false, true}) {
 			Range range;

@@ -14,6 +14,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
 import org.jfree.data.Range;
+import org.opensha.commons.util.ColorUtils;
 import org.opensha.commons.data.CSVFile;
 import org.opensha.commons.data.function.ArbDiscrEmpiricalDistFunc;
 import org.opensha.commons.data.function.ArbitrarilyDiscretizedFunc;
@@ -223,7 +224,7 @@ public class LogicTreeLineIntegralCalc {
 		
 		Color distColor = Colors.tab_grey;
 		Color meanColor = Color.BLACK;
-		Color transColor = new Color(distColor.getRed(), distColor.getGreen(), distColor.getBlue(), 60);
+		Color transColor = ColorUtils.transparent(distColor, 60);
 		PlotCurveCharacterstics minMaxChar = new PlotCurveCharacterstics(PlotLineType.SHADED_UNCERTAIN, 1f, transColor);
 		
 		funcs.add(bounds);

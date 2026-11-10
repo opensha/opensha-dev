@@ -16,6 +16,7 @@ import org.jfree.chart.annotations.XYLineAnnotation;
 import org.jfree.chart.annotations.XYTextAnnotation;
 import org.jfree.chart.ui.TextAnchor;
 import org.jfree.data.Range;
+import org.opensha.commons.util.ColorUtils;
 import org.opensha.commons.data.function.ArbitrarilyDiscretizedFunc;
 import org.opensha.commons.data.function.DefaultXY_DataSet;
 import org.opensha.commons.data.function.XY_DataSet;
@@ -145,7 +146,7 @@ public class WestCacheConnectivityFigures {
 		List<PlotCurveCharacterstics> chars = new ArrayList<>();
 		
 		Color grColor = Color.CYAN;
-		grColor = new Color(grColor.getRed(), grColor.getGreen(), grColor.getBlue(), 100);
+		grColor = ColorUtils.transparent(grColor, 100);
 		IncrementalMagFreqDist redistBins = new IncrementalMagFreqDist(pureGR.getMinX(), pureGR.size(), pureGR.getDelta());
 		for (int i=0; i<pureGR.size(); i++)
 			if (unadjustedMFD.getY(i) == 0d)
