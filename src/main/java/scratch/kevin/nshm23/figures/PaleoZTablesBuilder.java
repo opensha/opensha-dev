@@ -21,7 +21,7 @@ import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_Single
 import scratch.UCERF3.utils.aveSlip.U3AveSlipConstraint;
 import scratch.UCERF3.utils.aveSlip.U3AveSlipConstraint.U3AveSlipProbModel;
 
-class PaleoZTablesBuilder {
+public class PaleoZTablesBuilder {
 
 	public static void main(String[] args) throws IOException {
 		File u3SolFile = new File("/home/kevin/OpenSHA/UCERF3/rup_sets/modular/FM3_1_branch_averaged_full_modules.zip");
@@ -107,7 +107,7 @@ class PaleoZTablesBuilder {
 		csv.writeToFile(new File(outputDir, "paleo_slip_z_scores.csv"));
 	}
 	
-	private static double avgZScore(FaultSystemSolution sol, boolean abs, Region region) {
+	public static double avgZScore(FaultSystemSolution sol, boolean abs, Region region) {
 		PaleoseismicConstraintData data = sol.getRupSet().requireModule(PaleoseismicConstraintData.class);
 		
 		List<? extends SectMappedUncertainDataConstraint> origConstraints = data.getPaleoRateConstraints();

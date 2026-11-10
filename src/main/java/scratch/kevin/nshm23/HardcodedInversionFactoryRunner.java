@@ -27,6 +27,7 @@ import org.opensha.sha.earthquake.faultSysSolution.inversion.constraints.impl.Se
 import org.opensha.sha.earthquake.faultSysSolution.inversion.constraints.impl.SlipRateInversionConstraint;
 import org.opensha.sha.earthquake.faultSysSolution.modules.GridSourceProvider;
 import org.opensha.sha.earthquake.faultSysSolution.modules.InversionTargetMFDs;
+import org.opensha.sha.earthquake.faultSysSolution.modules.PosteriorSectionBValueDistributions;
 import org.opensha.sha.earthquake.faultSysSolution.reports.ReportPageGen;
 import org.opensha.sha.earthquake.faultSysSolution.reports.ReportPageGen.PlotLevel;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.NSHM23_ConstraintBuilder;
@@ -43,6 +44,7 @@ import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_Single
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_U3_HybridLogicTreeBranch;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.RupturePlausibilityModels;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.SectionSupraSeisBValues;
+import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.SectionSupraSeisBValues.DistributionAverageLevel;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.SegmentationModelBranchNode;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.SupraSeisBValues;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.U3_UncertAddDeformationModels;
@@ -140,8 +142,8 @@ public class HardcodedInversionFactoryRunner {
 //		dirName += "-nshm23-full_sys-prev_weights";
 //		NSHM23_PaleoDataLoader.INCLUDE_U3_PALEO_SLIP = false;
 //		dirName += "-no_paleo_slip";
-//		NSHM23_InvConfigFactory factory = new NSHM23_InvConfigFactory();
-//		dirName += "-nshm23";
+		NSHM23_InvConfigFactory factory = new NSHM23_InvConfigFactory();
+		dirName += "-nshm23";
 //		NSHM23_InvConfigFactory factory = new NSHM23_InvConfigFactory.PaleoSlipInequality();
 //		dirName += "-nshm23-paleo_slip_ineq";
 //		NSHM23_InvConfigFactory factory = new NSHM23_InvConfigFactory.ForceNewPaleo();
@@ -159,8 +161,8 @@ public class HardcodedInversionFactoryRunner {
 //		dirName += "-prvi25-limit_below_obs";
 //		PRVI25_InvConfigFactory.SUB_SECT_DDW_FRACT = 0.25; dirName += "-quarter_len_sub_sects";
 		
-		NSHM27_InvConfigFactory factory = new NSHM27_InvConfigFactory();
-		dirName += "-nshm26";
+//		NSHM27_InvConfigFactory factory = new NSHM27_InvConfigFactory();
+//		dirName += "-nshm26";
 		
 		factory.setCacheDir(new File("/home/kevin/OpenSHA/nshm23/rup_sets/cache"));
 		
@@ -171,7 +173,33 @@ public class HardcodedInversionFactoryRunner {
 //		LogicTreeBranch<LogicTreeNode> branch = NSHM23_U3_HybridLogicTreeBranch.DEFAULT; dirName += "-u3";
 //		LogicTreeBranch<LogicTreeNode> branch = NSHM23_LogicTreeBranch.DEFAULT_ON_FAULT;
 //		LogicTreeBranch<LogicTreeNode> branch = PRVI25_LogicTreeBranch.DEFAULT_CRUSTAL_ON_FAULT;
-//		branch = branch.copy();
+		LogicTreeBranch<LogicTreeNode> branch = NSHM23_LogicTreeBranch.AVERAGE_ON_FAULT;
+		branch = branch.copy();
+		
+		List<LogicTreeLevel<? extends LogicTreeNode>> levels = new ArrayList<>(branch.size());
+		List<LogicTreeNode> values = new ArrayList<>(branch.size());
+		for (int l=0; l<branch.size(); l++) {
+			LogicTreeLevel<? extends LogicTreeNode> level = branch.getLevel(l);
+			if (!SectionSupraSeisBValues.class.isAssignableFrom(level.getType())) {
+				levels.add(level);
+				values.add(branch.getValue(l));
+			}
+		}
+		
+//		dirName += "-bPosterior";
+//		levels.add(new PosteriorSectionBValueDistributions.AverageLevel(
+//				"Section posterior average b-value", "Posterior-b"));
+//		values.add(levels.getLast().getNodes().getFirst());
+		
+		dirName += "-bUniform";
+		levels.add(new SectionSupraSeisBValues.DistributionAverageLevel(
+				"Section average b-value", "Avg. b-value", NSHM23_InvConfigFactory.SUPRA_B_PRIOR_DIST));
+		values.add(levels.getLast().getNodes().getFirst());
+		
+		branch = new LogicTreeBranch<>(levels, values);
+		
+		factory.setSmoothPaleoVisible(true);
+		dirName += "-paleoVisibleSmooth";
 
 //		LogicTreeBranch<LogicTreeNode> branch = new LogicTreeBranch<>(PRVI25_LogicTree.levelsCrustalCombined);
 //		for (LogicTreeNode node : PRVI25_LogicTree.DEFAULT_CRUSTAL_ON_FAULT)
@@ -187,35 +215,35 @@ public class HardcodedInversionFactoryRunner {
 //			branch.setValue(node);
 //		writeGridProv = true;
 
-//		LogicTreeBranch<LogicTreeNode> branch = NSHM27_LogicTree.buildDefault(
-//				NSHM27_SeismicityRegions.GNMI, TectonicRegionType.SUBDUCTION_INTERFACE, false);
 ////		LogicTreeBranch<LogicTreeNode> branch = NSHM27_LogicTree.buildDefault(
-//// 				NSHM27_SeismicityRegions.GNMI, TectonicRegionType.ACTIVE_SHALLOW, false);
-//		dirName += "-gnmi";
-		NSHM27_LogicTree.INTERFACE_B_HINGED_WEIGHT = 1d;
-		LogicTreeBranch<LogicTreeNode> branch = NSHM27_LogicTree.buildDefault(
-				NSHM27_SeismicityRegions.AMSAM, TectonicRegionType.SUBDUCTION_INTERFACE, false);
-		dirName += "-amsam";
-
-		if (branch.hasValue(NSHM27_InterfaceFaultModels.class) ) {
-			branch.setValue(NSHM27_InterfaceObsSeisDMAdjustment.NONE);
-//			branch.setValue(NSHM27_InterfaceObsSeisDMAdjustment.AVERAGE);
-//			branch.setValue(NSHM27_InterfaceObsSeisDMAdjustment.SECTION_SPECIFIC);
-//			branch.setValue(NSHM27_InterfaceObsSeisDMAdjustment.EXTRAPOLATE);
-			branch.setValue(NSHM27_InterfaceMinSubSects.TWO);
-//			branch.setValue(NSHM27_InterfaceDeformationModels.Aggregated.LOW_COUPLING);
-			branch.setValue(NSHM27_InterfaceDeformationModels.Aggregated.PREF_COUPLING);
-//			branch.setValue(NSHM27_InterfaceDeformationModels.Aggregated.HIGH_COUPLING);
-//			branch.setValue(NSHM27_InterfaceCouplingDepthModels.DOUBLE_TAPER);
-			branch.setValue(NSHM27_InterfaceCouplingDepthModels.AVERAGE);
-		} else {
-			branch.setValue(NSHM27_CrustalDeformationModels.Aggregated.AVERAGE);
-		}
-//		branch.setValue(NSHM27_SeisRateModelBranch.AVERAGE);
-		branch.setValue(NSHM27_SeisRateModelBranch.PREFFERRED);
-		
-//		writeGridProv = false;
-		writeGridProv = true;
+////				NSHM27_SeismicityRegions.GNMI, TectonicRegionType.SUBDUCTION_INTERFACE, false);
+//////		LogicTreeBranch<LogicTreeNode> branch = NSHM27_LogicTree.buildDefault(
+////// 				NSHM27_SeismicityRegions.GNMI, TectonicRegionType.ACTIVE_SHALLOW, false);
+////		dirName += "-gnmi";
+//		NSHM27_LogicTree.INTERFACE_B_HINGED_WEIGHT = 1d;
+//		LogicTreeBranch<LogicTreeNode> branch = NSHM27_LogicTree.buildDefault(
+//				NSHM27_SeismicityRegions.AMSAM, TectonicRegionType.SUBDUCTION_INTERFACE, false);
+//		dirName += "-amsam";
+//
+//		if (branch.hasValue(NSHM27_InterfaceFaultModels.class) ) {
+//			branch.setValue(NSHM27_InterfaceObsSeisDMAdjustment.NONE);
+////			branch.setValue(NSHM27_InterfaceObsSeisDMAdjustment.AVERAGE);
+////			branch.setValue(NSHM27_InterfaceObsSeisDMAdjustment.SECTION_SPECIFIC);
+////			branch.setValue(NSHM27_InterfaceObsSeisDMAdjustment.EXTRAPOLATE);
+//			branch.setValue(NSHM27_InterfaceMinSubSects.TWO);
+////			branch.setValue(NSHM27_InterfaceDeformationModels.Aggregated.LOW_COUPLING);
+//			branch.setValue(NSHM27_InterfaceDeformationModels.Aggregated.PREF_COUPLING);
+////			branch.setValue(NSHM27_InterfaceDeformationModels.Aggregated.HIGH_COUPLING);
+////			branch.setValue(NSHM27_InterfaceCouplingDepthModels.DOUBLE_TAPER);
+//			branch.setValue(NSHM27_InterfaceCouplingDepthModels.AVERAGE);
+//		} else {
+//			branch.setValue(NSHM27_CrustalDeformationModels.Aggregated.AVERAGE);
+//		}
+////		branch.setValue(NSHM27_SeisRateModelBranch.AVERAGE);
+//		branch.setValue(NSHM27_SeisRateModelBranch.PREFFERRED);
+//		
+////		writeGridProv = false;
+//		writeGridProv = true;
 		
 //		double b = 1d;
 ////		double b = 0.5d;
