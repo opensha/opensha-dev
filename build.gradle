@@ -25,5 +25,11 @@ dependencies {
     implementation project(path: ':opensha')
     implementation project(path: ':opensha', configuration: 'implResolvable')
 
+    implementation 'org.apache.hadoop:hadoop-common:3.5.0'
+    implementation 'org.apache.hadoop:hadoop-mapreduce-client-core:3.5.0'
+    implementation 'org.apache.parquet:parquet-avro:1.15.1'
+
+    implementation 'org.duckdb:duckdb_jdbc:1.5.5.1'
+
     testImplementation 'junit:junit:4.13.2'
 }
