@@ -29,7 +29,12 @@ import org.opensha.sha.earthquake.faultSysSolution.inversion.InversionConfigurat
 import org.opensha.sha.earthquake.faultSysSolution.inversion.InversionInputGenerator;
 import org.opensha.sha.earthquake.faultSysSolution.inversion.Inversions;
 import org.opensha.sha.earthquake.faultSysSolution.inversion.constraints.InversionConstraint;
+import org.opensha.sha.earthquake.faultSysSolution.inversion.constraints.ConstraintWeightingType;
+import org.opensha.sha.earthquake.faultSysSolution.inversion.constraints.impl.PaleoRateInversionConstraint;
+import org.opensha.sha.earthquake.faultSysSolution.inversion.constraints.impl.PaleoSlipInversionConstraint;
 import org.opensha.sha.earthquake.faultSysSolution.inversion.constraints.impl.SegmentationProbabilityConstraint;
+import org.opensha.sha.earthquake.faultSysSolution.modules.InversionMisfitStats;
+import org.opensha.sha.earthquake.faultSysSolution.modules.InversionMisfitStats.MisfitStats;
 import org.opensha.sha.earthquake.faultSysSolution.ruptures.util.SegmentationRuptureExemptions;
 import org.opensha.sha.earthquake.faultSysSolution.reports.ReportMetadata;
 import org.opensha.sha.earthquake.faultSysSolution.reports.ReportPageGen;
@@ -297,6 +302,44 @@ public class UtahSegmentationInversionRunner {
 					report ? "[Report]("+path+"/report/README.md)" : "");
 		}
 		lines.addAll(table.build());
+		appendMisfitSummary(lines, output);
 		MarkdownUtils.writeReadmeAndHTML(lines, output);
+	}
+
+	private static void appendMisfitSummary(List<String> lines, File output) throws IOException {
+		TableBuilder table = MarkdownUtils.tableBuilder();
+		table.addLine("Case", "Constraint", "Rows", "Mean z", "Mean absolute z", "RMS z", "Largest absolute z");
+		for (Calculation calculation : Calculation.values()) {
+			File solutionFile = new File(new File(output, calculation.directoryName()), "solution.zip");
+			if (!solutionFile.isFile()) continue;
+			InversionMisfitStats misfits = FaultSystemSolution.load(solutionFile).getModule(InversionMisfitStats.class);
+			if (misfits == null) continue;
+			for (MisfitStats stats : misfits.getStats()) {
+				if (stats.numRows == 0 || stats.range.inequality
+						|| stats.range.weightingType != ConstraintWeightingType.NORMALIZED_BY_UNCERTAINTY)
+					continue;
+				String constraint = switch (stats.range.shortName) {
+				case "UncertSlipRate" -> "Slip rate";
+				case PaleoRateInversionConstraint.SHORT_NAME -> "Paleoseismic event rate";
+				case PaleoSlipInversionConstraint.SHORT_NAME -> "Paleoseismic slip";
+				default -> null;
+				};
+				if (constraint != null)
+					table.addLine(calculation.displayName(), constraint, Integer.toString(stats.numRows),
+							formatMisfit(stats.mean), formatMisfit(stats.absMean), formatMisfit(stats.rmse),
+							formatMisfit(Math.max(Math.abs(stats.min), Math.abs(stats.max))));
+			}
+		}
+		if (table.getNumLines() > 1) {
+			lines.addAll(List.of("", "## Slip-rate and paleoseismic misfits", "",
+					"Each z-score is the solution prediction minus the inversion target, divided by the "
+					+"standard deviation used in that constraint. Overall inversion weights are removed. "
+					+"Rows within each constraint contribute equally. Negative mean z indicates underprediction.", ""));
+			lines.addAll(table.build());
+		}
+	}
+
+	private static String formatMisfit(double value) {
+		return String.format(Locale.ROOT, "%.3f", value);
 	}
 }
