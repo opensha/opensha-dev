@@ -5,9 +5,9 @@ import org.opensha.sha.earthquake.faultSysSolution.FaultSystemRupSet;
 import org.opensha.sha.earthquake.faultSysSolution.ruptures.plausibility.impl.prob.JumpProbabilityCalc;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_SegmentationModels;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.RupsThroughCreepingSectBranchNode;
-import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.SegmentationModelBranchNode;
+import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.JumpSegmentationModelBranchNode;
 
-public enum TestRelativeSegModels implements SegmentationModelBranchNode, RupsThroughCreepingSectBranchNode {
+public enum TestRelativeSegModels implements JumpSegmentationModelBranchNode, RupsThroughCreepingSectBranchNode {
 	RELATIVE_CFF_MIDDLE("Relative (Middle)", NSHM23_SegmentationModels.MID);
 	
 	private String name;

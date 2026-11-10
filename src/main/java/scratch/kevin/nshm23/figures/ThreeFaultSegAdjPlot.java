@@ -259,7 +259,7 @@ public class ThreeFaultSegAdjPlot {
 		fullRupSet.addModule(areas);
 
 		ThresholdAveragingSectNuclMFD_Estimator.RelGRWorstJumpProb.D = true;
-		SectNucleationMFD_Estimator segAdjuster = new ThresholdAveragingSectNuclMFD_Estimator.RelGRWorstJumpProb(segModel, 50, true);
+		SectNucleationMFD_Estimator segAdjuster = new ThresholdAveragingSectNuclMFD_Estimator.RelGRWorstJumpProb<>(segModel, 50, true);
 //		String name = "Relative G-R MFD Adjustment";
 		String name = " ";
 		String prefix = "multi_fault";
@@ -268,7 +268,7 @@ public class ThreeFaultSegAdjPlot {
 		double jump2Prob = segModel.calcJumpProbability(dist2);
 		double jump3Prob = segModel.calcJumpProbability(dist3);
 		SectNucleationMFD_Estimator penalizeTwoOnlySegAdjuster =
-				new ThresholdAveragingSectNuclMFD_Estimator.RelGRWorstJumpProb(new JumpProbabilityCalc() {
+				new ThresholdAveragingSectNuclMFD_Estimator.RelGRWorstJumpProb<>(new JumpProbabilityCalc() {
 
 					@Override
 					public boolean isDirectional(boolean splayed) {

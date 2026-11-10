@@ -240,7 +240,7 @@ public class SlipRateSegAdjTests {
 		singleFaultRupSet.addModule(areas);
 		
 		RelGRWorstJumpProb.D = true;
-		RelGRWorstJumpProb adj = new RelGRWorstJumpProb(segModel, 50, true);
+		RelGRWorstJumpProb<Jump> adj = new RelGRWorstJumpProb<>(segModel, 50, true);
 		
 		SupraSeisBValInversionTargetMFDs.Builder mfdBuilder = new SupraSeisBValInversionTargetMFDs.Builder(rupSet, supraB);
 		mfdBuilder.applyDefModelUncertainties(false);

@@ -63,7 +63,7 @@ public class BvalAndSegConnectivityCorrelationSampler extends SectionCovarianceS
 //				if (segModelCalc instanceof BinaryJumpProbabilityCalc)
 //					builder.forBinaryRupProbModel((BinaryJumpProbabilityCalc)segModel);
 //				else
-					builder.adjustTargetsForData(new ThresholdAveragingSectNuclMFD_Estimator.RelGRWorstJumpProb(segModelCalc, 100, true));
+					builder.adjustTargetsForData(new ThresholdAveragingSectNuclMFD_Estimator.RelGRWorstJumpProb<>(segModelCalc, 100, true));
 			}
 			builder.applyDefModelUncertainties(false);
 			SupraSeisBValInversionTargetMFDs mfds = builder.build();

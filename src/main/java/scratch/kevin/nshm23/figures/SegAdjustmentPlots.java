@@ -261,13 +261,13 @@ public class SegAdjustmentPlots {
 		List<String> segPrefixes = new ArrayList<>();
 		List<Color> segColors = new ArrayList<>();
 		
-		segAdjusters.add(new ThresholdAveragingSectNuclMFD_Estimator.WorstAvgJumpProb(segModel));
+		segAdjusters.add(new ThresholdAveragingSectNuclMFD_Estimator.WorstAvgJumpProb<>(segModel));
 		segNames.add("Passthrough Rate MFD Adjustment");
 		segPrefixes.add("passthrough_rate_mfd_avg");
 		segColors.add(Color.BLUE.darker());
 		
 		ThresholdAveragingSectNuclMFD_Estimator.RelGRWorstJumpProb.D = true;
-		segAdjusters.add(new ThresholdAveragingSectNuclMFD_Estimator.RelGRWorstJumpProb(segModel, 50, true));
+		segAdjusters.add(new ThresholdAveragingSectNuclMFD_Estimator.RelGRWorstJumpProb<>(segModel, 50, true));
 //		segNames.add("Relative G-R MFD Adjustment");
 		segNames.add(" ");
 		segPrefixes.add("rel_gr_mfd_avg");

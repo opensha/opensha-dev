@@ -32,7 +32,7 @@ import org.opensha.sha.earthquake.rupForecastImpl.nshm23.NSHM23_InvConfigFactory
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_LogicTreeBranch;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_SegmentationModels;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.RupsThroughCreepingSectBranchNode;
-import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.SegmentationModelBranchNode;
+import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.JumpSegmentationModelBranchNode;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.util.NSHM23_RegionLoader;
 import org.opensha.sha.faultSurface.FaultSection;
 
@@ -186,7 +186,7 @@ public class ExternalSegModel {
 		System.out.println("DONE with custom sol");
 	}
 	
-	private static class CustomSegNode implements SegmentationModelBranchNode, RupsThroughCreepingSectBranchNode {
+	private static class CustomSegNode implements JumpSegmentationModelBranchNode, RupsThroughCreepingSectBranchNode {
 		
 		private JumpProbabilityCalc segModel;
 		private boolean allowedThroughCreeping;

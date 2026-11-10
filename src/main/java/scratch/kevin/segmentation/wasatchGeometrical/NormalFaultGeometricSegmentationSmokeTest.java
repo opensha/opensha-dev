@@ -10,26 +10,36 @@ import java.util.Map;
 import java.util.TreeMap;
 
 import org.opensha.commons.data.CSVFile;
+import org.opensha.commons.logicTree.LogicTreeBranch;
+import org.opensha.commons.logicTree.LogicTreeLevel;
+import org.opensha.commons.logicTree.LogicTreeNode;
 import org.opensha.commons.util.IDPairing;
 import org.opensha.sha.earthquake.faultSysSolution.FaultSystemRupSet;
+import org.opensha.sha.earthquake.faultSysSolution.inversion.InversionConfiguration;
+import org.opensha.sha.earthquake.faultSysSolution.inversion.constraints.InversionConstraint;
+import org.opensha.sha.earthquake.faultSysSolution.inversion.constraints.impl.JumpProbabilityConstraint;
 import org.opensha.sha.earthquake.faultSysSolution.inversion.constraints.impl.SegmentationProbabilityConstraint;
 import org.opensha.sha.earthquake.faultSysSolution.modules.ClusterRuptures;
 import org.opensha.sha.earthquake.faultSysSolution.reports.plots.RupHistogramPlots.RakeType;
 import org.opensha.sha.earthquake.faultSysSolution.ruptures.ClusterRupture;
-import org.opensha.sha.earthquake.faultSysSolution.ruptures.Transition;
 import org.opensha.sha.earthquake.faultSysSolution.ruptures.Jump;
-import org.opensha.sha.earthquake.faultSysSolution.ruptures.plausibility.impl.prob.NormalFaultGeometricSegmentationModel;
+import org.opensha.sha.earthquake.faultSysSolution.ruptures.Transition;
 import org.opensha.sha.earthquake.faultSysSolution.ruptures.plausibility.impl.prob.JumpProbabilityCalc;
-import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_SegmentationModels;
-import org.opensha.sha.earthquake.faultSysSolution.ruptures.plausibility.impl.prob.NormalFaultGeometricSegmentationProb.CoefficientSet;
-import org.opensha.sha.earthquake.faultSysSolution.ruptures.plausibility.impl.prob.NormalFaultGeometricSegmentationProb.Probabilities;
+import org.opensha.sha.earthquake.rupForecastImpl.nshm23.NSHM23_InvConfigFactory;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_DeformationModels;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_FaultModels;
+import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_LogicTreeBranch;
+import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_SegmentationModels;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_SingleStates;
 import org.opensha.sha.faultSurface.FaultSection;
 import org.opensha.sha.faultSurface.GeoJSONFaultSection;
 
 import com.google.common.base.Preconditions;
+
+import scratch.kevin.segmentation.normalFault.NSHM23_NormalFaultSegmentationModels;
+import scratch.kevin.segmentation.normalFault.NormalFaultGeometricSegmentationModel;
+import scratch.kevin.segmentation.normalFault.NormalFaultGeometricSegmentationProb.CoefficientSet;
+import scratch.kevin.segmentation.normalFault.NormalFaultGeometricSegmentationProb.Probabilities;
 
 import cern.colt.matrix.tdouble.DoubleMatrix2D;
 import cern.colt.matrix.tdouble.impl.SparseDoubleMatrix2D;
@@ -37,7 +47,7 @@ import cern.colt.matrix.tdouble.impl.SparseDoubleMatrix2D;
 /**
  * Usage: OUTPUT_DIR [REFERENCE_RUP_SET.zip]. Always audits the geologic Utah parent
  * sections. With a reference rupture set, uses NSHM23_SingleStates.UT to retain
- * Utah-connected clusters, then checks transition probabilities and matrix encoding.
+ * Utah-connected clusters, then checks probabilities, MFD targets, factory wiring, and configuration serialization.
  * This exercises the new constraint without changing NSHM23 inversion defaults.
  */
 public class NormalFaultGeometricSegmentationSmokeTest {
@@ -117,8 +127,9 @@ public class NormalFaultGeometricSegmentationSmokeTest {
 		CSVFile<String> csv = new CSVFile<>(true);
 		csv.addLine("first_id", "second_id", "first_name", "second_name", "coefficient_set", "bend_probability",
 				"gap_probability", "stepover_or_offset_probability", "combined_probability");
-		for (CoefficientSet coefficients : CoefficientSet.values()) {
-			NormalFaultGeometricSegmentationModel model = new NormalFaultGeometricSegmentationModel(coefficients, 10d, background);
+		for (NSHM23_NormalFaultSegmentationModels choice : NSHM23_NormalFaultSegmentationModels.values()) {
+			CoefficientSet coefficients = choice.getCoefficientSet();
+			NormalFaultGeometricSegmentationModel model = choice.getModel(utah, null);
 			Map<IDPairing, Transition> unique = new TreeMap<>();
 			int outsideRuptures = 0;
 			int nonWasatchNormalPairs = 0;
@@ -150,13 +161,48 @@ public class NormalFaultGeometricSegmentationSmokeTest {
 			SegmentationProbabilityConstraint constraint = new SegmentationProbabilityConstraint(1d, utah, model);
 			DoubleMatrix2D matrix = new SparseDoubleMatrix2D(constraint.getNumRows(), utah.getNumRuptures());
 			long nonzeros = constraint.encode(matrix, new double[matrix.rows()], 0);
+			LogicTreeBranch<LogicTreeNode> branch = branch(choice);
+			InversionConfiguration config = new NSHM23_InvConfigFactory().buildInversionConfig(utah, branch, 1);
+			Preconditions.checkNotNull(config, "Expected a regional inversion configuration");
+			File configFile = new File(output, "utah_"+coefficients.name().toLowerCase(java.util.Locale.ROOT)+"_config.json");
+			InversionConfiguration.writeJSON(config, configFile);
+			InversionConfiguration restored = InversionConfiguration.readJSON(configFile, utah);
+			int segmentationConstraints = 0;
+			for (InversionConstraint configured : restored.getConstraints()) {
+				Preconditions.checkState(!(configured instanceof JumpProbabilityConstraint), "Unexpected legacy constraint");
+				if (configured instanceof SegmentationProbabilityConstraint) {
+					segmentationConstraints++;
+					Preconditions.checkState(configured.getNumRows() == constraint.getNumRows());
+					DoubleMatrix2D normalized = new SparseDoubleMatrix2D(configured.getNumRows(), utah.getNumRuptures());
+					configured.encode(normalized, new double[normalized.rows()], 0);
+					for (int row=0; row<normalized.rows(); row++)
+						for (int r=0; r<normalized.columns(); r++)
+							Preconditions.checkState(Double.isFinite(normalized.getQuick(row, r)), "Nonfinite coefficient");
+				}
+			}
+			Preconditions.checkState(segmentationConstraints == 1);
+
 			report.append(coefficients).append(": ").append(unique.size()).append(" unique transitions, ")
 					.append(matrix.rows()).append(" constraint rows, ").append(nonzeros).append(" nonzero coefficients; ")
 					.append(outsideRuptures).append(" ruptures contain no normal subsections; ")
-					.append(nonWasatchNormalPairs).append(" normal transition pairs involve a non-Wasatch fault.\n\n");
+					.append(nonWasatchNormalPairs).append(" normal transition pairs involve a non-Wasatch fault.\n\n")
+					.append("Built and serialized the standard NSHM23 factory configuration with the replacement level, ")
+					.append("relative-GR MFD adjustments, and finite normalized segmentation coefficients. Configuration: ")
+					.append(configFile.getName()).append(".\n\n");
 		}
 		csv.writeToFile(new File(output, "utah_normal_fault_transition_probabilities.csv"));
 		Files.writeString(new File(output, "utah_normal_fault_smoke_test.md").toPath(), report, StandardCharsets.UTF_8);
 		System.out.println(report);
 	}
+	private static LogicTreeBranch<LogicTreeNode> branch(NSHM23_NormalFaultSegmentationModels choice) {
+		List<LogicTreeLevel<? extends LogicTreeNode>> levels = new ArrayList<>(NSHM23_LogicTreeBranch.levelsOnFault);
+		levels.set(levels.indexOf(NSHM23_LogicTreeBranch.SEG), LogicTreeLevel.forEnum(
+				NSHM23_NormalFaultSegmentationModels.class, "Normal Fault Segmentation", "NormalSeg"));
+		LogicTreeBranch<LogicTreeNode> branch = new LogicTreeBranch<>(levels);
+		for (LogicTreeNode node : NSHM23_LogicTreeBranch.DEFAULT_ON_FAULT)
+			branch.setValue(node instanceof NSHM23_SegmentationModels ? choice : node);
+		branch.setValue(NSHM23_DeformationModels.GEOLOGIC);
+		return branch;
+	}
+
 }

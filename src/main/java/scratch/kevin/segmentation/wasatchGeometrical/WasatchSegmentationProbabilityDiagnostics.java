@@ -13,11 +13,12 @@ import org.opensha.commons.geo.json.Feature;
 import org.opensha.commons.geo.json.FeatureCollection;
 import org.opensha.commons.geo.json.FeatureProperties;
 import org.opensha.commons.util.IDPairing;
-import org.opensha.sha.earthquake.faultSysSolution.ruptures.plausibility.impl.prob.NormalFaultGeometricSegmentationProb;
-import org.opensha.sha.earthquake.faultSysSolution.ruptures.plausibility.impl.prob.NormalFaultGeometricSegmentationProb.CoefficientSet;
-import org.opensha.sha.earthquake.faultSysSolution.ruptures.plausibility.impl.prob.NormalFaultGeometricSegmentationProb.Probabilities;
 import org.opensha.sha.earthquake.faultSysSolution.ruptures.util.FaultTraceSegmentationGeometry.Measurements;
 import org.opensha.sha.earthquake.faultSysSolution.ruptures.util.FaultTraceSegmentationGeometry.TraceRelation;
+
+import scratch.kevin.segmentation.normalFault.NormalFaultGeometricSegmentationProb.CoefficientSet;
+import scratch.kevin.segmentation.normalFault.NormalFaultGeometricSegmentationProb.Probabilities;
+import scratch.kevin.segmentation.normalFault.NormalFaultGeometricSegmentationProb;
 
 /** Adds feature probabilities for both draft fits, keeping trace properties subsection-specific. */
 public class WasatchSegmentationProbabilityDiagnostics {
