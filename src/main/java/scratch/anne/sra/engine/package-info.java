@@ -9,6 +9,6 @@
  * rupture, {@code logic_tree} builds per-branch EAL and loss-exceedance
  * distributions, and {@code lec_pipeline} orchestrates the full multi-stage
  * true-mean LEC workflow (see
- * {@link scratch.anne.sra.engine.lec_pipeline.PipelineMain}).</p>
+ * {@link scratch.anne.sra.engine.lecPipeline.PipelineMain}).</p>
  */
 package scratch.anne.sra.engine;

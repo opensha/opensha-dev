@@ -3,12 +3,12 @@ package scratch.anne.sra.examples.io;
 import java.nio.file.*;
 import java.util.*;
 
-import scratch.anne.sra.domain.structural_response.ResponseModelLibrary;
-import scratch.anne.sra.domain.structural_response.SimpleImResponse;
-import scratch.anne.sra.domain.structural_response.SimpleImResponseLibrary;
-import scratch.anne.sra.domain.structural_response.fragilities.FragilityModel;
-import scratch.anne.sra.domain.structural_response.fragilities.SimpleImFragilityLibraryPreparer;
-import scratch.anne.sra.domain.structural_response.fragilities.SimpleImFragilityLibraryPreparer.PrepareSpec;
+import scratch.anne.sra.domain.structuralResponse.ResponseModelLibrary;
+import scratch.anne.sra.domain.structuralResponse.SimpleImResponse;
+import scratch.anne.sra.domain.structuralResponse.SimpleImResponseLibrary;
+import scratch.anne.sra.domain.structuralResponse.fragilities.FragilityModel;
+import scratch.anne.sra.domain.structuralResponse.fragilities.SimpleImFragilityLibraryPreparer;
+import scratch.anne.sra.domain.structuralResponse.fragilities.SimpleImFragilityLibraryPreparer.PrepareSpec;
 import scratch.anne.sra.io.readers.FragilityLibraryReader;
 import scratch.anne.sra.util.AssetKeys.ImKey;
 import scratch.anne.sra.util.AssetKeys.ImKey.ImDomain;

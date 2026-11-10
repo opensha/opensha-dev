@@ -9,8 +9,8 @@ import java.util.Map;
 import scratch.anne.sra.domain.hazard.HazardCurve;
 import scratch.anne.sra.domain.hazard.HazardParameters;
 import scratch.anne.sra.domain.hazard.RuptureKey;
-import scratch.anne.sra.engine.per_rupture.RuptureHazardCurveCollection;
-import scratch.anne.sra.engine.per_rupture.RuptureHazardCurveCollection.RuptureExceedanceResult;
+import scratch.anne.sra.engine.perRupture.RuptureHazardCurveCollection;
+import scratch.anne.sra.engine.perRupture.RuptureHazardCurveCollection.RuptureExceedanceResult;
 import scratch.anne.sra.util.AssetKeys.ImKey;
 import scratch.anne.sra.util.AssetKeys.SiteKey;
 

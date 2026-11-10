@@ -12,8 +12,8 @@ import org.apache.parquet.io.OutputFile;
 
 import scratch.anne.sra.domain.hazard.HazardParameters;
 import scratch.anne.sra.domain.hazard.HazardParametersMetadataBuilder;
-import scratch.anne.sra.engine.per_rupture.RuptureLossResultsCollection;
-import scratch.anne.sra.engine.per_rupture.RuptureLossResultsCollection.RuptureResult;
+import scratch.anne.sra.engine.perRupture.RuptureLossResultsCollection;
+import scratch.anne.sra.engine.perRupture.RuptureLossResultsCollection.RuptureResult;
 
 import java.io.BufferedWriter;
 import java.io.IOException;
@@ -32,7 +32,7 @@ import java.util.Map;
  * merged with whatever {@code extraMetadata} the caller supplies (e.g.
  * portfolio/response-model provenance -- see
  * {@link scratch.anne.sra.domain.portfolio.PortfolioMetadataBuilder}/
- * {@link scratch.anne.sra.domain.structural_response.ResponseModelMetadataBuilder}).
+ * {@link scratch.anne.sra.domain.structuralResponse.ResponseModelMetadataBuilder}).
  * For CSV this is a leading {@code # HazardParameters} key,value block;
  * for Parquet it's the file's own footer key-value metadata.</p>
  */
@@ -70,7 +70,7 @@ public final class RuptureResultsExporter {
      *                      metadata to merge in alongside the standard
      *                      HazardParameters fields -- e.g.
      *                      {@link scratch.anne.sra.domain.portfolio.PortfolioMetadataBuilder}/
-     *                      {@link scratch.anne.sra.domain.structural_response.ResponseModelMetadataBuilder}'s
+     *                      {@link scratch.anne.sra.domain.structuralResponse.ResponseModelMetadataBuilder}'s
      *                      output. Pass {@code Map.of()} if this
      *                      exporter's caller has no portfolio/response
      *                      model file to attribute (e.g. {@code ExploreERF},

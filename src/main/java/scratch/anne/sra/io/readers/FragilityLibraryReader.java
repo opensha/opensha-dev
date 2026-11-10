@@ -9,9 +9,9 @@ import com.google.gson.*;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 
-import scratch.anne.sra.domain.structural_response.ResponseModelLibrary;
-import scratch.anne.sra.domain.structural_response.fragilities.FragilityModel;
-import scratch.anne.sra.domain.structural_response.fragilities.definitions.*;
+import scratch.anne.sra.domain.structuralResponse.ResponseModelLibrary;
+import scratch.anne.sra.domain.structuralResponse.fragilities.FragilityModel;
+import scratch.anne.sra.domain.structuralResponse.fragilities.definitions.*;
 import scratch.anne.sra.util.InputParsingUtil;
 import scratch.anne.sra.util.Metadata;
 import scratch.anne.sra.util.NumericUtil;

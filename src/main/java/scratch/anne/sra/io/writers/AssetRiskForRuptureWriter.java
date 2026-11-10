@@ -76,7 +76,7 @@ public final class AssetRiskForRuptureWriter implements AutoCloseable {
      *        part-file's footer metadata alongside {@code fRelative}/
      *        {@code fAbsolute} (e.g. {@link scratch.anne.sra.domain.hazard.HazardParametersMetadataBuilder}/
      *        {@link scratch.anne.sra.domain.portfolio.PortfolioMetadataBuilder}/
-     *        {@link scratch.anne.sra.domain.structural_response.ResponseModelMetadataBuilder}'s
+     *        {@link scratch.anne.sra.domain.structuralResponse.ResponseModelMetadataBuilder}'s
      *        output, merged together by the caller). Every key and
      *        value must be a {@code String} (Parquet's own
      *        requirement); pass {@code Map.of()} for none.

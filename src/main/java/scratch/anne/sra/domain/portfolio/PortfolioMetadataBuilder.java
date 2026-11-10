@@ -4,7 +4,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 import scratch.anne.sra.domain.asset.RiskConvolutionAsset;
-import scratch.anne.sra.domain.portfolio.portfolio_wrappers.RiskConvolutionPortfolio;
+import scratch.anne.sra.domain.portfolio.portfolioWrappers.RiskConvolutionPortfolio;
 
 /**
  * Builds the flat {@code key -> value} reproducibility metadata map for

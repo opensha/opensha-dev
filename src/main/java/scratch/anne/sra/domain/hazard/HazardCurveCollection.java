@@ -18,8 +18,8 @@ import scratch.anne.sra.util.AssetKeys.SiteKey;
  * parallel computation), then {@link #freeze}'d once the loop
  * completes so the result is safe to read without further locking.
  * Requires an {@code EXCEEDANCE} hazard metric type, same as
- * {@link scratch.anne.sra.engine.per_rupture.RuptureLossResultsCollection}/
- * {@link scratch.anne.sra.engine.per_rupture.RuptureHazardCurveCollection}.</p>
+ * {@link scratch.anne.sra.engine.perRupture.RuptureLossResultsCollection}/
+ * {@link scratch.anne.sra.engine.perRupture.RuptureHazardCurveCollection}.</p>
  */
 public final class HazardCurveCollection {
 

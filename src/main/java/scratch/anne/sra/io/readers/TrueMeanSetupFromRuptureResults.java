@@ -13,7 +13,7 @@ import com.google.common.collect.Table;
 
 import scratch.anne.sra.domain.hazard.HazardParameters;
 import scratch.anne.sra.domain.portfolio.PortfolioMetadataBuilder;
-import scratch.anne.sra.domain.structural_response.ResponseModelMetadataBuilder;
+import scratch.anne.sra.domain.structuralResponse.ResponseModelMetadataBuilder;
 import scratch.anne.sra.util.enums.HazardMetric;
 
 import org.opensha.sha.earthquake.faultSysSolution.FaultSystemSolution;

@@ -1,6 +1,6 @@
 package scratch.anne.sra.engine.convolution;
 
-import scratch.anne.sra.domain.structural_response.NamedResponseModel;
+import scratch.anne.sra.domain.structuralResponse.NamedResponseModel;
 import scratch.anne.sra.util.enums.IMT;
 
 /**

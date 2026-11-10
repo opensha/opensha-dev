@@ -6,7 +6,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Map;
 
-import scratch.anne.sra.engine.logic_tree.BranchLecDistributionBuilder.LevelDistribution;
+import scratch.anne.sra.engine.logicTree.BranchLecDistributionBuilder.LevelDistribution;
 import scratch.anne.sra.util.StringUtil;
 
 /**
