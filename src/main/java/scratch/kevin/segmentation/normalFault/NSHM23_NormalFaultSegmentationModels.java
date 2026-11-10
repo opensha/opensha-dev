@@ -6,6 +6,7 @@ import org.opensha.commons.logicTree.LogicTreeBranch;
 import org.opensha.sha.earthquake.faultSysSolution.FaultSystemRupSet;
 import org.opensha.sha.earthquake.faultSysSolution.FaultSystemSolution;
 import org.opensha.sha.earthquake.faultSysSolution.ruptures.Transition;
+import org.opensha.sha.earthquake.faultSysSolution.ruptures.util.SegmentationRuptureExemptions.Policy;
 import org.opensha.sha.earthquake.faultSysSolution.ruptures.plausibility.impl.prob.JumpProbabilityCalc;
 import org.opensha.sha.earthquake.faultSysSolution.ruptures.plausibility.impl.prob.RuptureProbabilityCalc.BinaryRuptureProbabilityCalc;
 import org.opensha.sha.earthquake.faultSysSolution.ruptures.plausibility.impl.prob.RuptureProbabilityCalc;
@@ -26,7 +27,10 @@ import scratch.kevin.segmentation.normalFault.NormalFaultGeometricSegmentationPr
  * <p>Replace the original segmentation level with an enum level for this class;
  * do not add it alongside the original segmentation level. Probabilities are
  * averaged across crossing ruptures in both the constraint and target-MFD paths.
- * The two preliminary fits have equal exploratory weights, not calibrated weights.
+ * The two preliminary fits have equal exploratory weights, not calibrated weights. Internal bends exempt
+ * tied minimum-size ruptures on a side only when no eligible non-crossing alternative exists entirely within
+ * the same parent fault; larger crossings remain constrained. This enforcement policy is shared by the
+ * inversion constraint and MFD adjustment.
  */
 @DoesNotAffect(FaultSystemRupSet.SECTS_FILE_NAME)
 @DoesNotAffect(FaultSystemRupSet.RUP_SECTS_FILE_NAME)
@@ -50,6 +54,9 @@ implements SegmentationModelBranchNode<Transition>, RupsThroughCreepingSectBranc
 	public CoefficientSet getCoefficientSet() { return coefficients; }
 	public double getMinimumBendAngleDegrees() { return 10d; }
 	public NSHM23_SegmentationModels getBackgroundChoice() { return NSHM23_SegmentationModels.MID; }
+
+	@Override
+	public Policy getRuptureExemptionPolicy() { return Policy.MINIMUM_INTERNAL_IF_NO_ALTERNATIVE; }
 
 	@Override
 	public NormalFaultGeometricSegmentationModel getModel(

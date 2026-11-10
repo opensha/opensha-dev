@@ -27,6 +27,12 @@ import org.opensha.sha.earthquake.faultSysSolution.ruptures.plausibility.impl.pr
 import org.opensha.sha.earthquake.faultSysSolution.ruptures.plausibility.impl.prob.RuptureProbabilityCalc.BinaryRuptureProbabilityCalc;
 import org.opensha.sha.earthquake.faultSysSolution.ruptures.plausibility.impl.prob.TransitionProbabilityCalc;
 import org.opensha.sha.earthquake.faultSysSolution.ruptures.util.SectionDistanceAzimuthCalculator;
+import org.opensha.sha.earthquake.faultSysSolution.ruptures.Transition;
+import org.opensha.sha.earthquake.faultSysSolution.ruptures.util.SegmentationRuptureExemptions;
+import org.opensha.sha.earthquake.faultSysSolution.ruptures.util.SegmentationRuptureExemptions.Policy;
+import org.opensha.sha.earthquake.rupForecastImpl.nshm23.targetMFDs.estimators.ThresholdAveragingSectNuclMFD_Estimator;
+import cern.colt.matrix.tdouble.DoubleMatrix2D;
+import cern.colt.matrix.tdouble.impl.SparseDoubleMatrix2D;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.NSHM23_ConstraintBuilder;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.NSHM23_InvConfigFactory;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.JumpSegmentationModelBranchNode;
@@ -78,6 +84,121 @@ public class NSHM23_NormalFaultSegmentationModelsTest {
 			}
 			assertEquals(1, found);
 		}
+	}
+
+	@Test
+	public void testTwoSubsectionFaultIsNoLongerForcedToZero() {
+		FaultSystemRupSet set = rupSet(false).getForRuptureSubSet(List.of(4)).getForSectionSubSet(List.of(1, 2));
+		NSHM23_NormalFaultSegmentationModels choice = NSHM23_NormalFaultSegmentationModels.AUTOMATED_5KM;
+		assertEquals(Policy.MINIMUM_INTERNAL_IF_NO_ALTERNATIVE, choice.getRuptureExemptionPolicy());
+		InversionConfiguration config = new NSHM23_InvConfigFactory().buildInversionConfig(set, branch(choice), 1);
+		SegmentationProbabilityConstraint segmentation = null;
+		for (InversionConstraint constraint : config.getConstraints())
+			if (constraint instanceof SegmentationProbabilityConstraint)
+				segmentation = (SegmentationProbabilityConstraint)constraint;
+		assertNotNull(segmentation);
+		assertEquals(2, segmentation.getRuptureExemptions().getExemptSides().size());
+		DoubleMatrix2D matrix = new SparseDoubleMatrix2D(segmentation.getNumRows(), 1);
+		segmentation.encode(matrix, new double[matrix.rows()], 0);
+		for (int row=0; row<matrix.rows(); row++) assertTrue(matrix.get(row, 0) <= 0d);
+		// Positive rate on the sole rupture no longer incurs any segmentation violation.
+		TransitionProbabilityCalc<Transition> model = choice.getModel(set, null);
+		ClusterRupture rupture = set.requireModule(ClusterRuptures.class).get(0);
+		assertTrue(model.calcRuptureProb(rupture, false) < 1d); // physical bend still exists
+		ExposedWorst<Transition> raw = new ExposedWorst<>(model);
+		raw.setRuptureExemptions(choice.getRuptureExemptionPolicy(), null);
+		initializeAdjustment(set, raw);
+		assertEquals(1d, raw.probability(rupture), 0d);
+		ExposedRelGR<Transition> relative = new ExposedRelGR<>(model);
+		relative.setRuptureExemptions(choice.getRuptureExemptionPolicy(), null);
+		initializeAdjustment(set, relative);
+		assertEquals(1d, relative.probability(rupture), 0d);
+	}
+
+	@Test
+	public void testMFDExemptionDoesNotEraseOppositeSideConstraint() {
+		FaultSystemRupSet set = rupSet(false).getForRuptureSubSet(List.of(3, 4, 5));
+		TransitionProbabilityCalc<SubsectionTransition> model = new TestNode(false, 0.05).getModel(set, null);
+		ExposedRelGR<SubsectionTransition> adjustment = new ExposedRelGR<>(model);
+		adjustment.setRuptureExemptions(Policy.MINIMUM_INTERNAL_IF_NO_ALTERNATIVE, null);
+		initializeAdjustment(set, adjustment);
+		ClusterRuptures ruptures = set.requireModule(ClusterRuptures.class);
+		SegmentationRuptureExemptions exemptions = SegmentationRuptureExemptions.build(set, model,
+				Policy.MINIMUM_INTERNAL_IF_NO_ALTERNATIVE, null);
+		assertTrue(exemptions.isExempt(2, 1, 1)); // two-subsection rupture is minimum on endpoint 2
+		assertFalse(exemptions.isExempt(1, 2, 1)); // endpoint 1 has a non-crossing option
+		assertTrue(adjustment.probability(ruptures.get(1)) < 1d);
+		assertTrue(adjustment.probability(ruptures.get(2)) < 1d); // larger rupture still penalized
+	}
+
+	@Test
+	public void testJumpThroughAlternativeDoesNotSuppressLocalRupture() {
+		List<FaultSection> sections = List.of(section(0, 10, 0, 0, 0, 5),
+				section(1, 10, 0, 5, 3, 10), section(2, 20, -2, 0, -2, 5), section(3, 30, 2, 0, 2, 5));
+		SectionDistanceAzimuthCalculator distances = new SectionDistanceAzimuthCalculator(sections);
+		List<ClusterRupture> ruptures = new ArrayList<>();
+		for (List<Integer> ids : List.of(List.of(0, 1), List.of(2, 0, 3), List.of(2), List.of(3))) {
+			List<FaultSection> participating = new ArrayList<>();
+			for (int id : ids) participating.add(sections.get(id));
+			ruptures.add(ClusterRupture.forOrderedSingleStrandRupture(participating, distances));
+		}
+		FaultSystemRupSet set = FaultSystemRupSet.builderForClusterRups(sections, ruptures)
+				.forScalingRelationship(NSHM23_ScalingRelationships.WIDTH_LIMITED)
+				.rupMags(new double[] {6.35, 6.65, 6.05, 6.05})
+				.slipAlongRupture(new SlipAlongRuptureModel.Uniform()).build();
+		NSHM23_NormalFaultSegmentationModels choice = NSHM23_NormalFaultSegmentationModels.AUTOMATED_5KM;
+		TransitionProbabilityCalc<Transition> model = choice.getModel(set, null);
+		ClusterRupture local = set.requireModule(ClusterRuptures.class).get(0);
+		ClusterRupture jumpThrough = set.requireModule(ClusterRuptures.class).get(1);
+		assertTrue(model.calcRuptureProb(local, false) < 1d);
+		ExposedWorst<Transition> raw = new ExposedWorst<>(model);
+		raw.setRuptureExemptions(choice.getRuptureExemptionPolicy(), null);
+		initializeAdjustment(set, raw);
+		assertEquals(1d, raw.probability(local), 0d);
+		assertTrue(raw.probability(jumpThrough) < 1d);
+		ExposedRelGR<Transition> relative = new ExposedRelGR<>(model);
+		relative.setRuptureExemptions(choice.getRuptureExemptionPolicy(), null);
+		initializeAdjustment(set, relative);
+		assertEquals(1d, relative.probability(local), 0d);
+	}
+
+	@Test
+	public void testPolicyDoesNotChangeTargetsWhenStoppingOptionsExist() {
+		FaultSystemRupSet set = rupSet(false);
+		TransitionProbabilityCalc<?> model = new TestNode(false, 0.05).getModel(set, null);
+		for (SegmentationMFD_Adjustment method : new SegmentationMFD_Adjustment[] {
+				SegmentationMFD_Adjustment.JUMP_PROB_THRESHOLD_AVG,
+				SegmentationMFD_Adjustment.REL_GR_THRESHOLD_AVG_SINGLE_ITER,
+				SegmentationMFD_Adjustment.REL_GR_THRESHOLD_AVG,
+				SegmentationMFD_Adjustment.RUP_PROB_THRESHOLD_AVG,
+				SegmentationMFD_Adjustment.RUP_MULTIPLY_WORST_JUMP_PROB}) {
+			List<? extends IncrementalMagFreqDist> expected = targets(set, model, method);
+			NSHM23_ConstraintBuilder builder = new NSHM23_ConstraintBuilder(set, 1d, null, false, false, false);
+			builder.adjustForActualRupSlips(false, false).adjustForSegmentationModel(model, method)
+					.ruptureExemptionPolicy(Policy.MINIMUM_INTERNAL_IF_NO_ALTERNATIVE);
+			List<? extends IncrementalMagFreqDist> actual = builder.getTargetMFDs().getOnFaultSupraSeisNucleationMFDs();
+			for (int s=0; s<expected.size(); s++)
+				for (int m=0; m<expected.get(s).size(); m++)
+					assertEquals(expected.get(s).getY(m), actual.get(s).getY(m), 1e-14);
+		}
+	}
+
+	private static void initializeAdjustment(FaultSystemRupSet set,
+			ThresholdAveragingSectNuclMFD_Estimator adjustment) {
+		new SupraSeisBValInversionTargetMFDs.Builder(set, 1d).applyDefModelUncertainties(false)
+				.addSectCountUncertainties(false).adjustTargetsForData(adjustment).build();
+	}
+
+	private static class ExposedWorst<T extends Transition>
+	extends ThresholdAveragingSectNuclMFD_Estimator.WorstJumpProb<T> {
+		ExposedWorst(TransitionProbabilityCalc<T> model) { super(model); }
+		double probability(ClusterRupture rupture) { return calcRupProb(rupture); }
+	}
+
+	private static class ExposedRelGR<T extends Transition>
+	extends ThresholdAveragingSectNuclMFD_Estimator.RelGRWorstJumpProb<T> {
+		ExposedRelGR(TransitionProbabilityCalc<T> model) { super(model, 100, true); }
+		double probability(ClusterRupture rupture) { return calcRupProb(rupture); }
 	}
 
 	@Test
