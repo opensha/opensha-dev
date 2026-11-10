@@ -1,0 +1,17 @@
+name,imtStr,imLevel,meanDR
+W1-lowrise,PGA,0.05,0
+W1-lowrise,PGA,0.1,0.05
+W1-lowrise,PGA,0.2,0.15
+W2-midrise,SA(1.0),0.05,0
+W2-midrise,SA(1.0),0.1,0.04
+W2-midrise,SA(1.0),0.15,0.12
+W3-highrise,PGV,0.1,0
+W3-highrise,PGV,0.2,0.06
+W3-highrise,PGV,0.3,0.18
+W4-lowrise,SA(1.0),0.05,0
+W4-lowrise,SA(1.0),0.1,0.05
+W4-lowrise,SA(1.0),0.2,0.12
+W4-lowrise,SA(1.0),0.3,0.18
+W5-midrise,PGA,0.02,0
+W5-midrise,PGA,0.05,0.03
+W5-midrise,PGA,0.1,0.08

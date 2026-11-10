@@ -1,0 +1,14 @@
+ComponentID,PrimaryLS,IMT,LimitStateName,Type,IMLevel,Probability,Median,Beta
+Fragility_A,Collapse,PGA,Slight,lognormal,,,0.08,0.4
+Fragility_A,Collapse,PGA,Collapse,lognormal,,,0.11,0.5
+Fragility_B,,SA(1.0),Slight,discrete,0.04,0.1,,
+Fragility_B,,SA(1.0),Slight,discrete,0.06,0.5,,
+Fragility_B,,SA(1.0),Slight,discrete,0.08,0.9,,
+Fragility_B,,SA(1.0),Collapse,discrete,0.05,0.2,,
+Fragility_B,,SA(1.0),Collapse,discrete,0.07,0.6,,
+Fragility_B,,SA(1.0),Collapse,discrete,0.10,0.95,,
+Fragility_C,Topple,SA(0.3),Slight,lognormal,,,0.07,0.35
+Fragility_C,Topple,SA(0.3),Collapse,discrete,0.05,0.2,,
+Fragility_C,Topple,SA(0.3),Collapse,discrete,0.08,0.5,,
+Fragility_C,Topple,SA(0.3),Collapse,discrete,0.10,0.9,,
+Fragility_C,Topple,SA(0.3),Topple,lognormal,,,0.12,0.45

@@ -1,0 +1,42 @@
+[
+  {
+    "name": "W1-lowrise",
+    "imt": "PGA",
+    "imLevels": [0.05, 0.1, 0.2],
+    "meanDamageRatio": [0.0, 0.05, 0.15],
+    "covariance": null,
+    "covDistribution": null
+  },
+  {
+    "name": "W2-midrise",
+    "imt": "SA(1.0)",
+    "imLevels": [0.05, 0.1, 0.15],
+    "meanDamageRatio": [0.0, 0.04, 0.12],
+    "covariance": [0.0, 0.02, 0.03],
+    "covDistribution": "LOGNORMAL"
+  },
+  {
+    "name": "W3-highrise",
+    "imt": "PGV",
+    "imLevels": [0.1, 0.2, 0.3],
+    "meanDamageRatio": [0.0, 0.06, 0.18],
+    "covariance": null,
+    "covDistribution": null
+  },
+  {
+    "name": "W4-lowrise",
+    "imt": "SA(1.0)",
+    "imLevels": [0.05, 0.1, 0.2, 0.3],
+    "meanDamageRatio": [0.0, 0.05, 0.12, 0.18],
+    "covariance": [0.0, 0.01, 0.02, 0.03],
+    "covDistribution": "BETA"
+  },
+  {
+    "name": "W5-midrise",
+    "imt": "PGA",
+    "imLevels": [0.02, 0.05, 0.1],
+    "meanDamageRatio": [0.0, 0.03, 0.08],
+    "covariance": null,
+    "covDistribution": null
+  }
+]

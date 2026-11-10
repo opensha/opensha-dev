@@ -1,0 +1,106 @@
+package scratch.anne.sra.util;
+
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.Arrays;
+import java.util.List;
+
+/** Small parsing helpers for config/CSV/JSON input values (strings to doubles, numeric arrays, delimited lists). */
+public class InputParsingUtil {
+
+    /**
+     * @throws IllegalArgumentException if no file exists at {@code path}
+     */
+    public static void verifyFileExists(Path path, String description) {
+        if (!Files.exists(path)) {
+            throw new IllegalArgumentException(description + " does not exist: " + path);
+        }
+    }
+
+    public static double parseDoubleOrThrow(String s) {
+        if (s == null || s.isEmpty()) {
+            throw new IllegalArgumentException("Expected numeric value but found empty string");
+        }
+        return Double.parseDouble(s.trim());
+    }
+
+    
+    public static double[] parseJsonNumericArray(Object obj) {
+        if (obj == null) return new double[0];
+        if (obj instanceof List<?>) {
+            List<?> list = (List<?>) obj;
+            return list.stream()
+                       .mapToDouble(v -> {
+                           if (v instanceof Number) return ((Number) v).doubleValue();
+                           else return Double.parseDouble(v.toString());
+                       })
+                       .toArray();
+        } else if (obj instanceof String) {
+            String[] tokens = ((String) obj).split(";");
+            return Arrays.stream(tokens)
+                         .mapToDouble(Double::parseDouble)
+                         .toArray();
+        } else {
+            throw new IllegalArgumentException("Cannot parse numeric array: " + obj);
+        }
+    }
+
+    
+    /**
+     * Cleans a CSV field by trimming whitespace and removing surrounding quotes.
+     *
+     * @param s raw CSV field
+     * @return cleaned value (never null)
+     */
+
+    public static String cleanCsvString(String s) {
+        if (s == null) return "";
+        s = s.trim();
+
+        if (s.startsWith("\"") && s.endsWith("\"") && s.length() > 1) {
+            s = s.substring(1, s.length() - 1);
+        }
+
+        return s;
+    }
+
+
+	public static double parseDoubleOrDefault(String s, double defaultVal) {
+	    if (s == null || s.isBlank()) {
+	        return defaultVal;
+	    }
+	    return Double.parseDouble(s.trim());
+	}
+
+    /**
+     * Parses a delimited list of doubles from a config value, e.g.
+     * {@code "[0.1, 0.2; 0.3]"} or {@code 0.1,0.2,0.3} -- tolerates
+     * optional surrounding quotes/brackets and either comma or
+     * semicolon separators.
+     *
+     * @param value raw config value; null/blank returns an empty list
+     */
+    public static List<Double> parseDoubleList(String value) {
+
+        if (value == null || value.isBlank())
+            return List.of();
+
+        // strip surrounding quotes FIRST
+        value = value.trim();
+
+        if ((value.startsWith("\"") && value.endsWith("\"")) ||
+            (value.startsWith("'") && value.endsWith("'"))) {
+            value = value.substring(1, value.length() - 1);
+        }
+
+        // remove brackets
+        value = value.replace("[", "")
+                     .replace("]", "");
+
+        return Arrays.stream(value.split("[,;]"))
+                .map(String::trim)
+                .filter(s -> !s.isEmpty())
+                .map(Double::parseDouble)
+                .toList();
+    }
+}

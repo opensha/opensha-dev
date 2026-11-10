@@ -1,0 +1,159 @@
+package scratch.anne.sra.examples.workflowTests;
+
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.Map;
+
+import scratch.anne.sra.domain.asset.vulnerability.VulnerabilityAsset;
+import scratch.anne.sra.domain.hazard.HazardParameters;
+import scratch.anne.sra.domain.hazard.HazardParametersMetadataBuilder;
+import scratch.anne.sra.domain.portfolio.Portfolio;
+import scratch.anne.sra.domain.portfolio.PortfolioMetadataBuilder;
+import scratch.anne.sra.domain.portfolio.portfolioWrappers.RiskConvolutionPortfolio;
+import scratch.anne.sra.domain.portfolio.portfolioWrappers.RiskConvolutionPortfolio.ConvolutionMode;
+import scratch.anne.sra.domain.structuralResponse.ResponseModelLibrary;
+import scratch.anne.sra.domain.structuralResponse.ResponseModelMetadataBuilder;
+import scratch.anne.sra.domain.structuralResponse.SimpleImResponseLibrary;
+import scratch.anne.sra.domain.structuralResponse.vulnerabilities.SimpleImVulnLibraryPreparer;
+import scratch.anne.sra.domain.structuralResponse.vulnerabilities.VulnerabilityModel;
+import scratch.anne.sra.engine.convolution.RiskConvolution.IntegrationMethod;
+import scratch.anne.sra.engine.portfolioWorkflow.PortfolioPerRuptureRiskConvolutionCalculator;
+import scratch.anne.sra.io.readers.ParseRiskRunParametersCSV;
+import scratch.anne.sra.io.readers.PortfolioReader;
+import scratch.anne.sra.io.readers.VulnerabilityLibraryReader;
+import scratch.anne.sra.io.writers.AssetRiskForRuptureWriter;
+import scratch.anne.sra.util.InputParsingUtil;
+
+
+/**
+ * Parameter sweep: runs the {@code PER_RUPTURE} per-asset Parquet
+ * export across every combination of {@code fRelativeGrid} x
+ * {@code fAbsoluteGrid} threshold values (see
+ * {@link AssetRiskForRuptureWriter#writeThresholdValue}), skipping any
+ * combination whose output CSV already exists -- lets you explore how
+ * the asset-write threshold affects output size/content without
+ * recomputing combinations you've already run.
+ *
+ * <p><b>Choice point -- edit before running:</b> {@code fRelativeGrid}/
+ * {@code fAbsoluteGrid} select which threshold combinations are swept
+ * (several alternative grids are commented out above the active ones);
+ * {@code baseFolder}/{@code inputFolder} select which run folder's
+ * {@code common_input.csv} drives the run.</p>
+ */
+public class PortfolioELossAssetFilterTesting {
+	
+	public static void main(String[] args) throws Exception {
+		
+//		double[] fRelativeGrid = {1e-1, 1e-2, 1e-3, 1e-4, 1e-5, 0};
+//		double[] fAbsoluteGrid = {1e-5, 1e-6, 1e-7, 1e-8, 1e-9, 0};
+		
+//		double[] fRelativeGrid = {1e-1, 2e-1, 3e-1, 4e-1, 5e-1, 6e-1, 7e-1, 8e-1, 9e-1};
+//		double[] fAbsoluteGrid = {1e-1, 1e-2, 1e-3, 1e-4, 2e-1, 3e-1, 4e-1, 5e-1};
+//		double[] fAbsoluteGrid = {0};
+		
+//		double[] fRelativeGrid = {0.9, 0.8, 0.7, 0.6, 0.5, 0.4, 0.3, 0.2, 1e-1, 1e-2, 1e-3, 1e-4, 1e-5, 0};
+//		double[] fAbsoluteGrid = {1e-1, 1e-2, 1e-3, 1e-4, 2e-1, 3e-1, 4e-1, 1e-5, 1e-6, 1e-7, 1e-8, 1e-9, 0};
+		
+//		double[] fRelativeGrid = {0};
+//		double[] fAbsoluteGrid = {0};
+		
+		double[] fRelativeGrid = {1e-1, 1e-2};
+		double[] fAbsoluteGrid = {1e-3, 1e-4, 1e-5};
+		
+		String fileTag = "";
+		
+		// ---------------------------------------------
+		
+		Path baseFolder = Path.of("C:\\Users\\ahulsey\\OneDrive - DOI\\Desktop\\Research\\openSRA\\software architecture\\my_scratch\\conversion to Java project\\BERM_test-outputs\\_vb\\csv_inputs");
+		Path inputFolder = Path.of("tests\\asset-per-rupture\\asset-filter-testing\\distributed_portfolio");
+	    Path runFolder = baseFolder.resolve(inputFolder);
+	    
+	    if (!Files.isDirectory(runFolder))
+	        throw new IllegalArgumentException("Run folder does not exist: " + runFolder);
+	
+	    Path configCSV = runFolder.resolve("common_input.csv");
+	    if (!Files.exists(configCSV))
+	        throw new IllegalArgumentException("Missing input.csv in run folder: " + runFolder);
+
+        
+	    // ---------------------------------------------
+	    Map<String, String> config =
+	            ParseRiskRunParametersCSV.loadConfig(configCSV);
+	    
+        Map<String, String> filterConfig =
+                ParseRiskRunParametersCSV.extractSourceFilterConfig(config);
+	    
+        HazardParameters hazardParameters = new HazardParameters(
+                config.get("erf_class"),
+                InputParsingUtil.parseDoubleOrDefault(
+                        config.get("erf_duration"),
+                        1.0
+                ),
+                ParseRiskRunParametersCSV.parseHazardMetric(config.get("hazard_metric")),
+                config.get("gmm"),
+                filterConfig
+        );
+        
+        IntegrationMethod integrationMethod = ParseRiskRunParametersCSV.parseIntegrationMethod(config.get("integration_method"));
+	    
+	    // ---------------------------------------------
+	    
+        Path portfolioCSV = Path.of(config.get("portfolio_csv"));
+        Path vulnLibraryJSON = Path.of(config.get("vuln_library_json"));
+
+        InputParsingUtil.verifyFileExists(portfolioCSV, "Portfolio CSV");
+        InputParsingUtil.verifyFileExists(vulnLibraryJSON, "Vulnerability JSON");
+        
+        Portfolio<VulnerabilityAsset> basePortfolio =
+                PortfolioReader.readCSV(portfolioCSV, VulnerabilityAsset.class);
+
+        ResponseModelLibrary<VulnerabilityModel> vulnLib =
+                VulnerabilityLibraryReader.readLibrary(vulnLibraryJSON);
+
+        SimpleImResponseLibrary expVulnLib =
+                SimpleImVulnLibraryPreparer.prepare(vulnLib, basePortfolio.getResponseModelNames());
+	    
+	    // --------------------------------------------------
+
+        Map<String, String> writerMetadata = new java.util.HashMap<>();
+        writerMetadata.putAll(HazardParametersMetadataBuilder.build(hazardParameters));
+        writerMetadata.putAll(PortfolioMetadataBuilder.build(basePortfolio));
+        writerMetadata.putAll(ResponseModelMetadataBuilder.build(expVulnLib));
+
+        for (double fRel : fRelativeGrid) {
+            for (double fAbs : fAbsoluteGrid) {
+            	String fileName = String.format("%s_fRel-%s_fAbs-%s", fileTag, sciTag(fRel), sciTag(fAbs));
+            	Path outputCSV = runFolder.resolve(fileName + ".csv");
+            	
+            	if (!Files.exists(outputCSV)) {
+	            	AssetRiskForRuptureWriter assetWriter = new AssetRiskForRuptureWriter(runFolder, fileName, fRel, fAbs, writerMetadata);
+	            	
+	            	RiskConvolutionPortfolio riskConvolutionPortfolio = new RiskConvolutionPortfolio(basePortfolio, expVulnLib);
+	            	
+		            PortfolioPerRuptureRiskConvolutionCalculator calculator =
+		                    new PortfolioPerRuptureRiskConvolutionCalculator(
+		                            riskConvolutionPortfolio,
+		                            expVulnLib,
+		                            hazardParameters,
+		                            integrationMethod,
+		                            assetWriter
+		                    );
+		            
+		            riskConvolutionPortfolio = calculator.computeRisk();
+		            riskConvolutionPortfolio.assertConvolutionExecutedAs(ConvolutionMode.PER_RUPTURE);
+		            riskConvolutionPortfolio.exportRuptureResults(outputCSV);
+            	}
+            }
+        }
+	}
+	
+	static String sciTag(double v) {
+	    if (v == 0.0) return "0";
+	    int exp = (int) Math.floor(Math.log10(v));
+	    double coeff = v / Math.pow(10, exp);
+	    long coeffRounded = Math.round(coeff);
+	    return coeffRounded + "e" + exp;
+	}
+	
+
+}

@@ -1,0 +1,11 @@
+{
+  "LJB1": {
+    "description": "PBR LJB1 at Lovejoy Buttes",
+    "comments": "plausible representation of the PBR LJB1 at Lovejoy Buttes, at about 15 km from the SAF, which has an 'alpha' angle of 0.21 rad",
+    "primaryLS": "Topple",
+    "imt": "PGA",
+    "limitStates": {
+      "Topple": { "type": "lognormal", "median": 0.28, "beta": 0.47238 }
+    }
+  }
+}
