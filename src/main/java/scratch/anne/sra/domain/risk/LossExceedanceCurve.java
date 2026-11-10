@@ -6,7 +6,7 @@ import java.util.List;
 import scratch.anne.sra.domain.hazard.RuptureKey;
 
 /**
- * A finished loss-exceedance curve: parallel arrays of loss threshold
+ * A complete loss-exceedance curve: parallel arrays of loss threshold
  * and cumulativeRate, ordered loss increasing / cumulativeRate
  * decreasing. Produced by DiscreteRankAccumulation or
  * LogNormalCOVAccumulation; consumed by anything that wants to plot it,

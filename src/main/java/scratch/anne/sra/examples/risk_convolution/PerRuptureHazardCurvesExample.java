@@ -12,7 +12,7 @@ import scratch.anne.sra.domain.asset.AbstractAsset;
 import scratch.anne.sra.domain.asset.vulnerability.VulnerabilityAsset;
 import scratch.anne.sra.domain.hazard.HazardParameters;
 import scratch.anne.sra.domain.portfolio.Portfolio;
-import scratch.anne.sra.engine.per_rupture.RuptureProbabilityCurveCollection;
+import scratch.anne.sra.engine.per_rupture.RuptureHazardCurveCollection;
 import scratch.anne.sra.io.readers.ParseRiskRunParametersCSV;
 import scratch.anne.sra.io.readers.PortfolioReader;
 import scratch.anne.sra.io.writers.RuptureProbabilityCurvesExporter;
@@ -26,7 +26,7 @@ import scratch.anne.sra.util.AssetKeys.ImKey.ImDomain;
  * For up to {@code nAssets} assets in a run folder's portfolio, builds
  * the shared ERF/GMM once and computes each asset's per-rupture
  * conditional exceedance-probability curves via
- * {@link RuptureProbabilityCurveCollection#fromERF}, writing one CSV
+ * {@link RuptureHazardCurveCollection#fromERF}, writing one CSV
  * per asset via {@link RuptureProbabilityCurvesExporter}.
  *
  * <p><b>Choice points -- edit before running:</b></p>
@@ -39,7 +39,7 @@ import scratch.anne.sra.util.AssetKeys.ImKey.ImDomain;
  *       define the IM grid each asset's curves are evaluated at.</li>
  * </ul>
  */
-public class PerRuptureProbabilityCurvesExampleCalc {
+public class PerRuptureHazardCurvesExample {
 
     public static Path baseFolder = Path.of("C:\\Users\\ahulsey\\OneDrive - DOI\\Desktop\\Research\\openSRA\\software architecture\\my_scratch\\conversion to Java project\\BERM_test-outputs\\_vb\\csv_inputs\\tests\\disagg");
     public static Path inputFolder = Path.of("");
@@ -126,8 +126,8 @@ public class PerRuptureProbabilityCurvesExampleCalc {
             ScalarIMR gmm = gmmRef.get();
             gmm.setParamDefaults();
 
-            RuptureProbabilityCurveCollection collection =
-                    RuptureProbabilityCurveCollection.fromERF(
+            RuptureHazardCurveCollection collection =
+                    RuptureHazardCurveCollection.fromERF(
                             erf, gmm, hazardParameters, asset, imKey
                     );
             collection.printSummary();

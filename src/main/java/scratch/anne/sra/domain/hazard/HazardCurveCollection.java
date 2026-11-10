@@ -19,7 +19,7 @@ import scratch.anne.sra.util.AssetKeys.SiteKey;
  * completes so the result is safe to read without further locking.
  * Requires an {@code EXCEEDANCE} hazard metric type, same as
  * {@link scratch.anne.sra.engine.per_rupture.RuptureLossResultsCollection}/
- * {@link scratch.anne.sra.engine.per_rupture.RuptureProbabilityCurveCollection}.</p>
+ * {@link scratch.anne.sra.engine.per_rupture.RuptureHazardCurveCollection}.</p>
  */
 public final class HazardCurveCollection {
 

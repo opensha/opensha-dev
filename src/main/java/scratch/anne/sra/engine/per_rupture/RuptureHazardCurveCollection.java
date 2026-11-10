@@ -49,20 +49,12 @@ import org.opensha.sha.faultSurface.PointSurface;
  * stored as metadata (like {@link HazardParameters}), since they are fixed
  * for the whole collection rather than varying per rupture.</p>
  *
- * <p>Threading is not handled here: any parallelization (e.g. one call per
- * site) is expected to live in a portfolio-level wrapper. The {@link AbstractERF}
- * passed to the {@code fromERF}/{@code fromHazardParameters} factories is
- * expected to be built once and may be shared read-only across concurrent
- * calls (matching how the ERF is shared across threads in the portfolio
- * workflow); the {@link ScalarIMR} is expected to be caller-owned per
- * call/thread, since it holds mutable per-call state (site, rupture, IMT).</p>
- *
  * <p>Parallel in structure to {@link RuptureResultsCollection}: same
  * {@link RuptureKey}, same frozen-after-build discipline. There is no
  * accumulation phase here (unlike loss), so {@link #freeze()} computes two
  * comparison hazard curves rather than loss contributions.</p>
  */
-public final class RuptureProbabilityCurveCollection {
+public final class RuptureHazardCurveCollection {
 
     private final HazardParameters hazardParameters;
     private final SiteKey siteKey;
@@ -84,7 +76,7 @@ public final class RuptureProbabilityCurveCollection {
     private HazardCurve aggregateHazardCurve;
     private HazardCurve directHazardCurve;
 
-    public RuptureProbabilityCurveCollection(
+    public RuptureHazardCurveCollection(
             HazardParameters hazardParameters,
             SiteKey siteKey,
             ImKey imKey,
@@ -284,7 +276,7 @@ public final class RuptureProbabilityCurveCollection {
      * wrapper that reuses one ERF across many assets/threads should instead
      * build the ERF once and call one of the {@code fromERF} overloads.</p>
      */
-    public static RuptureProbabilityCurveCollection fromHazardParameters(
+    public static RuptureHazardCurveCollection fromHazardParameters(
             HazardParameters hazardParameters,
             AbstractAsset asset,
             ImKey imKey
@@ -326,7 +318,7 @@ public final class RuptureProbabilityCurveCollection {
      * {@code fromERF(erf, gmm, hazardParameters, asset, imKey)} overload
      * instead.</p>
      */
-    public static RuptureProbabilityCurveCollection fromERF(
+    public static RuptureHazardCurveCollection fromERF(
             AbstractERF erf,
             HazardParameters hazardParameters,
             AbstractAsset asset,
@@ -364,7 +356,7 @@ public final class RuptureProbabilityCurveCollection {
      * @param asset            supplies lat/lon/vs30 for the site; stored as a {@link SiteKey}
      * @param imKey            IMT (+ period, if SA) and IM grid to evaluate at; stored as metadata
      */
-    public static RuptureProbabilityCurveCollection fromERF(
+    public static RuptureHazardCurveCollection fromERF(
             AbstractERF erf,
             ScalarIMR gmm,
             HazardParameters hazardParameters,
@@ -432,7 +424,7 @@ public final class RuptureProbabilityCurveCollection {
                         );
                 }
 
-                double magnitude = rupture.getMag();
+                double magnitude = rupture.getMag();               
                 // getDistanceRup() throws for PointSurface.DistanceCorrectable instances (e.g.
                 // NSHM-style point-source approximations). Note: DistanceCorrectable's own
                 // getUncorrectedDistances(Location) is broken in this version of OpenSHA — it
@@ -440,6 +432,8 @@ public final class RuptureProbabilityCurveCollection {
                 // getDistanceRup(...) and hits the overridden (always-throwing) version rather
                 // than the base PointSurface implementation. Working around this by going
                 // directly to the wrapped uncorrected surface via getUncorrectedSurface().
+                
+                // TODO ask for opensha fix of the getDistanceRup() method requiring my workaround 
                 RuptureSurface surface = rupture.getRuptureSurface();
                 double distance;
                 if (surface instanceof PointSurface.DistanceCorrectable) {
@@ -469,7 +463,7 @@ public final class RuptureProbabilityCurveCollection {
             }
         }
 
-        RuptureProbabilityCurveCollection collection = new RuptureProbabilityCurveCollection(
+        RuptureHazardCurveCollection collection = new RuptureHazardCurveCollection(
                 hazardParameters,
                 siteKey,
                 imKey,

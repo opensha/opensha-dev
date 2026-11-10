@@ -9,13 +9,13 @@ import java.util.Map;
 import scratch.anne.sra.domain.hazard.HazardCurve;
 import scratch.anne.sra.domain.hazard.HazardParameters;
 import scratch.anne.sra.domain.hazard.RuptureKey;
-import scratch.anne.sra.engine.per_rupture.RuptureProbabilityCurveCollection;
-import scratch.anne.sra.engine.per_rupture.RuptureProbabilityCurveCollection.RuptureExceedanceResult;
+import scratch.anne.sra.engine.per_rupture.RuptureHazardCurveCollection;
+import scratch.anne.sra.engine.per_rupture.RuptureHazardCurveCollection.RuptureExceedanceResult;
 import scratch.anne.sra.util.AssetKeys.ImKey;
 import scratch.anne.sra.util.AssetKeys.SiteKey;
 
 /**
- * Writes a {@link RuptureProbabilityCurveCollection} to CSV.
+ * Writes a {@link RuptureHazardCurveCollection} to CSV.
  *
  * <p>Unlike {@code RuptureResultsExporter} (many assets, one loss value per
  * rupture) or {@code HazardCurvesExporter} (many sites/IMTs, one curve per
@@ -26,7 +26,7 @@ import scratch.anne.sra.util.AssetKeys.SiteKey;
  * row.</p>
  *
  * <p>Requires the collection to already be frozen (see
- * {@link RuptureProbabilityCurveCollection#freeze()}, now called
+ * {@link RuptureHazardCurveCollection#freeze()}, now called
  * automatically at the end of {@code fromERF}), since the direct and
  * aggregate hazard curves are only available after freezing.</p>
  *
@@ -62,7 +62,7 @@ import scratch.anne.sra.util.AssetKeys.SiteKey;
  */
 public final class RuptureProbabilityCurvesExporter {
 
-    public void export(RuptureProbabilityCurveCollection collection, Path file) {
+    public void export(RuptureHazardCurveCollection collection, Path file) {
         HazardParameters hazardParameters = collection.getHazardParameters();
         Map<String, String> filterConfig = hazardParameters.getFilterConfig();
         SiteKey siteKey = collection.getSiteKey();

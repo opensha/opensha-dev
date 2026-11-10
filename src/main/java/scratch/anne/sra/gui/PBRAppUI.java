@@ -69,7 +69,7 @@ public class PBRAppUI extends JFrame {
 
 	
 	private static final ERFOption[] ALLOWED_ERFS = {
-		new ERFOption("org.opensha.sha.earthquake.rupForecastImpl.nshm23.erf.NSHM23_WUS_BranchAveragedERF"),
+		new ERFOption("org.opensha.sha.earthquake.rupForecastImpl.nshm23.erf.NSHM23_BranchAveragedERF"),
 	    new ERFOption("org.opensha.sha.earthquake.rupForecastImpl.WGCEP_UCERF_2_Final"),
 	    new ERFOption("org.opensha.sha.earthquake.rupForecastImpl.MeanUCERF3"),
 	};
@@ -469,7 +469,23 @@ public class PBRAppUI extends JFrame {
 
             @Override
             protected void done() {
-            	
+
+                // get() re-throws whatever doInBackground() threw, if
+                // anything -- without this, SwingWorker silently swallows
+                // that exception and done() proceeds anyway with
+                // whatever fields doInBackground() managed to set
+                // before failing (possibly none), leading to a confusing
+                // downstream NPE instead of the real cause.
+                try {
+                    get();
+                } catch (Exception e) {
+                    setStage(Stage.IDLE);
+                    Throwable cause = e.getCause() != null ? e.getCause() : e;
+                    logResult(" ERROR: " + cause);
+                    cause.printStackTrace();
+                    return;
+                }
+
             	setStage(Stage.COMPLETE);
 
                 // ---------------- ORIGINAL LOG BLOCK (RESTORED) ----------------

@@ -149,7 +149,7 @@ public interface ImValueTransformer {
     class PlaceholderImTransformation implements ImValueTransformer {
         @Override
         public Result transform(double[] imValues, double[] respValues) {
-            // TODO: implement optional interpolation (logspace, linspace, fixed points, etc.)
+            // TODO implement optional interpolation (logspace, linspace, fixed points, etc.)
             return new Result(imValues.clone(), respValues.clone());
         }
     }
