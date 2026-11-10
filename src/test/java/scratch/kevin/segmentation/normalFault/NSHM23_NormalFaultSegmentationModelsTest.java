@@ -279,15 +279,21 @@ public class NSHM23_NormalFaultSegmentationModelsTest {
 		JumpProbabilityCalc jumps = NSHM23_SegmentationModels.MID.getShawModel();
 		for (SegmentationMFD_Adjustment method : SegmentationMFD_Adjustment.values()) {
 			if (method == SegmentationMFD_Adjustment.NONE)
-				assertNull(method.getAdjustment(jumps));
+				assertNull(method.getAdjustment(jumps, 1));
 			else
-				assertNotNull(method.getAdjustment(jumps));
+				assertNotNull(method.getAdjustment(jumps, 1));
 		}
 	}
 
 	@Test(expected=IllegalArgumentException.class)
 	public void testJumpOnlyAdjustmentRejectsInternalTransitionModel() {
-		SegmentationMFD_Adjustment.GREEDY.getAdjustment(new TestNode(false, 0.05).getModel(rupSet(false), null));
+		SegmentationMFD_Adjustment.GREEDY.getAdjustment(new TestNode(false, 0.05).getModel(rupSet(false), null), 1);
+	}
+
+	@Test(expected=IllegalArgumentException.class)
+	public void testMFDPreInversionRejectsInternalTransitionModel() {
+		TransitionProbabilityCalc<?> model = new TestNode(false, 0.05).getModel(rupSet(false), null);
+		SegmentationMFD_Adjustment.MFD_PRE_INVERSION.getAdjustment(model, 1);
 	}
 
 	@Test
