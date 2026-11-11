@@ -90,7 +90,7 @@ public class NSHM23_NormalFaultSegmentationModelsTest {
 	public void testTwoSubsectionFaultIsNoLongerForcedToZero() {
 		FaultSystemRupSet set = rupSet(false).getForRuptureSubSet(List.of(4)).getForSectionSubSet(List.of(1, 2));
 		NSHM23_NormalFaultSegmentationModels choice = NSHM23_NormalFaultSegmentationModels.AUTOMATED_5KM;
-		assertEquals(Policy.MINIMUM_INTERNAL_IF_NO_ALTERNATIVE, choice.getRuptureExemptionPolicy());
+		assertEquals(Policy.MINIMUM_INTERNAL_IF_NO_UNCONSTRAINED_RUPTURE, choice.getRuptureExemptionPolicy());
 		InversionConfiguration config = new NSHM23_InvConfigFactory().buildInversionConfig(set, branch(choice), 1);
 		SegmentationProbabilityConstraint segmentation = null;
 		for (InversionConstraint constraint : config.getConstraints())

@@ -28,9 +28,9 @@ import scratch.kevin.segmentation.normalFault.NormalFaultGeometricSegmentationPr
  * do not add it alongside the original segmentation level. Probabilities are
  * averaged across crossing ruptures in both the constraint and target-MFD paths.
  * The two preliminary fits have equal exploratory weights, not calibrated weights. Internal bends exempt
- * tied minimum-size ruptures on a side only when no eligible non-crossing alternative exists entirely within
- * the same parent fault; larger crossings remain constrained. This enforcement policy is shared by the
- * inversion constraint and MFD adjustment.
+ * tied minimum-size ruptures on a side only when no eligible rupture using that subsection can carry rate
+ * on its own under the original segmentation bounds. Larger crossings remain constrained. The inversion
+ * constraint and MFD adjustment use the same policy.
  */
 @DoesNotAffect(FaultSystemRupSet.SECTS_FILE_NAME)
 @DoesNotAffect(FaultSystemRupSet.RUP_SECTS_FILE_NAME)
@@ -56,7 +56,7 @@ implements SegmentationModelBranchNode<Transition>, RupsThroughCreepingSectBranc
 	public NSHM23_SegmentationModels getBackgroundChoice() { return NSHM23_SegmentationModels.MID; }
 
 	@Override
-	public Policy getRuptureExemptionPolicy() { return Policy.MINIMUM_INTERNAL_IF_NO_ALTERNATIVE; }
+	public Policy getRuptureExemptionPolicy() { return Policy.MINIMUM_INTERNAL_IF_NO_UNCONSTRAINED_RUPTURE; }
 
 	@Override
 	public NormalFaultGeometricSegmentationModel getModel(

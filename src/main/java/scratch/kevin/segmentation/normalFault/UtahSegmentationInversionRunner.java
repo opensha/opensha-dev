@@ -83,7 +83,7 @@ public class UtahSegmentationInversionRunner {
 		boolean reports = true;
 		List<Calculation> calculations = Arrays.asList(Calculation.values());
 		String date = LocalDate.now(ZoneId.of("America/Los_Angeles")).format(DateTimeFormatter.ofPattern("yyyy_MM_dd"));
-		File output = new File(OUTPUT_PARENT, date+"-nshm23-utah-normal_fault_segmentation-local_min_rup_exemption");
+		File output = new File(OUTPUT_PARENT, date+"-nshm23-utah-normal_fault_segmentation-unconstrained_rup_exemption");
 		for (int i=0; i<args.length; i++) {
 			switch (args[i]) {
 			case "--prepare-only": prepareOnly = true; break;
@@ -231,7 +231,6 @@ public class UtahSegmentationInversionRunner {
 		settings.setProperty("state", NSHM23_SingleStates.UT.name());
 		settings.setProperty("geometric_exemption_policy",
 				NSHM23_NormalFaultSegmentationModels.AUTOMATED_5KM.getRuptureExemptionPolicy().name());
-		settings.setProperty("exemption_alternatives_within_parent_only", "true");
 		File file = new File(output, "run-settings.properties");
 		if (file.exists()) {
 			Properties previous = new Properties();
@@ -275,10 +274,10 @@ public class UtahSegmentationInversionRunner {
 				+"The factory also applies its usual minimum iteration budget based on section count.", "",
 				"Geometric choices use the 10-degree bend threshold, normal-to-normal geometry, and MID background "
 				+"without hardcoded Wasatch rules. Original MID retains its production Wasatch rules.", "",
-				"For internal bends only, if an endpoint has no eligible non-crossing rupture entirely within the same "
-				+"parent fault, all of its minimum-size "
-				+"ruptures (by subsection count) are exempt on that side. Their reference participation is retained; "
-				+"larger crossings and the opposite side are still constrained. MFD adjustments use the same policy.", "",
+				"If a subsection has no eligible rupture that can carry rate by itself under the original segmentation "
+				+"bounds, all of its minimum-size ruptures (by subsection count) are exempt from internal bend bounds "
+				+"on that subsection's side. Their participation still counts toward the reference rate. Larger "
+				+"crossings and between-parent jumps remain constrained. MFD adjustments use the same policy.", "",
 				"Each `config.json` is the regional inspection configuration; "
 				+"cluster solves build subset configurations. "
 				+"Independent stochastic realizations can differ even with matched calculation settings.", "",
