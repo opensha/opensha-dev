@@ -92,7 +92,7 @@ public class WasatchSegmentationGeometry {
 				boolean sameParent = first.getParentSectionId() == second.getParentSectionId();
 				// Input subsection lists are expected to retain their parent/along-strike order.
 				if (sameParent && j != i+1) continue;
-				Measurements m = geometry.measure(first, second);
+				Measurements m = geometry.measure(first, second, true);
 				if (!sameParent && m.closestTraceConnector.lengthKm > 15d) continue;
 				all.add(m);
 				if (first.getSectionName().contains("Malad") && second.getSectionName().contains("Malad")) malad.add(m);
@@ -124,6 +124,7 @@ public class WasatchSegmentationGeometry {
 		description += "White squares with black outlines mark subsection endpoints and shared boundaries.\n";
 		description += "GeoJSON contains one trace per subsection with its own properties; pair measurements are attached to connector features.\n";
 		description += "Pair maps show subsection endpoint-strike axes (blue/green dashed), their bisector (cyan dashed), and a right-angle marker.\n";
+		description += "Thick yellow-green lines mark the trace portions evaluated for overlap stepover distance.\n";
 		description += "Virginia Street overview and individual pair maps include its internal boundary and all nearby Wasatch subsection pairs within the 15 km candidate cutoff.\n";
 		description += "Probability CSVs and connector GeoJSON properties include both draft coefficient sets.\n"
 				+"Non-overlapping pairs multiply gap and lateral-offset probabilities; qualifying bends multiply all applicable distance terms.\n"
@@ -160,6 +161,7 @@ public class WasatchSegmentationGeometry {
 				.append("[Probabilities](").append(new File(outputDir, prefix+"_probabilities.csv").getAbsolutePath()).append(") | ")
 				.append("[GeoJSON](").append(new File(outputDir, prefix+".geojson").getAbsolutePath()).append(")\n\n")
 				.append("Subsection IDs refer to the geometry described in README.txt. Nearby pairs use a 15 km closest-trace cutoff.\n\n")
+				.append("Thick yellow-green lines highlight the portions of both traces searched for overlap stepover distance.\n\n")
 				.append("| Detailed plot | First subsection | Second subsection | Projected relation |\n")
 				.append("| --- | --- | --- | --- |\n");
 		for (Measurements m : measurements) {
@@ -210,6 +212,17 @@ public class WasatchSegmentationGeometry {
 		map.setScatterSymbol(PlotSymbol.FILLED_SQUARE, 7f, PlotSymbol.SQUARE, Color.BLACK);
 		List<LocationList> lines = new ArrayList<>();
 		List<PlotCurveCharacterstics> styles = new ArrayList<>();
+		PlotCurveCharacterstics overlapStyle =
+				new PlotCurveCharacterstics(PlotLineType.SOLID, 5f, new Color(125, 180, 30));
+		if (showStrikeGuides) {
+			Measurements pair = measurements.get(0);
+			if (pair.first.parentID != pair.second.parentID) {
+				lines.addAll(pair.firstOverlapSegments);
+				lines.addAll(pair.secondOverlapSegments);
+				for (int i=0; i<lines.size(); i++) styles.add(overlapStyle);
+			}
+		}
+		boolean hasOverlapHighlight = !lines.isEmpty();
 		Color[] colors = {Color.GRAY, Color.ORANGE, new Color(153, 51, 170), Color.RED, new Color(140, 86, 75)};
 		for (Measurements m : measurements) {
 			if (m.first.parentID == m.second.parentID && !prefix.equals("wasatch")) {
@@ -242,6 +255,10 @@ public class WasatchSegmentationGeometry {
 			legend.add(new PlotCurveCharacterstics(i == 4 ? PlotLineType.DASHED : PlotLineType.SOLID,
 					i >= 3 ? 3.5f : 2.5f, colors[i]));
 		legend.add(new PlotCurveCharacterstics(PlotSymbol.SQUARE, 7f, Color.BLACK));
+		if (hasOverlapHighlight) {
+			legend.add(overlapStyle);
+			legendLabels.add("Trace within overlap");
+		}
 		if (showStrikeGuides) {
 			Measurements m = measurements.get(0);
 			boolean internalBoundary = m.first.parentID == m.second.parentID;
