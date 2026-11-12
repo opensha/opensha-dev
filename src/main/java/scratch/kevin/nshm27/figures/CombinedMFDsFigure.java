@@ -60,8 +60,8 @@ public class CombinedMFDsFigure {
 
 	public static void main(String[] args) throws IOException {
 		EvenlyDiscretizedFunc refMFD = FaultSysTools.initEmptyMFD(4.99, 11.99);
-//		Range xRange = new Range(5d, 9.5d);
-		Range xRange = new Range(6d, 9.5d);
+		Range xRange = new Range(5d, 9.5d);
+//		Range xRange = new Range(6d, 9.5d);
 		Range yRange = new Range (1e-6, 1e1);
 		double fullWidth = PlotUtils.DEFAULT_USABLE_PAGE_WIDTH;
 		double fullHeight = fullWidth*0.75;

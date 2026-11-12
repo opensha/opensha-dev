@@ -89,7 +89,7 @@ public class SegMFDDemoPlot {
 		
 		JumpProbabilityCalc segModel = NSHM23_SegmentationModels.MID.getModel(rupSet, rupSet.getModule(LogicTreeBranch.class));
 		
-		SectNucleationMFD_Estimator adjustment = SegmentationMFD_Adjustment.REL_GR_THRESHOLD_AVG.getAdjustment(segModel);
+		SectNucleationMFD_Estimator adjustment = SegmentationMFD_Adjustment.REL_GR_THRESHOLD_AVG.getAdjustment(segModel, 16);
 		mfdBuilder.adjustTargetsForData(adjustment);
 		
 		targetMFDs = mfdBuilder.build();
@@ -98,7 +98,7 @@ public class SegMFDDemoPlot {
 		
 		segModel = NSHM23_SegmentationModels.CLASSIC.getModel(rupSet, rupSet.getModule(LogicTreeBranch.class));
 		
-		adjustment = SegmentationMFD_Adjustment.REL_GR_THRESHOLD_AVG.getAdjustment(segModel);
+		adjustment = SegmentationMFD_Adjustment.REL_GR_THRESHOLD_AVG.getAdjustment(segModel, 16);
 		mfdBuilder.clearTargetAdjustments().adjustTargetsForData(adjustment);
 		
 		targetMFDs = mfdBuilder.build();

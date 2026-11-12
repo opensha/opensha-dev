@@ -338,7 +338,7 @@ public class SegAdjustPageGen {
 				List<IncrementalMagFreqDist> adjTargetsList = new ArrayList<>();
 				for (SegmentationMFD_Adjustment adj : segAdjs) {
 					builder.clearTargetAdjustments();
-					SectNucleationMFD_Estimator adjEst = adj.getAdjustment(segModel);
+					SectNucleationMFD_Estimator adjEst = adj.getAdjustment(segModel, 1);
 					if (adjEst != null)
 						builder.adjustTargetsForData(adjEst);
 					List<UncertainIncrMagFreqDist> targets = builder.build().getOnFaultSupraSeisNucleationMFDs();
