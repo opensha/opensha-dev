@@ -9,7 +9,9 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import org.apache.commons.lang3.exception.ExceptionUtils;
@@ -52,6 +54,8 @@ import org.opensha.nshmp.shaded.model.NshmErf;
 import org.opensha.nshmp.shaded.model.NshmSource;
 import org.opensha.nshmp.shaded.model.NshmSurface;
 import org.opensha.nshmp.shaded.model.NshmpHazardModel;
+import org.opensha.nshmp.shaded.model.NshmpSourceType;
+import org.opensha.nshmp.shaded.model.NshmpTectonicSetting;
 
 /**
  * This class creates a list of fault system solutions (FSS) out of the 2023 CEUS fault-based sources.  All fault 
@@ -228,7 +232,7 @@ public class CEUS_FSS_creator {
 
 		ArrayList<FaultSystemSolution> fssList = new ArrayList<FaultSystemSolution>();
 		
-		ArrayList<Integer> srcZoneID_List = CEUS_FaultZones_creator.getSourceZoneID_List();
+		Set<Integer> srcZoneID_List = getZoneStrikes(hazardModel).keySet();
 
 		// get parent fault sections from Peter's features files
 		ArrayList<GeoJSONFaultSection> faultSectionData = getFaultSectionList(nshmModelDir);
@@ -681,9 +685,12 @@ public class CEUS_FSS_creator {
 		    fss.getRupSet().addModule(tectonicRegimes);
 		}
 		
-		// add gridded 
+		// add gridded
 		try {
-			bigFSS.setGridSourceProvider(buildGridSources(hazardModel));
+			GridSourceList zones = buildZoneSources(hazardModel);
+			GridSourceList gridded = buildGridSources(hazardModel);
+			GridSourceList combined = GridSourceList.combine(zones, gridded);
+			bigFSS.setGridSourceProvider(combined);
 		} catch (IOException e) {
 			throw ExceptionUtils.asRuntimeException(e);
 		}
@@ -1176,7 +1183,85 @@ if(src.getName().equals("Unnamed fault system source")) // temp fix for Peters I
 		System.out.println("Built "+numRups+" stable ruptures for "+ruptureLists.size()+" locations");
 		return new GridSourceList.Precomputed(ceusReg, TectonicRegionType.STABLE_SHALLOW, ruptureLists);
 	}
-	
+
+	private static Map<Integer, Double> getZoneStrikes(NshmpHazardModel model) {
+		Map<Integer, Double> strikes = new HashMap<>();
+		for (var tree : model.trees().get(NshmpTectonicSetting.STABLE_CRUST)) {
+			if (tree.type() != NshmpSourceType.ZONE)
+				continue;
+			for (var branch : tree) {
+				var ruptureSet = branch.value();
+				Preconditions.checkState(ruptureSet.type() == NshmpSourceType.ZONE);
+				Preconditions.checkState(ruptureSet.features().size() == 1,
+						"Expected one feature for zone %s", ruptureSet.id());
+				double strike = ruptureSet.features().get(0).properties().getDouble("strike").orElse(Double.NaN);
+				Double previous = strikes.putIfAbsent(ruptureSet.id(), strike);
+				Preconditions.checkState(previous == null || Double.compare(previous, strike) == 0,
+						"Conflicting strikes for zone %s", ruptureSet.id());
+			}
+		}
+		return strikes;
+	}
+
+	public static GridSourceList buildZoneSources(NshmpHazardModel model) throws IOException {
+		NshmErf erf = getNshmERF(model); // will have fault and zone
+
+		Map<Integer, Double> zoneStrikes = getZoneStrikes(model);
+
+		GriddedRegion ceusReg = new GriddedRegion(SeismicityRegions.CONUS_EAST.load(), 0.1, GriddedRegion.ANCHOR_0_0);
+
+		List<List<GriddedRupture>> ruptureLists = new ArrayList<>();
+		for (int i=0; i<ceusReg.getNodeCount(); i++)
+			ruptureLists.add(new ArrayList<>());
+
+		int numRups = 0;
+		Set<Integer> zoneIDs = new HashSet<>();
+		int numZoneSources = 0;
+		WC1994_MagLengthRelationship wc94 = new WC1994_MagLengthRelationship();
+		GriddedRupturePropertiesCache cache = new GriddedRupturePropertiesCache();
+
+		for(int s=0;s<erf.getNumSources();s++) {
+			NshmSource<?> src = (NshmSource<?>)erf.getSource(s);
+			if(zoneStrikes.containsKey(src.getNSHM_ID())) {
+				// it's a zone source
+				numZoneSources++;
+				zoneIDs.add(src.getNSHM_ID());
+				Preconditions.checkState(src instanceof NshmSource.Point);
+				Location loc = ((NshmSource.Point)src).location();
+				int locIndex = ceusReg.indexForLocation(loc);
+				Preconditions.checkState(locIndex >= 0, "Zone %s location outside CEUS grid: %s", src.getNSHM_ID(), loc);
+				Preconditions.checkState(src.getTectonicRegionType() == TectonicRegionType.STABLE_SHALLOW);
+				double strike = zoneStrikes.get(src.getNSHM_ID());
+				for (ProbEqkRupture rup : src) {
+					RuptureSurface surf = rup.getRuptureSurface();
+					double length = wc94.getMedianLength(rup.getMag());
+					double upper = surf.getAveRupTopDepth();
+					double lower = surf.getAveRupBottomDepth();
+					double dip = surf.getAveDip();
+					double expectedWidth = Math.min((22d - upper) / Math.sin(Math.toRadians(dip)), length / 1.5);
+					Preconditions.checkState(Precision.equals(upper, 5d, 1e-4)
+							&& Precision.equals(dip, 90d, 1e-4)
+							&& Precision.equals(surf.getAveWidth(), expectedWidth, 1e-4)
+							&& Precision.equals(lower, upper + expectedWidth, 1e-4),
+							"Unexpected zone rupture geometry for "+src.getNSHM_ID()+" at M"+rup.getMag());
+					GriddedRuptureProperties props = new GriddedRupturePropertiesBuilder()
+							.magnitude(rup.getMag()).rake(rup.getAveRake()).dip(dip).strike(strike)
+							.upperDepth(upper).lowerDepth(lower).length(length)
+							.hypocentralDepth(0.5 * (upper + lower))
+							.tectonicRegionType(TectonicRegionType.STABLE_SHALLOW).build();
+					// The wrapper already includes source-tree and MFD branch weights in this rate.
+					ruptureLists.get(locIndex).add(new GriddedRupture(locIndex, loc, cache.getCached(props),
+							rup.getMeanAnnualRate(1d)));
+					numRups++;
+				}
+			}
+		}
+		Preconditions.checkState(zoneIDs.equals(zoneStrikes.keySet()), "Not all model zones were converted: %s vs %s",
+				zoneIDs, zoneStrikes.keySet());
+		System.out.println("Built "+numRups+" stable zone ruptures across "+numZoneSources+" zone sources across "+zoneIDs.size()+" zones");
+		return new GridSourceList.Precomputed(ceusReg, TectonicRegionType.STABLE_SHALLOW, ruptureLists);
+	}
+
 	/**
 	 * I found these files by listing for "rupture-set.json" and "cluster-set.json" at various directory depths
 	 * @param srcIDsList
