@@ -168,13 +168,13 @@ public class GriddedUncertExplorationFigures {
 				highPDF.setName(null);
 				lowPDF.setName(null);
 				
+				funcs.add(highPDF);
+				chars.add(new PlotCurveCharacterstics(PlotLineType.DOTTED, 1f, Color.GRAY));
+				funcs.add(lowPDF);
+				chars.add(new PlotCurveCharacterstics(PlotLineType.DOTTED, 1f, Color.GRAY));
+				
 				funcs.add(prefPDF);
 				chars.add(new PlotCurveCharacterstics(PlotLineType.SHORT_DASHED, 1f, Color.DARK_GRAY));
-				
-				funcs.add(highPDF);
-				chars.add(new PlotCurveCharacterstics(PlotLineType.SHORT_DASHED, 1f, Color.GRAY));
-				funcs.add(lowPDF);
-				chars.add(new PlotCurveCharacterstics(PlotLineType.SHORT_DASHED, 1f, Color.GRAY));
 			}
 			
 			PlotSpec plot = new PlotSpec(funcs, chars, name, "Magnitude", "Incremental rate (1/yr)");
