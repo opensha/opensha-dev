@@ -64,6 +64,7 @@ import org.opensha.sha.earthquake.rupForecastImpl.nshm23.timeDependence.TimeDepe
 import org.opensha.sha.faultSurface.FaultSection;
 import org.opensha.sha.faultSurface.GeoJSONFaultSection;
 import org.opensha.sha.magdist.IncrementalMagFreqDist;
+import org.opensha.sha.util.TectonicRegionType;
 
 import com.google.common.base.Preconditions;
 import com.google.common.io.Files;
@@ -77,8 +78,8 @@ import scratch.ned.nshm23.FSS_Fetcher2023;
 public class LongTermTD_2027_Analyses {
 	
 	
-	private static TimeDepFaultSystemSolutionERF getFullPrefUS27_ERF() {
-		String full_FSS_fileName = "/Users/field/nshm-haz_data/fullPrefUS_FSS.zip";
+	private static TimeDepFaultSystemSolutionERF getFullPrefUS27_ERF(String full_FSS_fileName) {
+//		String full_FSS_fileName = "/Users/field/nshm-haz_data/fullPrefUS_FSS.zip";
 		FaultSystemSolution sol = FSS_Fetcher2023.getPreferredFull_FSS(full_FSS_fileName);	
 		
 		TimeDepFaultSystemSolutionERF erf = new TimeDepFaultSystemSolutionERF();
@@ -399,8 +400,8 @@ public class LongTermTD_2027_Analyses {
 	
 	public static void generatePreliminaryResults() {
 		
-		String rootDir = "/Users/field/Library/CloudStorage/OneDrive-DOI/Field_Other/ERF_Coordination/LongTermTD_2027/Analysis/PreliminaryResults/";
-		String fss_fileNameWithPath = rootDir+"fullPrefUS_FSS.zip";
+		String rootDir = "/Users/field/Field_Other/ERF_Coordination/LongTermTD_2027/Analysis/PreliminaryResults/";
+		String fss_fileNameWithPath = rootDir+"fullPrefUS_FSS.zip";  // this will be created on the first run
 		String outputDir, titleString, infoString;
 
 
@@ -417,9 +418,8 @@ public class LongTermTD_2027_Analyses {
 		PaleoMappingAlgorithm paleoMapping = PaleoMappingAlgorithm.NEIGHBORING_SECTS;
 		DataToInclude paleoDataToInclude = DataToInclude.HIST_RUPS_ONLY;
 		boolean includeUCERF3_Comp = false;
-				
-	
-		// NSHM 2027 Branch Averaged
+		
+//		// NSHM 2027 Branch Averaged
 		outputDir = referenceDir;
 		titleString = "NSHM 2027 Branch Averaged TD Model (Preliminary)";
 		infoString = "This applies the preliminary branch-averaged model (BPT and Weibull coupled with all aperidocity branches) and includes comparisons to UCERF3.";
@@ -439,7 +439,6 @@ public class LongTermTD_2027_Analyses {
 		fileList.add(new File(rootDir+"Weibull_HighAperiodicity/parentSectionData.csv"));
 		addParentMinMaxGainToFile(new File(outputDir+"parentSectionData.csv"), fileList, 8);
 
-		
 		// NSHM 2027 Branch Averaged BPT
 //		outputDir = rootDir+"NSHM27_BranchAveBPT/";
 //		titleString = "NSHM 2027 Branch Averaged TD Model - BPT";
@@ -781,7 +780,7 @@ public class LongTermTD_2027_Analyses {
 	
 	public static void generateRenewalModelPlots(boolean extrapolate) {
 		
-		String rootDir = "/Users/field/Library/CloudStorage/OneDrive-DOI/Field_Other/ERF_Coordination/LongTermTD_2027/Analysis/RenewalModelTestPlots";
+		String rootDir = "/Users/field/Field_Other/ERF_Coordination/LongTermTD_2027/Analysis/RenewalModelTestPlots";
 		String dirName = "Precision"+EqkProbDistCalc.getPrecision();  // change the value in this class if desired.
 		if(extrapolate)
 			dirName += "_extrapolated";
@@ -1108,7 +1107,7 @@ public class LongTermTD_2027_Analyses {
 		
 		HashMap<Integer,Integer> wusFromU3_ID_Map = new HashMap<Integer,Integer>();
 
-		TimeDepFaultSystemSolutionERF erf = getFullPrefUS27_ERF();
+		TimeDepFaultSystemSolutionERF erf = getFullPrefUS27_ERF("/Users/field/nshm-haz_data/fullPrefUS_FSS.zip");
 		
 		FaultSystemSolution u3_sol=null;
 		try {
@@ -1329,8 +1328,9 @@ public class LongTermTD_2027_Analyses {
 		
 	
 //		generatePreliminaryResults();
-		getFullPrefUS27_ERF();
-		System.exit(0);
+		
+//		getFullPrefUS27_ERF();
+//		System.exit(0);
 		
 		
 //		// write min and max ave slip rate for each rupture
@@ -1378,7 +1378,36 @@ public class LongTermTD_2027_Analyses {
 //		System.exit(0);
 		
 		
-		String rootDir = "/Users/field/Library/CloudStorage/OneDrive-DOI/Field_Other/ERF_Coordination/LongTermTD_2027/Analysis/Simulations/";
+		String rootDir = "/Users/field/Field_Other/ERF_Coordination/LongTermTD_2027/Analysis/Simulations/";
+		String full_FSS_fileName = rootDir+"fullPrefUS_FSS.zip";  // create and put the file in rootDir
+		
+		
+		
+		//PoissonAltTest
+		
+		// done with code at "PoissonAltTest TEST RIGHT HERE" in UCERF3_ProbabilityModel.getProbabilityGain()	
+//			double aper=0.5;
+//			TimeDepFaultSystemSolutionERF erf = getFullPrefUS27_ERF();
+//			UCERF3_ProbabilityModel u3ProbModel = (UCERF3_ProbabilityModel)erf.getProbabilityModel();
+//			u3ProbModel.setRenewalModelChoice(RenewalModels.BPT);
+//			u3ProbModel.setAperiodicityModelChoice(AperiodicityModels.SINGLE_VALUED);
+//			((AperiodicityModel.SingleValued)u3ProbModel.getAperiodicityModel()).setValue(aper);
+//			u3ProbModel.setCustomHistOpenIntervalModel(new HistoricalOpenInterval.SingleYear(erf.getTimeSpan().getStartTimeYear(), true));
+//			File parentDir = new File(rootDir+"PoissonAltTest/");
+//			if(!parentDir.exists()) 
+//				parentDir.mkdir();
+//			int numYrs = 50000;
+//			for(int i=1; i<2;i++) {
+//				File outputDir = new File(parentDir,"_"+numYrs+"yrs"); 
+//				long seed = 984087634+i*1000;
+//				String inputFile=null;
+//				inputFile = rootDir+"bptSimulationsUS27/Run1_50000yrs/outputTimesinceLast.txt";
+//				LongTermTD_Simulator.simulateEvents(erf, inputFile,"outputTimesinceLast.txt", numYrs, outputDir, 
+//						seed, true, true, Double.NaN);
+//				LongTermTD_Simulator.generateSimulationPlots(erf, inputFile, numYrs, outputDir, true);	
+//			}
+
+
 		
 			
 			
@@ -1561,52 +1590,54 @@ public class LongTermTD_2027_Analyses {
 
 		
 //		// FULL US2027 BPT SIMULTATIONS
-//		TimeDepFaultSystemSolutionERF erf = getFullPrefUS27_ERF();
-//		String aperSuffix ="";
-//		// Alt Aper?
-////		UCERF3_ProbabilityModel u3ProbModel = (UCERF3_ProbabilityModel)erf.getProbabilityModel();
-////		u3ProbModel.setAperiodicityModelChoice(AperiodicityModels.NSHM27_LOW);
-////		aperSuffix = "_aperLOW";
-////		u3ProbModel.setAperiodicityModelChoice(AperiodicityModels.NSHM27_HIGH);
-////		aperSuffix = "_aperHIGH";
-//		
-//		File parentDir = new File(rootDir+"bptSimulationsUS27"+aperSuffix+"/");
-//		if(!parentDir.exists()) 
-//			parentDir.mkdir();
-//		int numYrs = 50000;
-//		for(int i=1; i<2;i++) {
-//			File outputDir = new File(parentDir,"Run"+i+"_"+numYrs+"yrs"); 
-//			long seed = 984087634+i*1000;
-//			String inputFile=null;
-//			if(i==1)
-//				inputFile = rootDir+"poissonSimulationsUS27/Run1_1000000yrs/outputTimesinceLast.txt";
-//			else
-//				inputFile = rootDir+"bptSimulationsUS27/Run"+(i-1)+"_"+numYrs+"yrs/outputTimesinceLast.txt"; // make simulations consecutive
-////			LongTermTD_Simulator.simulateEvents(erf, inputFile,"outputTimesinceLast.txt", numYrs, outputDir, 
-////					seed, true, true, Double.NaN);
-//			LongTermTD_Simulator.generateSimulationPlots(erf, inputFile, numYrs, outputDir, true);	
-//		}
-//		// do plots for multiple simulations
-////		LongTermTD_Simulator.sectPlotsForMultSimulations(rootDir+"bptSimulationsUS27/", "Run", "_"+numYrs+"yrs", 20, erf.getSolution(), numYrs);
-////		LongTermTD_Simulator.rupPlotsForMultSimulations(rootDir+"bptSimulationsUS27/", "Run", "_"+numYrs+"yrs", 20, erf, numYrs);
+		TimeDepFaultSystemSolutionERF erf = getFullPrefUS27_ERF(full_FSS_fileName);
+		String aperSuffix ="";
+		// Alt Aper?
+//		UCERF3_ProbabilityModel u3ProbModel = (UCERF3_ProbabilityModel)erf.getProbabilityModel();
+//		u3ProbModel.setAperiodicityModelChoice(AperiodicityModels.NSHM27_LOW);
+//		aperSuffix = "_aperLOW";
+//		u3ProbModel.setAperiodicityModelChoice(AperiodicityModels.NSHM27_HIGH);
+//		aperSuffix = "_aperHIGH";
+		
+		File parentDir = new File(rootDir+"bptSimulationsUS27_Test"+aperSuffix+"/");
+		if(!parentDir.exists()) 
+			parentDir.mkdir();
+		int numYrs = 50000;
+		for(int i=2; i<3;i++) {
+			File outputDir = new File(parentDir,"Run"+i+"_"+numYrs+"yrs"); 
+			long seed = 984087634+i*1000;
+			String inputFile=null;
+			if(i==1)
+				inputFile = rootDir+"poissonSimulationsUS27/Run1_1000000yrs/outputTimesinceLast.txt";
+			else
+				inputFile = rootDir+"bptSimulationsUS27/Run"+(i-1)+"_"+numYrs+"yrs/outputTimesinceLast.txt"; // make simulations consecutive
+			LongTermTD_Simulator.simulateEvents(erf, inputFile,"outputTimesinceLast.txt", numYrs, outputDir, 
+					seed, true, true, Double.NaN);
+			// use duplicated input file in case original changed
+			File inputFileCopy = new File(outputDir,"inputTimeSinceLastCopy.txt");
+			LongTermTD_Simulator.generateSimulationPlots(erf, inputFileCopy.toString(), numYrs, outputDir, true);	
+		}
+		// do plots for multiple simulations
+//		LongTermTD_Simulator.sectPlotsForMultSimulations(rootDir+"bptSimulationsUS27/", "Run", "_"+numYrs+"yrs", 20, erf.getSolution(), numYrs);
+//		LongTermTD_Simulator.rupPlotsForMultSimulations(rootDir+"bptSimulationsUS27/", "Run", "_"+numYrs+"yrs", 20, erf, numYrs);
 	
 		
-		// POISSON SIMULATIONS
+//		// POISSON SIMULATIONS
 //		TimeDepFaultSystemSolutionERF erf = getFullPrefUS27_ERF();
 //		erf.setProbabilityModelChoice(FSS_ProbabilityModels.POISSON);
 //		File parentDir = new File(rootDir+"poissonSimulationsUS27/");
 //		if(!parentDir.exists()) 
 //			parentDir.mkdir();
-//		int numYrs = 50000;
-//		for(int i=76; i<81;i++) {
+//		int numYrs = 1000000;
+//		for(int i=1; i<2;i++) {
 //			File outputDir = new File(parentDir,"Run"+i+"_"+numYrs+"yrs"); 
 //			long seed = 984087634+i*1000;
 //			LongTermTD_Simulator.simulateEvents(erf, null,"outputTimesinceLast.txt", numYrs, outputDir, 
 //					seed, true, true, Double.NaN);
 //			LongTermTD_Simulator.generateSimulationPlots(erf, null, numYrs, outputDir, true);	
 //		}
-//		LongTermTD_Simulator.sectPlotsForMultSimulations(rootDir+"poissonSimulationsUS27/", "Run", "_"+numYrs+"yrs", 60, erf.getSolution(), numYrs);
-//		LongTermTD_Simulator.rupPlotsForMultSimulations(rootDir+"poissonSimulationsUS27/", "Run", "_"+numYrs+"yrs", 60, erf, (double)numYrs);
+////		LongTermTD_Simulator.sectPlotsForMultSimulations(rootDir+"poissonSimulationsUS27/", "Run", "_"+numYrs+"yrs", 60, erf.getSolution(), numYrs);
+////		LongTermTD_Simulator.rupPlotsForMultSimulations(rootDir+"poissonSimulationsUS27/", "Run", "_"+numYrs+"yrs", 60, erf, (double)numYrs);
 
 
 		
