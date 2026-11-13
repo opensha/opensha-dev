@@ -97,6 +97,7 @@ class InterfaceParticipationRateFigures {
 			int[] interfaceRemaps = interfaceIndexes.size() == baSol.getRupSet().getNumSections() ? null : Ints.toArray(interfaceIndexes);
 			
 			GeographicMapMaker mapMaker = new GeographicMapMaker(interfaceSects);
+			mapMaker.setWriteGeoJSON(false);
 			
 			String baPrefix = seisReg.name()+"_ba_";
 			

@@ -261,7 +261,7 @@ public class ObsUncertaintyBoundsFigure {
 						PlotCurveCharacterstics indvChar = new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, new Color(c, c, c, a));
 						int maxNumRates = 1000;
 						int numRates = Integer.min(maxNumRates, minNumSamples);
-						GutenbergRichterMagFreqDist[] rateMFDs = new GutenbergRichterMagFreqDist[minNumSamples];
+						GutenbergRichterMagFreqDist[] rateMFDs = new GutenbergRichterMagFreqDist[numRates];
 						
 						List<PureGR> samples = new ArrayList<>(numRates);
 						Random rand = new Random(numRates * minNumSamples * epochSamples.size());

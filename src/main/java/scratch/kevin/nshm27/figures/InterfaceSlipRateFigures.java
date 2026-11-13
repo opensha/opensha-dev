@@ -41,17 +41,19 @@ import com.google.common.base.Preconditions;
 
 import net.mahdilamb.colormap.Colors;
 
-public class SlipProjectionFigures {
+public class InterfaceSlipRateFigures {
 
 	public static void main(String[] args) throws IOException {
-//		File outputDir = new File(FIGURES_DIR, "slip_projection");
-		File outputDir = new File("/tmp/nshm27_slip_projection");
+		File outputDir = new File(FIGURES_DIR, "slip_projection");
+//		File outputDir = new File("/tmp/nshm27_slip_projection");
 		Preconditions.checkState(outputDir.exists() || outputDir.mkdir());
 
 		NSHM27_InterfaceFaultModels fm = NSHM27_InterfaceFaultModels.AMSAM_V1;
-		double maxSlip = 120;
+		double maxSlip = 130;
+		double cptDiscr = 25;
 //		NSHM27_InterfaceFaultModels fm = NSHM27_InterfaceFaultModels.GNMI_V1;
-//		double maxSlip = 20d;
+//		double maxSlip = 25d;
+//		double cptDiscr = 5;
 		
 		List<? extends FaultSection> sects = fm.buildSubSects(fm);
 		
@@ -66,6 +68,7 @@ public class SlipProjectionFigures {
 		
 //		double maxSlip = maxSlip(dm.apply(fm, branch, sects));
 		CPT slipCPT = GMT_CPT_Files.SEQUENTIAL_BATLOW_UNIFORM.instance().rescale(0d, maxSlip);
+		slipCPT.setPreferredTickInterval(cptDiscr);
 		
 		DeformationFront df = NSHM27_InterfaceDeformationModels.getDeformationFront(fm);
 		double moveOffset = 15d; // km
