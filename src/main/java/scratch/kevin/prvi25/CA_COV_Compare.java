@@ -1,5 +1,6 @@
 package scratch.kevin.prvi25;
 
+import java.awt.geom.Path2D;
 import java.awt.geom.Point2D;
 import java.io.File;
 import java.io.IOException;
@@ -19,22 +20,28 @@ public class CA_COV_Compare {
 
 	public static void main(String[] args) throws IOException {
 		XY_DataSet[] caOutlines = PoliticalBoundariesData.loadCAOutlines();
-		List<Region> caRegions = new ArrayList<>();
+//		List<Region> caRegions = new ArrayList<>();
+		// temporary fix for JVM bug 
+		List<Path2D> caRegions = new ArrayList<>();
 		for (int i=0; i<caOutlines.length; i++) {
 			LocationList outline = new LocationList();
 			for (Point2D pt : caOutlines[i])
 				outline.add(new Location(pt.getY(), pt.getX()));
-			caRegions.add(new Region(outline, BorderType.MERCATOR_LINEAR));
+//			caRegions.add(new Region(outline, BorderType.MERCATOR_LINEAR));
+			caRegions.add(outline.toPath());
 		}
 		
 		CSVFile<String> csv = CSVFile.readFile(new File("/tmp/1.0s_TWO_IN_50.csv"), false);
+//		CSVFile<String> csv = CSVFile.readFile(new File("/tmp/pga_TWO_IN_50.csv"), false);
 		
 		MinMaxAveTracker covTrack = new MinMaxAveTracker();
 		for (int row=1; row<csv.getNumRows(); row++) {
 			Location loc = new Location(csv.getDouble(row, 1), csv.getDouble(row, 2));
 			boolean inside = false;
-			for (Region reg : caRegions) {
-				if (reg.contains(loc)) {
+//			for (Region reg : caRegions) {
+//				if (reg.contains(loc)) {
+			for (Path2D reg : caRegions) {
+				if (reg.contains(loc.lon, loc.lat)) {
 					inside = true;
 					break;
 				}
