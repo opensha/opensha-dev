@@ -11,7 +11,7 @@ import org.opensha.sha.faultSurface.GeoJSONFaultSection;
 import org.opensha.sha.simulators.stiffness.AggregatedStiffnessCalculator;
 import org.opensha.sha.simulators.stiffness.SubSectStiffnessCalculator;
 import org.opensha.sha.simulators.stiffness.AggregatedStiffnessCalculator.AggregationMethod;
-import org.opensha.sha.simulators.stiffness.SubSectStiffnessCalculator.PatchAlignment;
+import org.opensha.sha.simulators.stiffness.SubSectStiffnessCalculator.PatchGenerationStrategy;
 import org.opensha.sha.simulators.stiffness.SubSectStiffnessCalculator.StiffnessType;
 import org.opensha.sha.util.FocalMech;
 
@@ -65,7 +65,7 @@ public class RelativeCFFTests {
 		
 //		SubSectStiffnessCalculator calc = new SubSectStiffnessCalculator(null, distance, len2, upper, lower)
 		SubSectStiffnessCalculator stiffnessCalc = new SubSectStiffnessCalculator(
-				sects, stiffGridSpacing, lameLambda, lameMu, coeffOfFriction, PatchAlignment.FILL_OVERLAP, 1d);
+				sects, stiffGridSpacing, lameLambda, lameMu, coeffOfFriction, PatchGenerationStrategy.AUTO, 1d);
 		AggregatedStiffnessCalculator sumAgg = new AggregatedStiffnessCalculator(StiffnessType.CFF, stiffnessCalc, true,
 				AggregationMethod.FLATTEN, AggregationMethod.SUM, AggregationMethod.SUM, AggregationMethod.SUM);
 		

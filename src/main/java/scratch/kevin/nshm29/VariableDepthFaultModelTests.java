@@ -9,6 +9,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
+import java.util.concurrent.TimeUnit;
 
 import org.opensha.commons.geo.Location;
 import org.opensha.commons.geo.LocationList;
@@ -34,8 +35,11 @@ import org.opensha.sha.earthquake.rupForecastImpl.nshm23.util.NSHM23_RegionLoade
 import org.opensha.sha.faultSurface.FaultSection;
 import org.opensha.sha.faultSurface.FaultTrace;
 import org.opensha.sha.faultSurface.GeoJSONFaultSection;
+import org.opensha.sha.simulators.stiffness.SubSectStiffnessCalculator;
+import org.opensha.sha.simulators.stiffness.SubSectStiffnessCalculator.PatchGenerationStrategy;
 
 import com.google.common.base.Preconditions;
+import com.google.common.base.Stopwatch;
 
 public class VariableDepthFaultModelTests {
 	
@@ -68,6 +72,16 @@ public class VariableDepthFaultModelTests {
 		GeographicMapMaker.GEOJSON_DEFAULT_SURF_OPACITY = 0.5;
 		SectBySectDetailPlots.writeParentSectsMap(outputDir, "fault_sections_map", mappedSects, region);
 		SectBySectDetailPlots.writeParentSectsMap(outputDir, "fault_subsections_map", subSects, region);
+		
+		// try building patches
+		System.out.println("Building patches for "+subSects.size()+" subsections");
+		SubSectStiffnessCalculator calc = new SubSectStiffnessCalculator(subSects, 2d, 30000, 30000, 0.5d, PatchGenerationStrategy.AUTO, 1d);
+		Stopwatch watch = Stopwatch.createStarted();
+		for (FaultSection subSect : subSects)
+			calc.getPatches(subSect);
+		watch.stop();
+		double secs = watch.elapsed(TimeUnit.MILLISECONDS)/1000d;
+		System.out.println("Took "+(float)secs+" to build patches for all "+subSects.size()+" subsections");
 	}
 
 	/** Join the separately supplied traces without modifying the cached original sections. */

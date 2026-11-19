@@ -30,10 +30,10 @@ import org.opensha.sha.faultSurface.FaultSection;
 import org.opensha.sha.faultSurface.FaultTrace;
 import org.opensha.sha.faultSurface.GeoJSONFaultSection;
 import org.opensha.sha.simulators.stiffness.SubSectStiffnessCalculator;
-import org.opensha.sha.simulators.stiffness.SubSectStiffnessCalculator.PatchAlignment;
-import org.opensha.sha.simulators.stiffness.SubSectStiffnessCalculator.PatchLocation;
+import org.opensha.sha.simulators.stiffness.SubSectStiffnessCalculator.PatchGenerationStrategy;
 import org.opensha.sha.simulators.stiffness.SubSectStiffnessCalculator.StiffnessDistribution;
 import org.opensha.sha.simulators.stiffness.SubSectStiffnessCalculator.StiffnessType;
+import org.opensha.sha.simulators.stiffness.patches.PatchLocation;
 
 import com.google.common.base.Preconditions;
 
@@ -320,7 +320,7 @@ public class RelativeCFFCalculator {
 		ClusterConnectionStrategy connStrat = rs.requireModule(PlausibilityConfiguration.class).getConnectionStrategy();
 		
 		SubSectStiffnessCalculator stiffnessCalc = new SubSectStiffnessCalculator(
-				rs.getFaultSectionDataList(), 2d, 3e4, 3e4, 0.5, PatchAlignment.FILL_OVERLAP, 1d);
+				rs.getFaultSectionDataList(), 2d, 3e4, 3e4, 0.5, PatchGenerationStrategy.AUTO, 1d);
 		
 		int threads = 1;
 //		int threads = FaultSysTools.defaultNumThreads();

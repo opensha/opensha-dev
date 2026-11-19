@@ -19,7 +19,7 @@ import org.opensha.sha.faultSurface.FaultSection;
 import org.opensha.sha.simulators.stiffness.AggregatedStiffnessCalculator;
 import org.opensha.sha.simulators.stiffness.SubSectStiffnessCalculator;
 import org.opensha.sha.simulators.stiffness.AggregatedStiffnessCalculator.AggregationMethod;
-import org.opensha.sha.simulators.stiffness.SubSectStiffnessCalculator.PatchAlignment;
+import org.opensha.sha.simulators.stiffness.SubSectStiffnessCalculator.PatchGenerationStrategy;
 import org.opensha.sha.simulators.stiffness.SubSectStiffnessCalculator.StiffnessType;
 
 import com.google.gson.annotations.Expose;
@@ -59,7 +59,7 @@ public class ScenarioStiffnessCalc {
 		}
 		
 		SubSectStiffnessCalculator stiffnessCalc = new SubSectStiffnessCalculator(
-				sects, stiffGridSpacing, 3e4, 3e4, coeffOfFriction, PatchAlignment.FILL_OVERLAP, 1d);
+				sects, stiffGridSpacing, 3e4, 3e4, coeffOfFriction, PatchGenerationStrategy.AUTO, 1d);
 		AggregatedStiffnessCalculator sumAgg = new AggregatedStiffnessCalculator(StiffnessType.CFF, stiffnessCalc, true,
 				AggregationMethod.FLATTEN, AggregationMethod.SUM, AggregationMethod.SUM, AggregationMethod.SUM);
 		
