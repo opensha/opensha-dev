@@ -16,6 +16,7 @@ import java.util.Map;
 import java.util.Random;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Function;
 import java.util.function.IntToDoubleFunction;
 
 import org.apache.commons.math3.stat.StatUtils;
@@ -103,13 +104,16 @@ public class SamplingScoreFigures {
 		int[] sampleCounts = {256, 512, 1024, 2048, 4096, 8192, 16384};
 //		int[] sampleCounts = {256, 512, 1024, 2048, 4096, 8192};
 //		int[] sampleCounts = {256, 512, 1024, 2048, 4096};
+//		int[] sampleCounts = {256, 512, 1024, 2048};
 //		int[] sampleCounts = {256, 512, 1024};
 //		int[] sampleCounts = {256, 512};
 		SamplingMethod[] methods = {
 				SamplingMethod.MONTE_CARLO,
 				SamplingMethod.LATIN_HYPERCUBE,
 				SamplingMethod.PAIRWISE_OPTIMIZED_LATIN_HYPERCUBE,
-				SamplingMethod.CENTERED_DISCREPANCY_OPTIMIZED_LATIN_HYPERCUBE,
+				// NOTE: CDO-LHS requires too many iterations/time to truly nail for even moderate sample counts,
+				// but when it does, it can out-perform both Sobol and PO-LHS in 2D for the all-continuous case.
+//				SamplingMethod.CENTERED_DISCREPANCY_OPTIMIZED_LATIN_HYPERCUBE,
 				SamplingMethod.SOBOL,
 				SamplingMethod.OWEN_SCRAMBLED_SOBOL
 		};
@@ -126,29 +130,47 @@ public class SamplingScoreFigures {
 						new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, Colors.tab_blue));
 //		int numPlotTrials = 10;
 		int numPlotTrials = 0;
-//		int numAvgTrials = 10;
-//		int numAvgTrials = 50;
-//		int numAvgTrials = 100;
-		int numAvgTrials = 200;
-//		int numAvgTrials = 500;
+		
+////		int numAvgTrials = 10;
+//		int numAvgTrials = 20;
+////		int numAvgTrials = 50;
+////		int numAvgTrials = 100;
+////		int numAvgTrials = 200;
+////		int numAvgTrials = 500;
+//		Function<SamplingMethod, Integer> trialsFunc = M -> M == SamplingMethod.SOBOL ? 1 : numAvgTrials;
+		
+		int trialBaseCount = 200;
+		Function<SamplingMethod, Integer> trialsFunc = M -> {
+				return switch (M) {
+				case SOBOL -> 1; // deterministic, only 1 needed
+				case MONTE_CARLO -> trialBaseCount*4; // extra to make sure it plots exactly at 1
+				case PAIRWISE_OPTIMIZED_LATIN_HYPERCUBE -> trialBaseCount/2; // expensive
+				case CENTERED_DISCREPANCY_OPTIMIZED_LATIN_HYPERCUBE -> trialBaseCount/4; // really expensive
+				default -> trialBaseCount;
+				};
+		};
 		
 		System.setProperty("java.util.concurrent.ForkJoinPool.common.parallelism", "16");
 
-		boolean redoNormScores = false;
-		boolean redoCenteredDiscrepancies = false;
-		boolean replotIndvSamples = false;
+//		boolean redoNormScores = false;
+//		boolean redoCenteredDiscrepancies = false;
+//		boolean replotIndvSamples = false;
+		
+		boolean redoNormScores = true;
+		boolean redoCenteredDiscrepancies = true;
+		boolean replotIndvSamples = true;
 
-		String treeName = null;
-		int numD = 10;
-//		int numD = 5;
-		List<SamplingDimension> samplingDimensions = new ArrayList<>();
-		for (int i=0; i<numD; i++)
-			samplingDimensions.add(ContinuousSamplingDimension.INSTANCE);
-		String samplingPrefix = "continuous_"+samplingDimensions.size()+"d";
+//		String treeName = null;
+//		int numD = 10;
+////		int numD = 5;
+//		List<SamplingDimension> samplingDimensions = new ArrayList<>();
+//		for (int i=0; i<numD; i++)
+//			samplingDimensions.add(ContinuousSamplingDimension.INSTANCE);
+//		String samplingPrefix = "continuous_"+samplingDimensions.size()+"d";
 
-//		String treeName = "NSHM23-WUS";
-//		List<SamplingDimension> samplingDimensions = getDimsNSHM23();
-//		String samplingPrefix = "nshm23_"+samplingDimensions.size()+"d";
+		String treeName = "NSHM23-WUS";
+		List<SamplingDimension> samplingDimensions = getDimsNSHM23();
+		String samplingPrefix = "nshm23_"+samplingDimensions.size()+"d";
 		
 //		String treeName = "NSHM27-AmSam";
 //		List<SamplingDimension> samplingDimensions = getDimsNSHM27_AmSam();
@@ -242,15 +264,17 @@ public class SamplingScoreFigures {
 					SamplingMethod method = methods[m];
 					String prefix = method.name();
 					
-					// use the same seed for pairwise and regular LHS
-					String seedName = method == SamplingMethod.PAIRWISE_OPTIMIZED_LATIN_HYPERCUBE ? SamplingMethod.LATIN_HYPERCUBE.name() : method.name();
+					// use the same seed for optimized and regular LHS
+					String seedName = method.isLHS() && method.isOptimized() ?
+									SamplingMethod.LATIN_HYPERCUBE.name() : method.name();
 					Random baseRand = new Random(RandomSeedUtils.seedForStrings(seedName));
 					
-					int myTrials = method == SamplingMethod.SOBOL ? 1 : numAvgTrials;
+					int myTrials = trialsFunc.apply(method);
 					System.out.println("Doing "+method+", "+sampleCount+" samples x "+myTrials+" trials");
 					
 					LinkedList<CompletableFuture<PointSet>> sampleFutures = new LinkedList<>();
 					
+					Stopwatch buildWatch = Stopwatch.createStarted();
 					for (int i=0; i<myTrials; i++) {
 						long seed = baseRand.nextLong();
 						sampleFutures.add(CompletableFuture.supplyAsync(()->method.prepare(sampleCount, samplingDimensions, seed)));
@@ -260,6 +284,8 @@ public class SamplingScoreFigures {
 					
 					while (!sampleFutures.isEmpty())
 						samples.add(sampleFutures.removeFirst().join());
+					buildWatch.stop();
+					System.out.println("\tBuilt "+myTrials+" point sets in "+timeStr(buildWatch));
 					
 					if (redoNormScores) {
 						// if we only have 1 trial, do that one in parallel

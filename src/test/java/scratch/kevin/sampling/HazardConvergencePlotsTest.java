@@ -24,7 +24,7 @@ public class HazardConvergencePlotsTest {
 						HazardConvergenceCalcs.MCS_REFERENCE_NAME, metric, ConvergenceSummary.MEAN_ABSOLUTE,
 						2, 0.2, 0.05, 0.1, 0.2, 0.3, 0.25, new double[] {0.15, 0.25}));
 			rows.add(new ReferenceSummary(SamplingMethod.MONTE_CARLO, 512,
-					HazardConvergenceCalcs.LOO_MCS_REFERENCE_NAME, metric, ConvergenceSummary.MEAN_ABSOLUTE,
+					HazardConvergenceCalcs.REPLACED_MCS_REFERENCE_NAME, metric, ConvergenceSummary.MEAN_ABSOLUTE,
 					4, 0.3, 0.05, 0.2, 0.3, 0.4, 0.2, new double[] {0.2, 0.25, 0.35, 0.4}));
 			rows.add(new ReferenceSummary(SamplingMethod.LATIN_HYPERCUBE, 512,
 					HazardConvergenceCalcs.MCS_REFERENCE_NAME, metric, ConvergenceSummary.MEAN_ABSOLUTE,
@@ -68,5 +68,24 @@ public class HazardConvergencePlotsTest {
 		assertEquals(5d, combined.median(), 0d);
 		assertEquals(1d, combined.minimum(), 0d);
 		assertEquals(9d, combined.maximum(), 0d);
+	}
+
+	@Test public void representativeSelectionUsesDistanceFromMedianRanks() {
+		List<HazardMapPlots.RepresentativeCandidate> candidates = List.of(
+				candidate("a", 1d, 5d, 1d, 5d),
+				candidate("b", 2d, 4d, 2d, 4d),
+				candidate("c", 3d, 3d, 3d, 3d),
+				candidate("d", 4d, 2d, 4d, 2d),
+				candidate("e", 5d, 1d, 5d, 1d));
+		HazardMapPlots.RepresentativeSelection selection = HazardMapPlots.selectRepresentative(candidates);
+		assertEquals("c", selection.candidate().runDir().getName());
+		assertEquals(5, selection.candidateCount());
+		assertEquals(0d, selection.meanRankDistance(), 0d);
+		for (double rank : selection.ranks())
+			assertEquals(0.5, rank, 0d);
+	}
+
+	private static HazardMapPlots.RepresentativeCandidate candidate(String name, double... errors) {
+		return new HazardMapPlots.RepresentativeCandidate(new java.io.File(name), 0, 1, null, errors);
 	}
 }
