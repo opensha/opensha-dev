@@ -7,7 +7,10 @@ import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 import org.opensha.commons.data.CSVWriter;
 import org.opensha.commons.logicTree.LogicTreeBranch;
@@ -16,6 +19,9 @@ import org.opensha.sha.earthquake.faultSysSolution.FaultSystemRupSet;
 import org.opensha.sha.earthquake.faultSysSolution.RuptureSets;
 import org.opensha.sha.earthquake.faultSysSolution.modules.ConnectivityClusters;
 import org.opensha.sha.earthquake.faultSysSolution.modules.NamedFaults;
+import org.opensha.sha.earthquake.faultSysSolution.ruptures.ClusterRupture;
+import org.opensha.sha.earthquake.faultSysSolution.ruptures.FaultSubsectionCluster;
+import org.opensha.sha.earthquake.faultSysSolution.ruptures.plausibility.impl.prob.RuptureProbabilityCalc.BinaryRuptureProbabilityCalc;
 import org.opensha.sha.earthquake.faultSysSolution.ruptures.strategies.ExhaustiveBilateralRuptureGrowingStrategy.SecondaryVariations;
 import org.opensha.sha.earthquake.faultSysSolution.ruptures.util.ConnectivityCluster;
 import org.opensha.sha.earthquake.faultSysSolution.util.FaultSectionUtils;
@@ -40,6 +46,11 @@ public class ToyRuptureSetBuilder {
 		String dirName = new SimpleDateFormat("yyyy_MM_dd").format(new Date());
 //		String dirName = "2024_11_06";
 		
+		// <names, fullCluster>
+		// true for fullCluster means bring in all sections in that cluster
+		// false means just that section
+		Map<String[], Boolean> nameSearches;
+		
 		dirName += "-quantum_test_rup_set_problem";
 		
 //		String[] nameSearches = { "Likely" };
@@ -48,8 +59,22 @@ public class ToyRuptureSetBuilder {
 //		String[] nameSearches = { "Cedar", "Mountain", "Mahogany" };
 //		dirName += "-124_sects";
 		
-		String[] nameSearches = { "San", "Felipe", "proxy" };
-		dirName += "-213_sects";
+//		String[] nameSearches = { "San", "Felipe", "proxy" };
+//		dirName += "-213_sects";
+		
+//		nameSearches = Map.of(
+//				new String[] { "Inks", "Creek" }, true,
+//				new String[] { "Battle", "Creek" }, true
+//				);
+//		dirName += "-32_sects";
+		
+		nameSearches = Map.of(
+				new String[] { "Inks", "Creek" }, true,
+				new String[] { "Battle", "Creek" }, true,
+				new String[] { "Great Valley 1" }, false,
+				new String[] { "Great Valley 2" }, false
+				);
+		dirName += "-46_sects";
 		
 		System.out.println(dirName);
 		
@@ -70,27 +95,47 @@ public class ToyRuptureSetBuilder {
 			System.out.println("Building connectivity clusters");
 			ConnectivityClusters clusters = ConnectivityClusters.build(origRupSet);
 			
-			int targetParentID = FaultSectionUtils.findParentSectionID(origRupSet.getFaultSectionDataList(), nameSearches);
-			FaultSection targetSect = null;
-			for (FaultSection sect : origRupSet.getFaultSectionDataList()) {
-				if (sect.getParentSectionId() == targetParentID) {
-					targetSect = sect;
-					break;
-				}
-			}
-			Preconditions.checkNotNull(targetSect);
-			ConnectivityCluster cluster = null;
-			for (ConnectivityCluster testCluster : clusters) {
-				if (testCluster.containsSect(targetSect)) {
-					cluster = testCluster;
-					break;
+			HashSet<Integer> sectIDs = new HashSet<>();
+			
+			boolean anyPartial = false;
+			
+			for (String[] names : nameSearches.keySet()) {
+				boolean fullCluster = nameSearches.get(names);
+				
+				int targetParentID = FaultSectionUtils.findParentSectionID(origRupSet.getFaultSectionDataList(), names);
+				
+				List<FaultSection> sectsForParent = new ArrayList<>();
+				for (FaultSection sect : origRupSet.getFaultSectionDataList())
+					if (sect.getParentSectionId() == targetParentID)
+						sectsForParent.add(sect);
+				Preconditions.checkState(!sectsForParent.isEmpty());
+				
+				if (fullCluster) {
+					ConnectivityCluster cluster = null;
+					FaultSection targetSect = sectsForParent.getFirst();
+					for (ConnectivityCluster testCluster : clusters) {
+						if (testCluster.containsSect(targetSect)) {
+							cluster = testCluster;
+							break;
+						}
+					}
+					
+					Preconditions.checkNotNull(cluster, "No cluster found for %s", targetSect);
+					
+					System.out.println("Cluster for "+targetSect.getSectionName()+" has "+cluster.getNumRuptures()
+							+" ruptures on "+cluster.getNumSections()+" sub-sections");
+					
+					sectIDs.addAll(cluster.getSectIDs());
+				} else {
+					System.out.println("Adding "+sectsForParent.size()+ " individual sections for parent "
+							+targetParentID+" ("+sectsForParent.getFirst().getParentSectionName()+")");
+					for (FaultSection sect : sectsForParent)
+						sectIDs.add(sect.getSectionId());
+					anyPartial = true;
 				}
 			}
 			
-			System.out.println("Cluster for "+targetSect.getSectionName()+" has "+cluster.getNumRuptures()
-					+" ruptures on "+cluster.getNumSections()+" sub-sections");
-			
-			origRupSet = origRupSet.getForSectionSubSet(cluster.getSectIDs());
+			origRupSet = origRupSet.getForSectionSubSet(sectIDs, anyPartial ? new FullyContainedRupturesOnly(sectIDs) : null);
 			origRupSet.removeModuleInstances(NamedFaults.class);
 			origRupSet.write(rsFile);
 		}
@@ -151,6 +196,35 @@ public class ToyRuptureSetBuilder {
 		// now write the actual ruptures
 		writeRuptures(origRupSet.getSectionIndicesForAllRups(), new File(outputDir, "orig_ruptures.csv"), subSects.size());
 		writeRuptures(rupSet.getSectionIndicesForAllRups(), new File(outputDir, "exhaustive_ruptures.csv"), subSects.size());
+	}
+	
+	private static class FullyContainedRupturesOnly implements BinaryRuptureProbabilityCalc {
+		
+		private Set<Integer> sectIDs;
+
+		public FullyContainedRupturesOnly(Set<Integer> sectIDs) {
+			this.sectIDs = sectIDs;
+		}
+
+		@Override
+		public boolean isDirectional(boolean splayed) {
+			return false;
+		}
+
+		@Override
+		public String getName() {
+			return "Fully on my sections";
+		}
+
+		@Override
+		public boolean isRupAllowed(ClusterRupture fullRupture, boolean verbose) {
+			for (FaultSubsectionCluster cluster : fullRupture.getClustersIterable())
+				for (FaultSection sect : cluster.subSects)
+					if (!sectIDs.contains(sect.getSectionId()))
+						return false;
+			return true;
+		}
+		
 	}
 	
 	private static void writeRuptures(List<List<Integer>> rups, File file, int numSects) throws IOException {
